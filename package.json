@@ -1,14 +1,15 @@
 {
-  "name": "plugin-sample-vite-vue",
+  "name": "siyuan-reference-analytics",
   "version": "0.0.1",
   "type": "module",
-  "description": "This is a sample plugin based on vite and vue for Siyuan (https://b3log.org/siyuan)",
+  "description": "A SiYuan plugin for document reference analytics.",
   "author": "",
   "license": "MIT",
   "homepage": "",
   "repository": "",
   "scripts": {
     "dev": "vite build --watch",
+    "test": "vitest run",
     "release": "node ./release.js",
     "release:manual": "node ./release.js --mode=manual",
     "release:patch": "node ./release.js --mode=patch",
@@ -37,6 +38,7 @@
     "typescript": "^5.0.4",
     "vite": "^6.2.1",
     "vite-plugin-static-copy": "^0.15.0",
-    "vite-plugin-zip-pack": "^1.0.5"
+    "vite-plugin-zip-pack": "^1.0.5",
+    "vitest": "^3.2.4"
   }
 }

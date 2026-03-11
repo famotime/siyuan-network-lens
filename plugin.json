@@ -1,10 +1,10 @@
 {
-  "name": "plugin-sample-vite-vue",
-  "author": "wetoria",
-  "url": "https://github.com/Wetoria/plugin-sample-vite-vue",
+  "name": "siyuan-reference-analytics",
+  "author": "",
+  "url": "",
   "version": "0.0.1",
-  "minAppVersion": "2.10.14",
-  "disabledInPublish": true,
+  "minAppVersion": "3.5.7",
+  "disabledInPublish": false,
   "backends": [
     "all"
   ],
@@ -12,22 +12,27 @@
     "all"
   ],
   "displayName": {
-    "default": "plugin-sample-vite-vue",
-    "en_US": "plugin-sample-vite-vue",
-    "zh_CN": "plugin-sample-vite-vue"
+    "default": "Reference Analytics",
+    "en_US": "Reference Analytics",
+    "zh_CN": "引用网络分析器"
   },
   "description": {
-    "default": "plugin-sample-vite-vue",
-    "en_US": "plugin-sample-vite-vue",
-    "zh_CN": "plugin-sample-vite-vue"
+    "default": "Analyze SiYuan document references and surface hubs, communities, orphans, trends, paths, and repair suggestions.",
+    "en_US": "Analyze SiYuan document references and surface hubs, communities, orphans, trends, paths, and repair suggestions.",
+    "zh_CN": "分析思源文档级引用网络，识别核心节点、主题社区、孤立文档、趋势、路径和整理建议。"
   },
   "readme": {
     "default": "README.md",
     "en_US": "README.md",
-    "zh_CN": "README_zh_CN.md"
+    "zh_CN": "README.md"
   },
   "funding": {
     "custom": []
   },
-  "keywords": []
+  "keywords": [
+    "analytics",
+    "graph",
+    "reference",
+    "knowledge-management"
+  ]
 }

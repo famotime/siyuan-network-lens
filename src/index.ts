@@ -1,65 +1,69 @@
-import {
-  Plugin,
-  getFrontend,
-} from "siyuan";
-import "@/index.scss";
-import PluginInfoString from '@/../plugin.json'
-import { destroy, init } from '@/main'
+import '@/index.scss'
 
-let PluginInfo = {
-  version: '',
-}
-try {
-  PluginInfo = PluginInfoString
-} catch (err) {
-  console.log('Plugin info parse error: ', err)
-}
-const {
-  version,
-} = PluginInfo
+import { Plugin } from 'siyuan'
 
-export default class PluginSample extends Plugin {
-  // Run as mobile
-  public isMobile: boolean
-  // Run in browser
-  public isBrowser: boolean
-  // Run as local
-  public isLocal: boolean
-  // Run in Electron
-  public isElectron: boolean
-  // Run in window
-  public isInWindow: boolean
-  public platform: SyFrontendTypes
-  public readonly version = version
+import pluginInfo from '@/../plugin.json'
+import { destroyApp, mountApp } from '@/main'
+
+const DOCK_TYPE = 'reference-analytics-dock'
+const PLUGIN_TITLE = '引用网络分析器'
+const PLUGIN_ICON = 'iconGraph'
+
+export default class ReferenceAnalyticsPlugin extends Plugin {
+  private dockInstance?: ReturnType<Plugin['addDock']>
+
+  get version() {
+    return pluginInfo.version
+  }
 
   async onload() {
-    const frontEnd = getFrontend();
-    this.platform = frontEnd as SyFrontendTypes
-    this.isMobile = frontEnd === "mobile" || frontEnd === "browser-mobile"
-    this.isBrowser = frontEnd.includes('browser')
-    this.isLocal =
-      location.href.includes('127.0.0.1')
-      || location.href.includes('localhost')
-    this.isInWindow = location.href.includes('window.html')
+    this.addTopBar({
+      icon: PLUGIN_ICON,
+      title: PLUGIN_TITLE,
+      callback: () => {
+        this.openDock()
+      },
+    })
 
-    try {
-      require("@electron/remote")
-        .require("@electron/remote/main")
-      this.isElectron = true
-    } catch (err) {
-      this.isElectron = false
-    }
+    this.addCommand({
+      langKey: 'openReferenceAnalytics',
+      langText: PLUGIN_TITLE,
+      hotkey: '',
+      callback: () => {
+        this.openDock()
+      },
+    })
 
-    console.log('Plugin loaded, the plugin is ', this)
-
-    init(this)
+    this.dockInstance = this.addDock({
+      type: DOCK_TYPE,
+      data: {},
+      config: {
+        position: 'RightTop',
+        size: {
+          width: 420,
+          height: null,
+        },
+        icon: PLUGIN_ICON,
+        title: PLUGIN_TITLE,
+        show: false,
+      },
+      init: (dock) => {
+        const root = document.createElement('div')
+        root.className = 'reference-analytics-root'
+        dock.element.append(root)
+        mountApp(root, this)
+      },
+      destroy: () => {
+        destroyApp()
+      },
+    })
   }
 
   onunload() {
-    destroy()
+    destroyApp()
   }
 
-  openSetting() {
-    window._sy_plugin_sample.openSetting()
+  openDock() {
+    this.dockInstance?.model.toggleModel(DOCK_TYPE, true)
   }
 }
