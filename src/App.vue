@@ -1529,6 +1529,11 @@ function normalizeTags(tags?: readonly string[] | string) {
   --panel-strong: color-mix(in srgb, var(--b3-theme-primary) 18%, var(--b3-theme-surface));
   --panel-soft: color-mix(in srgb, var(--b3-theme-primary) 6%, var(--b3-theme-surface));
   --panel-muted: color-mix(in srgb, var(--b3-theme-on-surface) 72%, transparent);
+  --surface-card: color-mix(in srgb, var(--b3-theme-surface) 94%, var(--b3-theme-background));
+  --surface-card-strong: color-mix(in srgb, var(--b3-theme-surface) 88%, var(--b3-theme-background));
+  --surface-card-soft: color-mix(in srgb, var(--b3-theme-surface) 82%, var(--b3-theme-background));
+  --surface-chip-warm: color-mix(in srgb, var(--accent-warm) 22%, var(--b3-theme-surface));
+  --surface-chip-cool: color-mix(in srgb, var(--accent-cool) 16%, var(--b3-theme-surface));
   --accent-warm: #e77b45;
   --accent-cool: #227c9d;
   height: 100%;
@@ -1602,7 +1607,7 @@ h1 {
   padding: 12px;
   border-radius: 16px;
   border: 1px solid var(--panel-border);
-  background: color-mix(in srgb, var(--b3-theme-surface) 90%, white);
+  background: var(--surface-card);
 }
 
 .filter-item span {
@@ -1634,7 +1639,7 @@ input {
 .state-banner {
   border-radius: 20px;
   border: 1px solid var(--panel-border);
-  background: color-mix(in srgb, var(--b3-theme-surface) 92%, white);
+  background: var(--surface-card-strong);
   box-shadow: 0 18px 38px -28px rgba(34, 52, 67, 0.35);
 }
 
@@ -1831,8 +1836,8 @@ input {
 .badge {
   width: fit-content;
   font-size: 12px;
-  background: color-mix(in srgb, var(--accent-warm) 18%, white);
-  color: #8d431e;
+  background: var(--surface-chip-warm);
+  color: color-mix(in srgb, var(--accent-warm) 55%, var(--b3-theme-on-surface));
 }
 
 .community-tags,
@@ -1845,7 +1850,7 @@ input {
 
 .community-tag,
 .path-node {
-  background: color-mix(in srgb, var(--accent-cool) 12%, white);
+  background: var(--surface-chip-cool);
 }
 
 .split-block {
@@ -1870,14 +1875,14 @@ input {
 .detail-card {
   padding: 12px;
   border-radius: 14px;
-  background: color-mix(in srgb, var(--b3-theme-background) 88%, white);
+  background: var(--surface-card);
 }
 
 .mini-list__item,
 .trend-item button {
   padding: 10px 12px;
   border-radius: 12px;
-  background: color-mix(in srgb, var(--b3-theme-background) 84%, white);
+  background: var(--surface-card-soft);
 }
 
 .mini-list__entry {
@@ -1921,7 +1926,7 @@ input {
   min-width: 0;
   padding: 12px;
   border-radius: 14px;
-  background: color-mix(in srgb, var(--b3-theme-background) 88%, white);
+  background: var(--surface-card);
 }
 
 .trend-stats span {
