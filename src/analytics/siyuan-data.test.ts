@@ -196,6 +196,73 @@ describe('loadAnalyticsSnapshot', () => {
     ])
   })
 
+  it('parses block references with single-quoted titles', async () => {
+    apiMocks.sqlMock.mockImplementation(async (query: string) => {
+      if (query.includes('FROM refs r')) {
+        return []
+      }
+
+      if (query.includes("WHERE type = 'd'")) {
+        return [
+          {
+            id: '20260312150000-srcdoc1',
+            box: 'box-1',
+            path: '/a.sy',
+            hpath: '/A',
+            title: 'Source A',
+            tag: '#index',
+            created: '20260312140000',
+            updated: '20260312150000',
+          },
+          {
+            id: '20260312150001-tgtdoc1',
+            box: 'box-1',
+            path: '/b.sy',
+            hpath: '/B',
+            title: 'Target B',
+            tag: '#topic',
+            created: '20260312141000',
+            updated: '20260312150000',
+          },
+        ]
+      }
+
+      if (query.includes('%((%') || query.includes('%siyuan://blocks/%')) {
+        return [
+          {
+            id: '20260312150002-srcblk1',
+            rootId: '20260312150000-srcdoc1',
+            markdown: "see ((20260312150003-tgtblk1 'skills'))",
+            updated: '20260312152000',
+          },
+        ]
+      }
+
+      if (query.includes("SELECT id, COALESCE(NULLIF(root_id, ''), id) AS rootId")) {
+        return [
+          {
+            id: '20260312150003-tgtblk1',
+            rootId: '20260312150001-tgtdoc1',
+          },
+        ]
+      }
+
+      return []
+    })
+
+    apiMocks.lsNotebooksMock.mockResolvedValue({ notebooks: [] })
+
+    const snapshot = await loadAnalyticsSnapshot()
+
+    expect(snapshot.references).toEqual([
+      expect.objectContaining({
+        sourceDocumentId: '20260312150000-srcdoc1',
+        targetDocumentId: '20260312150001-tgtdoc1',
+        targetBlockId: '20260312150003-tgtblk1',
+      }),
+    ])
+  })
+
   it('falls back to the target block id when a document block has an empty root_id', async () => {
     apiMocks.sqlMock.mockImplementation(async (query: string) => {
       if (query.includes('FROM refs r')) {
@@ -261,5 +328,57 @@ describe('loadAnalyticsSnapshot', () => {
         targetBlockId: '20260312110001-tgtdoc1',
       }),
     ])
+  })
+
+  it('adds explicit limit clauses to avoid the default 64-row cap', async () => {
+    const queries: string[] = []
+
+    apiMocks.sqlMock.mockImplementation(async (query: string) => {
+      queries.push(query)
+
+      if (query.includes('FROM refs r')) {
+        return []
+      }
+
+      if (query.includes("WHERE type = 'd'")) {
+        return []
+      }
+
+      if (query.includes('%siyuan://blocks/%') || query.includes('%((%')) {
+        return [
+          {
+            id: '20260312123000-srcblk1',
+            rootId: '20260312120000-srcdoc1',
+            markdown: '[Target](siyuan://blocks/20260312121000-tgtdoc1)',
+            updated: '20260312124000',
+          },
+        ]
+      }
+
+      if (query.includes("SELECT id, COALESCE(NULLIF(root_id, ''), id) AS rootId")) {
+        return [
+          {
+            id: '20260312121000-tgtdoc1',
+            rootId: '20260312121000-tgtdoc1',
+          },
+        ]
+      }
+
+      return []
+    })
+
+    apiMocks.lsNotebooksMock.mockResolvedValue({ notebooks: [] })
+
+    await loadAnalyticsSnapshot()
+
+    const documentQuery = queries.find(query => query.includes("WHERE type = 'd'"))
+    const referenceQuery = queries.find(query => query.includes('FROM refs r'))
+    const internalSourceQuery = queries.find(query => query.includes('%siyuan://blocks/%') || query.includes('%((%'))
+    const internalTargetQuery = queries.find(query => query.includes("SELECT id, COALESCE(NULLIF(root_id, ''), id) AS rootId"))
+
+    expect(documentQuery).toContain('LIMIT')
+    expect(referenceQuery).toContain('LIMIT')
+    expect(internalSourceQuery).toContain('LIMIT')
+    expect(internalTargetQuery).toContain('LIMIT')
   })
 })

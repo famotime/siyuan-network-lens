@@ -18,7 +18,7 @@ interface MarkdownReferenceTarget {
 }
 
 const SIYUAN_BLOCK_URL_PATTERN = /siyuan:\/\/blocks\/([^?\s<>"')\]#]+)/gi
-const BLOCK_REFERENCE_PATTERN = /\(\(\s*([^)\s"]+)(?:\s+"[^"]*")?\s*\)\)/g
+const BLOCK_REFERENCE_PATTERN = /\(\(\s*([^)\s"']+)(?:\s+(?:"[^"]*"|'[^']*'))?\s*\)\)/g
 
 export function collectInternalLinkTargetIds(sourceRows: InternalLinkSourceRow[]): string[] {
   const targetIds = new Set<string>()

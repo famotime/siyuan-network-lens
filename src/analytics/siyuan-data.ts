@@ -51,6 +51,8 @@ interface InternalLinkTargetRow {
   rootId: string
 }
 
+const QUERY_LIMIT = 200000
+
 const DOCUMENT_SQL = `
   SELECT
     id,
@@ -68,6 +70,7 @@ const DOCUMENT_SQL = `
   FROM blocks
   WHERE type = 'd'
   ORDER BY updated DESC
+  LIMIT ${QUERY_LIMIT}
 `
 
 const REFERENCE_SQL = `
@@ -85,6 +88,7 @@ const REFERENCE_SQL = `
   WHERE r.type = 'ref_id'
     AND r.root_id <> r.def_block_root_id
   ORDER BY sourceUpdated DESC
+  LIMIT ${QUERY_LIMIT}
 `
 
 const INTERNAL_LINK_SOURCE_SQL = `
@@ -98,6 +102,7 @@ const INTERNAL_LINK_SOURCE_SQL = `
       COALESCE(markdown, '') LIKE '%siyuan://blocks/%'
       OR COALESCE(markdown, '') LIKE '%((%'
     )
+  LIMIT ${QUERY_LIMIT}
 `
 
 export async function loadAnalyticsSnapshot(): Promise<AnalyticsSnapshot> {
@@ -166,6 +171,7 @@ async function loadInternalLinkTargets(targetIds: string[]): Promise<InternalLin
       SELECT id, COALESCE(NULLIF(root_id, ''), id) AS rootId
       FROM blocks
       WHERE id IN (${chunk.map(quoteSql).join(', ')})
+      LIMIT ${chunk.length}
     `) as InternalLinkTargetRow[]
     targetRows.push(...(rows ?? []))
   }
