@@ -1,9 +1,9 @@
-import '@/index.scss'
-
-import { Plugin } from 'siyuan'
+import { Plugin, Dialog } from 'siyuan'
+import { reactive, watch } from 'vue'
 
 import pluginInfo from '@/../plugin.json'
-import { destroyApp, mountApp } from '@/main'
+import { destroyApp, mountApp, mountSetting, destroySetting } from '@/main'
+import { DEFAULT_CONFIG, type PluginConfig } from './types/config'
 
 const DOCK_TYPE = 'reference-analytics-dock'
 const PLUGIN_TITLE = '引用网络分析器'
@@ -11,12 +11,22 @@ const PLUGIN_ICON = 'iconGraph'
 
 export default class ReferenceAnalyticsPlugin extends Plugin {
   private dockInstance?: ReturnType<Plugin['addDock']>
+  private config = reactive<PluginConfig>({ ...DEFAULT_CONFIG })
 
   get version() {
     return pluginInfo.version
   }
 
   async onload() {
+    const loadedConfig = await this.loadData('settings.json')
+    if (loadedConfig) {
+      Object.assign(this.config, loadedConfig)
+    }
+
+    watch(() => { return { ...this.config } }, (newConfig) => {
+      this.saveData('settings.json', newConfig)
+    }, { deep: true })
+
     this.addTopBar({
       icon: PLUGIN_ICON,
       title: PLUGIN_TITLE,
@@ -51,7 +61,7 @@ export default class ReferenceAnalyticsPlugin extends Plugin {
         const root = document.createElement('div')
         root.className = 'reference-analytics-root'
         dock.element.append(root)
-        mountApp(root, this)
+        mountApp(root, this, this.config)
       },
       destroy: () => {
         destroyApp()
@@ -65,5 +75,22 @@ export default class ReferenceAnalyticsPlugin extends Plugin {
 
   openDock() {
     this.dockInstance?.model.toggleModel(DOCK_TYPE, true)
+  }
+
+  openSetting() {
+    const dialog = new Dialog({
+      title: '引用网络分析器 设置',
+      width: '600px',
+      height: '500px',
+      content: '<div id="reference-analytics-setting-root" style="height: 100%;"></div>',
+      destroyCallback: () => {
+        destroySetting()
+      }
+    })
+
+    const root = dialog.element.querySelector('#reference-analytics-setting-root') as HTMLElement
+    if (root) {
+        mountSetting(root, this.config)
+    }
   }
 }
