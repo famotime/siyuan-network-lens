@@ -126,7 +126,7 @@ export function buildSummaryCards(params: {
       key: 'orphans',
       label: '孤立文档',
       value: params.report.summary.orphanCount.toString(),
-      hint: '历史上从未形成过文档级连接',
+      hint: '当前窗口内没有有效文档级连接',
     },
     {
       key: 'dormant',
@@ -257,7 +257,7 @@ export function buildSummaryDetailSections(params: {
     orphans: {
       key: 'orphans',
       title: '孤立文档详情',
-      description: '历史上从未形成过文档级连接的文档。',
+      description: '当前窗口内没有有效文档级连接的文档。',
       kind: 'list',
       items: params.report.orphans.map(item => ({
         documentId: item.documentId,

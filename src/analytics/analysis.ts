@@ -37,6 +37,7 @@ export interface AnalyticsFilters {
   notebook?: string
   tag?: string
   keyword?: string
+  themeNames?: string[]
 }
 
 export type OrphanSort = 'updated-desc' | 'created-desc' | 'title-asc'
@@ -360,8 +361,7 @@ export function analyzeReferenceGraph(params: {
       }
     })
 
-  const orphans = sortOrphans(disconnectedDocuments
-    .filter(item => item.historicalReferenceCount === 0), params.orphanSort)
+  const orphans = sortOrphans(disconnectedDocuments, params.orphanSort)
 
   const dormantDocuments = disconnectedDocuments
     .map((item) => {
@@ -656,8 +656,15 @@ function matchesFilters(document: NormalizedDocument, filters?: AnalyticsFilters
   }
   if (filters.keyword) {
     const keyword = filters.keyword.toLowerCase()
-    const haystack = `${document.title} ${document.hpath} ${document.tags.join(' ')}`.toLowerCase()
+    const haystack = `${document.title} ${document.hpath} ${document.path} ${document.tags.join(' ')}`.toLowerCase()
     if (!haystack.includes(keyword)) {
+      return false
+    }
+  }
+  if (filters.themeNames?.length) {
+    const haystack = `${document.title} ${document.hpath} ${document.path} ${document.tags.join(' ')}`.toLowerCase()
+    const hasMatchedTheme = filters.themeNames.some(themeName => haystack.includes(themeName.toLowerCase()))
+    if (!hasMatchedTheme) {
       return false
     }
   }

@@ -2,6 +2,52 @@
   <div class="setting-panel">
     <div class="setting-group">
       <div class="setting-header">
+        <h3>主题文档</h3>
+        <p>指定主题页所在目录，生成主题筛选选项并为孤立文档提供链接建议。</p>
+      </div>
+      <div class="setting-form">
+        <label class="setting-field">
+          <span>主题笔记本</span>
+          <select v-model="config.themeNotebookId">
+            <option value="">请选择笔记本</option>
+            <option
+              v-for="notebook in notebooks"
+              :key="notebook.id"
+              :value="notebook.id"
+            >
+              {{ notebook.name }}
+            </option>
+          </select>
+        </label>
+        <label class="setting-field">
+          <span>主题文档路径</span>
+          <input
+            v-model.trim="config.themeDocumentPath"
+            placeholder="/专题"
+            type="text"
+          >
+        </label>
+        <label class="setting-field">
+          <span>名称前缀</span>
+          <input
+            v-model.trim="config.themeNamePrefix"
+            placeholder="可选，例如 主题-"
+            type="text"
+          >
+        </label>
+        <label class="setting-field">
+          <span>名称后缀</span>
+          <input
+            v-model.trim="config.themeNameSuffix"
+            placeholder="可选，例如 -索引"
+            type="text"
+          >
+        </label>
+      </div>
+    </div>
+
+    <div class="setting-group">
+      <div class="setting-header">
         <h3>统计卡片</h3>
         <p>控制顶部卡片以及点击后的详情展示。</p>
       </div>
@@ -68,11 +114,33 @@
 </template>
 
 <script setup lang="ts">
+import { onMounted, ref } from 'vue'
+
+import { lsNotebooks } from '@/api'
 import type { PluginConfig } from '@/types/config'
 
-const props = defineProps<{
+interface NotebookOption {
+  id: string
+  name: string
+}
+
+defineProps<{
   config: PluginConfig
 }>()
+
+const notebooks = ref<NotebookOption[]>([])
+
+onMounted(async () => {
+  try {
+    const response = await lsNotebooks()
+    notebooks.value = (response?.notebooks ?? []).map(notebook => ({
+      id: notebook.id,
+      name: notebook.name,
+    }))
+  } catch {
+    notebooks.value = []
+  }
+})
 </script>
 
 <style scoped>
@@ -92,6 +160,12 @@ const props = defineProps<{
   display: flex;
   flex-direction: column;
   gap: 16px;
+}
+
+.setting-form {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px;
 }
 
 .setting-header {
@@ -161,5 +235,33 @@ const props = defineProps<{
 .setting-item__text span {
   font-size: 12px;
   color: color-mix(in srgb, var(--b3-theme-on-background) 60%, transparent);
+}
+
+.setting-field {
+  display: grid;
+  gap: 6px;
+  font-size: 13px;
+  color: color-mix(in srgb, var(--b3-theme-on-background) 72%, transparent);
+}
+
+.setting-field span {
+  font-weight: 500;
+}
+
+.setting-field input,
+.setting-field select {
+  width: 100%;
+  border: 1px solid color-mix(in srgb, var(--b3-theme-primary) 12%, transparent);
+  border-radius: 8px;
+  background: color-mix(in srgb, var(--b3-theme-surface) 60%, transparent);
+  color: var(--b3-theme-on-background);
+  padding: 10px 12px;
+  box-sizing: border-box;
+}
+
+@media (max-width: 720px) {
+  .setting-form {
+    grid-template-columns: 1fr;
+  }
 }
 </style>

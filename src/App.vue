@@ -19,52 +19,64 @@
     </div>
 
     <div class="filter-panel">
-      <label class="filter-item">
-        <span>时间窗口</span>
-        <select v-model="timeRange">
-          <option
-            v-for="option in timeRangeOptions"
-            :key="option.value"
-            :value="option.value"
+      <div class="filter-panel__row filter-panel__row--meta">
+        <label class="filter-item">
+          <span>时间窗口</span>
+          <select v-model="timeRange">
+            <option
+              v-for="option in timeRangeOptions"
+              :key="option.value"
+              :value="option.value"
+            >
+              {{ option.label }}
+            </option>
+          </select>
+        </label>
+        <label class="filter-item">
+          <span>笔记本</span>
+          <select v-model="selectedNotebook">
+            <option value="">全部笔记本</option>
+            <option
+              v-for="notebook in notebookOptions"
+              :key="notebook.id"
+              :value="notebook.id"
+            >
+              {{ notebook.name }}
+            </option>
+          </select>
+        </label>
+        <label class="filter-item">
+          <span>标签</span>
+          <select v-model="selectedTag">
+            <option value="">全部标签</option>
+            <option
+              v-for="tag in tagOptions"
+              :key="tag"
+              :value="tag"
+            >
+              {{ tag }}
+            </option>
+          </select>
+        </label>
+      </div>
+
+      <div class="filter-panel__row filter-panel__row--focus">
+        <label class="filter-item filter-item--theme">
+          <span>主题</span>
+          <ThemeMultiSelect
+            v-model="selectedThemes"
+            :options="themeOptions"
+          />
+        </label>
+        <label class="filter-item filter-item--keyword">
+          <span>关键词</span>
+          <input
+            v-model.trim="keyword"
+            placeholder="按标题、路径、标签筛选"
+            type="search"
           >
-            {{ option.label }}
-          </option>
-        </select>
-      </label>
-      <label class="filter-item">
-        <span>笔记本</span>
-        <select v-model="selectedNotebook">
-          <option value="">全部笔记本</option>
-          <option
-            v-for="notebook in notebookOptions"
-            :key="notebook.id"
-            :value="notebook.id"
-          >
-            {{ notebook.name }}
-          </option>
-        </select>
-      </label>
-      <label class="filter-item">
-        <span>标签</span>
-        <select v-model="selectedTag">
-          <option value="">全部标签</option>
-          <option
-            v-for="tag in tagOptions"
-            :key="tag"
-            :value="tag"
-          >
-            {{ tag }}
-          </option>
-        </select>
-      </label>
-      <label class="filter-item filter-item--wide">
-        <span>主题/关键词</span>
-        <input
-          v-model.trim="keyword"
-          placeholder="按标题、路径、标签筛选"
-          type="search"
-        >
-      </label>
+        </label>
+      </div>
     </div>
 
     <div
@@ -129,10 +141,12 @@
         >
           <template v-if="selectedSummaryDetail.key === 'orphans'">
             <OrphanDetailPanel
-              :items="selectedSummaryDetail.items"
+              :items="orphanDetailItems"
               :orphan-sort="orphanSort"
               :open-document="openDocument"
-              :on-update-orphan-sort="(value) => { orphanSort.value = value }"
+              :on-update-orphan-sort="updateOrphanSort"
+              :on-toggle-theme-suggestion="toggleOrphanThemeSuggestion"
+              :is-theme-suggestion-active="isThemeSuggestionActive"
             />
           </template>
           <template v-else-if="selectedSummaryDetail.key === 'dormant'">
@@ -140,7 +154,7 @@
               :items="selectedSummaryDetail.items"
               :dormant-days="dormantDays"
               :open-document="openDocument"
-              :on-update-dormant-days="(value) => { dormantDays.value = value }"
+              :on-update-dormant-days="updateDormantDays"
             />
           </template>
           <template v-else-if="selectedSummaryDetail.kind === 'list'">
@@ -511,8 +525,9 @@ import { SUGGESTION_TYPE_LABELS } from '@/analytics/ui-copy'
 import DormantDetailPanel from '@/components/DormantDetailPanel.vue'
 import OrphanDetailPanel from '@/components/OrphanDetailPanel.vue'
 import RankingPanel from '@/components/RankingPanel.vue'
+import ThemeMultiSelect from '@/components/ThemeMultiSelect.vue'
 import { useAnalyticsState } from '@/composables/use-analytics'
-import { appendBlock, prependBlock } from '@/api'
+import { appendBlock, deleteBlock, getBlockKramdown, getChildBlocks, prependBlock, updateBlock } from '@/api'
 import type { PluginConfig } from '@/types/config'
 
 const props = defineProps<{
@@ -522,10 +537,15 @@ const props = defineProps<{
 
 const analytics = useAnalyticsState({
   plugin: props.plugin,
+  config: props.config,
   openTab,
   showMessage,
   appendBlock,
   prependBlock,
+  deleteBlock,
+  updateBlock,
+  getChildBlocks,
+  getBlockKramdown,
 })
 
 const {
@@ -535,6 +555,8 @@ const {
   timeRangeOptions,
   selectedNotebook,
   selectedTag,
+  selectedThemes,
+  themeOptions,
   keyword,
   orphanSort,
   dormantDays,
@@ -552,6 +574,7 @@ const {
   summaryCards,
   selectedSummaryDetail,
   selectedSummaryCount,
+  orphanDetailItems,
   pathOptions,
   pathChain,
   panelCounts,
@@ -574,6 +597,8 @@ const {
   openDocument,
   formatTimestamp,
   formatDelta,
+  toggleOrphanThemeSuggestion,
+  isThemeSuggestionActive,
 } = analytics
 
 const visibleSummaryCards = computed(() => {
@@ -611,6 +636,14 @@ watch(visibleSummaryCards, (cards) => {
     selectSummaryCard(cards[0].key)
   }
 }, { immediate: true })
+
+function updateOrphanSort(value: typeof orphanSort.value) {
+  orphanSort.value = value
+}
+
+function updateDormantDays(value: number) {
+  dormantDays.value = value
+}
 </script>
 
 <style lang="scss" scoped>
@@ -678,7 +711,6 @@ h1 {
   line-height: 1.6;
 }
 
-.filter-panel,
 .summary-grid,
 .layout-grid {
   display: grid;
@@ -686,8 +718,23 @@ h1 {
 }
 
 .filter-panel {
-  grid-template-columns: repeat(6, minmax(0, 1fr));
+  display: grid;
+  gap: 16px;
   margin-bottom: 24px;
+}
+
+.filter-panel__row {
+  display: grid;
+  gap: 16px;
+}
+
+.filter-panel__row--meta {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+
+.filter-panel__row--focus {
+  grid-template-columns: minmax(0, 1.3fr) minmax(0, 1fr);
+  align-items: start;
 }
 
 .filter-item {
@@ -711,10 +758,6 @@ h1 {
   font-weight: 500;
 }
 
-.filter-item--wide {
-  grid-column: span 2;
-}
-
 select,
 input {
   width: 100%;
@@ -723,6 +766,10 @@ input {
   background: transparent;
   color: inherit;
   font-size: 14px;
+}
+
+.filter-item--theme {
+  min-height: auto;
 }
 
 .summary-grid {
@@ -1162,7 +1209,9 @@ input {
   .filter-panel,
   .summary-grid,
   .layout-grid,
-  .split-block {
+  .split-block,
+  .filter-panel__row--meta,
+  .filter-panel__row--focus {
     grid-template-columns: 1fr;
   }
 

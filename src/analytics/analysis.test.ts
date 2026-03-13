@@ -154,7 +154,7 @@ describe('analyzeReferenceGraph', () => {
     )
   })
 
-  it('treats documents with historical inbound or outbound links as non-orphans', () => {
+  it('treats documents without current-window links as orphans even if they had older links', () => {
     const report = analyzeReferenceGraph({
       documents: [
         { id: 'doc-a', box: 'box-1', path: '/a.sy', hpath: '/Alpha', title: 'Alpha', tags: ['topic'], created: '20260101090000', updated: '20260310120000' },
@@ -170,10 +170,7 @@ describe('analyzeReferenceGraph', () => {
       timeRange: '7d',
     })
 
-    expect(report.orphans.map(document => document.documentId)).toEqual(['doc-d'])
-    expect(report.orphans.some(document => document.documentId === 'doc-a')).toBe(false)
-    expect(report.orphans.some(document => document.documentId === 'doc-b')).toBe(false)
-    expect(report.orphans.some(document => document.documentId === 'doc-c')).toBe(false)
+    expect(report.orphans.map(document => document.documentId)).toEqual(['doc-a', 'doc-b', 'doc-c', 'doc-d'])
 
     expect(report.summary.sparseEvidenceCount).toBe(3)
   })

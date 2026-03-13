@@ -11,12 +11,20 @@ import {
 } from '@/analytics/analysis'
 import { createActiveDocumentSync } from '@/analytics/active-document'
 import { buildLinkAssociations } from '@/analytics/link-associations'
+import {
+  addThemeLinkToDocumentChange,
+  applyThemeLinkToOrphanDocument,
+  removeThemeLinkFromDocumentChange,
+  type AppliedThemeLinkChange,
+} from '@/analytics/orphan-theme-links'
 import { syncAssociation as syncAssociationCore } from '@/analytics/link-sync'
 import { buildPanelCounts } from '@/analytics/panel-counts'
 import { buildSummaryCards, buildSummaryDetailSections, type SummaryCardItem, type SummaryCardKey } from '@/analytics/summary-details'
+import { buildThemeOptions, collectThemeDocuments, countThemeMatchesForDocument } from '@/analytics/theme-documents'
 import { buildTimeRangeOptions } from '@/analytics/time-range'
 import { buildPanelCollapseState, togglePanelCollapse, type PanelCollapseState } from '@/analytics/panel-collapse'
 import { loadAnalyticsSnapshot, type AnalyticsSnapshot } from '@/analytics/siyuan-data'
+import type { PluginConfig } from '@/types/config'
 
 export type PathScope = 'focused' | 'all' | 'community'
 
@@ -39,9 +47,14 @@ type PluginLike = {
 type OpenTabFn = (params: { app: any, doc: { id: string, zoomIn?: boolean } }) => void
 type ShowMessageFn = (text: string, timeout?: number, type?: 'info' | 'error') => void
 type BlockWriteFn = (dataType: 'markdown' | 'dom', data: string, parentID: string) => Promise<any>
+type BlockDeleteFn = (id: string) => Promise<any>
+type BlockUpdateFn = (dataType: 'markdown' | 'dom', data: string, id: string) => Promise<any>
+type GetChildBlocksFn = (id: string) => Promise<Array<{ id: string, type?: string }>>
+type GetBlockKramdownFn = (id: string) => Promise<{ id: string, kramdown: string }>
 
 type UseAnalyticsParams = {
   plugin: PluginLike
+  config: PluginConfig
   loadSnapshot?: () => Promise<AnalyticsSnapshot>
   nowProvider?: () => Date
   createActiveDocumentSync?: typeof createActiveDocumentSync
@@ -49,6 +62,10 @@ type UseAnalyticsParams = {
   openTab: OpenTabFn
   appendBlock: BlockWriteFn
   prependBlock: BlockWriteFn
+  deleteBlock: BlockDeleteFn
+  updateBlock: BlockUpdateFn
+  getChildBlocks: GetChildBlocksFn
+  getBlockKramdown: GetBlockKramdownFn
 }
 
 export function useAnalyticsState(params: UseAnalyticsParams) {
@@ -59,6 +76,10 @@ export function useAnalyticsState(params: UseAnalyticsParams) {
   const openTab = params.openTab
   const appendBlock = params.appendBlock
   const prependBlock = params.prependBlock
+  const deleteBlock = params.deleteBlock
+  const updateBlock = params.updateBlock
+  const getChildBlocks = params.getChildBlocks
+  const getBlockKramdown = params.getBlockKramdown
 
   const loading = ref(false)
   const errorMessage = ref('')
@@ -66,6 +87,7 @@ export function useAnalyticsState(params: UseAnalyticsParams) {
   const timeRange = ref<TimeRange>('7d')
   const selectedNotebook = ref('')
   const selectedTag = ref('')
+  const selectedThemes = ref<string[]>([])
   const keyword = ref('')
   const orphanSort = ref<OrphanSort>('updated-desc')
   const dormantDays = ref(30)
@@ -82,12 +104,14 @@ export function useAnalyticsState(params: UseAnalyticsParams) {
   const expandedLinkPanels = ref(new Set<string>())
   const expandedLinkGroups = ref(new Set<string>())
   const syncInProgress = ref(new Set<string>())
+  const pendingThemeSuggestionBlocks = ref(new Map<string, AppliedThemeLinkChange>())
   const timeRangeOptions = computed(() => buildTimeRangeOptions())
   let disposeActiveDocumentSync: (() => void) | null = null
 
   const filters = computed<AnalyticsFilters>(() => ({
     notebook: selectedNotebook.value || undefined,
     tag: selectedTag.value || undefined,
+    themeNames: selectedThemes.value.length ? [...selectedThemes.value] : undefined,
     keyword: keyword.value || undefined,
   }))
 
@@ -105,6 +129,11 @@ export function useAnalyticsState(params: UseAnalyticsParams) {
   const documentMap = computed(() => {
     return new Map((snapshot.value?.documents ?? []).map(document => [document.id, document]))
   })
+  const themeDocuments = computed(() => collectThemeDocuments({
+    documents: snapshot.value?.documents ?? [],
+    config: params.config,
+  }))
+  const themeOptions = computed(() => buildThemeOptions(themeDocuments.value))
 
   const filteredDocuments = computed(() => {
     if (!snapshot.value) {
@@ -212,6 +241,39 @@ export function useAnalyticsState(params: UseAnalyticsParams) {
 
   const selectedSummaryDetail = computed(() => {
     return summaryDetailSections.value?.[selectedSummaryCardKey.value] ?? null
+  })
+  const orphanThemeSuggestions = computed(() => {
+    const suggestions = new Map<string, ReturnType<typeof countThemeMatchesForDocument>>()
+
+    if (!report.value) {
+      return suggestions
+    }
+
+    for (const orphan of report.value.orphans) {
+      const document = documentMap.value.get(orphan.documentId)
+      if (!document) {
+        continue
+      }
+      const matches = countThemeMatchesForDocument({
+        document,
+        themeDocuments: themeDocuments.value,
+      })
+      if (matches.length) {
+        suggestions.set(orphan.documentId, matches)
+      }
+    }
+
+    return suggestions
+  })
+  const orphanDetailItems = computed(() => {
+    if (selectedSummaryDetail.value?.key !== 'orphans' || selectedSummaryDetail.value.kind !== 'list') {
+      return []
+    }
+
+    return selectedSummaryDetail.value.items.map(item => ({
+      ...item,
+      themeSuggestions: orphanThemeSuggestions.value.get(item.documentId) ?? [],
+    }))
   })
 
   const selectedSummaryCount = computed(() => {
@@ -377,6 +439,11 @@ export function useAnalyticsState(params: UseAnalyticsParams) {
     }
   }, { immediate: true })
 
+  watch(themeOptions, (options) => {
+    const allowedThemes = new Set(options.map(option => option.value))
+    selectedThemes.value = selectedThemes.value.filter(themeName => allowedThemes.has(themeName))
+  }, { immediate: true })
+
   watch([activeDocumentId, sampleDocumentIds], ([documentId, documentIds]) => {
     if (documentId && documentIds.has(documentId)) {
       selectedEvidenceDocument.value = documentId
@@ -427,6 +494,7 @@ export function useAnalyticsState(params: UseAnalyticsParams) {
     analysisNow.value = nowProvider()
     try {
       snapshot.value = await loadSnapshot()
+      pendingThemeSuggestionBlocks.value.clear()
     } catch (error) {
       const message = error instanceof Error ? error.message : '读取思源数据失败'
       errorMessage.value = message
@@ -536,7 +604,6 @@ export function useAnalyticsState(params: UseAnalyticsParams) {
       app: params.plugin.app,
       doc: {
         id: documentId,
-        zoomIn: true,
       },
     })
   }
@@ -550,6 +617,65 @@ export function useAnalyticsState(params: UseAnalyticsParams) {
 
   function formatDelta(delta: number) {
     return delta > 0 ? `+${delta}` : delta.toString()
+  }
+
+  function isThemeSuggestionActive(orphanDocumentId: string, themeDocumentId: string) {
+    return pendingThemeSuggestionBlocks.value.get(orphanDocumentId)?.links.some(item => item.themeDocumentId === themeDocumentId) ?? false
+  }
+
+  async function toggleOrphanThemeSuggestion(orphanDocumentId: string, themeDocumentId: string) {
+    const existingChange = pendingThemeSuggestionBlocks.value.get(orphanDocumentId)
+
+    if (existingChange?.links.some(item => item.themeDocumentId === themeDocumentId)) {
+      try {
+        const nextChange = await removeThemeLinkFromDocumentChange({
+          change: existingChange,
+          themeDocumentId,
+          deleteBlock,
+          updateBlock,
+        })
+        if (nextChange) {
+          pendingThemeSuggestionBlocks.value.set(orphanDocumentId, nextChange)
+        } else {
+          pendingThemeSuggestionBlocks.value.delete(orphanDocumentId)
+        }
+        notify('已撤销主题链接建议', 3000, 'info')
+      } catch (error) {
+        const message = error instanceof Error ? error.message : '撤销主题链接失败'
+        notify(message, 5000, 'error')
+      }
+      return
+    }
+
+    const themeDocument = themeDocuments.value.find(item => item.documentId === themeDocumentId)
+    if (!themeDocument) {
+      notify('未找到对应的主题文档', 5000, 'error')
+      return
+    }
+
+    try {
+      const change = existingChange
+        ? await addThemeLinkToDocumentChange({
+            change: existingChange,
+            themeDocumentId: themeDocument.documentId,
+            themeDocumentTitle: themeDocument.title,
+            updateBlock,
+          })
+        : await applyThemeLinkToOrphanDocument({
+            orphanDocumentId,
+            themeDocumentId: themeDocument.documentId,
+            themeDocumentTitle: themeDocument.title,
+            getChildBlocks,
+            getBlockKramdown,
+            updateBlock,
+            prependBlock,
+          })
+      pendingThemeSuggestionBlocks.value.set(orphanDocumentId, change)
+      notify('已插入主题链接，刷新分析后将重新判断孤立状态', 3000, 'info')
+    } catch (error) {
+      const message = error instanceof Error ? error.message : '插入主题链接失败'
+      notify(message, 5000, 'error')
+    }
   }
 
   function normalizeTags(tags?: readonly string[] | string) {
@@ -573,6 +699,8 @@ export function useAnalyticsState(params: UseAnalyticsParams) {
     timeRangeOptions,
     selectedNotebook,
     selectedTag,
+    selectedThemes,
+    themeOptions,
     keyword,
     orphanSort,
     dormantDays,
@@ -603,6 +731,8 @@ export function useAnalyticsState(params: UseAnalyticsParams) {
     summaryDetailSections,
     selectedSummaryDetail,
     selectedSummaryCount,
+    orphanThemeSuggestions,
+    orphanDetailItems,
     pathOptions,
     pathChain,
     linkAssociationsByDocumentId,
@@ -626,5 +756,7 @@ export function useAnalyticsState(params: UseAnalyticsParams) {
     openDocument,
     formatTimestamp,
     formatDelta,
+    toggleOrphanThemeSuggestion,
+    isThemeSuggestionActive,
   }
 }
