@@ -36,7 +36,7 @@ export interface SummaryDetailItem {
   badge?: string
 }
 
-type ListDetailSectionKey = Exclude<SummaryCardKey, 'ranking' | 'suggestions' | 'trends'>
+type ListDetailSectionKey = Exclude<SummaryCardKey, 'ranking' | 'suggestions' | 'trends' | 'propagation'>
 
 export type SummaryDetailSection =
   | {
@@ -66,6 +66,13 @@ export type SummaryDetailSection =
     description: string
     kind: 'trends'
     trends: TrendReport
+  }
+  | {
+    key: 'propagation'
+    title: string
+    description: string
+    kind: 'propagation'
+    items: SummaryDetailItem[]
   }
 
 export function buildSummaryCards(params: {
@@ -285,7 +292,7 @@ export function buildSummaryDetailSections(params: {
       key: 'propagation',
       title: '传播节点详情',
       description: '高频出现在关键最短路径上的文档。',
-      kind: 'list',
+      kind: 'propagation',
       items: params.report.propagationNodes.map(item => ({
         documentId: item.documentId,
         title: item.title,

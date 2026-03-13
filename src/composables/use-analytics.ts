@@ -22,7 +22,6 @@ export type PathScope = 'focused' | 'all' | 'community'
 
 const panelKeys = [
   'summary-detail',
-  'paths',
 ] as const
 
 type PanelKey = typeof panelKeys[number]
@@ -285,32 +284,6 @@ export function useAnalyticsState(params: UseAnalyticsParams) {
     })
   })
 
-  const selectedDocumentDetail = computed(() => {
-    if (!report.value || !selectedEvidenceDocument.value) {
-      return null
-    }
-
-    const orphan = report.value.orphans.find(item => item.documentId === selectedEvidenceDocument.value) ?? null
-    const dormant = report.value.dormantDocuments.find(item => item.documentId === selectedEvidenceDocument.value) ?? null
-    const bridge = report.value.bridgeDocuments.find(item => item.documentId === selectedEvidenceDocument.value) ?? null
-    const propagation = report.value.propagationNodes.find(item => item.documentId === selectedEvidenceDocument.value) ?? null
-    const community = report.value.communities.find(item => item.documentIds.includes(selectedEvidenceDocument.value)) ?? null
-    const trend = [
-      ...(trends.value?.risingDocuments ?? []),
-      ...(trends.value?.fallingDocuments ?? []),
-    ].find(item => item.documentId === selectedEvidenceDocument.value) ?? null
-
-    return {
-      documentId: selectedEvidenceDocument.value,
-      orphan,
-      dormant,
-      bridge,
-      propagation,
-      community,
-      trend,
-    }
-  })
-
   const linkAssociationsByDocumentId = computed(() => {
     const map = new Map<string, ReturnType<typeof buildLinkAssociations>>()
     if (!snapshot.value) {
@@ -336,16 +309,13 @@ export function useAnalyticsState(params: UseAnalyticsParams) {
         communities: 0,
         orphanBridge: 0,
         trends: 0,
-        paths: 0,
         propagation: 0,
-        documentDetail: 0,
       }
     }
     return buildPanelCounts({
       report: report.value,
       trends: trends.value,
       pathChain: pathChain.value,
-      hasSelectedDocumentDetail: Boolean(selectedDocumentDetail.value),
     })
   })
 
@@ -635,7 +605,6 @@ export function useAnalyticsState(params: UseAnalyticsParams) {
     selectedSummaryCount,
     pathOptions,
     pathChain,
-    selectedDocumentDetail,
     linkAssociationsByDocumentId,
     panelCounts,
     snapshotLabel,

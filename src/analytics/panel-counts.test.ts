@@ -27,14 +27,11 @@ describe('buildPanelCounts', () => {
       } as any,
       trends: null,
       pathChain: [],
-      hasSelectedDocumentDetail: false,
     })
 
     expect(Object.keys(counts).sort()).toEqual([
       'communities',
-      'documentDetail',
       'orphanBridge',
-      'paths',
       'propagation',
       'ranking',
       'suggestions',
@@ -126,7 +123,6 @@ describe('buildPanelCounts', () => {
       report,
       trends,
       pathChain: ['doc-a', 'doc-b', 'doc-c', 'doc-d'],
-      hasSelectedDocumentDetail: true,
     })
 
     expect(counts.ranking).toBe(12)
@@ -134,8 +130,6 @@ describe('buildPanelCounts', () => {
     expect(counts.communities).toBe(3)
     expect(counts.orphanBridge).toBe(3)
     expect(counts.trends).toBe(10)
-    expect(counts.paths).toBe(4)
     expect(counts.propagation).toBe(8)
-    expect(counts.documentDetail).toBe(1)
   })
 })

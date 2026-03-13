@@ -61,16 +61,8 @@
     <div class="setting-group">
       <div class="setting-header">
         <h3>传播与链路</h3>
-        <p>探索文档之间的关联路径与隐性传导价值。</p>
+        <p>传播节点详情中将包含关系传播路径视图。</p>
       </div>
-
-      <label class="setting-item">
-        <span class="setting-item__text">
-          <strong>关系传播路径</strong>
-          <span>查看两篇文档间的最短连接路径</span>
-        </span>
-        <input type="checkbox" v-model="config.showPaths" class="b3-switch">
-      </label>
     </div>
   </div>
 </template>

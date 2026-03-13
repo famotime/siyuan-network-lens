@@ -180,6 +180,114 @@
               当前卡片下没有可展示的文档。
             </div>
           </template>
+          <template v-else-if="selectedSummaryDetail.kind === 'propagation'">
+            <div
+              v-if="selectedSummaryDetail.items.length"
+              class="summary-detail-list"
+            >
+              <article
+                v-for="item in selectedSummaryDetail.items"
+                :key="`${selectedSummaryDetail.key}-${item.documentId}`"
+                class="summary-detail-item"
+              >
+                <div class="summary-detail-item__header">
+                  <button
+                    class="summary-detail-item__title"
+                    type="button"
+                    @click="openDocument(item.documentId)"
+                  >
+                    {{ item.title }}
+                  </button>
+                  <span
+                    v-if="item.badge"
+                    class="badge"
+                  >
+                    {{ item.badge }}
+                  </span>
+                </div>
+                <p class="summary-detail-item__meta">
+                  {{ item.meta }}
+                </p>
+              </article>
+            </div>
+            <div
+              v-else
+              class="empty-state"
+            >
+              当前卡片下没有可展示的传播节点。
+            </div>
+
+            <div class="propagation-path">
+              <div class="propagation-path__header">
+                <h3>关系传播路径</h3>
+                <p>限定路径深度与范围，查看文档如何跨主题建立连接。</p>
+              </div>
+              <div class="path-controls">
+                <label>
+                  <span>范围</span>
+                  <select v-model="pathScope">
+                    <option value="focused">核心 + 桥接</option>
+                    <option value="all">当前筛选全部文档</option>
+                    <option value="community">当前社区</option>
+                  </select>
+                </label>
+                <label>
+                  <span>最大深度</span>
+                  <select v-model="maxPathDepth">
+                    <option :value="3">3</option>
+                    <option :value="4">4</option>
+                    <option :value="5">5</option>
+                    <option :value="6">6</option>
+                  </select>
+                </label>
+                <label>
+                  <span>起点</span>
+                  <select v-model="fromDocumentId">
+                    <option
+                      v-for="document in pathOptions"
+                      :key="document.id"
+                      :value="document.id"
+                    >
+                      {{ document.title }}
+                    </option>
+                  </select>
+                </label>
+                <label>
+                  <span>终点</span>
+                  <select v-model="toDocumentId">
+                    <option
+                      v-for="document in pathOptions"
+                      :key="document.id"
+                      :value="document.id"
+                    >
+                      {{ document.title }}
+                    </option>
+                  </select>
+                </label>
+              </div>
+
+              <div
+                v-if="pathChain.length"
+                class="path-chain"
+              >
+                <button
+                  v-for="documentId in pathChain"
+                  :key="documentId"
+                  class="path-node"
+                  type="button"
+                  @click="openDocument(documentId)"
+                >
+                  {{ resolveTitle(documentId) }}
+                </button>
+              </div>
+              <div
+                v-else
+                class="empty-state"
+              >
+                当前筛选条件下未找到可解释路径。
+              </div>
+            </div>
+          </template>
           <template v-else-if="selectedSummaryDetail.kind === 'ranking'">
             <RankingPanel
               variant="detail"
@@ -391,103 +499,6 @@
           </template>
         </div>
       </section>
-
-      <div class="layout-grid">
-        <section v-if="config.showPaths" class="panel">
-          <div class="panel-header">
-            <div>
-              <h2>关系传播路径</h2>
-              <p>支持限定路径深度与范围，查看文档如何跨主题建立连接。</p>
-            </div>
-            <div class="panel-header__actions">
-              <span class="meta-text">{{ panelCounts.paths }} 篇文档</span>
-              <button
-                class="panel-toggle"
-                type="button"
-                :aria-expanded="isPanelExpanded('paths')"
-                :aria-label="isPanelExpanded('paths') ? '折叠详情' : '展开详情'"
-                @click="togglePanel('paths')"
-              >
-                {{ isPanelExpanded('paths') ? '折叠' : '展开' }}
-                <span
-                  class="panel-toggle__caret"
-                  aria-hidden="true"
-                />
-              </button>
-            </div>
-          </div>
-
-          <div
-            v-show="isPanelExpanded('paths')"
-            class="panel-body"
-          >
-            <div class="path-controls">
-              <label>
-                <span>范围</span>
-                <select v-model="pathScope">
-                  <option value="focused">核心 + 桥接</option>
-                  <option value="all">当前筛选全部文档</option>
-                  <option value="community">当前社区</option>
-                </select>
-              </label>
-              <label>
-                <span>最大深度</span>
-                <select v-model="maxPathDepth">
-                  <option :value="3">3</option>
-                  <option :value="4">4</option>
-                  <option :value="5">5</option>
-                  <option :value="6">6</option>
-                </select>
-              </label>
-              <label>
-                <span>起点</span>
-                <select v-model="fromDocumentId">
-                  <option
-                    v-for="document in pathOptions"
-                    :key="document.id"
-                    :value="document.id"
-                  >
-                    {{ document.title }}
-                  </option>
-                </select>
-              </label>
-              <label>
-                <span>终点</span>
-                <select v-model="toDocumentId">
-                  <option
-                    v-for="document in pathOptions"
-                    :key="document.id"
-                    :value="document.id"
-                  >
-                    {{ document.title }}
-                  </option>
-                </select>
-              </label>
-            </div>
-
-            <div
-              v-if="pathChain.length"
-              class="path-chain"
-            >
-              <button
-                v-for="documentId in pathChain"
-                :key="documentId"
-                class="path-node"
-                type="button"
-                @click="openDocument(documentId)"
-              >
-                {{ resolveTitle(documentId) }}
-              </button>
-            </div>
-            <div
-              v-else
-              class="empty-state"
-            >
-              当前筛选条件下未找到可解释路径。
-            </div>
-          </div>
-        </section>
-      </div>
     </template>
   </div>
 </template>

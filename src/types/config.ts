@@ -5,7 +5,6 @@ export interface PluginConfig {
   showCommunities: boolean
   showOrphanBridge: boolean
   showTrends: boolean
-  showPaths: boolean
   showPropagation: boolean
 }
 
@@ -16,6 +15,5 @@ export const DEFAULT_CONFIG: PluginConfig = {
   showCommunities: true,
   showOrphanBridge: true,
   showTrends: true,
-  showPaths: true,
   showPropagation: true,
 }

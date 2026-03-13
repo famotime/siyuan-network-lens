@@ -105,6 +105,7 @@ describe('buildSummaryDetailSections', () => {
     expect(sections.bridges.items).toEqual([
       expect.objectContaining({ documentId: 'doc-a', title: 'Alpha' }),
     ])
+    expect(sections.propagation.kind).toBe('propagation')
     expect(sections.propagation.items).toEqual([
       expect.objectContaining({ documentId: 'doc-a', badge: '2 分' }),
     ])
