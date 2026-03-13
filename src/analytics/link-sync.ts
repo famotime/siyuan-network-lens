@@ -1,4 +1,4 @@
-export type LinkDirection = 'outbound' | 'inbound'
+export type LinkDirection = 'outbound' | 'inbound' | 'child'
 
 type BlockWriteFn = (dataType: 'markdown' | 'dom', data: string, parentID: string) => Promise<any>
 

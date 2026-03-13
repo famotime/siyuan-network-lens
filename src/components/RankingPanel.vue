@@ -70,14 +70,14 @@
                 @click="toggleLinkGroup(item.documentId, 'outbound')"
               >
                 <span class="link-association__caret" aria-hidden="true" />
-                正链（出链） {{ resolveLinkAssociations(item.documentId).outbound.length }}
+                正链（出链） {{ resolveAssociations(item.documentId).outbound.length }}
               </button>
               <div
                 v-show="isLinkGroupExpanded(item.documentId, 'outbound')"
                 class="link-association__list"
               >
                 <div
-                  v-for="link in resolveLinkAssociations(item.documentId).outbound"
+                  v-for="link in resolveAssociations(item.documentId).outbound"
                   :key="`outbound-${item.documentId}-${link.documentId}`"
                   class="link-association__item"
                 >
@@ -100,7 +100,7 @@
                   </button>
                 </div>
                 <p
-                  v-if="resolveLinkAssociations(item.documentId).outbound.length === 0"
+                  v-if="resolveAssociations(item.documentId).outbound.length === 0"
                   class="empty-inline"
                 >
                   当前没有出链关联。
@@ -115,14 +115,14 @@
                 @click="toggleLinkGroup(item.documentId, 'inbound')"
               >
                 <span class="link-association__caret" aria-hidden="true" />
-                反链（入链） {{ resolveLinkAssociations(item.documentId).inbound.length }}
+                反链（入链） {{ resolveAssociations(item.documentId).inbound.length }}
               </button>
               <div
                 v-show="isLinkGroupExpanded(item.documentId, 'inbound')"
                 class="link-association__list"
               >
                 <div
-                  v-for="link in resolveLinkAssociations(item.documentId).inbound"
+                  v-for="link in resolveAssociations(item.documentId).inbound"
                   :key="`inbound-${item.documentId}-${link.documentId}`"
                   class="link-association__item"
                 >
@@ -145,10 +145,54 @@
                   </button>
                 </div>
                 <p
-                  v-if="resolveLinkAssociations(item.documentId).inbound.length === 0"
+                  v-if="resolveAssociations(item.documentId).inbound.length === 0"
                   class="empty-inline"
                 >
                   当前没有入链关联。
+                </p>
+              </div>
+            </div>
+            <div class="link-association__group">
+              <button
+                :class="['link-association__toggle', { 'link-association__toggle--expanded': isLinkGroupExpanded(item.documentId, 'child') }]"
+                type="button"
+                :aria-expanded="isLinkGroupExpanded(item.documentId, 'child')"
+                @click="toggleLinkGroup(item.documentId, 'child')"
+              >
+                <span class="link-association__caret" aria-hidden="true" />
+                子文档 {{ resolveAssociations(item.documentId).childDocuments.length }}
+              </button>
+              <div
+                v-show="isLinkGroupExpanded(item.documentId, 'child')"
+                class="link-association__list"
+              >
+                <div
+                  v-for="link in resolveAssociations(item.documentId).childDocuments"
+                  :key="`child-${item.documentId}-${link.documentId}`"
+                  class="link-association__item"
+                >
+                  <button
+                    class="link-association__doc"
+                    :class="{ 'link-association__doc--highlight': true }"
+                    type="button"
+                    @click="openDocument(link.documentId)"
+                  >
+                    {{ link.title }}
+                  </button>
+                  <button
+                    class="ghost-button"
+                    type="button"
+                    :disabled="isSyncing(item.documentId, link.documentId, 'child')"
+                    @click="syncAssociation(item.documentId, link.documentId, 'child')"
+                  >
+                    {{ isSyncing(item.documentId, link.documentId, 'child') ? '正链中...' : '正链' }}
+                  </button>
+                </div>
+                <p
+                  v-if="resolveAssociations(item.documentId).childDocuments.length === 0"
+                  class="empty-inline"
+                >
+                  当前没有可补充的子文档链接。
                 </p>
               </div>
             </div>
@@ -169,9 +213,8 @@
 <script setup lang="ts">
 import type { RankingDetailItem } from '@/analytics/summary-details'
 import type { LinkAssociations } from '@/analytics/link-associations'
+import type { LinkDirection } from '@/analytics/link-sync'
 import SuggestionCallout from './SuggestionCallout.vue'
-
-type LinkDirection = 'outbound' | 'inbound'
 
 const props = withDefaults(defineProps<{
   ranking: RankingDetailItem[]
@@ -193,6 +236,15 @@ const props = withDefaults(defineProps<{
 }>(), {
   variant: 'panel',
 })
+
+function resolveAssociations(documentId: string): LinkAssociations {
+  const associations = props.resolveLinkAssociations(documentId)
+  return {
+    outbound: associations.outbound ?? [],
+    inbound: associations.inbound ?? [],
+    childDocuments: associations.childDocuments ?? [],
+  }
+}
 </script>
 
 <style scoped>

@@ -17,7 +17,7 @@ import {
   removeThemeLinkFromDocumentChange,
   type AppliedThemeLinkChange,
 } from '@/analytics/orphan-theme-links'
-import { syncAssociation as syncAssociationCore } from '@/analytics/link-sync'
+import { syncAssociation as syncAssociationCore, type LinkDirection } from '@/analytics/link-sync'
 import { buildPanelCounts } from '@/analytics/panel-counts'
 import { buildSummaryCards, buildSummaryDetailSections, type SummaryCardItem, type SummaryCardKey } from '@/analytics/summary-details'
 import { buildThemeOptions, collectThemeDocuments, countThemeMatchesForDocument } from '@/analytics/theme-documents'
@@ -147,9 +147,22 @@ export function useAnalyticsState(params: UseAnalyticsParams) {
       filters: filters.value,
     })
   })
+  const associationDocuments = computed(() => {
+    if (!snapshot.value) {
+      return []
+    }
+    return filterDocumentsByTimeRange({
+      documents: snapshot.value.documents,
+      references: snapshot.value.references,
+      now: analysisNow.value,
+      timeRange: 'all',
+      filters: filters.value,
+    })
+  })
 
   const sampleDocumentIds = computed(() => new Set(filteredDocuments.value.map(document => document.id)))
   const sampleDocumentMap = computed(() => new Map(filteredDocuments.value.map(document => [document.id, document])))
+  const associationDocumentMap = computed(() => new Map(associationDocuments.value.map(document => [document.id, document])))
 
   const report = computed(() => {
     if (!snapshot.value) {
@@ -359,6 +372,7 @@ export function useAnalyticsState(params: UseAnalyticsParams) {
         documentId: item.documentId,
         references: snapshot.value.references,
         documentMap: sampleDocumentMap.value,
+        childDocumentMap: associationDocumentMap.value,
         now: analysisNow.value,
         timeRange: timeRange.value,
       }))
@@ -519,7 +533,7 @@ export function useAnalyticsState(params: UseAnalyticsParams) {
   }
 
   function resolveLinkAssociations(documentId: string) {
-    return linkAssociationsByDocumentId.value.get(documentId) ?? { outbound: [], inbound: [] }
+    return linkAssociationsByDocumentId.value.get(documentId) ?? { outbound: [], inbound: [], childDocuments: [] }
   }
 
   function toggleLinkPanel(documentId: string) {
@@ -535,11 +549,11 @@ export function useAnalyticsState(params: UseAnalyticsParams) {
     return expandedLinkPanels.value.has(documentId)
   }
 
-  function buildLinkGroupKey(documentId: string, direction: 'outbound' | 'inbound') {
+  function buildLinkGroupKey(documentId: string, direction: LinkDirection) {
     return `${documentId}:${direction}`
   }
 
-  function toggleLinkGroup(documentId: string, direction: 'outbound' | 'inbound') {
+  function toggleLinkGroup(documentId: string, direction: LinkDirection) {
     const key = buildLinkGroupKey(documentId, direction)
     if (expandedLinkGroups.value.has(key)) {
       expandedLinkGroups.value.delete(key)
@@ -548,19 +562,19 @@ export function useAnalyticsState(params: UseAnalyticsParams) {
     expandedLinkGroups.value.add(key)
   }
 
-  function isLinkGroupExpanded(documentId: string, direction: 'outbound' | 'inbound') {
+  function isLinkGroupExpanded(documentId: string, direction: LinkDirection) {
     return expandedLinkGroups.value.has(buildLinkGroupKey(documentId, direction))
   }
 
-  function buildSyncKey(coreDocumentId: string, targetDocumentId: string, direction: 'outbound' | 'inbound') {
+  function buildSyncKey(coreDocumentId: string, targetDocumentId: string, direction: LinkDirection) {
     return `${coreDocumentId}:${targetDocumentId}:${direction}`
   }
 
-  function isSyncing(coreDocumentId: string, targetDocumentId: string, direction: 'outbound' | 'inbound') {
+  function isSyncing(coreDocumentId: string, targetDocumentId: string, direction: LinkDirection) {
     return syncInProgress.value.has(buildSyncKey(coreDocumentId, targetDocumentId, direction))
   }
 
-  async function syncAssociation(coreDocumentId: string, targetDocumentId: string, direction: 'outbound' | 'inbound') {
+  async function syncAssociation(coreDocumentId: string, targetDocumentId: string, direction: LinkDirection) {
     const key = buildSyncKey(coreDocumentId, targetDocumentId, direction)
     if (syncInProgress.value.has(key)) {
       return

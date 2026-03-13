@@ -4,19 +4,21 @@ import { filterReferencesByTimeRange } from './analysis'
 export interface LinkAssociationItem {
   documentId: string
   title: string
-  direction: 'outbound' | 'inbound'
+  direction: 'outbound' | 'inbound' | 'child'
   isOverlap: boolean
 }
 
 export interface LinkAssociations {
   outbound: LinkAssociationItem[]
   inbound: LinkAssociationItem[]
+  childDocuments: LinkAssociationItem[]
 }
 
 export function buildLinkAssociations(params: {
   documentId: string
   references: ReferenceRecord[]
   documentMap: Map<string, DocumentRecord>
+  childDocumentMap?: Map<string, DocumentRecord>
   now: Date
   timeRange: TimeRange
 }): LinkAssociations {
@@ -57,8 +59,13 @@ export function buildLinkAssociations(params: {
     overlap,
     direction: 'inbound',
   })
+  const childDocuments = buildChildAssociationList({
+    coreDocumentId: params.documentId,
+    documentMap: params.childDocumentMap ?? params.documentMap,
+    excluded: new Set([...outboundTargets, ...inboundSources]),
+  })
 
-  return { outbound, inbound }
+  return { outbound, inbound, childDocuments }
 }
 
 function buildAssociationList(params: {
@@ -86,4 +93,74 @@ function buildAssociationList(params: {
 
 function resolveTitle(document: DocumentRecord): string {
   return document.title || document.name || document.content || document.hpath || document.id
+}
+
+function buildChildAssociationList(params: {
+  coreDocumentId: string
+  documentMap: Map<string, DocumentRecord>
+  excluded: Set<string>
+}): LinkAssociationItem[] {
+  const coreDocument = params.documentMap.get(params.coreDocumentId)
+  if (!coreDocument) {
+    return []
+  }
+
+  return [...params.documentMap.values()]
+    .filter((candidate) => {
+      if (candidate.id === params.coreDocumentId) {
+        return false
+      }
+      if (params.excluded.has(candidate.id)) {
+        return false
+      }
+      return isChildDocument(coreDocument, candidate)
+    })
+    .map(candidate => ({
+      documentId: candidate.id,
+      title: resolveTitle(candidate),
+      direction: 'child' as const,
+      isOverlap: false,
+    }))
+    .sort((left, right) => left.title.localeCompare(right.title, 'zh-CN'))
+}
+
+function isChildDocument(parent: Partial<DocumentRecord>, candidate: Partial<DocumentRecord>): boolean {
+  if (parent.box && candidate.box && parent.box !== candidate.box) {
+    return false
+  }
+
+  const pathPrefix = toChildPathPrefix(parent.path)
+  if (pathPrefix && normalizePath(candidate.path).startsWith(pathPrefix)) {
+    return true
+  }
+
+  const hierarchyPrefix = toHierarchyPrefix(parent.hpath)
+  if (hierarchyPrefix && normalizePath(candidate.hpath).startsWith(hierarchyPrefix)) {
+    return true
+  }
+
+  return false
+}
+
+function toChildPathPrefix(path?: string): string {
+  const normalized = normalizePath(path)
+  if (!normalized) {
+    return ''
+  }
+  if (normalized.endsWith('.sy')) {
+    return `${normalized.slice(0, -3)}/`
+  }
+  return normalized.endsWith('/') ? normalized : `${normalized}/`
+}
+
+function toHierarchyPrefix(hpath?: string): string {
+  const normalized = normalizePath(hpath)
+  if (!normalized) {
+    return ''
+  }
+  return normalized.endsWith('/') ? normalized : `${normalized}/`
+}
+
+function normalizePath(value?: string): string {
+  return (value ?? '').replace(/\\/g, '/').trim()
 }

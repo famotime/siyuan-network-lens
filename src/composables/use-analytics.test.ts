@@ -224,4 +224,51 @@ describe('useAnalyticsState', () => {
       'doc-orphan-zeta',
     ])
   })
+
+  it('keeps child documents visible in link associations even when child docs are outside the active time window', async () => {
+    const childSnapshot = {
+      documents: [
+        { id: 'doc-parent', box: 'box-1', path: '/topics/skills.sy', hpath: '/主题笔记/~Skills', title: '~Skills', tags: [], created: '20260215063907', updated: '20260313195129' },
+        { id: 'doc-child-old', box: 'box-1', path: '/topics/skills/doc-child-old.sy', hpath: '/主题笔记/~Skills/Claude Skills 编写指南', title: 'Claude Skills 编写指南', tags: [], created: '20260102102024', updated: '20260217120636' },
+        { id: 'doc-side', box: 'box-1', path: '/topics/side.sy', hpath: '/主题笔记/Side', title: 'Side', tags: [], created: '20260310120000', updated: '20260311120000' },
+      ],
+      references: [
+        { id: 'ref-1', sourceDocumentId: 'doc-side', sourceBlockId: 'blk-1', targetDocumentId: 'doc-parent', targetBlockId: 'blk-2', content: '[[~Skills]]', sourceUpdated: '20260311120000' },
+      ],
+      notebooks: [],
+      fetchedAt: '20260312000000',
+    }
+
+    const state = useAnalyticsState({
+      plugin: { eventBus: { on: () => {}, off: () => {} }, app: {} } as any,
+      config: {
+        showSummaryCards: true,
+        showRanking: true,
+        showCommunities: true,
+        showOrphanBridge: true,
+        showTrends: true,
+        showPropagation: true,
+        themeNotebookId: 'box-1',
+        themeDocumentPath: '/专题',
+        themeNamePrefix: '主题-',
+        themeNameSuffix: '-索引',
+      },
+      loadSnapshot: async () => childSnapshot as any,
+      nowProvider: () => now,
+      createActiveDocumentSync: () => () => {},
+      showMessage: () => {},
+      openTab: () => {},
+      appendBlock: async () => [],
+      prependBlock: async () => [],
+      deleteBlock: async () => [],
+      updateBlock: async () => [],
+      getChildBlocks: async () => [],
+      getBlockKramdown: async () => ({ id: '', kramdown: '' }),
+    })
+
+    await state.refresh()
+    await nextTick()
+
+    expect(state.resolveLinkAssociations('doc-parent').childDocuments.map(item => item.documentId)).toEqual(['doc-child-old'])
+  })
 })

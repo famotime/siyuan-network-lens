@@ -107,6 +107,38 @@ describe('RankingPanel', () => {
     expect(html).toContain('同步')
   })
 
+  it('renders child document group with positive-link action', async () => {
+    const app = createSSRApp({
+      render: () => h(RankingPanel, {
+        ranking: baseRanking,
+        panelCount: 1,
+        snapshotLabel: '03-12 00:00',
+        isExpanded: true,
+        onTogglePanel: vi.fn(),
+        resolveTitle: (id: string) => id,
+        formatTimestamp: () => '2026-03-10',
+        openDocument: vi.fn(),
+        toggleLinkPanel: vi.fn(),
+        isLinkPanelExpanded: () => true,
+        resolveLinkAssociations: () => ({
+          outbound: [],
+          inbound: [],
+          childDocuments: [{ documentId: 'doc-child', title: 'Child Doc', direction: 'child', isOverlap: false }],
+        }),
+        toggleLinkGroup: vi.fn(),
+        isLinkGroupExpanded: (_documentId: string, direction: 'outbound' | 'inbound' | 'child') => direction === 'child',
+        isSyncing: () => false,
+        syncAssociation: vi.fn(),
+      }),
+    })
+
+    const html = await renderToString(app)
+
+    expect(html).toContain('子文档 1')
+    expect(html).toContain('Child Doc')
+    expect(html).toContain('正链')
+  })
+
   it('renders integrated suggestion callout in detail mode', async () => {
     const app = createSSRApp({
       render: () => h(RankingPanel, {

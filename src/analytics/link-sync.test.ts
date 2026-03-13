@@ -35,4 +35,21 @@ describe('link sync', () => {
 
     expect(appendBlock).toHaveBeenCalledWith('markdown', '((target "Target"))', 'core')
   })
+
+  it('appends child document links to the core document tail', async () => {
+    const appendBlock = vi.fn().mockResolvedValue([])
+    const prependBlock = vi.fn().mockResolvedValue([])
+
+    await syncAssociation({
+      coreDocumentId: 'core',
+      targetDocumentId: 'child',
+      direction: 'child',
+      resolveTitle: id => (id === 'core' ? 'Core' : 'Child'),
+      appendBlock,
+      prependBlock,
+    })
+
+    expect(appendBlock).toHaveBeenCalledWith('markdown', '((child "Child"))', 'core')
+    expect(prependBlock).not.toHaveBeenCalled()
+  })
 })
