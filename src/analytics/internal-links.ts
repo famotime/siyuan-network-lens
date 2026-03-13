@@ -4,6 +4,7 @@ interface InternalLinkSourceRow {
   id: string
   rootId: string
   markdown: string | null
+  content?: string | null
   updated: string | null
 }
 
@@ -24,7 +25,7 @@ export function collectInternalLinkTargetIds(sourceRows: InternalLinkSourceRow[]
   const targetIds = new Set<string>()
 
   for (const row of sourceRows) {
-    for (const target of extractMarkdownReferenceTargets(row.markdown ?? '')) {
+    for (const target of extractMarkdownReferenceTargets(resolveSourceText(row))) {
       targetIds.add(target.targetBlockId)
     }
   }
@@ -41,7 +42,7 @@ export function buildInternalLinkReferences(params: {
 
   for (const row of params.sourceRows) {
     const sourceDocumentId = row.rootId || row.id
-    const targets = extractMarkdownReferenceTargets(row.markdown ?? '')
+    const targets = extractMarkdownReferenceTargets(resolveSourceText(row))
 
     targets.forEach((target, targetIndex) => {
       const targetDocumentId = targetRootMap.get(target.targetBlockId)
@@ -62,6 +63,10 @@ export function buildInternalLinkReferences(params: {
   }
 
   return references
+}
+
+function resolveSourceText(row: InternalLinkSourceRow): string {
+  return row.markdown ?? row.content ?? ''
 }
 
 function extractMarkdownReferenceTargets(markdown: string): MarkdownReferenceTarget[] {

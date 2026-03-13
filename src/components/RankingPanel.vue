@@ -64,10 +64,12 @@
           >
             <div class="link-association__group">
               <button
-                class="link-association__toggle"
+                :class="['link-association__toggle', { 'link-association__toggle--expanded': isLinkGroupExpanded(item.documentId, 'outbound') }]"
                 type="button"
+                :aria-expanded="isLinkGroupExpanded(item.documentId, 'outbound')"
                 @click="toggleLinkGroup(item.documentId, 'outbound')"
               >
+                <span class="link-association__caret" aria-hidden="true" />
                 出链（正链） {{ resolveLinkAssociations(item.documentId).outbound.length }}
               </button>
               <div
@@ -107,10 +109,12 @@
             </div>
             <div class="link-association__group">
               <button
-                class="link-association__toggle"
+                :class="['link-association__toggle', { 'link-association__toggle--expanded': isLinkGroupExpanded(item.documentId, 'inbound') }]"
                 type="button"
+                :aria-expanded="isLinkGroupExpanded(item.documentId, 'inbound')"
                 @click="toggleLinkGroup(item.documentId, 'inbound')"
               >
+                <span class="link-association__caret" aria-hidden="true" />
                 入链（反链） {{ resolveLinkAssociations(item.documentId).inbound.length }}
               </button>
               <div
@@ -355,6 +359,27 @@ const props = defineProps<{
   color: var(--b3-theme-on-background);
   cursor: pointer;
   padding: 0;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.link-association__toggle--expanded {
+  color: color-mix(in srgb, var(--accent-cool) 75%, var(--b3-theme-on-background));
+}
+
+.link-association__caret {
+  display: inline-block;
+  width: 6px;
+  height: 6px;
+  border-right: 2px solid currentColor;
+  border-bottom: 2px solid currentColor;
+  transform: rotate(-45deg);
+  transition: transform 0.2s ease;
+}
+
+.link-association__toggle--expanded .link-association__caret {
+  transform: rotate(45deg);
 }
 
 .link-association__list {

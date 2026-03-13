@@ -379,6 +379,7 @@ describe('loadAnalyticsSnapshot', () => {
     expect(documentQuery).toContain('LIMIT')
     expect(referenceQuery).toContain('LIMIT')
     expect(internalSourceQuery).toContain('LIMIT')
+    expect(internalSourceQuery).toContain('COALESCE(content')
     expect(internalTargetQuery).toContain('LIMIT')
   })
 })

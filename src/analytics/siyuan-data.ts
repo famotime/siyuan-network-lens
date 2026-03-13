@@ -43,6 +43,7 @@ interface InternalLinkSourceRow {
   id: string
   rootId: string
   markdown: string | null
+  content: string | null
   updated: string | null
 }
 
@@ -96,11 +97,14 @@ const INTERNAL_LINK_SOURCE_SQL = `
     id,
     COALESCE(NULLIF(root_id, ''), id) AS rootId,
     markdown,
+    content,
     updated
   FROM blocks
   WHERE (
       COALESCE(markdown, '') LIKE '%siyuan://blocks/%'
       OR COALESCE(markdown, '') LIKE '%((%'
+      OR COALESCE(content, '') LIKE '%siyuan://blocks/%'
+      OR COALESCE(content, '') LIKE '%((%'
     )
   LIMIT ${QUERY_LIMIT}
 `
