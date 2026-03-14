@@ -104,7 +104,7 @@ function buildSuggestionCalloutItems(item: SummaryDetailItem & { themeSuggestion
     const text = suggestion.text.replace(/[。；，,\s]*$/, '')
     return {
       ...suggestion,
-      text: `${text}，建议优先连接以下主题文档：`,
+      text: `${text}，建议链接以下主题文档（点击添加）：`,
     }
   })
 }

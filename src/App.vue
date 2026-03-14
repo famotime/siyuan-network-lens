@@ -372,22 +372,22 @@
           </template>
           <template v-else-if="selectedSummaryDetail.kind === 'trends'">
             <div class="trend-stats">
-              <div>
-                <span>当前窗口</span>
-                <strong>{{ selectedSummaryDetail.trends.current.referenceCount }}</strong>
-              </div>
-              <div>
-                <span>前一窗口</span>
-                <strong>{{ selectedSummaryDetail.trends.previous.referenceCount }}</strong>
-              </div>
-              <div>
-                <span>新增连接</span>
-                <strong>{{ selectedSummaryDetail.trends.connectionChanges.newCount }}</strong>
-              </div>
-              <div>
-                <span>断裂连接</span>
-                <strong>{{ selectedSummaryDetail.trends.connectionChanges.brokenCount }}</strong>
-              </div>
+              <article class="trend-stats__card summary-card">
+                <span class="trend-stats__label summary-card__label">当前窗口</span>
+                <strong class="trend-stats__value summary-card__value">{{ selectedSummaryDetail.trends.current.referenceCount }}</strong>
+              </article>
+              <article class="trend-stats__card summary-card">
+                <span class="trend-stats__label summary-card__label">前一窗口</span>
+                <strong class="trend-stats__value summary-card__value">{{ selectedSummaryDetail.trends.previous.referenceCount }}</strong>
+              </article>
+              <article class="trend-stats__card summary-card">
+                <span class="trend-stats__label summary-card__label">新增连接</span>
+                <strong class="trend-stats__value summary-card__value">{{ selectedSummaryDetail.trends.connectionChanges.newCount }}</strong>
+              </article>
+              <article class="trend-stats__card summary-card">
+                <span class="trend-stats__label summary-card__label">断裂连接</span>
+                <strong class="trend-stats__value summary-card__value">{{ selectedSummaryDetail.trends.connectionChanges.brokenCount }}</strong>
+              </article>
             </div>
 
             <div class="trend-grid">
@@ -1281,33 +1281,27 @@ input {
 
 .trend-stats {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
-  gap: 12px;
+  grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
+  gap: 10px;
   margin-bottom: 18px;
 }
 
-.trend-stats div {
-  padding: 16px;
-  border-radius: 14px;
+.trend-stats__card {
+  display: grid;
+  gap: 6px;
+  align-content: start;
+  padding: 10px 12px;
   background:
-    linear-gradient(180deg, color-mix(in srgb, var(--b3-theme-primary) 4%, transparent), transparent 45%),
-    var(--surface-card);
-  border: 1px solid color-mix(in srgb, var(--b3-theme-primary) 12%, var(--panel-border));
-  box-shadow: inset 0 1px 0 color-mix(in srgb, var(--b3-theme-background) 55%, transparent);
+    linear-gradient(180deg, color-mix(in srgb, var(--b3-theme-primary) 4%, transparent), transparent 55%),
+    var(--surface-card-strong);
 }
 
-.trend-stats span {
-  display: block;
-  font-size: 13px;
-  color: var(--panel-muted);
-  font-weight: 500;
-  margin-bottom: 4px;
+.trend-stats__label {
+  margin: 0;
 }
 
-.trend-stats strong {
-  font-size: 22px;
-  font-weight: 600;
-  color: var(--b3-theme-primary);
+.trend-stats__value {
+  font-size: 26px;
 }
 
 .trend-section-card {

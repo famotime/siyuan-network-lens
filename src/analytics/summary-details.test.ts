@@ -46,7 +46,7 @@ const report = {
   ],
   suggestions: [
     { type: 'promote-hub', documentId: 'doc-b', title: 'Beta', reason: '被 2 个文档引用，共 2 次' },
-    { type: 'repair-orphan', documentId: 'doc-c', title: 'Gamma', reason: '当前分析窗口内没有文档级连接' },
+    { type: 'repair-orphan', documentId: 'doc-c', title: 'Gamma', reason: '当前没有文档级连接' },
     { type: 'archive-dormant', documentId: 'doc-c', title: 'Gamma', reason: '11 天未产生有效连接，适合归档或补齐索引' },
     { type: 'maintain-bridge', documentId: 'doc-a', title: 'Alpha', reason: '连接 1 条关系，移除后会打断社区连通性' },
   ],
@@ -115,7 +115,7 @@ describe('buildSummaryDetailSections', () => {
         documentId: 'doc-c',
         title: 'Gamma',
         suggestions: [
-          expect.objectContaining({ label: '补齐链接', text: '当前分析窗口内没有文档级连接' }),
+          expect.objectContaining({ label: '补齐链接', text: '当前没有文档级连接' }),
         ],
       }),
     ])

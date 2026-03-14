@@ -38,6 +38,16 @@ describe('App trend detail layout', () => {
     expect(source).toContain('height: 10px;')
   })
 
+  it('renders trend stat cards in a compact summary-like layout', async () => {
+    const source = await readFile(new URL('./App.vue', import.meta.url), 'utf8')
+
+    expect(source).toContain('trend-stats__card')
+    expect(source).toContain('trend-stats__label')
+    expect(source).toContain('trend-stats__value')
+    expect(source).toContain('grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));')
+    expect(source).toContain('padding: 10px 12px;')
+  })
+
   it('renders the plugin icon in the hero area and keeps top action labels on one line', async () => {
     const source = await readFile(new URL('./App.vue', import.meta.url), 'utf8')
 

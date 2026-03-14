@@ -37,7 +37,7 @@ describe('OrphanDetailPanel', () => {
     expect(html).toContain('Alpha')
     expect(html).toContain('主题文档')
     expect(html).toContain('补齐链接')
-    expect(html).toContain('建议补充至少一条出链或入链，建议优先连接以下主题文档：')
+    expect(html).toContain('建议补充至少一条出链或入链，建议链接以下主题文档（点击添加）：')
     expect(html).toContain('AI')
     expect(html).not.toContain('主题-AI-索引</span>')
     expect(html).not.toContain('建议与主题文档建立链接：')

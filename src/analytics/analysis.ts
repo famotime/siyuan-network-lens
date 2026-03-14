@@ -1188,7 +1188,7 @@ function buildSuggestions(
       title: item.title,
       reason: item.hasSparseEvidence
         ? `当前窗口内没有文档级连接，但历史上还有 ${item.historicalReferenceCount} 条零散引用证据`
-        : '当前分析窗口内没有文档级连接',
+        : '当前没有文档级连接',
     })
   }
 
