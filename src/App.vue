@@ -162,13 +162,15 @@ import SummaryDetailSection from '@/components/SummaryDetailSection.vue'
 import ThemeMultiSelect from '@/components/ThemeMultiSelect.vue'
 import { useAnalyticsState } from '@/composables/use-analytics'
 import { appendBlock, deleteBlock, getBlockKramdown, getChildBlocks, prependBlock, updateBlock } from '@/api'
-import type { PluginConfig } from '@/types/config'
+import { ensureConfigDefaults, type PluginConfig } from '@/types/config'
 import pluginIconUrl from '../icon.png'
 
 const props = defineProps<{
   plugin: Plugin
   config: PluginConfig
 }>()
+
+ensureConfigDefaults(props.config)
 
 const analytics = useAnalyticsState({
   plugin: props.plugin,
@@ -246,6 +248,15 @@ const visibleSummaryCards = computed(() => {
     return []
   }
   return summaryCards.value.filter((card) => {
+    if (card.key === 'documents') {
+      return props.config.showDocuments
+    }
+    if (card.key === 'read') {
+      return props.config.showRead
+    }
+    if (card.key === 'references') {
+      return props.config.showReferences
+    }
     if (card.key === 'ranking') {
       return props.config.showRanking
     }
@@ -258,8 +269,14 @@ const visibleSummaryCards = computed(() => {
     if (card.key === 'propagation') {
       return props.config.showPropagation
     }
-    if (card.key === 'orphans' || card.key === 'dormant' || card.key === 'bridges') {
-      return props.config.showOrphanBridge
+    if (card.key === 'orphans') {
+      return props.config.showOrphans
+    }
+    if (card.key === 'dormant') {
+      return props.config.showDormant
+    }
+    if (card.key === 'bridges') {
+      return props.config.showBridges
     }
     return true
   })

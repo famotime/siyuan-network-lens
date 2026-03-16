@@ -3,7 +3,7 @@ import { reactive, watch } from 'vue'
 
 import pluginInfo from '@/../plugin.json'
 import { destroyApp, mountApp, mountSetting, destroySetting } from '@/main'
-import { DEFAULT_CONFIG, type PluginConfig } from './types/config'
+import { DEFAULT_CONFIG, ensureConfigDefaults, type PluginConfig } from './types/config'
 
 const DOCK_TYPE = 'reference-analytics-dock'
 const PLUGIN_TITLE = '脉络镜'
@@ -20,8 +20,10 @@ export default class ReferenceAnalyticsPlugin extends Plugin {
   async onload() {
     const loadedConfig = await this.loadData('settings.json')
     if (loadedConfig) {
+      ensureConfigDefaults(loadedConfig as PluginConfig)
       Object.assign(this.config, loadedConfig)
     }
+    ensureConfigDefaults(this.config)
 
     watch(() => { return { ...this.config } }, (newConfig) => {
       this.saveData('settings.json', newConfig)
