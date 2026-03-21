@@ -29,5 +29,6 @@ describe('config defaults', () => {
     expect(config.showDormant).toBe(false)
     expect(config.showBridges).toBe(false)
     expect(config.showPropagation).toBe(true)
+    expect(config.readPaths).toBe('')
   })
 })

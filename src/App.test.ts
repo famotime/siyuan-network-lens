@@ -14,11 +14,12 @@ describe('App trend detail layout', () => {
 
   it('renders the plugin icon in the hero area and keeps top action labels on one line', async () => {
     const source = await readFile(new URL('./App.vue', import.meta.url), 'utf8')
+    const normalizedSource = source.replace(/\r\n/g, '\n')
 
     expect(source).toContain('class="hero__icon"')
     expect(source).toContain('alt="脉络镜插件图标"')
     expect(source).toContain('white-space: nowrap;')
-    expect(source).toContain(`.hero__intro {
+    expect(normalizedSource).toContain(`.hero__intro {
   flex: 1;
   min-width: 0;
   display: flex;

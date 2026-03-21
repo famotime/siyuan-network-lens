@@ -201,6 +201,65 @@ describe('buildSummaryDetailSections', () => {
     }))
   })
 
+  it('supports notebook-scoped read directories in read detail sections', () => {
+    const sections = buildSummaryDetailSections({
+      documents: [
+        { id: 'doc-notebook-read', box: 'box-1', path: '/read/archive/note.sy', hpath: '/已读/归档/Notebook Read', title: 'Notebook Read', tags: [], created: '20260302090000', updated: '20260310120000' },
+        { id: 'doc-other-box', box: 'box-2', path: '/read/archive/note.sy', hpath: '/已读/归档/Other Box', title: 'Other Box', tags: [], created: '20260302090000', updated: '20260310120000' },
+      ],
+      references: [],
+      report: {
+        ...report,
+        summary: {
+          ...report.summary,
+          totalDocuments: 2,
+          analyzedDocuments: 2,
+          totalReferences: 0,
+          orphanCount: 2,
+          communityCount: 0,
+          dormantCount: 0,
+          propagationCount: 0,
+        },
+        ranking: [],
+        communities: [],
+        bridgeDocuments: [],
+        orphans: [
+          { documentId: 'doc-notebook-read', title: 'Notebook Read', degree: 0, createdAt: '20260302090000', updatedAt: '20260310120000', historicalReferenceCount: 0, lastHistoricalAt: '', hasSparseEvidence: false },
+          { documentId: 'doc-other-box', title: 'Other Box', degree: 0, createdAt: '20260302090000', updatedAt: '20260310120000', historicalReferenceCount: 0, lastHistoricalAt: '', hasSparseEvidence: false },
+        ],
+        dormantDocuments: [],
+        propagationNodes: [],
+        suggestions: [],
+      } as any,
+      now,
+      timeRange: 'all',
+      notebooks: [
+        { id: 'box-1', name: '知识库' },
+        { id: 'box-2', name: '工作台' },
+      ],
+      dormantDays: 30,
+      config: {
+        readTagNames: [],
+        readTitlePrefixes: '',
+        readTitleSuffixes: '',
+        readPaths: '/知识库/已读',
+      } as any,
+      readCardMode: 'read',
+    })
+
+    expect((sections as Record<string, any>).read).toEqual(expect.objectContaining({
+      key: 'read',
+      kind: 'list',
+      items: [
+        expect.objectContaining({
+          documentId: 'doc-notebook-read',
+          badge: '目录命中',
+          meta: '命中目录：/知识库/已读',
+        }),
+      ],
+    }))
+  })
+
   it('deduplicates inbound and outbound counts by document pairs', () => {
     const duplicateReferences = [
       { id: 'ref-1', sourceDocumentId: 'doc-a', sourceBlockId: 'blk-a1', targetDocumentId: 'doc-b', targetBlockId: 'blk-b1', content: '[[Beta]]', sourceUpdated: '20260311120000' },

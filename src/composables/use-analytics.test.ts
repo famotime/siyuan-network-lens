@@ -239,6 +239,67 @@ describe('useAnalyticsState', () => {
     }))
   })
 
+  it('counts notebook-scoped read paths in the summary card totals', async () => {
+    const notebookSnapshot = {
+      documents: [
+        { id: 'doc-read', box: 'box-clips', path: '/web/inbox/read/article.sy', hpath: '/Web收集箱/已读/文章', title: '文章', tags: [], created: '20260310120000', updated: '20260311120000' },
+        { id: 'doc-unread', box: 'box-clips', path: '/web/inbox/todo/article.sy', hpath: '/Web收集箱/待读/文章', title: '待读文章', tags: [], created: '20260310120000', updated: '20260311120000' },
+      ],
+      references: [],
+      notebooks: [
+        { id: 'box-clips', name: '剪藏笔记本' },
+      ],
+      fetchedAt: '20260312000000',
+    }
+
+    const state = useAnalyticsState({
+      plugin: { eventBus: { on: () => {}, off: () => {} }, app: {} } as any,
+      config: {
+        showSummaryCards: true,
+        showRanking: true,
+        showCommunities: true,
+        showOrphanBridge: true,
+        showTrends: true,
+        showPropagation: true,
+        themeNotebookId: '',
+        themeDocumentPath: '',
+        themeNamePrefix: '',
+        themeNameSuffix: '',
+        readTagNames: [],
+        readTitlePrefixes: '',
+        readTitleSuffixes: '',
+        readPaths: '/剪藏笔记本/Web收集箱/已读',
+      },
+      loadSnapshot: async () => notebookSnapshot as any,
+      nowProvider: () => now,
+      createActiveDocumentSync: () => () => {},
+      showMessage: () => {},
+      openTab: () => {},
+      appendBlock: async () => [],
+      prependBlock: async () => [],
+      deleteBlock: async () => [],
+      updateBlock: async () => [],
+      getChildBlocks: async () => [],
+      getBlockKramdown: async () => ({ id: '', kramdown: '' }),
+    })
+
+    await state.refresh()
+    await nextTick()
+
+    expect(state.summaryCards.value.find(card => card.key === 'read')).toEqual(expect.objectContaining({
+      label: '未读文档',
+      value: '1',
+    }))
+
+    state.toggleReadCardMode()
+    await nextTick()
+
+    expect(state.summaryCards.value.find(card => card.key === 'read')).toEqual(expect.objectContaining({
+      label: '已读文档',
+      value: '1',
+    }))
+  })
+
   it('uses default snapshot loader when not provided', async () => {
     const state = useAnalyticsState({
       plugin: { eventBus: { on: () => {}, off: () => {} }, app: {} } as any,

@@ -49,6 +49,9 @@ export function ensureReadMarkerDefaults(config: PluginConfig) {
   if (typeof config.readTitleSuffixes !== 'string') {
     config.readTitleSuffixes = ''
   }
+  if (typeof config.readPaths !== 'string') {
+    config.readPaths = ''
+  }
 }
 
 export function collectTagOptions(rows: Array<{ tag: string | null }>): Array<{ value: string, label: string, key: string }> {

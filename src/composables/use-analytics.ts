@@ -243,6 +243,7 @@ export function useAnalyticsState(params: UseAnalyticsParams) {
     }
     const readMatches = collectReadMatches({
       documents: filteredDocuments.value,
+      notebooks: snapshot.value?.notebooks,
       config: params.config,
     })
     return buildSummaryCards({
@@ -264,6 +265,7 @@ export function useAnalyticsState(params: UseAnalyticsParams) {
     return buildSummaryDetailSections({
       documents: snapshot.value.documents,
       references: snapshot.value.references,
+      notebooks: snapshot.value.notebooks,
       report: report.value,
       now: analysisNow.value,
       timeRange: timeRange.value,

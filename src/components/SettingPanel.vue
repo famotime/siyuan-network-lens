@@ -49,9 +49,17 @@
     <div class="setting-group">
       <div class="setting-header">
         <h3>已读标记</h3>
-        <p>定义已读文档判定规则，命中任一标签、标题前缀或标题后缀即计为已读。</p>
+        <p>定义已读文档判定规则，命中任一目录、标签、标题前缀或标题后缀即计为已读。</p>
       </div>
       <div class="setting-form">
+        <label class="setting-field setting-field--full">
+          <span>已读目录</span>
+          <input
+            v-model.trim="config.readPaths"
+            placeholder="多个目录用 | 分隔，支持包含笔记本的全路径，例如 /知识库/已读|/归档/专题"
+            type="text"
+          >
+        </label>
         <label class="setting-field setting-field--full">
           <span>已读标签</span>
           <div class="setting-select-shell">

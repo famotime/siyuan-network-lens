@@ -18,6 +18,7 @@ export interface PluginConfig {
   readTagNames?: string[]
   readTitlePrefixes?: string
   readTitleSuffixes?: string
+  readPaths?: string
   summaryCardOrder?: string[]
 }
 
@@ -40,6 +41,7 @@ export const DEFAULT_CONFIG: PluginConfig = {
   readTagNames: [],
   readTitlePrefixes: '',
   readTitleSuffixes: '',
+  readPaths: '',
   summaryCardOrder: undefined,
 }
 
@@ -86,5 +88,8 @@ export function ensureConfigDefaults(config: PluginConfig) {
   }
   if (typeof config.readTitleSuffixes !== 'string') {
     config.readTitleSuffixes = ''
+  }
+  if (typeof config.readPaths !== 'string') {
+    config.readPaths = ''
   }
 }

@@ -34,6 +34,7 @@ describe('SettingPanel', () => {
           readTagNames: ['已读'],
           readTitlePrefixes: '已读-|三星-',
           readTitleSuffixes: '-五星',
+          readPaths: '/已读|/归档',
         },
       }),
     })
@@ -42,8 +43,9 @@ describe('SettingPanel', () => {
 
     expect(html.indexOf('主题文档')).toBeLessThan(html.indexOf('已读标记'))
     expect(html.indexOf('已读标记')).toBeLessThan(html.indexOf('统计卡片'))
-    expect(html.indexOf('统计卡片')).toBeLessThan(html.indexOf('传播与链路'))
+    expect(html.indexOf('已读标记')).toBeLessThan(html.indexOf('传播与链路'))
     expect(html).toContain('主题文档路径')
+    expect(html).toContain('已读目录')
     expect(html).toContain('已读标签')
     expect(html).toContain('标题前缀')
     expect(html).toContain('标题后缀')

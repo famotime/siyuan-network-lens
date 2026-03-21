@@ -4,7 +4,9 @@
 
 这是一个思源笔记插件项目，名称是“脉络镜（Context lens）”。
 
-当前目标不是做图谱渲染，而是做“文档级引用网络”的结构分析与整理辅助。核心输出包括：
+它当前聚焦的是“文档级引用网络”的结构分析与整理辅助，不做大型图谱渲染。核心目标是把文档之间的引用关系转成可解释的分析结果、证据和整理动作，帮助用户更快发现结构问题与优化入口。
+
+当前主要输出包括：
 
 - 文档级引用热度排行
 - 主题社区发现
@@ -15,6 +17,7 @@
 - 原始引用证据查看
 - 可操作建议
 - 顶部统计卡片点击后的详情联动
+- 已读/未读文档识别与详情查看
 
 ## 技术栈
 
@@ -53,6 +56,7 @@ markdown fallback 当前支持：
 
 - `siyuan://blocks/<id>`
 - `((block-id "title"))`
+- `((block-id 'title'))`
 
 关键实现位于：
 
@@ -61,7 +65,7 @@ markdown fallback 当前支持：
 
 如果后续出现“文档里明明有链接/引用但没识别”的问题，优先检查这两层。
 
-### 3. 孤立文档定义
+### 3. 孤立文档与沉没文档定义
 
 当前“孤立文档”的定义是：
 
@@ -69,8 +73,7 @@ markdown fallback 当前支持：
 
 因此：
 
-- 只要当前窗口内存在文档级连接
-- 它就不应被视为孤立文档
+- 只要当前窗口内存在文档级连接，它就不应被视为孤立文档
 - 即使它历史上曾经有连接，只要当前窗口内没有有效连接，仍会回到孤立文档
 
 “沉没文档”才是：
@@ -109,8 +112,30 @@ markdown fallback 当前支持：
 - `src/analytics/theme-documents.ts`
 - `src/analytics/orphan-theme-links.ts`
 - `src/composables/use-analytics.ts`
+- `src/composables/use-analytics-interactions.ts`
 
-### 5. 传播节点定义
+### 5. 已读/未读文档规则
+
+当前支持在设置页配置“已读文档”规则，命中任一条件即视为已读：
+
+- 已读标签
+- 标题前缀
+- 标题后缀
+
+相关行为：
+
+- 顶部统计卡片包含“已读/未读文档”
+- 该卡片可在已读与未读视图间切换
+- 点击卡片后可联动查看命中详情
+
+关键实现位于：
+
+- `src/analytics/read-status.ts`
+- `src/analytics/summary-details.ts`
+- `src/components/SettingPanel.vue`
+- `src/components/SummaryCardsGrid.vue`
+
+### 6. 传播节点定义
 
 “高传播价值节点”当前采用可解释的启发式口径：
 
@@ -119,36 +144,66 @@ markdown fallback 当前支持：
 
 这不是严格的图论 betweenness centrality，而是面向产品交互的轻量替代实现。
 
-### 6. 顶部统计卡片
+### 7. 顶部统计卡片
 
-顶部统计卡片当前已支持点击，并在下方展示对应文档详情列表。详情中的文档标题可直接打开文档。
+顶部统计卡片当前支持：
+
+- 点击后在下方展示对应详情列表
+- 拖拽重排卡片顺序
+- 重置为默认顺序
+- 已读卡片在“已读/未读”之间切换
 
 相关代码：
 
 - `src/App.vue`
+- `src/analytics/summary-card-order.ts`
 - `src/analytics/summary-details.ts`
+- `src/components/SummaryCardsGrid.vue`
 
 ## 关键目录
 
 - `src/App.vue`
-  - 主界面，包含筛选器、统计卡片、各分析面板、详情联动
+  - 主界面，负责筛选器、顶部操作区和页面级布局组装
+- `src/composables/use-analytics.ts`
+  - 主状态容器，组合快照、筛选、分析结果与 UI 联动状态
+- `src/composables/use-analytics-derived.ts`
+  - 纯派生选择器，负责标签选项、路径候选、孤立主题建议映射、详情计数与关联映射构建
+- `src/composables/use-analytics-interactions.ts`
+  - 交互副作用控制器，负责关联同步和孤立主题建议写入/撤销
 - `src/analytics/analysis.ts`
   - 核心分析逻辑
+- `src/analytics/document-utils.ts`
+  - 共享 helper，统一标题回退、标签拆分、时间戳解析与时间窗口判断
 - `src/analytics/siyuan-data.ts`
   - 从思源数据库读取文档与引用快照
 - `src/analytics/internal-links.ts`
-  - markdown 中 `siyuan://blocks/...` 和 `((...))` fallback 解析
+  - markdown fallback 内部链接解析
+- `src/analytics/theme-documents.ts`
+  - 主题文档识别与主题筛选项构建
+- `src/analytics/orphan-theme-links.ts`
+  - 孤立文档主题修复建议的插入与撤销
+- `src/analytics/read-status.ts`
+  - 已读规则匹配逻辑
 - `src/analytics/summary-details.ts`
-  - 顶部统计卡片对应的详情列表生成逻辑
-- `src/analytics/*.test.ts`
-  - 当前主要测试覆盖点
-- `docs/思源笔记插件_PRD_脉络镜_Reference_Analytics.md`
+  - 顶部统计卡片与详情生成逻辑
+- `src/analytics/summary-card-order.ts`
+  - 顶部统计卡片排序、归一化与重排
+- `src/components/SettingPanel.vue`
+  - 设置页，包含主题文档、统计卡片、已读规则等配置
+- `src/components/setting-panel-data.ts`
+  - 设置页数据 helper，负责默认值修正以及笔记本/标签选项初始化
+- `src/components/SummaryCardsGrid.vue`
+  - 顶部统计卡片区，负责拖拽排序和已读卡片切换按钮
+- `src/components/SummaryDetailSection.vue`
+  - 详情区，负责列表、排行、趋势和传播路径视图
+- `docs/思源笔记插件_PRD_引用网络分析器_Reference_Analytics.md`
   - 原始 PRD
-- `docs/思源笔记插件_脉络镜_PRD差距清单.md`
-  - 当前差距收敛记录，按最新实现已完成本轮清单
-- /reference_docs
-  - 思源笔记插件开发者文档，包括相关API接口说明和示例
-
+- `docs/统计卡片规则与定义说明.md`
+  - 当前顶部统计卡片的口径与边界说明
+- `docs/project-structure.md`
+  - 当前结构文档
+- `reference_docs/`
+  - 思源笔记插件开发者文档，包括相关 API 接口说明和示例
 
 ## 开发约定
 
@@ -159,13 +214,21 @@ markdown fallback 当前支持：
 - 图分析结果
 - 趋势分析
 - markdown fallback 引用采集
-- 顶部统计卡片详情生成
+- 顶部统计卡片与详情生成
+- 主题文档识别与孤立修复建议
+- 已读规则匹配
+- 卡片排序与面板折叠
+- 主 composable 的派生选择器与交互动作
+- 关键 UI 组件渲染
 
 新增或修复行为时，优先补测试：
 
 - `src/analytics/analysis.test.ts`
 - `src/analytics/siyuan-data.test.ts`
 - `src/analytics/summary-details.test.ts`
+- `src/analytics/read-status.test.ts`
+- `src/composables/use-analytics.test.ts`
+- `src/components/*.test.ts`
 
 ### 2. 不要轻易改动的语义
 
@@ -174,9 +237,11 @@ markdown fallback 当前支持：
 - 孤立文档 = 当前窗口内没有有效文档级连接
 - 沉没文档 = 当前窗口不活跃，但历史可能有连接
 - 文档链接/引用应包含 `refs` 与 markdown fallback 两条采集路径
+- 同文档自引用不算文档级连接
 - 主题文档名称取配置目录下文档标题去除前后缀后的结果
 - 孤立修复建议支持追加到首段或复用同一个建议段落
 - 顶部统计卡片点击后必须能联动下方详情列表
+- “已读文档”按标签/标题前缀/标题后缀命中任一条件判定
 
 ### 3. 非任务范围文件
 
@@ -216,26 +281,41 @@ npm run build
 3. 是否是同文档内自引用，这种不会算文档级连接
 4. 如果刚刚撤销主题建议链接，刷新前后是否仍残留其他文档级链接
 
+### 已读/未读统计不符合预期
+
+优先检查：
+
+1. `src/analytics/read-status.ts` 的命中规则
+2. 设置页中的标签、标题前缀、标题后缀配置是否正确
+3. `src/analytics/summary-details.ts` 中 read card 详情构造是否与卡片模式一致
+
 ### UI 统计和详情不一致
 
 优先检查：
 
 1. `src/App.vue` 中 `summaryCards`
 2. `src/analytics/summary-details.ts` 中详情生成规则
-3. `selectedSummaryCardKey` 的联动状态
+3. `selectedSummaryCardKey` 与 `readCardMode` 的联动状态
 
 ## 当前状态备注
 
 仓库近期已经完成：
 
-- PRD 差距清单本轮开发项
+- 文档级引用网络分析主流程
 - `siyuan://blocks/...` 与 `((...))` fallback 引用识别
 - 孤立/沉没定义修正
 - 高传播价值节点面板
-- 顶部统计卡片可点击详情
+- 顶部统计卡片点击联动详情
+- 顶部统计卡片拖拽排序与重置
+- 主题文档修复建议
+- 已读文档规则与统计卡片
+- 分析层共享 helper 收敛
+- `useAnalyticsState` 的纯派生逻辑与副作用控制器拆分
+- `App.vue` 详情区与统计卡片区拆分为独立组件
+- 设置页数据准备逻辑下沉到独立 helper
 
 如果后续要继续增强，优先考虑：
 
 - 传播节点的证据解释进一步细化
-- 更多链接格式兼容
+- 更多 markdown 内部链接格式兼容
 - 更细的社区语义解释

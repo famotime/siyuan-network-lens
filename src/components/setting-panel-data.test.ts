@@ -26,6 +26,7 @@ describe('setting-panel-data', () => {
     expect(config.readTagNames).toEqual([])
     expect(config.readTitlePrefixes).toBe('')
     expect(config.readTitleSuffixes).toBe('')
+    expect(config.readPaths).toBe('')
   })
 
   it('collects unique sorted tag options from block tag rows', () => {

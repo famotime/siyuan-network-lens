@@ -176,6 +176,7 @@ export function buildSummaryCards(params: {
 export function buildSummaryDetailSections(params: {
   documents: DocumentRecord[]
   references: ReferenceRecord[]
+  notebooks?: Array<{ id: string, name: string }>
   report: ReferenceGraphReport
   now: Date
   timeRange: TimeRange
@@ -183,7 +184,7 @@ export function buildSummaryDetailSections(params: {
   filters?: AnalyticsFilters
   themeDocumentIds?: Iterable<string>
   dormantDays: number
-  config?: Pick<PluginConfig, 'readTagNames' | 'readTitlePrefixes' | 'readTitleSuffixes'>
+  config?: Pick<PluginConfig, 'readTagNames' | 'readTitlePrefixes' | 'readTitleSuffixes' | 'readPaths'>
   readCardMode?: ReadCardMode
 }): Record<SummaryCardKey, SummaryDetailSection> {
   const filteredDocuments = filterDocumentsByTimeRange({
@@ -205,6 +206,7 @@ export function buildSummaryDetailSections(params: {
   const themeDocumentIdSet = new Set(params.themeDocumentIds ?? [])
   const readMatches = collectReadMatches({
     documents: filteredDocuments,
+    notebooks: params.notebooks,
     config: params.config,
   })
   const readCardMode = params.readCardMode ?? 'unread'
@@ -212,10 +214,10 @@ export function buildSummaryDetailSections(params: {
   const unreadItems = filteredDocuments
     .filter(document => !readDocumentIdSet.has(document.id))
     .sort((left, right) => compareTimestamp(right.updated ?? '', left.updated ?? '') || resolveTitle(left).localeCompare(resolveTitle(right), 'zh-CN'))
-    .map(document => ({
+      .map(document => ({
       documentId: document.id,
       title: resolveTitle(document),
-      meta: `未命中已读标签或标题规则 · 最近更新 ${formatCompactDate(document.updated)}`,
+      meta: `未命中已读目录、标签或标题规则 · 最近更新 ${formatCompactDate(document.updated)}`,
       badge: '待标记',
       isThemeDocument: themeDocumentIdSet.has(document.id),
     }))
@@ -239,8 +241,8 @@ export function buildSummaryDetailSections(params: {
       key: 'read',
       title: readCardMode === 'read' ? '已读文档详情' : '未读文档详情',
       description: readCardMode === 'read'
-        ? '命中已读标签或标题规则的文档。'
-        : '未命中已读标签或标题规则的文档。',
+        ? '命中已读目录、标签或标题规则的文档。'
+        : '未命中已读目录、标签或标题规则的文档。',
       kind: 'list',
       items: readCardMode === 'read'
         ? readMatches.map(item => ({
@@ -427,6 +429,9 @@ function buildReadMeta(item: ReturnType<typeof collectReadMatches>[number]): str
   if (item.matchedSuffixes.length) {
     parts.push(`命中后缀：${item.matchedSuffixes.join(' / ')}`)
   }
+  if (item.matchedPaths.length) {
+    parts.push(`命中目录：${item.matchedPaths.join(' / ')}`)
+  }
 
   return parts.join(' · ')
 }
@@ -439,6 +444,9 @@ function buildReadBadge(item: ReturnType<typeof collectReadMatches>[number]): st
   }
   if (item.matchedPrefixes.length || item.matchedSuffixes.length) {
     badges.push('标题命中')
+  }
+  if (item.matchedPaths.length) {
+    badges.push('目录命中')
   }
 
   return badges.join(' / ') || undefined
