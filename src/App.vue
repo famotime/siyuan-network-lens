@@ -94,9 +94,64 @@
 
     <div
       v-else-if="loading && !report"
-      class="state-banner"
+      class="loading-panel panel"
+      role="status"
+      aria-live="polite"
     >
-      正在读取 blocks 与 refs 数据...
+      <div class="loading-panel__header">
+        <div class="loading-panel__copy">
+          <p class="loading-panel__eyebrow">
+            Context loading
+          </p>
+          <h2 class="loading-panel__title">
+            正在整理主题、标签与引用概览
+          </h2>
+          <p class="loading-panel__description">
+            首次打开时会先读取 blocks、refs 以及可用的主题和标签信息。
+          </p>
+        </div>
+        <div
+          class="loading-panel__pulse"
+          aria-hidden="true"
+        >
+          <span class="loading-panel__pulse-core" />
+        </div>
+      </div>
+
+      <div
+        class="loading-panel__chips"
+        aria-hidden="true"
+      >
+        <span class="loading-panel__chip loading-shimmer" />
+        <span class="loading-panel__chip loading-shimmer" />
+        <span class="loading-panel__chip loading-shimmer" />
+        <span class="loading-panel__chip loading-shimmer" />
+      </div>
+
+      <div
+        class="loading-panel__cards"
+        aria-hidden="true"
+      >
+        <div class="loading-panel__card loading-shimmer" />
+        <div class="loading-panel__card loading-shimmer" />
+        <div class="loading-panel__card loading-shimmer" />
+        <div class="loading-panel__card loading-shimmer" />
+      </div>
+
+      <div
+        class="loading-panel__detail"
+        aria-hidden="true"
+      >
+        <div class="loading-panel__detail-head">
+          <span class="loading-panel__line loading-panel__line--title loading-shimmer" />
+          <span class="loading-panel__line loading-panel__line--meta loading-shimmer" />
+        </div>
+        <div class="loading-panel__detail-grid">
+          <div class="loading-panel__detail-block loading-shimmer" />
+          <div class="loading-panel__detail-block loading-shimmer" />
+          <div class="loading-panel__detail-block loading-shimmer" />
+        </div>
+      </div>
     </div>
 
     <template v-else-if="report && trends">
@@ -1094,6 +1149,240 @@ input {
   background: color-mix(in srgb, var(--b3-theme-error) 5%, var(--b3-theme-surface));
 }
 
+.loading-panel {
+  position: relative;
+  overflow: hidden;
+  display: grid;
+  gap: 22px;
+  padding: 24px;
+  margin-bottom: 24px;
+  border-color: color-mix(in srgb, var(--accent-cool) 18%, var(--panel-border));
+  background:
+    radial-gradient(circle at top right, color-mix(in srgb, var(--accent-cool) 12%, transparent), transparent 32%),
+    linear-gradient(180deg, color-mix(in srgb, var(--b3-theme-primary) 5%, transparent), transparent 38%),
+    var(--surface-card-strong);
+  box-shadow:
+    0 12px 30px -24px rgba(0, 0, 0, 0.45),
+    inset 0 1px 0 color-mix(in srgb, var(--b3-theme-background) 48%, transparent);
+}
+
+.loading-panel::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background:
+    linear-gradient(120deg, transparent 0%, color-mix(in srgb, white 10%, transparent) 22%, transparent 44%);
+  transform: translateX(-100%);
+  animation: loading-panel-sheen 2.8s ease-in-out infinite;
+  pointer-events: none;
+}
+
+.loading-panel__header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 20px;
+}
+
+.loading-panel__copy {
+  display: grid;
+  gap: 8px;
+  min-width: 0;
+}
+
+.loading-panel__eyebrow {
+  font-size: 11px;
+  line-height: 1;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: color-mix(in srgb, var(--accent-cool) 68%, var(--panel-muted));
+  font-weight: 700;
+}
+
+.loading-panel__title {
+  font-size: 22px;
+  line-height: 1.25;
+}
+
+.loading-panel__description {
+  max-width: 48ch;
+  color: var(--panel-muted);
+  line-height: 1.7;
+}
+
+.loading-panel__pulse {
+  flex: none;
+  width: 52px;
+  height: 52px;
+  border-radius: 50%;
+  display: grid;
+  place-items: center;
+  background:
+    radial-gradient(circle, color-mix(in srgb, var(--accent-cool) 18%, transparent) 0%, transparent 64%);
+}
+
+.loading-panel__pulse-core {
+  width: 16px;
+  height: 16px;
+  border-radius: 50%;
+  background: color-mix(in srgb, var(--accent-cool) 74%, var(--b3-theme-primary));
+  box-shadow:
+    0 0 0 0 color-mix(in srgb, var(--accent-cool) 28%, transparent),
+    0 0 18px color-mix(in srgb, var(--accent-cool) 34%, transparent);
+  animation: loading-panel-pulse 1.8s ease-out infinite;
+}
+
+.loading-panel__chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+
+.loading-panel__chip {
+  display: inline-flex;
+  width: 108px;
+  height: 30px;
+  border-radius: 999px;
+  border: 1px solid color-mix(in srgb, var(--panel-border) 84%, transparent);
+  background: color-mix(in srgb, var(--surface-card) 88%, transparent);
+}
+
+.loading-panel__chip:nth-child(2) {
+  width: 84px;
+}
+
+.loading-panel__chip:nth-child(3) {
+  width: 132px;
+}
+
+.loading-panel__chip:nth-child(4) {
+  width: 96px;
+}
+
+.loading-panel__cards {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+  gap: 16px;
+}
+
+.loading-panel__card {
+  height: 110px;
+  border-radius: 16px;
+  border: 1px solid color-mix(in srgb, var(--panel-border) 84%, transparent);
+  background:
+    linear-gradient(180deg, color-mix(in srgb, var(--accent-cool) 8%, transparent), transparent 44%),
+    var(--surface-card);
+}
+
+.loading-panel__detail {
+  display: grid;
+  gap: 16px;
+  padding: 18px;
+  border-radius: 18px;
+  border: 1px solid color-mix(in srgb, var(--panel-border) 88%, transparent);
+  background:
+    linear-gradient(180deg, color-mix(in srgb, var(--b3-theme-primary) 5%, transparent), transparent 42%),
+    color-mix(in srgb, var(--surface-card) 92%, var(--b3-theme-background));
+}
+
+.loading-panel__detail-head {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  align-items: center;
+}
+
+.loading-panel__line {
+  display: inline-flex;
+  height: 12px;
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--surface-card-soft) 88%, transparent);
+}
+
+.loading-panel__line--title {
+  width: min(220px, 42%);
+  height: 14px;
+}
+
+.loading-panel__line--meta {
+  width: min(110px, 24%);
+}
+
+.loading-panel__detail-grid {
+  display: grid;
+  grid-template-columns: 1.2fr 1fr 1fr;
+  gap: 12px;
+}
+
+.loading-panel__detail-block {
+  min-height: 104px;
+  border-radius: 14px;
+  border: 1px solid color-mix(in srgb, var(--panel-border) 84%, transparent);
+  background:
+    linear-gradient(180deg, color-mix(in srgb, var(--surface-card-soft) 86%, transparent), transparent),
+    var(--surface-card);
+}
+
+.loading-shimmer {
+  position: relative;
+  overflow: hidden;
+}
+
+.loading-shimmer::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(
+    100deg,
+    transparent 0%,
+    color-mix(in srgb, white 18%, transparent) 28%,
+    transparent 56%
+  );
+  transform: translateX(-100%);
+  animation: loading-shimmer 1.8s ease-in-out infinite;
+}
+
+@keyframes loading-shimmer {
+  to {
+    transform: translateX(100%);
+  }
+}
+
+@keyframes loading-panel-sheen {
+  0%,
+  18% {
+    transform: translateX(-100%);
+  }
+
+  42%,
+  100% {
+    transform: translateX(100%);
+  }
+}
+
+@keyframes loading-panel-pulse {
+  0% {
+    transform: scale(0.92);
+    box-shadow:
+      0 0 0 0 color-mix(in srgb, var(--accent-cool) 28%, transparent),
+      0 0 18px color-mix(in srgb, var(--accent-cool) 34%, transparent);
+  }
+
+  70% {
+    transform: scale(1);
+    box-shadow:
+      0 0 0 16px color-mix(in srgb, var(--accent-cool) 0%, transparent),
+      0 0 24px color-mix(in srgb, var(--accent-cool) 20%, transparent);
+  }
+
+  100% {
+    transform: scale(0.92);
+    box-shadow:
+      0 0 0 0 color-mix(in srgb, var(--accent-cool) 0%, transparent),
+      0 0 16px color-mix(in srgb, var(--accent-cool) 10%, transparent);
+  }
+}
+
 @media (max-width: 980px) {
   .filter-panel,
   .summary-grid,
@@ -1119,6 +1408,16 @@ input {
 
   .hero__actions {
     align-items: stretch;
+  }
+
+  .loading-panel__header,
+  .loading-panel__detail-head {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+
+  .loading-panel__detail-grid {
+    grid-template-columns: 1fr;
   }
 }
 </style>

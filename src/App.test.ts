@@ -49,4 +49,17 @@ describe('App trend detail layout', () => {
     expect(source).toContain('props.config.showBridges')
     expect(source).not.toContain('showOrphanBridge')
   })
+
+  it('shows an in-panel loading skeleton for the first analytics load', async () => {
+    const source = await readFile(new URL('./App.vue', import.meta.url), 'utf8')
+
+    expect(source).toContain("v-else-if=\"loading && !report\"")
+    expect(source).toContain('class="loading-panel panel"')
+    expect(source).toContain('loading-panel__title')
+    expect(source).toContain('loading-panel__chips')
+    expect(source).toContain('loading-panel__cards')
+    expect(source).toContain('loading-panel__detail')
+    expect(source).toContain('loading-shimmer')
+    expect(source).not.toContain('正在读取 blocks 与 refs 数据...')
+  })
 })
