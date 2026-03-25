@@ -11,33 +11,45 @@ import {
 
 describe('summary card config', () => {
   it('uses a single definition list as the source of default order and card settings', () => {
+    expect(SUMMARY_CARD_DEFINITIONS.map(item => item.key)).toEqual([
+      'read',
+      'orphans',
+      'ranking',
+      'documents',
+      'trends',
+      'references',
+      'communities',
+      'propagation',
+      'bridges',
+      'dormant',
+    ])
     expect(SUMMARY_CARD_DEFINITIONS.map(item => item.key)).toEqual(DEFAULT_SUMMARY_CARD_ORDER)
-    expect(getSummaryCardDefinition('documents')).toEqual(expect.objectContaining({
-      key: 'documents',
-      visibilityConfigKey: 'showDocuments',
+    expect(getSummaryCardDefinition('read')).toEqual(expect.objectContaining({
+      key: 'read',
+      visibilityConfigKey: 'showRead',
       defaultVisible: true,
-      settingLabel: '文档样本卡片',
+      settingLabel: '已读/未读文档卡片',
     }))
     expect(getSummaryCardDefinition('bridges')).toEqual(expect.objectContaining({
       key: 'bridges',
       visibilityConfigKey: 'showBridges',
-      defaultVisible: true,
+      defaultVisible: false,
       settingLabel: '桥接节点卡片',
     }))
   })
 
   it('derives per-card visibility defaults and visibility lookups from the shared definitions', () => {
     expect(buildSummaryCardVisibilityDefaults()).toEqual({
-      showDocuments: true,
       showRead: true,
-      showReferences: true,
-      showRanking: true,
-      showTrends: true,
-      showCommunities: true,
       showOrphans: true,
-      showDormant: true,
-      showBridges: true,
-      showPropagation: true,
+      showRanking: true,
+      showDocuments: false,
+      showTrends: false,
+      showReferences: false,
+      showCommunities: false,
+      showPropagation: false,
+      showBridges: false,
+      showDormant: false,
     })
 
     expect(getSummaryCardVisibilityConfigKey('ranking')).toBe('showRanking')

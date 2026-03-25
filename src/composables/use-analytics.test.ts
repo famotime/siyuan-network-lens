@@ -63,16 +63,16 @@ describe('useAnalyticsState', () => {
     await nextTick()
 
     expect(state.summaryCards.value.map(card => card.key)).toEqual([
+      'read',
+      'ranking',
       'orphans',
       'documents',
-      'read',
-      'references',
-      'ranking',
       'trends',
+      'references',
       'communities',
-      'dormant',
-      'bridges',
       'propagation',
+      'bridges',
+      'dormant',
     ])
     expect(config.summaryCardOrder).toEqual(state.summaryCards.value.map(card => card.key))
   })
@@ -120,16 +120,16 @@ describe('useAnalyticsState', () => {
     await nextTick()
 
     expect(state.summaryCards.value.map(card => card.key)).toEqual([
-      'documents',
       'read',
-      'references',
-      'ranking',
-      'trends',
-      'communities',
       'orphans',
-      'dormant',
-      'bridges',
+      'ranking',
+      'documents',
+      'trends',
+      'references',
+      'communities',
       'propagation',
+      'bridges',
+      'dormant',
     ])
     expect(config.summaryCardOrder).toEqual(state.summaryCards.value.map(card => card.key))
   })

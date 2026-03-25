@@ -19,9 +19,9 @@ describe('config defaults', () => {
 
     ensureConfigDefaults(config)
 
-    expect(config.showDocuments).toBe(true)
+    expect(config.showDocuments).toBe(false)
     expect(config.showRead).toBe(true)
-    expect(config.showReferences).toBe(true)
+    expect(config.showReferences).toBe(false)
     expect(config.showRanking).toBe(false)
     expect(config.showCommunities).toBe(true)
     expect(config.showTrends).toBe(true)

@@ -25,12 +25,12 @@ describe('summary card order', () => {
       'documents',
       'read',
       'ranking',
-      'references',
       'trends',
+      'references',
       'communities',
-      'dormant',
-      'bridges',
       'propagation',
+      'bridges',
+      'dormant',
     ])
   })
 
@@ -40,16 +40,16 @@ describe('summary card order', () => {
       draggedKey: 'orphans',
       targetKey: 'documents',
     })).toEqual([
+      'read',
+      'ranking',
       'orphans',
       'documents',
-      'read',
-      'references',
-      'ranking',
       'trends',
+      'references',
       'communities',
-      'dormant',
-      'bridges',
       'propagation',
+      'bridges',
+      'dormant',
     ])
   })
 })
