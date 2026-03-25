@@ -215,6 +215,7 @@ import FilterSelect from '@/components/FilterSelect.vue'
 import SummaryCardsGrid from '@/components/SummaryCardsGrid.vue'
 import SummaryDetailSection from '@/components/SummaryDetailSection.vue'
 import ThemeMultiSelect from '@/components/ThemeMultiSelect.vue'
+import { isSummaryCardVisible } from '@/analytics/summary-card-config'
 import { useAnalyticsState } from '@/composables/use-analytics'
 import { appendBlock, deleteBlock, getBlockKramdown, getChildBlocks, prependBlock, updateBlock } from '@/api'
 import { ensureConfigDefaults, type PluginConfig } from '@/types/config'
@@ -302,39 +303,7 @@ const visibleSummaryCards = computed(() => {
   if (!props.config.showSummaryCards) {
     return []
   }
-  return summaryCards.value.filter((card) => {
-    if (card.key === 'documents') {
-      return props.config.showDocuments
-    }
-    if (card.key === 'read') {
-      return props.config.showRead
-    }
-    if (card.key === 'references') {
-      return props.config.showReferences
-    }
-    if (card.key === 'ranking') {
-      return props.config.showRanking
-    }
-    if (card.key === 'trends') {
-      return props.config.showTrends
-    }
-    if (card.key === 'communities') {
-      return props.config.showCommunities
-    }
-    if (card.key === 'propagation') {
-      return props.config.showPropagation
-    }
-    if (card.key === 'orphans') {
-      return props.config.showOrphans
-    }
-    if (card.key === 'dormant') {
-      return props.config.showDormant
-    }
-    if (card.key === 'bridges') {
-      return props.config.showBridges
-    }
-    return true
-  })
+  return summaryCards.value.filter(card => isSummaryCardVisible(props.config, card.key))
 })
 
 const timeRangeFilterOptions = computed(() => timeRangeOptions.value.map(option => ({

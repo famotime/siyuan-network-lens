@@ -1,3 +1,5 @@
+import { SUMMARY_CARD_DEFINITIONS, buildSummaryCardVisibilityDefaults } from '@/analytics/summary-card-config'
+
 export interface PluginConfig {
   showSummaryCards: boolean
   showDocuments?: boolean
@@ -24,16 +26,7 @@ export interface PluginConfig {
 
 export const DEFAULT_CONFIG: PluginConfig = {
   showSummaryCards: true,
-  showDocuments: true,
-  showRead: true,
-  showReferences: true,
-  showRanking: true,
-  showCommunities: true,
-  showTrends: true,
-  showOrphans: true,
-  showDormant: true,
-  showBridges: true,
-  showPropagation: true,
+  ...buildSummaryCardVisibilityDefaults(),
   themeNotebookId: '',
   themeDocumentPath: '',
   themeNamePrefix: '',
@@ -46,39 +39,19 @@ export const DEFAULT_CONFIG: PluginConfig = {
 }
 
 export function ensureConfigDefaults(config: PluginConfig) {
-  const legacyOrphanBridge = typeof config.showOrphanBridge === 'boolean'
-    ? config.showOrphanBridge
-    : true
+  for (const definition of SUMMARY_CARD_DEFINITIONS) {
+    const visibilityKey = definition.visibilityConfigKey
+    if (typeof config[visibilityKey] === 'boolean') {
+      continue
+    }
 
-  if (typeof config.showDocuments !== 'boolean') {
-    config.showDocuments = true
-  }
-  if (typeof config.showRead !== 'boolean') {
-    config.showRead = true
-  }
-  if (typeof config.showReferences !== 'boolean') {
-    config.showReferences = true
-  }
-  if (typeof config.showRanking !== 'boolean') {
-    config.showRanking = true
-  }
-  if (typeof config.showCommunities !== 'boolean') {
-    config.showCommunities = true
-  }
-  if (typeof config.showTrends !== 'boolean') {
-    config.showTrends = true
-  }
-  if (typeof config.showOrphans !== 'boolean') {
-    config.showOrphans = legacyOrphanBridge
-  }
-  if (typeof config.showDormant !== 'boolean') {
-    config.showDormant = legacyOrphanBridge
-  }
-  if (typeof config.showBridges !== 'boolean') {
-    config.showBridges = legacyOrphanBridge
-  }
-  if (typeof config.showPropagation !== 'boolean') {
-    config.showPropagation = true
+    const legacyVisibilityKey = definition.legacyVisibilityConfigKey
+    if (legacyVisibilityKey && typeof config[legacyVisibilityKey] === 'boolean') {
+      config[visibilityKey] = config[legacyVisibilityKey]
+      continue
+    }
+
+    config[visibilityKey] = definition.defaultVisible
   }
   if (!Array.isArray(config.readTagNames)) {
     config.readTagNames = []

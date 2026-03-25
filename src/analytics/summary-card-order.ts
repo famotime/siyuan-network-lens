@@ -1,17 +1,7 @@
 import type { SummaryCardItem, SummaryCardKey } from './summary-details'
+import { DEFAULT_SUMMARY_CARD_ORDER as DEFAULT_SUMMARY_CARD_ORDER_CONFIG } from './summary-card-config'
 
-export const DEFAULT_SUMMARY_CARD_ORDER: SummaryCardKey[] = [
-  'documents',
-  'read',
-  'references',
-  'ranking',
-  'trends',
-  'communities',
-  'orphans',
-  'dormant',
-  'bridges',
-  'propagation',
-]
+export const DEFAULT_SUMMARY_CARD_ORDER = DEFAULT_SUMMARY_CARD_ORDER_CONFIG
 
 export function normalizeSummaryCardOrder(order?: readonly string[]): SummaryCardKey[] {
   const normalized: SummaryCardKey[] = []
