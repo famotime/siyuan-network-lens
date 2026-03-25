@@ -6,7 +6,7 @@
 
 自从学习了著名的卡片笔记法，我就寄希望于能从笔记网络中产生链接和洞见，促进学习和输出。但在这样的体量下，思源笔记（或其他以双链为卖点的笔记软件）现有的链接管理功能对我实际帮助不大，点开“关系图”除了看到一大堆笔记节点喷薄而出的视觉愉悦感，我根本做不了什么，既无法从中产生洞见，也无从下手进一步维护笔记链接。
 
-![image](assets/image-20260321125717-vlt9cbc.quickedit-convert-webp-1774075159634-20260321143919-1wi75gk.webp)
+![image](https://raw.githubusercontent.com/famotime/siyuan-network-lens/main/assets/image-20260321125717-vlt9cbc.quickedit-convert-webp-1774075159634-20260321143919-1wi75gk.webp)
 
 主要问题是笔记规模扩大后图谱变得十分混乱，图谱节点重叠、布局每次加载变化，导致难以分析和导航。关系图仅显示连接存在，却不揭示具体关系类型（如因果或包含），信息密度低，无法提供层级笔记那样的清晰结构。
 
@@ -22,8 +22,8 @@
 
 为此，我尝试构建了一个插件——“脉络镜”（暂定名）——希望让隐没的知识，重现脉络。
 
-![image](assets/image-20260321143603-yyqht4u.quickedit-convert-webp-1774075160113-20260321143920-ed2ln0p.webp)
+![image](https://raw.githubusercontent.com/famotime/siyuan-network-lens/main/assets/image-20260321143603-yyqht4u.quickedit-convert-webp-1774075160113-20260321143920-ed2ln0p.webp)
 
-![image](assets/image-20260321143824-1lckav4.quickedit-convert-webp-1774075160589-20260321143920-v297w9q.webp)
+![image](https://raw.githubusercontent.com/famotime/siyuan-network-lens/main/assets/image-20260321143824-1lckav4.quickedit-convert-webp-1774075160589-20260321143920-v297w9q.webp)
 
 ‍
