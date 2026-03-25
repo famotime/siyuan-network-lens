@@ -3,10 +3,10 @@
   "version": "0.7.0",
   "type": "module",
   "description": "A SiYuan plugin for document network lens.",
-  "author": "",
+  "author": "Quincy Zou",
   "license": "MIT",
-  "homepage": "",
-  "repository": "",
+  "homepage": "https://github.com/famotime/siyuan-network-lens",
+  "repository": "https://github.com/famotime/siyuan-network-lens.git",
   "scripts": {
     "dev": "vite build --watch",
     "test": "vitest run",

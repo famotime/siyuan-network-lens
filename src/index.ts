@@ -8,6 +8,7 @@ import { DEFAULT_CONFIG, ensureConfigDefaults, type PluginConfig } from './types
 const DOCK_TYPE = 'reference-analytics-dock'
 const PLUGIN_TITLE = '脉络镜'
 const PLUGIN_ICON = 'iconGraph'
+const STORAGE_NAME = 'settings.json'
 
 export default class ReferenceAnalyticsPlugin extends Plugin {
   private dockInstance?: ReturnType<Plugin['addDock']>
@@ -18,7 +19,7 @@ export default class ReferenceAnalyticsPlugin extends Plugin {
   }
 
   async onload() {
-    const loadedConfig = await this.loadData('settings.json')
+    const loadedConfig = await this.loadData(STORAGE_NAME)
     if (loadedConfig) {
       ensureConfigDefaults(loadedConfig as PluginConfig)
       Object.assign(this.config, loadedConfig)
@@ -26,7 +27,7 @@ export default class ReferenceAnalyticsPlugin extends Plugin {
     ensureConfigDefaults(this.config)
 
     watch(() => { return { ...this.config } }, (newConfig) => {
-      this.saveData('settings.json', newConfig)
+      this.saveData(STORAGE_NAME, newConfig)
     }, { deep: true })
 
     this.addTopBar({
@@ -73,6 +74,10 @@ export default class ReferenceAnalyticsPlugin extends Plugin {
 
   onunload() {
     destroyApp()
+  }
+
+  async uninstall() {
+    await this.removeData('settings.json')
   }
 
   openDock() {

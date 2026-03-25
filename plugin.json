@@ -1,7 +1,7 @@
 {
   "name": "siyuan-network-lens",
-  "author": "",
-  "url": "",
+  "author": "Quincy Zou",
+  "url": "https://github.com/famotime/siyuan-network-lens",
   "version": "0.7.0",
   "minAppVersion": "3.5.7",
   "disabledInPublish": false,
@@ -12,14 +12,10 @@
     "all"
   ],
   "displayName": {
-    "default": "Network lens",
-    "en_US": "Network lens",
-    "zh_CN": "脉络镜"
+    "default": "脉络镜"
   },
   "description": {
-    "default": "Analyze SiYuan document references and surface hubs, communities, orphans, trends, paths, and repair suggestions.",
-    "en_US": "Analyze SiYuan document references and surface hubs, communities, orphans, trends, paths, and repair suggestions.",
-    "zh_CN": "分析思源文档级引用网络，识别核心节点、主题社区、孤立文档、趋势、路径和整理建议。"
+    "default": "分析思源文档级引用网络，识别核心节点、主题社区、孤立文档、趋势、路径和整理建议。"
   },
   "readme": {
     "default": "README.md"
