@@ -1,6 +1,6 @@
 {
   "name": "siyuan-network-lens",
-  "version": "0.0.1",
+  "version": "0.7.0",
   "type": "module",
   "description": "A SiYuan plugin for document network lens.",
   "author": "",
