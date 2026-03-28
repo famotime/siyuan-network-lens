@@ -162,6 +162,16 @@ export async function upload(
   return request(url, form);
 }
 
+export async function getDocAssets(id: BlockId | DocumentId): Promise<any> {
+  let url = "/api/asset/getDocAssets";
+  return request(url, { id: id });
+}
+
+export async function statAsset(path: string): Promise<any> {
+  let url = "/api/asset/statAsset";
+  return request(url, { path: path });
+}
+
 // **************************************** Block ****************************************
 type DataType = "markdown" | "dom";
 export async function insertBlock(

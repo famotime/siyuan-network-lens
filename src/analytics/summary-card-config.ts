@@ -2,6 +2,7 @@ import type { SummaryCardKey } from './summary-details'
 
 export type SummaryCardVisibilityConfigKey =
   | 'showDocuments'
+  | 'showLargeDocuments'
   | 'showRead'
   | 'showReferences'
   | 'showRanking'
@@ -52,6 +53,13 @@ export const SUMMARY_CARD_DEFINITIONS: SummaryCardDefinition[] = [
     defaultVisible: false,
     settingLabel: '文档样本卡片',
     settingDescription: '展示当前筛选命中的文档数量',
+  },
+  {
+    key: 'largeDocuments',
+    visibilityConfigKey: 'showLargeDocuments',
+    defaultVisible: true,
+    settingLabel: '大文档卡片',
+    settingDescription: '展示按文字或资源阈值切换的大文档统计入口',
   },
   {
     key: 'trends',

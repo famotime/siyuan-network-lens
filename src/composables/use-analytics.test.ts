@@ -67,6 +67,7 @@ describe('useAnalyticsState', () => {
       'ranking',
       'orphans',
       'documents',
+      'largeDocuments',
       'trends',
       'references',
       'communities',
@@ -81,6 +82,7 @@ describe('useAnalyticsState', () => {
     const config = {
       showSummaryCards: true,
       showRanking: true,
+      showLargeDocuments: true,
       showCommunities: true,
       showOrphanBridge: true,
       showTrends: true,
@@ -89,7 +91,7 @@ describe('useAnalyticsState', () => {
       themeDocumentPath: '/专题',
       themeNamePrefix: '主题-',
       themeNameSuffix: '-索引',
-      summaryCardOrder: ['orphans', 'documents', 'read', 'references', 'ranking', 'trends', 'communities', 'dormant', 'bridges', 'propagation'],
+      summaryCardOrder: ['orphans', 'documents', 'largeDocuments', 'read', 'references', 'ranking', 'trends', 'communities', 'dormant', 'bridges', 'propagation'],
       readTagNames: ['note'],
       readTitlePrefixes: '',
       readTitleSuffixes: '',
@@ -124,6 +126,7 @@ describe('useAnalyticsState', () => {
       'orphans',
       'ranking',
       'documents',
+      'largeDocuments',
       'trends',
       'references',
       'communities',
@@ -140,6 +143,7 @@ describe('useAnalyticsState', () => {
         config: {
           showSummaryCards: true,
           showRanking: true,
+          showLargeDocuments: true,
           showCommunities: true,
           showOrphanBridge: true,
           showTrends: true,
@@ -173,6 +177,8 @@ describe('useAnalyticsState', () => {
     expect(documentCard?.value).toBe('7')
     expect(readCard?.label).toBe('未读文档')
     expect(readCard?.value).toBe('5')
+    expect(state.summaryCards.value.find(card => card.key === 'largeDocuments')?.label).toBe('大文档·文字')
+    expect(state.summaryCards.value.find(card => card.key === 'largeDocuments')?.value).toBe('0')
     expect(state.report.value?.ranking.map(item => item.documentId)).toEqual(['doc-b'])
     expect(state.selectedEvidenceDocument.value).toBe('doc-b')
     expect(state.themeOptions.value.map(item => item.label)).toEqual(['机器学习', 'AI'])
@@ -184,6 +190,7 @@ describe('useAnalyticsState', () => {
       config: {
         showSummaryCards: true,
         showRanking: true,
+        showLargeDocuments: true,
         showCommunities: true,
         showOrphanBridge: true,
         showTrends: true,
@@ -207,6 +214,10 @@ describe('useAnalyticsState', () => {
       updateBlock: async () => [],
       getChildBlocks: async () => [],
       getBlockKramdown: async () => ({ id: '', kramdown: '' }),
+      loadLargeDocumentMetrics: async () => new Map([
+        ['doc-a', { documentId: 'doc-a', wordCount: 10001, documentBytes: 10, assetBytes: 4 * 1024 * 1024, totalBytes: 4 * 1024 * 1024 + 10, assetCount: 2 }],
+        ['doc-b', { documentId: 'doc-b', wordCount: 9000, documentBytes: 2 * 1024 * 1024, assetBytes: 0, totalBytes: 2 * 1024 * 1024, assetCount: 0 }],
+      ]),
     })
 
     await state.refresh()
@@ -236,6 +247,81 @@ describe('useAnalyticsState', () => {
       items: expect.arrayContaining([
         expect.objectContaining({ documentId: 'doc-a', badge: '标签命中' }),
       ]),
+    }))
+  })
+
+  it('toggles the large document card between word and storage modes', async () => {
+    const largeDocumentSnapshot = {
+      ...snapshot,
+      documents: snapshot.documents.map(document => (
+        document.id === 'doc-a'
+          ? { ...document, updated: '20260311120000' }
+          : document
+      )),
+    }
+
+    const state = useAnalyticsState({
+      plugin: { eventBus: { on: () => {}, off: () => {} }, app: {} } as any,
+      config: {
+        showSummaryCards: true,
+        showRanking: true,
+        showLargeDocuments: true,
+        showCommunities: true,
+        showOrphanBridge: true,
+        showTrends: true,
+        showPropagation: true,
+        themeNotebookId: 'box-1',
+        themeDocumentPath: '/专题',
+        themeNamePrefix: '主题-',
+        themeNameSuffix: '-索引',
+      },
+      loadSnapshot: async () => largeDocumentSnapshot as any,
+      nowProvider: () => now,
+      createActiveDocumentSync: () => () => {},
+      showMessage: () => {},
+      openTab: () => {},
+      appendBlock: async () => [],
+      prependBlock: async () => [],
+      deleteBlock: async () => [],
+      updateBlock: async () => [],
+      getChildBlocks: async () => [],
+      getBlockKramdown: async () => ({ id: '', kramdown: '' }),
+      loadLargeDocumentMetrics: async () => new Map([
+        ['doc-a', { documentId: 'doc-a', wordCount: 10001, documentBytes: 10, assetBytes: 4 * 1024 * 1024, totalBytes: 4 * 1024 * 1024 + 10, assetCount: 2 }],
+        ['doc-b', { documentId: 'doc-b', wordCount: 12000, documentBytes: 2 * 1024 * 1024, assetBytes: 0, totalBytes: 2 * 1024 * 1024, assetCount: 0 }],
+      ]),
+    })
+
+    await state.refresh()
+    await nextTick()
+
+    state.selectedSummaryCardKey.value = 'largeDocuments'
+    await nextTick()
+
+    expect(state.summaryCards.value.find(card => card.key === 'largeDocuments')).toEqual(expect.objectContaining({
+      label: '大文档·文字',
+      value: '2',
+    }))
+    expect(state.selectedSummaryDetail.value).toEqual(expect.objectContaining({
+      title: '大文档详情（按文字）',
+      items: [
+        expect.objectContaining({ documentId: 'doc-b', badge: '12000 字' }),
+        expect.objectContaining({ documentId: 'doc-a', badge: '10001 字' }),
+      ],
+    }))
+
+    state.toggleLargeDocumentCardMode()
+    await nextTick()
+
+    expect(state.summaryCards.value.find(card => card.key === 'largeDocuments')).toEqual(expect.objectContaining({
+      label: '大文档·资源',
+      value: '1',
+    }))
+    expect(state.selectedSummaryDetail.value).toEqual(expect.objectContaining({
+      title: '大文档详情（按资源）',
+      items: [
+        expect.objectContaining({ documentId: 'doc-a', badge: '4.0 MB' }),
+      ],
     }))
   })
 

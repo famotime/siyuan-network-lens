@@ -3,6 +3,7 @@ import { SUMMARY_CARD_DEFINITIONS, buildSummaryCardVisibilityDefaults } from '@/
 export interface PluginConfig {
   showSummaryCards: boolean
   showDocuments?: boolean
+  showLargeDocuments?: boolean
   showRead?: boolean
   showReferences?: boolean
   showRanking?: boolean

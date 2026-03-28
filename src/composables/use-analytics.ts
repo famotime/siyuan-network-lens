@@ -6,10 +6,17 @@ import {
   findReferencePath,
   filterDocumentsByTimeRange,
   type AnalyticsFilters,
+  type DocumentRecord,
   type OrphanSort,
   type TimeRange,
 } from '@/analytics/analysis'
 import { createActiveDocumentSync } from '@/analytics/active-document'
+import {
+  buildLargeDocumentSummary,
+  loadLargeDocumentMetrics,
+  type LargeDocumentCardMode,
+  type LargeDocumentMetric,
+} from '@/analytics/large-documents'
 import { buildPanelCounts } from '@/analytics/panel-counts'
 import { collectReadMatches, type ReadCardMode } from '@/analytics/read-status'
 import {
@@ -69,6 +76,7 @@ type UseAnalyticsParams = {
   plugin: PluginLike
   config: PluginConfig
   loadSnapshot?: () => Promise<AnalyticsSnapshot>
+  loadLargeDocumentMetrics?: (documents: DocumentRecord[]) => Promise<Map<string, LargeDocumentMetric>>
   nowProvider?: () => Date
   createActiveDocumentSync?: typeof createActiveDocumentSync
   showMessage: ShowMessageFn
@@ -83,6 +91,7 @@ type UseAnalyticsParams = {
 
 export function useAnalyticsState(params: UseAnalyticsParams) {
   const loadSnapshot = params.loadSnapshot ?? loadAnalyticsSnapshot
+  const loadLargeDocumentMetricsFn = params.loadLargeDocumentMetrics ?? (documents => loadLargeDocumentMetrics({ documents }))
   const nowProvider = params.nowProvider ?? (() => new Date())
   const syncActiveDocument = params.createActiveDocumentSync ?? createActiveDocumentSync
   const notify = params.showMessage
@@ -114,8 +123,10 @@ export function useAnalyticsState(params: UseAnalyticsParams) {
   const maxPathDepth = ref(6)
   const selectedSummaryCardKey = ref<SummaryCardKey>('documents')
   const readCardMode = ref<ReadCardMode>('unread')
+  const largeDocumentCardMode = ref<LargeDocumentCardMode>('words')
   const summaryCardOrder = ref<SummaryCardKey[]>(normalizeSummaryCardOrder(params.config.summaryCardOrder))
   const panelCollapseState = ref<PanelCollapseState<PanelKey>>(buildPanelCollapseState(panelKeys))
+  const largeDocumentMetrics = ref<Map<string, LargeDocumentMetric>>(new Map())
   const timeRangeOptions = computed(() => buildTimeRangeOptions())
   let disposeActiveDocumentSync: (() => void) | null = null
 
@@ -253,6 +264,11 @@ export function useAnalyticsState(params: UseAnalyticsParams) {
       readDocumentCount: readMatches.length,
       readCardMode: readCardMode.value,
       trends: trends.value,
+      largeDocumentSummary: buildLargeDocumentSummary({
+        documents: filteredDocuments.value,
+        metrics: largeDocumentMetrics.value,
+      }),
+      largeDocumentCardMode: largeDocumentCardMode.value,
     })
   })
   const summaryCards = computed<SummaryCardItem[]>(() => sortSummaryCards(rawSummaryCards.value, summaryCardOrder.value))
@@ -275,6 +291,8 @@ export function useAnalyticsState(params: UseAnalyticsParams) {
       dormantDays: dormantDays.value,
       config: params.config,
       readCardMode: readCardMode.value,
+      largeDocumentMetrics: largeDocumentMetrics.value,
+      largeDocumentCardMode: largeDocumentCardMode.value,
     })
   })
 
@@ -473,6 +491,9 @@ export function useAnalyticsState(params: UseAnalyticsParams) {
     analysisNow.value = nowProvider()
     try {
       snapshot.value = await loadSnapshot()
+      largeDocumentMetrics.value = snapshot.value
+        ? await loadLargeDocumentMetricsFn(snapshot.value.documents)
+        : new Map()
       themeSuggestionController.clearPendingThemeSuggestionBlocks()
     } catch (error) {
       const message = error instanceof Error ? error.message : '读取思源数据失败'
@@ -497,6 +518,10 @@ export function useAnalyticsState(params: UseAnalyticsParams) {
 
   function toggleReadCardMode() {
     readCardMode.value = readCardMode.value === 'read' ? 'unread' : 'read'
+  }
+
+  function toggleLargeDocumentCardMode() {
+    largeDocumentCardMode.value = largeDocumentCardMode.value === 'storage' ? 'words' : 'storage'
   }
 
   function persistSummaryCardOrder(nextOrder: SummaryCardKey[]) {
@@ -608,6 +633,7 @@ export function useAnalyticsState(params: UseAnalyticsParams) {
     maxPathDepth,
     selectedSummaryCardKey,
     readCardMode,
+    largeDocumentCardMode,
     panelCollapseState,
     filters,
     notebookOptions,
@@ -639,6 +665,7 @@ export function useAnalyticsState(params: UseAnalyticsParams) {
     selectCommunity,
     selectSummaryCard,
     toggleReadCardMode,
+    toggleLargeDocumentCardMode,
     reorderSummaryCard,
     resetSummaryCardOrder,
     resolveLinkAssociations,

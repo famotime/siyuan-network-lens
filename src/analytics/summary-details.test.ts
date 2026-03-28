@@ -201,6 +201,111 @@ describe('buildSummaryDetailSections', () => {
     }))
   })
 
+  it('builds large document details in word mode using the text threshold and no top-10 cap', () => {
+    const sections = buildSummaryDetailSections({
+      documents: [
+        { id: 'doc-big-a', box: 'box-1', path: '/a.sy', hpath: '/Alpha', title: 'Alpha', content: '甲'.repeat(10001), created: '20260301090000', updated: '20260311120000' },
+        { id: 'doc-big-b', box: 'box-1', path: '/b.sy', hpath: '/Beta', title: 'Beta', content: '乙'.repeat(9999), created: '20260302090000', updated: '20260310120000' },
+        { id: 'doc-big-c', box: 'box-1', path: '/c.sy', hpath: '/Gamma', title: 'Gamma', content: '丙'.repeat(15000), created: '20260303090000', updated: '20260309120000' },
+        { id: 'doc-big-d', box: 'box-1', path: '/d.sy', hpath: '/Delta', title: 'Delta', content: '丁'.repeat(12000), created: '20260304090000', updated: '20260308120000' },
+      ],
+      references: [],
+      report: {
+        ...report,
+        summary: {
+          ...report.summary,
+          totalDocuments: 3,
+          analyzedDocuments: 3,
+          totalReferences: 0,
+          orphanCount: 3,
+          communityCount: 0,
+          dormantCount: 0,
+          propagationCount: 0,
+        },
+        ranking: [],
+        communities: [],
+        bridgeDocuments: [],
+        orphans: [],
+        dormantDocuments: [],
+        propagationNodes: [],
+        suggestions: [],
+      } as any,
+      now,
+      timeRange: 'all',
+      dormantDays: 30,
+      largeDocumentMetrics: new Map([
+        ['doc-big-a', { documentId: 'doc-big-a', wordCount: 10001, documentBytes: 10, assetBytes: 30, totalBytes: 40, assetCount: 2 }],
+        ['doc-big-b', { documentId: 'doc-big-b', wordCount: 9999, documentBytes: 50, assetBytes: 0, totalBytes: 50, assetCount: 0 }],
+        ['doc-big-c', { documentId: 'doc-big-c', wordCount: 15000, documentBytes: 20, assetBytes: 5, totalBytes: 25, assetCount: 1 }],
+        ['doc-big-d', { documentId: 'doc-big-d', wordCount: 12000, documentBytes: 30, assetBytes: 10, totalBytes: 40, assetCount: 1 }],
+      ]),
+      largeDocumentCardMode: 'words',
+    })
+
+    expect((sections as Record<string, any>).largeDocuments).toEqual(expect.objectContaining({
+      key: 'largeDocuments',
+      kind: 'list',
+      title: '大文档详情（按文字）',
+      items: [
+        expect.objectContaining({ documentId: 'doc-big-c', badge: '15000 字' }),
+        expect.objectContaining({ documentId: 'doc-big-d', badge: '12000 字' }),
+        expect.objectContaining({ documentId: 'doc-big-a', badge: '10001 字' }),
+      ],
+    }))
+  })
+
+  it('builds large document details in storage mode using the storage threshold and no top-10 cap', () => {
+    const sections = buildSummaryDetailSections({
+      documents: [
+        { id: 'doc-big-a', box: 'box-1', path: '/a.sy', hpath: '/Alpha', title: 'Alpha', content: '甲'.repeat(10001), created: '20260301090000', updated: '20260311120000' },
+        { id: 'doc-big-b', box: 'box-1', path: '/b.sy', hpath: '/Beta', title: 'Beta', content: '乙'.repeat(9999), created: '20260302090000', updated: '20260310120000' },
+        { id: 'doc-big-c', box: 'box-1', path: '/c.sy', hpath: '/Gamma', title: 'Gamma', content: '丙'.repeat(15000), created: '20260303090000', updated: '20260309120000' },
+        { id: 'doc-big-d', box: 'box-1', path: '/d.sy', hpath: '/Delta', title: 'Delta', content: '丁'.repeat(12000), created: '20260304090000', updated: '20260308120000' },
+      ],
+      references: [],
+      report: {
+        ...report,
+        summary: {
+          ...report.summary,
+          totalDocuments: 3,
+          analyzedDocuments: 3,
+          totalReferences: 0,
+          orphanCount: 3,
+          communityCount: 0,
+          dormantCount: 0,
+          propagationCount: 0,
+        },
+        ranking: [],
+        communities: [],
+        bridgeDocuments: [],
+        orphans: [],
+        dormantDocuments: [],
+        propagationNodes: [],
+        suggestions: [],
+      } as any,
+      now,
+      timeRange: 'all',
+      dormantDays: 30,
+      largeDocumentMetrics: new Map([
+        ['doc-big-a', { documentId: 'doc-big-a', wordCount: 10001, documentBytes: 10, assetBytes: 4 * 1024 * 1024, totalBytes: 4 * 1024 * 1024 + 10, assetCount: 2 }],
+        ['doc-big-b', { documentId: 'doc-big-b', wordCount: 9999, documentBytes: 50, assetBytes: 0, totalBytes: 50, assetCount: 0 }],
+        ['doc-big-c', { documentId: 'doc-big-c', wordCount: 15000, documentBytes: 20, assetBytes: 5, totalBytes: 25, assetCount: 1 }],
+        ['doc-big-d', { documentId: 'doc-big-d', wordCount: 12000, documentBytes: 2 * 1024 * 1024, assetBytes: 1024 * 1024 + 1, totalBytes: 3 * 1024 * 1024 + 1, assetCount: 1 }],
+      ]),
+      largeDocumentCardMode: 'storage',
+    })
+
+    expect((sections as Record<string, any>).largeDocuments).toEqual(expect.objectContaining({
+      key: 'largeDocuments',
+      kind: 'list',
+      title: '大文档详情（按资源）',
+      items: [
+        expect.objectContaining({ documentId: 'doc-big-a', badge: '4.0 MB' }),
+        expect.objectContaining({ documentId: 'doc-big-d', badge: '3.0 MB' }),
+      ],
+    }))
+  })
+
   it('supports notebook-scoped read directories in read detail sections', () => {
     const sections = buildSummaryDetailSections({
       documents: [
@@ -397,10 +502,15 @@ describe('buildSummaryCards', () => {
       documentCount: 5,
       readDocumentCount: 2,
       trends: trends as any,
+      largeDocumentSummary: {
+        wordDocumentCount: 3,
+        storageDocumentCount: 2,
+      },
     })
 
     const dormant = cards.find(card => card.key === 'dormant')
     const read = cards.find(card => card.key === 'read')
+    const largeDocuments = cards.find(card => card.key === 'largeDocuments')
 
     expect(dormant).toEqual(expect.objectContaining({
       label: '沉没文档',
@@ -411,6 +521,11 @@ describe('buildSummaryCards', () => {
       label: '未读文档',
       value: '3',
       hint: '未命中已读标记规则的文档数',
+    }))
+    expect(largeDocuments).toEqual(expect.objectContaining({
+      label: '大文档·文字',
+      value: '3',
+      hint: '按字数超过 10000 的文档数量统计',
     }))
   })
 
@@ -436,10 +551,34 @@ describe('buildSummaryCards', () => {
       report: report as any,
       dormantDays: 30,
       trends: trends as any,
+      largeDocumentSummary: {
+        wordDocumentCount: 3,
+        storageDocumentCount: 2,
+      },
     })
 
     expect(cards.find(card => card.key === 'ranking')?.value).toBe('1')
     expect(cards.some(card => card.key === 'suggestions')).toBe(false)
     expect(cards.find(card => card.key === 'trends')?.value).toBe('2')
+    expect(cards.find(card => card.key === 'largeDocuments')?.value).toBe('3')
+  })
+
+  it('can switch the large document card to storage mode explicitly', () => {
+    const cards = buildSummaryCards({
+      report: report as any,
+      dormantDays: 30,
+      trends: trends as any,
+      largeDocumentSummary: {
+        wordDocumentCount: 3,
+        storageDocumentCount: 2,
+      },
+      largeDocumentCardMode: 'storage',
+    })
+
+    expect(cards.find(card => card.key === 'largeDocuments')).toEqual(expect.objectContaining({
+      label: '大文档·资源',
+      value: '2',
+      hint: '按总大小超过 3 MB 的文档数量统计',
+    }))
   })
 })

@@ -23,6 +23,7 @@ describe('config defaults', () => {
     expect(config.showRead).toBe(true)
     expect(config.showReferences).toBe(false)
     expect(config.showRanking).toBe(false)
+    expect(config.showLargeDocuments).toBe(true)
     expect(config.showCommunities).toBe(true)
     expect(config.showTrends).toBe(true)
     expect(config.showOrphans).toBe(false)

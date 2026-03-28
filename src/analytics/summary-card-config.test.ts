@@ -16,6 +16,7 @@ describe('summary card config', () => {
       'orphans',
       'ranking',
       'documents',
+      'largeDocuments',
       'trends',
       'references',
       'communities',
@@ -36,6 +37,11 @@ describe('summary card config', () => {
       defaultVisible: false,
       settingLabel: '桥接节点卡片',
     }))
+    expect(getSummaryCardDefinition('largeDocuments')).toEqual(expect.objectContaining({
+      key: 'largeDocuments',
+      visibilityConfigKey: 'showLargeDocuments',
+      settingLabel: '大文档卡片',
+    }))
   })
 
   it('derives per-card visibility defaults and visibility lookups from the shared definitions', () => {
@@ -44,6 +50,7 @@ describe('summary card config', () => {
       showOrphans: true,
       showRanking: true,
       showDocuments: false,
+      showLargeDocuments: true,
       showTrends: false,
       showReferences: false,
       showCommunities: false,
@@ -53,6 +60,7 @@ describe('summary card config', () => {
     })
 
     expect(getSummaryCardVisibilityConfigKey('ranking')).toBe('showRanking')
+    expect(getSummaryCardVisibilityConfigKey('largeDocuments')).toBe('showLargeDocuments')
     expect(isSummaryCardVisible({
       showSummaryCards: true,
       showRanking: false,

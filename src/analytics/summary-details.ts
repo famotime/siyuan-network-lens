@@ -8,6 +8,14 @@ import {
   type TrendReport,
   filterDocumentsByTimeRange,
 } from './analysis'
+import {
+  buildLargeDocumentMeta,
+  buildLargeDocumentRankings,
+  formatLargeDocumentBadge,
+  type LargeDocumentCardMode,
+  type LargeDocumentMetric,
+  type LargeDocumentSummary,
+} from './large-documents'
 import { collectReadMatches, type ReadCardMode } from './read-status'
 import { SUGGESTION_TYPE_LABELS } from './ui-copy'
 import {
@@ -21,6 +29,7 @@ import type { PluginConfig } from '@/types/config'
 
 export type SummaryCardKey =
   | 'documents'
+  | 'largeDocuments'
   | 'read'
   | 'references'
   | 'ranking'
@@ -99,11 +108,18 @@ export function buildSummaryCards(params: {
   readDocumentCount?: number
   readCardMode?: ReadCardMode
   trends?: TrendReport | null
+  largeDocumentSummary?: LargeDocumentSummary
+  largeDocumentCardMode?: LargeDocumentCardMode
 }): SummaryCardItem[] {
   const trendCount = params.trends
     ? params.trends.risingDocuments.length + params.trends.fallingDocuments.length
     : 0
   const readCardMode = params.readCardMode ?? 'unread'
+  const largeDocumentCardMode = params.largeDocumentCardMode ?? 'words'
+  const largeDocumentSummary = params.largeDocumentSummary ?? {
+    wordDocumentCount: 0,
+    storageDocumentCount: 0,
+  }
   const readDocumentCount = params.readDocumentCount ?? 0
   const unreadDocumentCount = Math.max((params.documentCount ?? params.report.summary.totalDocuments) - readDocumentCount, 0)
 
@@ -121,6 +137,16 @@ export function buildSummaryCards(params: {
       hint: readCardMode === 'read'
         ? '命中已读标记规则的文档数'
         : '未命中已读标记规则的文档数',
+    },
+    {
+      key: 'largeDocuments',
+      label: largeDocumentCardMode === 'storage' ? '大文档·资源' : '大文档·文字',
+      value: (largeDocumentCardMode === 'storage'
+        ? largeDocumentSummary.storageDocumentCount
+        : largeDocumentSummary.wordDocumentCount).toString(),
+      hint: largeDocumentCardMode === 'storage'
+        ? '按总大小超过 3 MB 的文档数量统计'
+        : '按字数超过 10000 的文档数量统计',
     },
     {
       key: 'references',
@@ -186,6 +212,8 @@ export function buildSummaryDetailSections(params: {
   dormantDays: number
   config?: Pick<PluginConfig, 'readTagNames' | 'readTitlePrefixes' | 'readTitleSuffixes' | 'readPaths'>
   readCardMode?: ReadCardMode
+  largeDocumentMetrics?: ReadonlyMap<string, LargeDocumentMetric>
+  largeDocumentCardMode?: LargeDocumentCardMode
 }): Record<SummaryCardKey, SummaryDetailSection> {
   const filteredDocuments = filterDocumentsByTimeRange({
     documents: params.documents,
@@ -210,7 +238,19 @@ export function buildSummaryDetailSections(params: {
     config: params.config,
   })
   const readCardMode = params.readCardMode ?? 'unread'
+  const largeDocumentCardMode = params.largeDocumentCardMode ?? 'words'
   const readDocumentIdSet = new Set(readMatches.map(item => item.documentId))
+  const largeDocumentItems = buildLargeDocumentRankings({
+    documents: filteredDocuments,
+    metrics: params.largeDocumentMetrics,
+    mode: largeDocumentCardMode,
+  }).map(item => ({
+    documentId: item.documentId,
+    title: item.title,
+    meta: buildLargeDocumentMeta(largeDocumentCardMode, item, item.updatedAt),
+    badge: formatLargeDocumentBadge(largeDocumentCardMode, item),
+    isThemeDocument: themeDocumentIdSet.has(item.documentId),
+  }))
   const unreadItems = filteredDocuments
     .filter(document => !readDocumentIdSet.has(document.id))
     .sort((left, right) => compareTimestamp(right.updated ?? '', left.updated ?? '') || resolveTitle(left).localeCompare(resolveTitle(right), 'zh-CN'))
@@ -253,6 +293,15 @@ export function buildSummaryDetailSections(params: {
             isThemeDocument: themeDocumentIdSet.has(item.documentId),
           }))
         : unreadItems,
+    },
+    largeDocuments: {
+      key: 'largeDocuments',
+      title: largeDocumentCardMode === 'storage' ? '大文档详情（按资源）' : '大文档详情（按文字）',
+      description: largeDocumentCardMode === 'storage'
+        ? '按总大小超过 3 MB 的文档倒序列出全部命中结果。'
+        : '按字数超过 10000 的文档倒序列出全部命中结果。',
+      kind: 'list',
+      items: largeDocumentItems,
     },
     references: {
       key: 'references',

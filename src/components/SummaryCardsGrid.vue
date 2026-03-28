@@ -29,12 +29,12 @@
           <strong class="summary-card__value">{{ card.value }}</strong>
         </button>
         <button
-          v-if="card.key === 'read'"
+          v-if="shouldShowCardToggle(card.key)"
           class="summary-card__toggle"
           type="button"
-          :aria-label="readCardMode === 'read' ? '切换为未读文档' : '切换为已读文档'"
-          :title="readCardMode === 'read' ? '切换为未读文档' : '切换为已读文档'"
-          @click.stop="onToggleReadCardMode()"
+          :aria-label="resolveToggleLabel(card.key)"
+          :title="resolveToggleLabel(card.key)"
+          @click.stop="handleCardToggle(card.key)"
         >
           <svg
             class="summary-card__toggle-icon"
@@ -59,6 +59,7 @@
 <script setup lang="ts">
 import { ref } from 'vue'
 
+import type { LargeDocumentCardMode } from '@/analytics/large-documents'
 import type { ReadCardMode } from '@/analytics/read-status'
 import type { SummaryCardItem, SummaryCardKey } from '@/analytics/summary-details'
 
@@ -66,8 +67,10 @@ const props = defineProps<{
   cards: SummaryCardItem[]
   selectedSummaryCardKey: SummaryCardKey
   readCardMode: ReadCardMode
+  largeDocumentCardMode: LargeDocumentCardMode
   onSelectSummaryCard: (cardKey: SummaryCardKey) => void
   onToggleReadCardMode: () => void
+  onToggleLargeDocumentCardMode: () => void
   onReorderSummaryCard: (draggedKey: SummaryCardKey, targetKey: SummaryCardKey) => void
 }>()
 
@@ -105,6 +108,29 @@ function handleSummaryCardDrop(cardKey: SummaryCardKey) {
 function handleSummaryCardDragEnd() {
   draggedSummaryCardKey.value = ''
   dropTargetSummaryCardKey.value = ''
+}
+
+function shouldShowCardToggle(cardKey: SummaryCardKey): boolean {
+  return cardKey === 'read' || cardKey === 'largeDocuments'
+}
+
+function resolveToggleLabel(cardKey: SummaryCardKey): string {
+  if (cardKey === 'read') {
+    return props.readCardMode === 'read' ? '切换为未读文档' : '切换为已读文档'
+  }
+
+  return props.largeDocumentCardMode === 'storage' ? '切换为按文字统计' : '切换为按资源统计'
+}
+
+function handleCardToggle(cardKey: SummaryCardKey) {
+  if (cardKey === 'read') {
+    props.onToggleReadCardMode()
+    return
+  }
+
+  if (cardKey === 'largeDocuments') {
+    props.onToggleLargeDocumentCardMode()
+  }
 }
 </script>
 

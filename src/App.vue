@@ -160,8 +160,10 @@
         :cards="visibleSummaryCards"
         :selected-summary-card-key="selectedSummaryCardKey"
         :read-card-mode="readCardMode"
+        :large-document-card-mode="largeDocumentCardMode"
         :on-select-summary-card="selectSummaryCard"
         :on-toggle-read-card-mode="toggleReadCardMode"
+        :on-toggle-large-document-card-mode="toggleLargeDocumentCardMode"
         :on-reorder-summary-card="reorderSummaryCard"
       />
 
@@ -259,6 +261,7 @@ const {
   maxPathDepth,
   selectedSummaryCardKey,
   readCardMode,
+  largeDocumentCardMode,
   notebookOptions,
   tagOptions,
   report,
@@ -279,6 +282,7 @@ const {
   selectCommunity,
   selectSummaryCard,
   toggleReadCardMode,
+  toggleLargeDocumentCardMode,
   reorderSummaryCard,
   resetSummaryCardOrder,
   resolveLinkAssociations,
