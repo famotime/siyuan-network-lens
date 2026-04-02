@@ -137,6 +137,7 @@
         </label>
         <label class="setting-field setting-field--full">
           <span>Base URL</span>
+          <small class="setting-field__hint">OpenAI 兼容服务通常需要填写到 <code>/v1</code>，例如 <code>https://api.siliconflow.cn/v1</code></small>
           <input
             v-model.trim="config.aiBaseUrl"
             placeholder="https://api.openai.com/v1"
@@ -157,6 +158,50 @@
             v-model.trim="config.aiModel"
             placeholder="gpt-4.1-mini"
             type="text"
+          >
+        </label>
+        <label class="setting-field">
+          <span>超时时间</span>
+          <small class="setting-field__hint">发起请求的超时时间</small>
+          <div class="setting-input-with-suffix">
+            <input
+              v-model.number="config.aiRequestTimeoutSeconds"
+              min="1"
+              step="1"
+              type="number"
+            >
+            <span class="setting-input-with-suffix__unit">s</span>
+          </div>
+        </label>
+        <label class="setting-field">
+          <span>最大 Token 数</span>
+          <small class="setting-field__hint">请求 API 时传入的 <code>max_tokens</code> 参数，用于控制生成的文本长度</small>
+          <input
+            v-model.number="config.aiMaxTokens"
+            min="1"
+            step="1"
+            type="number"
+          >
+        </label>
+        <label class="setting-field">
+          <span>温度</span>
+          <small class="setting-field__hint">请求 API 时传入的 <code>temperature</code> 参数，用于控制生成的文本随机性</small>
+          <input
+            v-model.number="config.aiTemperature"
+            max="2"
+            min="0"
+            step="0.1"
+            type="number"
+          >
+        </label>
+        <label class="setting-field">
+          <span>最大上下文数</span>
+          <small class="setting-field__hint">请求 API 时传入的最大上下文数</small>
+          <input
+            v-model.number="config.aiMaxContextMessages"
+            min="1"
+            step="1"
+            type="number"
           >
         </label>
         <label class="setting-field setting-field--full">
@@ -361,6 +406,20 @@ async function handleTestConnection() {
   font-weight: 500;
 }
 
+.setting-field__hint {
+  font-size: 12px;
+  line-height: 1.5;
+  color: color-mix(in srgb, var(--b3-theme-on-background) 58%, transparent);
+}
+
+.setting-field__hint code {
+  padding: 1px 6px;
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--b3-theme-primary) 12%, transparent);
+  color: var(--b3-theme-primary);
+  font-family: ui-monospace, SFMono-Regular, Consolas, monospace;
+}
+
 .setting-select-shell,
 .setting-field input,
 .setting-field select {
@@ -371,6 +430,18 @@ async function handleTestConnection() {
   color: var(--b3-theme-on-background);
   padding: 10px 12px;
   box-sizing: border-box;
+}
+
+.setting-input-with-suffix {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 10px;
+}
+
+.setting-input-with-suffix__unit {
+  color: color-mix(in srgb, var(--b3-theme-on-background) 58%, transparent);
+  font-weight: 500;
 }
 
 .setting-actions {

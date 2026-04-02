@@ -1,6 +1,11 @@
 import { SUMMARY_CARD_DEFINITIONS, buildSummaryCardVisibilityDefaults } from '@/analytics/summary-card-config'
 import type { AiContextCapacity } from '@/analytics/ai-inbox'
 
+export const DEFAULT_AI_REQUEST_TIMEOUT_SECONDS = 30
+export const DEFAULT_AI_MAX_TOKENS = 10240
+export const DEFAULT_AI_TEMPERATURE = 0.7
+export const DEFAULT_AI_MAX_CONTEXT_MESSAGES = 7
+
 export interface PluginConfig {
   showSummaryCards: boolean
   showDocuments?: boolean
@@ -27,6 +32,10 @@ export interface PluginConfig {
   aiBaseUrl?: string
   aiApiKey?: string
   aiModel?: string
+  aiRequestTimeoutSeconds?: number
+  aiMaxTokens?: number
+  aiTemperature?: number
+  aiMaxContextMessages?: number
   aiContextCapacity?: AiContextCapacity
   summaryCardOrder?: string[]
 }
@@ -46,6 +55,10 @@ export const DEFAULT_CONFIG: PluginConfig = {
   aiBaseUrl: '',
   aiApiKey: '',
   aiModel: '',
+  aiRequestTimeoutSeconds: DEFAULT_AI_REQUEST_TIMEOUT_SECONDS,
+  aiMaxTokens: DEFAULT_AI_MAX_TOKENS,
+  aiTemperature: DEFAULT_AI_TEMPERATURE,
+  aiMaxContextMessages: DEFAULT_AI_MAX_CONTEXT_MESSAGES,
   aiContextCapacity: 'balanced',
   summaryCardOrder: undefined,
 }
@@ -89,7 +102,47 @@ export function ensureConfigDefaults(config: PluginConfig) {
   if (typeof config.aiModel !== 'string') {
     config.aiModel = ''
   }
+  config.aiRequestTimeoutSeconds = normalizePositiveInteger(
+    config.aiRequestTimeoutSeconds,
+    DEFAULT_AI_REQUEST_TIMEOUT_SECONDS,
+  )
+  config.aiMaxTokens = normalizePositiveInteger(
+    config.aiMaxTokens,
+    DEFAULT_AI_MAX_TOKENS,
+  )
+  config.aiTemperature = normalizeTemperature(
+    config.aiTemperature,
+    DEFAULT_AI_TEMPERATURE,
+  )
+  config.aiMaxContextMessages = normalizePositiveInteger(
+    config.aiMaxContextMessages,
+    DEFAULT_AI_MAX_CONTEXT_MESSAGES,
+  )
   if (config.aiContextCapacity !== 'compact' && config.aiContextCapacity !== 'balanced' && config.aiContextCapacity !== 'full') {
     config.aiContextCapacity = 'balanced'
   }
+}
+
+function normalizePositiveInteger(value: unknown, fallback: number): number {
+  const normalized = typeof value === 'string' && value.trim()
+    ? Number.parseInt(value, 10)
+    : typeof value === 'number'
+      ? Math.floor(value)
+      : Number.NaN
+
+  return Number.isFinite(normalized) && normalized > 0
+    ? normalized
+    : fallback
+}
+
+function normalizeTemperature(value: unknown, fallback: number): number {
+  const normalized = typeof value === 'string' && value.trim()
+    ? Number.parseFloat(value)
+    : typeof value === 'number'
+      ? value
+      : Number.NaN
+
+  return Number.isFinite(normalized) && normalized >= 0 && normalized <= 2
+    ? normalized
+    : fallback
 }

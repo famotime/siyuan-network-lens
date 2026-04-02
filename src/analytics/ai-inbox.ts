@@ -7,7 +7,13 @@ import type {
   TrendReport,
 } from './analysis'
 import type { SummaryCardItem } from './summary-details'
-import type { PluginConfig } from '@/types/config'
+import {
+  DEFAULT_AI_MAX_CONTEXT_MESSAGES,
+  DEFAULT_AI_MAX_TOKENS,
+  DEFAULT_AI_REQUEST_TIMEOUT_SECONDS,
+  DEFAULT_AI_TEMPERATURE,
+  type PluginConfig,
+} from '@/types/config'
 
 type ForwardProxyFn = (
   url: string,
@@ -18,9 +24,23 @@ type ForwardProxyFn = (
   contentType?: string,
 ) => Promise<IResForwardProxy>
 
+type AiLogger = Pick<Console, 'info' | 'warn' | 'error'>
+
 export type AiContextCapacity = 'compact' | 'balanced' | 'full'
 
-type AiConfig = Pick<PluginConfig, 'aiEnabled' | 'aiBaseUrl' | 'aiApiKey' | 'aiModel'>
+type AiConfig = Pick<
+  PluginConfig,
+  | 'aiEnabled'
+  | 'aiBaseUrl'
+  | 'aiApiKey'
+  | 'aiModel'
+  | 'aiRequestTimeoutSeconds'
+  | 'aiMaxTokens'
+  | 'aiTemperature'
+  | 'aiMaxContextMessages'
+>
+
+type ChatCompletionMessage = { role: 'system' | 'user' | 'assistant', content: string }
 
 export type AiInboxItemType = 'document' | 'connection' | 'topic-page' | 'bridge-risk'
 
@@ -137,7 +157,10 @@ export function isAiConfigComplete(config: AiConfig): boolean {
 
 export function createAiInboxService(deps: {
   forwardProxy: ForwardProxyFn
+  logger?: AiLogger
 }): AiInboxService {
+  const logger = deps.logger ?? console
+
   return {
     buildPayload(params) {
       return buildAiInboxPayload(params)
@@ -146,6 +169,7 @@ export function createAiInboxService(deps: {
       const response = await requestChatCompletion({
         config: params.config,
         forwardProxy: deps.forwardProxy,
+        logger,
         messages: [
           { role: 'system', content: SYSTEM_PROMPT },
           {
@@ -158,7 +182,6 @@ export function createAiInboxService(deps: {
             ].join('\n'),
           },
         ],
-        maxTokens: 1600,
       })
 
       return normalizeAiInboxResult(parseJsonFromContent(response))
@@ -167,11 +190,12 @@ export function createAiInboxService(deps: {
       const response = await requestChatCompletion({
         config: params.config,
         forwardProxy: deps.forwardProxy,
+        logger,
         messages: [
           { role: 'system', content: '你是连接测试助手。只返回 OK。' },
           { role: 'user', content: '请只回复 OK' },
         ],
-        maxTokens: 20,
+        maxTokensOverride: 20,
       })
 
       const message = extractChatCompletionContent(response).trim()
@@ -303,8 +327,9 @@ function buildConnectionTitle(documentMap: Map<string, DocumentRecord>, document
 async function requestChatCompletion(params: {
   config: AiConfig
   forwardProxy: ForwardProxyFn
-  messages: Array<{ role: 'system' | 'user' | 'assistant', content: string }>
-  maxTokens: number
+  logger: AiLogger
+  messages: ChatCompletionMessage[]
+  maxTokensOverride?: number
 }) {
   if (!params.config.aiEnabled) {
     throw new Error('请先在设置中启用 AI 整理收件箱')
@@ -313,26 +338,72 @@ async function requestChatCompletion(params: {
     throw new Error('AI 接入配置不完整，请补充 Base URL、API Key 和 Model')
   }
 
+  const requestOptions = resolveAiRequestOptions(params.config)
   const endpoint = `${params.config.aiBaseUrl!.replace(/\/+$/, '')}/chat/completions`
-  const response = await params.forwardProxy(
+  const messages = limitChatCompletionMessages(params.messages, requestOptions.maxContextMessages)
+  const body = JSON.stringify({
+    model: params.config.aiModel,
+    messages,
+    max_tokens: params.maxTokensOverride ?? requestOptions.maxTokens,
+    temperature: requestOptions.temperature,
+  })
+  const requestTrace = {
     endpoint,
-    'POST',
-    JSON.stringify({
-      model: params.config.aiModel,
-      messages: params.messages,
-      max_tokens: params.maxTokens,
-      temperature: 0.3,
-    }),
-    [
-      { Authorization: `Bearer ${params.config.aiApiKey}` },
-      { Accept: 'application/json' },
-    ],
-    20000,
-    'application/json',
-  )
+    timeoutMs: requestOptions.timeoutMs,
+    model: params.config.aiModel ?? '',
+    maxTokens: params.maxTokensOverride ?? requestOptions.maxTokens,
+    temperature: requestOptions.temperature,
+    maxContextMessages: requestOptions.maxContextMessages,
+    totalMessages: params.messages.length,
+    sentMessages: messages.length,
+    requestBytes: body.length,
+  }
+
+  params.logger.info('[NetworkLens][AI] Request start', requestTrace)
+
+  let response: IResForwardProxy
+  try {
+    response = await params.forwardProxy(
+      endpoint,
+      'POST',
+      body,
+      [
+        { Authorization: `Bearer ${params.config.aiApiKey}` },
+        { Accept: 'application/json' },
+      ],
+      requestOptions.timeoutMs,
+      'application/json',
+    )
+  } catch (error) {
+    const errorMessage = error instanceof Error ? error.message : String(error)
+    params.logger.error('[NetworkLens][AI] Request failed', {
+      ...requestTrace,
+      errorMessage,
+    })
+    throw buildAiRequestError({
+      cause: error,
+      endpoint,
+      timeoutMs: requestOptions.timeoutMs,
+      model: params.config.aiModel ?? '',
+      maxTokens: params.maxTokensOverride ?? requestOptions.maxTokens,
+      temperature: requestOptions.temperature,
+      maxContextMessages: requestOptions.maxContextMessages,
+    })
+  }
+
+  params.logger.info('[NetworkLens][AI] Response received', {
+    ...requestTrace,
+    status: response?.status ?? 'unknown',
+    elapsed: response?.elapsed ?? 'unknown',
+  })
 
   if (!response || response.status < 200 || response.status >= 300) {
     const status = response?.status ?? '未知状态'
+    params.logger.warn('[NetworkLens][AI] Non-2xx response', {
+      ...requestTrace,
+      status,
+      responseBody: response?.body?.slice(0, 500) ?? '',
+    })
     throw new Error(`AI 请求失败（${status}）`)
   }
 
@@ -340,10 +411,37 @@ async function requestChatCompletion(params: {
   try {
     payload = JSON.parse(response.body)
   } catch {
+    params.logger.warn('[NetworkLens][AI] Invalid JSON response', {
+      ...requestTrace,
+      status: response.status,
+      responseBody: response.body?.slice(0, 500) ?? '',
+    })
     throw new Error('AI 接口返回了无法解析的 JSON')
   }
 
   return payload
+}
+
+export function resolveAiRequestOptions(config: Pick<
+  PluginConfig,
+  'aiRequestTimeoutSeconds' | 'aiMaxTokens' | 'aiTemperature' | 'aiMaxContextMessages'
+>) {
+  return {
+    timeoutMs: normalizePositiveInteger(config.aiRequestTimeoutSeconds, DEFAULT_AI_REQUEST_TIMEOUT_SECONDS) * 1000,
+    maxTokens: normalizePositiveInteger(config.aiMaxTokens, DEFAULT_AI_MAX_TOKENS),
+    temperature: normalizeTemperature(config.aiTemperature, DEFAULT_AI_TEMPERATURE),
+    maxContextMessages: normalizePositiveInteger(config.aiMaxContextMessages, DEFAULT_AI_MAX_CONTEXT_MESSAGES),
+  }
+}
+
+export function limitChatCompletionMessages(messages: ChatCompletionMessage[], maxContextMessages: number) {
+  const systemMessages = messages.filter(message => message.role === 'system')
+  const conversationalMessages = messages.filter(message => message.role !== 'system')
+
+  return [
+    ...systemMessages,
+    ...conversationalMessages.slice(-Math.max(1, maxContextMessages)),
+  ]
 }
 
 function extractChatCompletionContent(payload: any): string {
@@ -446,4 +544,72 @@ function normalizePriority(value: unknown): string {
     return value
   }
   return 'P2'
+}
+
+function normalizePositiveInteger(value: unknown, fallback: number): number {
+  const normalized = typeof value === 'number'
+    ? Math.floor(value)
+    : typeof value === 'string' && value.trim()
+      ? Number.parseInt(value, 10)
+      : Number.NaN
+
+  return Number.isFinite(normalized) && normalized > 0
+    ? normalized
+    : fallback
+}
+
+function normalizeTemperature(value: unknown, fallback: number): number {
+  const normalized = typeof value === 'number'
+    ? value
+    : typeof value === 'string' && value.trim()
+      ? Number.parseFloat(value)
+      : Number.NaN
+
+  return Number.isFinite(normalized) && normalized >= 0 && normalized <= 2
+    ? normalized
+    : fallback
+}
+
+function buildAiRequestError(params: {
+  cause: unknown
+  endpoint: string
+  timeoutMs: number
+  model: string
+  maxTokens: number
+  temperature: number
+  maxContextMessages: number
+}) {
+  const rawMessage = params.cause instanceof Error ? params.cause.message : String(params.cause)
+  const hints: string[] = [
+    `请求地址：${params.endpoint}`,
+    `超时配置：${Math.round(params.timeoutMs / 1000)} 秒`,
+    `模型：${params.model}`,
+    `max_tokens：${params.maxTokens}`,
+    `temperature：${params.temperature}`,
+    `最大上下文数：${params.maxContextMessages}`,
+  ]
+
+  if (isLikelyMissingV1Path(params.endpoint)) {
+    hints.push(`Base URL 很可能应包含 /v1；当前请求落到了 ${params.endpoint}`)
+  }
+
+  if (params.endpoint.startsWith('https://api.siliconflow.cn/chat/completions')) {
+    hints.push('SiliconFlow 可优先检查 Base URL 是否填写为 https://api.siliconflow.cn/v1')
+  }
+
+  if (rawMessage.includes('context deadline exceeded')) {
+    hints.push('这是请求超时。优先检查 Base URL、网络连通性，并尝试切换为“紧凑”、降低最大 Token 数或继续增大超时时间')
+    return new Error(`AI 请求超时：${rawMessage}\n${hints.join('\n')}`)
+  }
+
+  return new Error(`AI 请求失败：${rawMessage}\n${hints.join('\n')}`)
+}
+
+function isLikelyMissingV1Path(endpoint: string): boolean {
+  try {
+    const url = new URL(endpoint)
+    return !url.pathname.includes('/v1/')
+  } catch {
+    return false
+  }
 }

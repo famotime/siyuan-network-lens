@@ -55,6 +55,10 @@ describe('SettingPanel', () => {
           aiBaseUrl: 'https://api.example.com/v1',
           aiApiKey: 'sk-test',
           aiModel: 'gpt-4.1-mini',
+          aiRequestTimeoutSeconds: 30,
+          aiMaxTokens: 10240,
+          aiTemperature: 0.7,
+          aiMaxContextMessages: 7,
           aiContextCapacity: 'compact',
         },
       }),
@@ -84,8 +88,13 @@ describe('SettingPanel', () => {
     expect(html).toContain('AI 接入')
     expect(html).toContain('启用 AI 整理收件箱')
     expect(html).toContain('Base URL')
+    expect(html).toContain('https://api.siliconflow.cn/v1')
     expect(html).toContain('API Key')
     expect(html).toContain('Model')
+    expect(html).toContain('超时时间')
+    expect(html).toContain('最大 Token 数')
+    expect(html).toContain('温度')
+    expect(html).toContain('最大上下文数')
     expect(html).toContain('上下文容量')
     expect(html).toContain('紧凑')
     expect(html).toContain('测试连接')
