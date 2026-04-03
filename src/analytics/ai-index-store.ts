@@ -5,8 +5,9 @@ import type { ThemeDocument } from './theme-documents'
 import type { PluginConfig } from '@/types/config'
 
 const AI_INDEX_STORAGE_NAME = 'ai-document-index.json'
-const AI_INDEX_SCHEMA_VERSION = 1
+const AI_INDEX_SCHEMA_VERSION = 2
 const AI_PROFILE_VERSION = 1
+const EMPTY_JSON_ARRAY = JSON.stringify([])
 
 type AiConfig = Pick<
   PluginConfig,
@@ -44,6 +45,11 @@ export interface DocumentSemanticProfileRecord {
   roleHintsJson: string
   embeddingJson: string
   evidenceSnippetsJson: string
+  documentSummaryShort?: string
+  documentSummaryMedium?: string
+  documentKeywordsJson?: string
+  documentEvidenceSnippetsJson?: string
+  documentSummaryUpdatedAt?: string
   updatedAt: string
 }
 
@@ -71,6 +77,17 @@ export interface AiDocumentIndexStore {
     timeRange: TimeRange
     result: AiLinkSuggestionResult
   }) => Promise<void>
+  saveDocumentSummary: (params: {
+    config: AiConfig
+    sourceDocument: DocumentRecord
+    summaryShort: string
+    summaryMedium?: string
+    keywords?: string[]
+    evidenceSnippets?: string[]
+    updatedAt?: string
+  }) => Promise<void>
+  getSemanticProfile: (documentId: string) => Promise<DocumentSemanticProfileRecord | null>
+  getFreshSemanticProfile: (documentId: string, sourceUpdatedAt: string) => Promise<DocumentSemanticProfileRecord | null>
   invalidateSuggestionCache: (documentId: string) => Promise<void>
 }
 
@@ -93,6 +110,7 @@ export function createAiDocumentIndexStore(storage: PluginStorageLike): AiDocume
         sourceDocument: params.sourceDocument,
         orphan: params.orphan,
         result: params.result,
+        existing: snapshot.semanticProfiles[params.sourceDocument.id],
         updatedAt,
       })
       snapshot.suggestionCache[buildSuggestionCacheStorageKey(params.sourceDocument.id, cacheKey)] = {
@@ -108,6 +126,35 @@ export function createAiDocumentIndexStore(storage: PluginStorageLike): AiDocume
       }
 
       await saveSnapshot(storage, snapshot)
+    },
+    async saveDocumentSummary(params) {
+      const snapshot = await loadSnapshot(storage)
+      const updatedAt = params.updatedAt || new Date().toISOString()
+
+      snapshot.semanticProfiles[params.sourceDocument.id] = buildDocumentSummaryProfileRecord({
+        config: params.config,
+        sourceDocument: params.sourceDocument,
+        existing: snapshot.semanticProfiles[params.sourceDocument.id],
+        summaryShort: params.summaryShort,
+        summaryMedium: params.summaryMedium,
+        keywords: params.keywords,
+        evidenceSnippets: params.evidenceSnippets,
+        updatedAt,
+      })
+
+      await saveSnapshot(storage, snapshot)
+    },
+    async getSemanticProfile(documentId) {
+      const snapshot = await loadSnapshot(storage)
+      return snapshot.semanticProfiles[documentId] ?? null
+    },
+    async getFreshSemanticProfile(documentId, sourceUpdatedAt) {
+      const snapshot = await loadSnapshot(storage)
+      const profile = snapshot.semanticProfiles[documentId]
+      if (!profile) {
+        return null
+      }
+      return profile.sourceUpdatedAt === sourceUpdatedAt ? profile : null
     },
     async invalidateSuggestionCache(documentId) {
       const snapshot = await loadSnapshot(storage)
@@ -170,7 +217,14 @@ async function loadSnapshot(storage: PluginStorageLike): Promise<AiDocumentIndex
 
   return {
     schemaVersion: Number.isFinite(data.schemaVersion) ? data.schemaVersion : AI_INDEX_SCHEMA_VERSION,
-    semanticProfiles: isRecord(data.semanticProfiles) ? data.semanticProfiles as Record<string, DocumentSemanticProfileRecord> : {},
+    semanticProfiles: isRecord(data.semanticProfiles)
+      ? Object.fromEntries(
+          Object.entries(data.semanticProfiles).map(([documentId, record]) => [
+            documentId,
+            normalizeSemanticProfileRecord(record),
+          ]),
+        )
+      : {},
     suggestionCache: isRecord(data.suggestionCache) ? data.suggestionCache as Record<string, DocumentLinkSuggestionCacheRecord> : {},
   }
 }
@@ -192,8 +246,15 @@ function buildSemanticProfileRecord(params: {
   sourceDocument: DocumentRecord
   orphan: OrphanItem
   result: AiLinkSuggestionResult
+  existing?: DocumentSemanticProfileRecord
   updatedAt: string
 }): DocumentSemanticProfileRecord {
+  const baseRecord = buildBaseSemanticProfileRecord({
+    config: params.config,
+    sourceDocument: params.sourceDocument,
+    existing: params.existing,
+    updatedAt: params.updatedAt,
+  })
   const title = resolveDocumentTitle(params.sourceDocument)
   const tags = normalizeTags(params.sourceDocument.tags)
   const summaryShort = params.result.summary.trim() || `已生成 ${title} 的 AI 补链建议`
@@ -227,6 +288,87 @@ function buildSemanticProfileRecord(params: {
   ])
 
   return {
+    ...baseRecord,
+    summaryShort,
+    summaryMedium,
+    keywordsJson: JSON.stringify(keywords),
+    topicCandidatesJson: JSON.stringify(topicCandidates),
+    entitiesJson: JSON.stringify([]),
+    roleHintsJson: JSON.stringify(roleHints),
+    embeddingJson: baseRecord.embeddingJson,
+    evidenceSnippetsJson: JSON.stringify(evidenceSnippets),
+  }
+}
+
+function normalizeSemanticProfileRecord(value: unknown): DocumentSemanticProfileRecord {
+  const record = (isRecord(value) ? value : {}) as Partial<DocumentSemanticProfileRecord>
+
+  return {
+    documentId: typeof record.documentId === 'string' ? record.documentId : '',
+    sourceUpdatedAt: typeof record.sourceUpdatedAt === 'string' ? record.sourceUpdatedAt : '',
+    sourceHash: typeof record.sourceHash === 'string' ? record.sourceHash : '',
+    profileVersion: Number.isFinite(record.profileVersion) ? Number(record.profileVersion) : AI_PROFILE_VERSION,
+    modelVersion: typeof record.modelVersion === 'string' ? record.modelVersion : 'unknown',
+    title: typeof record.title === 'string' ? record.title : '',
+    path: typeof record.path === 'string' ? record.path : '',
+    hpath: typeof record.hpath === 'string' ? record.hpath : '',
+    tagsJson: typeof record.tagsJson === 'string' ? record.tagsJson : EMPTY_JSON_ARRAY,
+    summaryShort: typeof record.summaryShort === 'string' ? record.summaryShort : '',
+    summaryMedium: typeof record.summaryMedium === 'string' ? record.summaryMedium : '',
+    keywordsJson: typeof record.keywordsJson === 'string' ? record.keywordsJson : EMPTY_JSON_ARRAY,
+    topicCandidatesJson: typeof record.topicCandidatesJson === 'string' ? record.topicCandidatesJson : EMPTY_JSON_ARRAY,
+    entitiesJson: typeof record.entitiesJson === 'string' ? record.entitiesJson : EMPTY_JSON_ARRAY,
+    roleHintsJson: typeof record.roleHintsJson === 'string' ? record.roleHintsJson : EMPTY_JSON_ARRAY,
+    embeddingJson: typeof record.embeddingJson === 'string' ? record.embeddingJson : EMPTY_JSON_ARRAY,
+    evidenceSnippetsJson: typeof record.evidenceSnippetsJson === 'string' ? record.evidenceSnippetsJson : EMPTY_JSON_ARRAY,
+    documentSummaryShort: typeof record.documentSummaryShort === 'string' ? record.documentSummaryShort : undefined,
+    documentSummaryMedium: typeof record.documentSummaryMedium === 'string' ? record.documentSummaryMedium : undefined,
+    documentKeywordsJson: typeof record.documentKeywordsJson === 'string' ? record.documentKeywordsJson : undefined,
+    documentEvidenceSnippetsJson: typeof record.documentEvidenceSnippetsJson === 'string' ? record.documentEvidenceSnippetsJson : undefined,
+    documentSummaryUpdatedAt: typeof record.documentSummaryUpdatedAt === 'string' ? record.documentSummaryUpdatedAt : undefined,
+    updatedAt: typeof record.updatedAt === 'string' ? record.updatedAt : '',
+  }
+}
+
+function buildDocumentSummaryProfileRecord(params: {
+  config: AiConfig
+  sourceDocument: DocumentRecord
+  existing?: DocumentSemanticProfileRecord
+  summaryShort: string
+  summaryMedium?: string
+  keywords?: string[]
+  evidenceSnippets?: string[]
+  updatedAt: string
+}): DocumentSemanticProfileRecord {
+  const baseRecord = buildBaseSemanticProfileRecord({
+    config: params.config,
+    sourceDocument: params.sourceDocument,
+    existing: params.existing,
+    updatedAt: params.updatedAt,
+  })
+  const summaryShort = params.summaryShort.trim()
+  const summaryMedium = (params.summaryMedium ?? summaryShort).trim() || summaryShort
+
+  return {
+    ...baseRecord,
+    documentSummaryShort: summaryShort || undefined,
+    documentSummaryMedium: summaryMedium || undefined,
+    documentKeywordsJson: JSON.stringify(deduplicateStrings(params.keywords ?? [])),
+    documentEvidenceSnippetsJson: JSON.stringify(deduplicateStrings(params.evidenceSnippets ?? [])),
+    documentSummaryUpdatedAt: params.updatedAt,
+  }
+}
+
+function buildBaseSemanticProfileRecord(params: {
+  config: AiConfig
+  sourceDocument: DocumentRecord
+  existing?: DocumentSemanticProfileRecord
+  updatedAt: string
+}): DocumentSemanticProfileRecord {
+  const title = resolveDocumentTitle(params.sourceDocument)
+  const tags = normalizeTags(params.sourceDocument.tags)
+
+  return {
     documentId: params.sourceDocument.id,
     sourceUpdatedAt: params.sourceDocument.updated ?? '',
     sourceHash: simpleHash([
@@ -244,14 +386,19 @@ function buildSemanticProfileRecord(params: {
     path: params.sourceDocument.path ?? '',
     hpath: params.sourceDocument.hpath ?? '',
     tagsJson: JSON.stringify(tags),
-    summaryShort,
-    summaryMedium,
-    keywordsJson: JSON.stringify(keywords),
-    topicCandidatesJson: JSON.stringify(topicCandidates),
-    entitiesJson: JSON.stringify([]),
-    roleHintsJson: JSON.stringify(roleHints),
-    embeddingJson: JSON.stringify([]),
-    evidenceSnippetsJson: JSON.stringify(evidenceSnippets),
+    summaryShort: params.existing?.summaryShort ?? '',
+    summaryMedium: params.existing?.summaryMedium ?? '',
+    keywordsJson: params.existing?.keywordsJson ?? EMPTY_JSON_ARRAY,
+    topicCandidatesJson: params.existing?.topicCandidatesJson ?? EMPTY_JSON_ARRAY,
+    entitiesJson: params.existing?.entitiesJson ?? EMPTY_JSON_ARRAY,
+    roleHintsJson: params.existing?.roleHintsJson ?? EMPTY_JSON_ARRAY,
+    embeddingJson: params.existing?.embeddingJson ?? EMPTY_JSON_ARRAY,
+    evidenceSnippetsJson: params.existing?.evidenceSnippetsJson ?? EMPTY_JSON_ARRAY,
+    documentSummaryShort: params.existing?.documentSummaryShort,
+    documentSummaryMedium: params.existing?.documentSummaryMedium,
+    documentKeywordsJson: params.existing?.documentKeywordsJson,
+    documentEvidenceSnippetsJson: params.existing?.documentEvidenceSnippetsJson,
+    documentSummaryUpdatedAt: params.existing?.documentSummaryUpdatedAt,
     updatedAt: params.updatedAt,
   }
 }

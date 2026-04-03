@@ -56,7 +56,7 @@ import {
   type AiLinkSuggestionService,
   type OrphanAiSuggestionState,
 } from '@/analytics/ai-link-suggestions'
-import { normalizeTags } from '@/analytics/document-utils'
+import { normalizeTags, resolveDocumentTitle } from '@/analytics/document-utils'
 import type { PluginConfig } from '@/types/config'
 
 export type { PathScope } from './use-analytics-derived'
@@ -822,6 +822,25 @@ export function useAnalyticsState(params: UseAnalyticsParams) {
         },
       })
       if (aiIndexStore) {
+        const documentSummary = buildStoredDocumentSummary(sourceDocument)
+
+        if (aiIndexStore.saveDocumentSummary) {
+          try {
+            await aiIndexStore.saveDocumentSummary({
+              config: params.config,
+              sourceDocument,
+              summaryShort: documentSummary.summaryShort,
+              summaryMedium: documentSummary.summaryMedium,
+              keywords: documentSummary.keywords,
+              evidenceSnippets: documentSummary.evidenceSnippets,
+              updatedAt: result.generatedAt,
+            })
+          } catch (error) {
+            const message = error instanceof Error ? error.message : '文档摘要索引保存失败'
+            notify(message, 5000, 'error')
+          }
+        }
+
         try {
           await aiIndexStore.saveSuggestionIndex({
             config: params.config,
@@ -962,4 +981,41 @@ export function useAnalyticsState(params: UseAnalyticsParams) {
     toggleOrphanAiTagSuggestion: aiSuggestionActions.toggleOrphanAiTagSuggestion,
     isAiTagSuggestionActive: aiSuggestionActions.isAiTagSuggestionActive,
   }
+}
+
+function buildStoredDocumentSummary(sourceDocument: DocumentRecord) {
+  const title = resolveDocumentTitle(sourceDocument)
+  const contentLines = (sourceDocument.content ?? '')
+    .split(/\r?\n/)
+    .map(line => line.replace(/\s+/g, ' ').trim())
+    .filter(Boolean)
+  const evidenceSnippets = deduplicateStrings(contentLines.slice(0, 2))
+  const flattenedContent = contentLines.join(' ').trim()
+  const summaryShort = flattenedContent.slice(0, 120) || `文档《${title}》`
+  const summaryMediumParts = [
+    `标题：${title}`,
+    sourceDocument.hpath ? `路径：${sourceDocument.hpath}` : '',
+    evidenceSnippets.length ? `正文要点：${evidenceSnippets.join(' ')}` : '',
+  ].filter(Boolean)
+
+  return {
+    summaryShort,
+    summaryMedium: summaryMediumParts.join('；'),
+    keywords: deduplicateStrings([
+      ...normalizeTags(sourceDocument.tags),
+      ...splitTitleKeywords(title),
+    ]),
+    evidenceSnippets,
+  }
+}
+
+function splitTitleKeywords(title: string): string[] {
+  return title
+    .split(/[\s,，、/]+/)
+    .map(part => part.trim())
+    .filter(part => part.length >= 2)
+}
+
+function deduplicateStrings(values: string[]): string[] {
+  return [...new Set(values.map(value => value.trim()).filter(Boolean))]
 }

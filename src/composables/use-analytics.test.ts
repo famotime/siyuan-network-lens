@@ -937,6 +937,7 @@ describe('useAnalyticsState', () => {
       return aiSuggestionResult
     })
     const saveSuggestionIndex = vi.fn(async () => undefined)
+    const saveDocumentSummary = vi.fn(async () => undefined)
 
     const state = useAnalyticsState({
       plugin: { eventBus: { on: () => {}, off: () => {} }, app: {} } as any,
@@ -980,6 +981,7 @@ describe('useAnalyticsState', () => {
         suggestForOrphan,
       }),
       aiIndexStore: {
+        saveDocumentSummary,
         saveSuggestionIndex,
         invalidateSuggestionCache: vi.fn(async () => undefined),
       },
@@ -1009,6 +1011,13 @@ describe('useAnalyticsState', () => {
       result: aiSuggestionResult,
     })
     expect(saveSuggestionIndex).toHaveBeenCalledTimes(1)
+    expect(saveDocumentSummary).toHaveBeenCalledTimes(1)
+    expect(saveDocumentSummary).toHaveBeenCalledWith(expect.objectContaining({
+      sourceDocument: expect.objectContaining({
+        id: 'doc-orphan',
+      }),
+      summaryShort: expect.any(String),
+    }))
     expect(saveSuggestionIndex).toHaveBeenCalledWith(expect.objectContaining({
       sourceDocument: expect.objectContaining({
         id: 'doc-orphan',
