@@ -58,6 +58,71 @@
             </div>
           </div>
         </SuggestionCallout>
+        <div
+          v-if="aiEnabled"
+          class="orphan-detail__ai-panel"
+        >
+          <div class="orphan-detail__ai-actions">
+            <button
+              class="orphan-detail__ai-button"
+              type="button"
+              :disabled="!aiConfigReady || resolveAiSuggestionState(item.documentId)?.loading"
+              @click="onGenerateAiSuggestion(item.documentId)"
+            >
+              {{ resolveAiSuggestionState(item.documentId)?.result ? '重新生成 AI 建议' : 'AI 建议' }}
+            </button>
+            <span
+              v-if="!aiConfigReady"
+              class="orphan-detail__ai-hint"
+            >
+              需先在设置中补充 AI 接入配置。
+            </span>
+          </div>
+
+          <div
+            v-if="resolveAiSuggestionState(item.documentId)?.loading || resolveAiSuggestionState(item.documentId)?.error || resolveAiSuggestionState(item.documentId)?.result"
+            class="orphan-detail__ai-body"
+          >
+            <p
+              v-if="resolveAiSuggestionState(item.documentId)?.loading"
+              class="orphan-detail__ai-status"
+            >
+              {{ resolveAiSuggestionState(item.documentId)?.statusMessage }}
+              <span class="orphan-detail__ai-subtle">若配置了 Embedding Model，会先完成 embedding 召回，再整理推荐理由。</span>
+            </p>
+            <p
+              v-else-if="resolveAiSuggestionState(item.documentId)?.error"
+              class="orphan-detail__ai-error"
+            >
+              {{ resolveAiSuggestionState(item.documentId)?.error }}
+            </p>
+            <div
+              v-else-if="resolveAiSuggestionState(item.documentId)?.result"
+              class="orphan-detail__ai-result"
+            >
+              <p class="orphan-detail__ai-summary">{{ resolveAiSuggestionState(item.documentId)?.result?.summary }}</p>
+              <article
+                v-for="suggestion in resolveAiSuggestionState(item.documentId)?.result?.suggestions ?? []"
+                :key="`${item.documentId}-${suggestion.targetDocumentId}`"
+                class="orphan-detail__ai-suggestion"
+              >
+                <div class="orphan-detail__ai-suggestion-top">
+                  <button
+                    class="orphan-detail__ai-target"
+                    type="button"
+                    @click="openDocument(suggestion.targetDocumentId)"
+                  >
+                    {{ suggestion.targetTitle }}
+                  </button>
+                  <span class="orphan-detail__ai-badge">{{ suggestion.confidence }}</span>
+                </div>
+                <p><strong>推荐理由：</strong>{{ suggestion.reason }}</p>
+                <p><strong>预估收益：</strong>{{ suggestion.expectedBenefit }}</p>
+                <p v-if="suggestion.draftText"><strong>建议文案：</strong>{{ suggestion.draftText }}</p>
+              </article>
+            </div>
+          </div>
+        </div>
       </article>
     </div>
     <div
@@ -71,6 +136,7 @@
 
 <script setup lang="ts">
 import type { OrphanSort } from '@/analytics/analysis'
+import type { OrphanAiSuggestionState } from '@/analytics/ai-link-suggestions'
 import type { DetailSuggestion, SummaryDetailItem } from '@/analytics/summary-details'
 import type { ThemeDocumentMatch } from '@/analytics/theme-documents'
 import DocumentTitle from './DocumentTitle.vue'
@@ -83,6 +149,10 @@ const props = defineProps<{
   openDocument: (documentId: string) => void
   onToggleThemeSuggestion: (documentId: string, themeDocumentId: string) => void
   isThemeSuggestionActive: (documentId: string, themeDocumentId: string) => boolean
+  aiEnabled: boolean
+  aiConfigReady: boolean
+  aiSuggestionStates: Map<string, OrphanAiSuggestionState>
+  onGenerateAiSuggestion: (documentId: string) => void | Promise<void>
 }>()
 
 function onSortChange(event: Event) {
@@ -107,6 +177,10 @@ function buildSuggestionCalloutItems(item: SummaryDetailItem & { themeSuggestion
       text: `${text}，建议链接以下主题文档（点击添加）：`,
     }
   })
+}
+
+function resolveAiSuggestionState(documentId: string): OrphanAiSuggestionState | undefined {
+  return props.aiSuggestionStates.get(documentId)
 }
 </script>
 
@@ -202,5 +276,104 @@ function buildSuggestionCalloutItems(item: SummaryDetailItem & { themeSuggestion
 
 .orphan-detail__theme-name {
   font-weight: 600;
+}
+
+.orphan-detail__ai-panel {
+  display: grid;
+  gap: 10px;
+  margin-top: 12px;
+  padding-top: 12px;
+  border-top: 1px dashed var(--panel-border);
+}
+
+.orphan-detail__ai-actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 10px;
+}
+
+.orphan-detail__ai-button,
+.orphan-detail__ai-target {
+  border: 0;
+  border-radius: 999px;
+  cursor: pointer;
+  font: inherit;
+}
+
+.orphan-detail__ai-button {
+  padding: 8px 14px;
+  background: color-mix(in srgb, var(--b3-theme-primary) 12%, transparent);
+  color: var(--b3-theme-primary);
+  font-weight: 600;
+}
+
+.orphan-detail__ai-button:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.orphan-detail__ai-hint,
+.orphan-detail__ai-subtle {
+  font-size: 12px;
+  color: var(--panel-muted);
+}
+
+.orphan-detail__ai-body {
+  display: grid;
+  gap: 10px;
+  border-radius: 12px;
+  padding: 12px;
+  background: color-mix(in srgb, var(--b3-theme-primary) 6%, var(--surface-card));
+}
+
+.orphan-detail__ai-status,
+.orphan-detail__ai-error,
+.orphan-detail__ai-summary,
+.orphan-detail__ai-suggestion p {
+  margin: 0;
+  line-height: 1.65;
+}
+
+.orphan-detail__ai-error {
+  color: var(--b3-theme-error);
+}
+
+.orphan-detail__ai-result {
+  display: grid;
+  gap: 10px;
+}
+
+.orphan-detail__ai-suggestion {
+  display: grid;
+  gap: 6px;
+  padding: 10px 12px;
+  border-radius: 10px;
+  background: var(--surface-card);
+  border: 1px solid color-mix(in srgb, var(--b3-theme-primary) 10%, transparent);
+}
+
+.orphan-detail__ai-suggestion-top {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 10px;
+}
+
+.orphan-detail__ai-target {
+  padding: 0;
+  background: transparent;
+  color: var(--b3-theme-primary);
+  text-align: left;
+  font-weight: 700;
+}
+
+.orphan-detail__ai-badge {
+  padding: 4px 8px;
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--b3-theme-primary) 12%, transparent);
+  color: var(--b3-theme-primary);
+  font-size: 12px;
+  text-transform: uppercase;
 }
 </style>

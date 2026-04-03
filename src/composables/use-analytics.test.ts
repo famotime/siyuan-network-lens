@@ -820,4 +820,86 @@ describe('useAnalyticsState', () => {
       }),
     ])
   })
+
+  it('loads orphan AI suggestions on demand and exposes friendly progress state', async () => {
+    const aiSuggestionResult = {
+      generatedAt: '2026-03-12T08:00:00.000Z',
+      summary: '优先补到主题页。',
+      suggestions: [
+        {
+          targetDocumentId: 'doc-theme-ai',
+          targetTitle: '主题-AI-索引',
+          targetType: 'theme-document',
+          confidence: 'high',
+          reason: '主题匹配和 embedding 相似度都很高。',
+          expectedBenefit: '预计移出孤立文档列表。',
+          draftText: '可归入 AI 主题：((doc-theme-ai "主题-AI-索引"))',
+        },
+      ],
+    }
+    const suggestForOrphan = vi.fn(async ({ onProgress }: any) => {
+      onProgress?.('正在分析文档语义并生成 embedding…')
+      onProgress?.('正在基于 embedding 与结构信号召回候选…')
+      onProgress?.('AI 正在整理推荐理由与插入文案…')
+      return aiSuggestionResult
+    })
+
+    const state = useAnalyticsState({
+      plugin: { eventBus: { on: () => {}, off: () => {} }, app: {} } as any,
+      config: {
+        showSummaryCards: true,
+        showRanking: true,
+        showCommunities: true,
+        showOrphanBridge: true,
+        showTrends: true,
+        showPropagation: true,
+        themeNotebookId: 'box-1',
+        themeDocumentPath: '/专题',
+        themeNamePrefix: '主题-',
+        themeNameSuffix: '-索引',
+        aiEnabled: true,
+        aiBaseUrl: 'https://api.example.com/v1',
+        aiApiKey: 'sk-test',
+        aiModel: 'gpt-4.1-mini',
+        aiEmbeddingModel: 'text-embedding-3-small',
+      },
+      loadSnapshot: async () => snapshot as any,
+      nowProvider: () => now,
+      createActiveDocumentSync: () => () => {},
+      showMessage: () => {},
+      openTab: () => {},
+      appendBlock: async () => [],
+      prependBlock: async () => [],
+      deleteBlock: async () => [],
+      updateBlock: async () => [],
+      getChildBlocks: async () => [],
+      getBlockKramdown: async () => ({ id: '', kramdown: '' }),
+      forwardProxy: async () => ({
+        body: '',
+        contentType: 'application/json',
+        elapsed: 1,
+        headers: {},
+        status: 200,
+        url: 'https://api.example.com/v1',
+      }),
+      createAiLinkSuggestionService: () => ({
+        suggestForOrphan,
+      }),
+    } as any)
+
+    await state.refresh()
+    await nextTick()
+
+    await (state as any).generateOrphanAiSuggestion('doc-orphan')
+    await nextTick()
+
+    expect(suggestForOrphan).toHaveBeenCalledTimes(1)
+    expect(typeof (state as any).generateOrphanAiSuggestion).toBe('function')
+    expect((state as any).orphanAiSuggestionStates.value.get('doc-orphan')).toEqual({
+      loading: false,
+      statusMessage: '',
+      error: '',
+      result: aiSuggestionResult,
+    })
+  })
 })

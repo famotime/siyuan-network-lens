@@ -35,6 +35,10 @@
           :on-update-orphan-sort="onUpdateOrphanSort"
           :on-toggle-theme-suggestion="toggleOrphanThemeSuggestion"
           :is-theme-suggestion-active="isThemeSuggestionActive"
+          :ai-enabled="aiEnabled"
+          :ai-config-ready="aiLinkSuggestionConfigReady"
+          :ai-suggestion-states="orphanAiSuggestionStates"
+          :on-generate-ai-suggestion="generateOrphanAiSuggestion"
         />
       </template>
       <template v-else-if="detail.key === 'dormant'">
@@ -446,6 +450,7 @@
 import { computed } from 'vue'
 
 import type { OrphanSort } from '@/analytics/analysis'
+import type { OrphanAiSuggestionState } from '@/analytics/ai-link-suggestions'
 import type { LinkDirection } from '@/analytics/link-sync'
 import type { DetailSuggestion, SummaryDetailSection as SummaryDetailSectionType } from '@/analytics/summary-details'
 import type { ReadCardMode } from '@/analytics/read-status'
@@ -481,6 +486,10 @@ const props = defineProps<{
   openDocument: (documentId: string) => void
   toggleOrphanThemeSuggestion: (orphanDocumentId: string, themeDocumentId: string) => Promise<void>
   isThemeSuggestionActive: (orphanDocumentId: string, themeDocumentId: string) => boolean
+  aiEnabled: boolean
+  aiLinkSuggestionConfigReady: boolean
+  orphanAiSuggestionStates: Map<string, OrphanAiSuggestionState>
+  generateOrphanAiSuggestion: (documentId: string) => Promise<void>
   readCardMode: ReadCardMode
   pathScope: PathScope
   onUpdatePathScope: (value: PathScope) => void

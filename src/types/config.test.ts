@@ -35,6 +35,7 @@ describe('config defaults', () => {
     expect(config.aiBaseUrl).toBe('')
     expect(config.aiApiKey).toBe('')
     expect(config.aiModel).toBe('')
+    expect(config.aiEmbeddingModel).toBe('')
     expect(config.aiRequestTimeoutSeconds).toBe(30)
     expect(config.aiMaxTokens).toBe(10240)
     expect(config.aiTemperature).toBe(0.7)

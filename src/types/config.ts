@@ -32,6 +32,7 @@ export interface PluginConfig {
   aiBaseUrl?: string
   aiApiKey?: string
   aiModel?: string
+  aiEmbeddingModel?: string
   aiRequestTimeoutSeconds?: number
   aiMaxTokens?: number
   aiTemperature?: number
@@ -55,6 +56,7 @@ export const DEFAULT_CONFIG: PluginConfig = {
   aiBaseUrl: '',
   aiApiKey: '',
   aiModel: '',
+  aiEmbeddingModel: '',
   aiRequestTimeoutSeconds: DEFAULT_AI_REQUEST_TIMEOUT_SECONDS,
   aiMaxTokens: DEFAULT_AI_MAX_TOKENS,
   aiTemperature: DEFAULT_AI_TEMPERATURE,
@@ -101,6 +103,9 @@ export function ensureConfigDefaults(config: PluginConfig) {
   }
   if (typeof config.aiModel !== 'string') {
     config.aiModel = ''
+  }
+  if (typeof config.aiEmbeddingModel !== 'string') {
+    config.aiEmbeddingModel = ''
   }
   config.aiRequestTimeoutSeconds = normalizePositiveInteger(
     config.aiRequestTimeoutSeconds,

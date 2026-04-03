@@ -125,7 +125,7 @@
     <div class="setting-group">
       <div class="setting-header">
         <h3>AI 接入</h3>
-        <p>配置兼容 OpenAI API 的服务，用于生成“AI 整理收件箱”的今日优先待办。</p>
+        <p>配置兼容 OpenAI API 的服务，用于生成“AI 整理收件箱”和孤立文档的 AI 补链建议。</p>
       </div>
       <div class="setting-form">
         <label class="setting-item setting-item--full">
@@ -157,6 +157,15 @@
           <input
             v-model.trim="config.aiModel"
             placeholder="gpt-4.1-mini"
+            type="text"
+          >
+        </label>
+        <label class="setting-field setting-field--full">
+          <span>Embedding Model（可选）</span>
+          <small class="setting-field__hint">可选，用于增强孤立文档 AI 补链召回；留空时会退回到主题命中与结构候选</small>
+          <input
+            v-model.trim="config.aiEmbeddingModel"
+            placeholder="text-embedding-3-small"
             type="text"
           >
         </label>

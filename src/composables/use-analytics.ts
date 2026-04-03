@@ -45,6 +45,12 @@ import {
   createThemeSuggestionController,
 } from './use-analytics-interactions'
 import { createAiInboxService, isAiConfigComplete, type AiInboxResult, type AiInboxService } from '@/analytics/ai-inbox'
+import {
+  createAiLinkSuggestionService,
+  isAiLinkSuggestionConfigComplete,
+  type AiLinkSuggestionService,
+  type OrphanAiSuggestionState,
+} from '@/analytics/ai-link-suggestions'
 import type { PluginConfig } from '@/types/config'
 
 export type { PathScope } from './use-analytics-derived'
@@ -99,6 +105,7 @@ type UseAnalyticsParams = {
   getBlockKramdown: GetBlockKramdownFn
   forwardProxy?: ForwardProxyFn
   createAiInboxService?: (deps: { forwardProxy: ForwardProxyFn }) => AiInboxService
+  createAiLinkSuggestionService?: (deps: { forwardProxy: ForwardProxyFn }) => AiLinkSuggestionService
 }
 
 export function useAnalyticsState(params: UseAnalyticsParams) {
@@ -116,6 +123,9 @@ export function useAnalyticsState(params: UseAnalyticsParams) {
   const getBlockKramdown = params.getBlockKramdown
   const aiInboxService = params.forwardProxy
     ? (params.createAiInboxService?.({ forwardProxy: params.forwardProxy }) ?? createAiInboxService({ forwardProxy: params.forwardProxy }))
+    : null
+  const aiLinkSuggestionService = params.forwardProxy
+    ? (params.createAiLinkSuggestionService?.({ forwardProxy: params.forwardProxy }) ?? createAiLinkSuggestionService({ forwardProxy: params.forwardProxy }))
     : null
 
   const loading = ref(false)
@@ -147,6 +157,7 @@ export function useAnalyticsState(params: UseAnalyticsParams) {
   const aiInboxError = ref('')
   const aiConnectionMessage = ref('')
   const aiInboxResult = ref<AiInboxResult | null>(null)
+  const orphanAiSuggestionStates = ref<Map<string, OrphanAiSuggestionState>>(new Map())
   const timeRangeOptions = computed(() => buildTimeRangeOptions())
   let disposeActiveDocumentSync: (() => void) | null = null
 
@@ -293,6 +304,7 @@ export function useAnalyticsState(params: UseAnalyticsParams) {
   })
   const summaryCards = computed<SummaryCardItem[]>(() => sortSummaryCards(rawSummaryCards.value, summaryCardOrder.value))
   const aiConfigReady = computed(() => isAiConfigComplete(params.config))
+  const aiLinkSuggestionConfigReady = computed(() => isAiLinkSuggestionConfigComplete(params.config))
 
   const summaryDetailSections = computed(() => {
     if (!snapshot.value || !report.value) {
@@ -519,6 +531,7 @@ export function useAnalyticsState(params: UseAnalyticsParams) {
       aiInboxError.value = ''
       aiConnectionMessage.value = ''
       aiInboxResult.value = null
+      orphanAiSuggestionStates.value = new Map()
     } catch (error) {
       const message = error instanceof Error ? error.message : '读取思源数据失败'
       errorMessage.value = message
@@ -682,6 +695,80 @@ export function useAnalyticsState(params: UseAnalyticsParams) {
     }
   }
 
+  function updateOrphanAiSuggestionState(documentId: string, nextState: OrphanAiSuggestionState) {
+    const nextMap = new Map(orphanAiSuggestionStates.value)
+    nextMap.set(documentId, nextState)
+    orphanAiSuggestionStates.value = nextMap
+  }
+
+  async function generateOrphanAiSuggestion(documentId: string) {
+    if (!snapshot.value || !report.value) {
+      updateOrphanAiSuggestionState(documentId, {
+        loading: false,
+        statusMessage: '',
+        error: '当前分析结果还未准备好，请先刷新分析',
+        result: null,
+      })
+      return
+    }
+
+    const sourceDocument = snapshot.value.documents.find(document => document.id === documentId)
+    const orphan = report.value.orphans.find(item => item.documentId === documentId)
+    if (!sourceDocument || !orphan) {
+      updateOrphanAiSuggestionState(documentId, {
+        loading: false,
+        statusMessage: '',
+        error: '当前文档不在孤立文档列表中',
+        result: null,
+      })
+      return
+    }
+
+    updateOrphanAiSuggestionState(documentId, {
+      loading: true,
+      statusMessage: '正在分析文档语义并生成 embedding…',
+      error: '',
+      result: null,
+    })
+
+    try {
+      if (!aiLinkSuggestionService) {
+        throw new Error('AI 网络代理未初始化')
+      }
+      const result = await aiLinkSuggestionService.suggestForOrphan({
+        config: params.config,
+        sourceDocument,
+        orphan,
+        documents: snapshot.value.documents,
+        themeDocuments: themeDocuments.value,
+        report: report.value,
+        onProgress: (message) => {
+          updateOrphanAiSuggestionState(documentId, {
+            loading: true,
+            statusMessage: message,
+            error: '',
+            result: null,
+          })
+        },
+      })
+      updateOrphanAiSuggestionState(documentId, {
+        loading: false,
+        statusMessage: '',
+        error: '',
+        result,
+      })
+    } catch (error) {
+      const message = error instanceof Error ? error.message : 'AI 补链建议生成失败'
+      updateOrphanAiSuggestionState(documentId, {
+        loading: false,
+        statusMessage: '',
+        error: message,
+        result: null,
+      })
+      notify(message, 5000, 'error')
+    }
+  }
+
   const linkInteractions = createLinkAssociationInteractions({
     resolveTitle,
     appendBlock,
@@ -725,11 +812,13 @@ export function useAnalyticsState(params: UseAnalyticsParams) {
     largeDocumentCardMode,
     panelCollapseState,
     aiConfigReady,
+    aiLinkSuggestionConfigReady,
     aiInboxLoading,
     aiConnectionTesting,
     aiInboxError,
     aiConnectionMessage,
     aiInboxResult,
+    orphanAiSuggestionStates,
     filters,
     notebookOptions,
     tagOptions,
@@ -778,6 +867,7 @@ export function useAnalyticsState(params: UseAnalyticsParams) {
     formatTimestamp,
     formatDelta,
     generateAiInbox,
+    generateOrphanAiSuggestion,
     testAiConnection,
     toggleOrphanThemeSuggestion: themeSuggestionController.toggleOrphanThemeSuggestion,
     isThemeSuggestionActive: themeSuggestionController.isThemeSuggestionActive,

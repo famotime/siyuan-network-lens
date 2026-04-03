@@ -197,6 +197,10 @@
         :open-document="openDocument"
         :toggle-orphan-theme-suggestion="toggleOrphanThemeSuggestion"
         :is-theme-suggestion-active="isThemeSuggestionActive"
+        :ai-enabled="Boolean(props.config.aiEnabled)"
+        :ai-link-suggestion-config-ready="aiLinkSuggestionConfigReady"
+        :orphan-ai-suggestion-states="orphanAiSuggestionStates"
+        :generate-orphan-ai-suggestion="generateOrphanAiSuggestion"
         :read-card-mode="readCardMode"
         :path-scope="pathScope"
         :on-update-path-scope="updatePathScope"
@@ -293,11 +297,13 @@ const {
   themeDocumentIds,
   orphanDetailItems,
   orphanThemeSuggestions,
+  orphanAiSuggestionStates,
   pathOptions,
   pathChain,
   panelCounts,
   snapshotLabel,
   aiConfigReady,
+  aiLinkSuggestionConfigReady,
   aiInboxLoading,
   aiConnectionTesting,
   aiInboxError,
@@ -305,6 +311,7 @@ const {
   aiInboxResult,
   refresh,
   generateAiInbox,
+  generateOrphanAiSuggestion,
   testAiConnection,
   selectEvidence,
   selectCommunity,

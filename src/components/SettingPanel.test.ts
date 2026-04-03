@@ -55,6 +55,7 @@ describe('SettingPanel', () => {
           aiBaseUrl: 'https://api.example.com/v1',
           aiApiKey: 'sk-test',
           aiModel: 'gpt-4.1-mini',
+          aiEmbeddingModel: 'text-embedding-3-small',
           aiRequestTimeoutSeconds: 30,
           aiMaxTokens: 10240,
           aiTemperature: 0.7,
@@ -91,6 +92,8 @@ describe('SettingPanel', () => {
     expect(html).toContain('https://api.siliconflow.cn/v1')
     expect(html).toContain('API Key')
     expect(html).toContain('Model')
+    expect(html).toContain('Embedding Model（可选）')
+    expect(html).toContain('text-embedding-3-small')
     expect(html).toContain('超时时间')
     expect(html).toContain('最大 Token 数')
     expect(html).toContain('温度')

@@ -27,6 +27,17 @@ describe('OrphanDetailPanel', () => {
         openDocument: vi.fn(),
         onToggleThemeSuggestion: vi.fn(),
         isThemeSuggestionActive: vi.fn().mockReturnValue(false),
+        aiEnabled: true,
+        aiConfigReady: true,
+        aiSuggestionStates: new Map([
+          ['doc-a', {
+            loading: true,
+            statusMessage: '正在分析文档语义并生成 embedding…',
+            error: '',
+            result: null,
+          }],
+        ]),
+        onGenerateAiSuggestion: vi.fn(),
       }),
     })
 
@@ -39,6 +50,8 @@ describe('OrphanDetailPanel', () => {
     expect(html).toContain('补齐链接')
     expect(html).toContain('建议补充至少一条出链或入链，建议链接以下主题文档（点击添加）：')
     expect(html).toContain('AI')
+    expect(html).toContain('AI 建议')
+    expect(html).toContain('正在分析文档语义并生成 embedding')
     expect(html).not.toContain('主题-AI-索引</span>')
     expect(html).not.toContain('建议与主题文档建立链接：')
   })
