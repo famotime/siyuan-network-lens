@@ -7,10 +7,34 @@ const documents = Array.from({ length: 12 }, (_, index) => ({
   box: 'box-1',
   path: `/doc-${index + 1}.sy`,
   hpath: `/Doc ${index + 1}`,
-  title: `Doc ${index + 1}`,
+  title: index === 0 ? 'AI 与机器学习整理' : `Doc ${index + 1}`,
+  content: index === 0 ? 'AI 人工智能 机器学习 模型 训练' : '',
   created: '20260301090000',
   updated: '20260311120000',
-}))
+})).concat([
+  {
+    id: 'doc-theme-ai',
+    box: 'box-1',
+    path: '/topics/theme-ai.sy',
+    hpath: '/专题/主题-AI-索引',
+    title: '主题-AI-索引',
+    name: 'AI',
+    alias: '人工智能',
+    created: '20260301090000',
+    updated: '20260311120000',
+  },
+  {
+    id: 'doc-theme-ml',
+    box: 'box-1',
+    path: '/topics/theme-ml.sy',
+    hpath: '/专题/主题-机器学习-索引',
+    title: '主题-机器学习-索引',
+    name: '机器学习',
+    alias: 'ML',
+    created: '20260301090000',
+    updated: '20260311120000',
+  },
+])
 
 const report = {
   summary: {
@@ -124,6 +148,71 @@ const trends = {
 } as any
 
 describe('ai inbox payload', () => {
+  it('builds concrete action candidates with targets, score breakdown and expected benefits', () => {
+    const service = createAiInboxService({
+      forwardProxy: async () => {
+        throw new Error('not used')
+      },
+    })
+
+    const payload = service.buildPayload({
+      documents,
+      report,
+      trends,
+      summaryCards: [
+        { key: 'orphans', label: '孤立文档', value: '10', hint: '当前窗口内没有有效文档级连接' },
+      ] as any,
+      filters: {},
+      timeRange: '7d',
+      dormantDays: 30,
+      contextCapacity: 'balanced',
+      themeDocuments: [
+        {
+          documentId: 'doc-theme-ai',
+          title: '主题-AI-索引',
+          themeName: 'AI',
+          matchTerms: ['AI', '人工智能'],
+          box: 'box-1',
+          path: '/topics/theme-ai.sy',
+          hpath: '/专题/主题-AI-索引',
+        },
+        {
+          documentId: 'doc-theme-ml',
+          title: '主题-机器学习-索引',
+          themeName: '机器学习',
+          matchTerms: ['机器学习', 'ML'],
+          box: 'box-1',
+          path: '/topics/theme-ml.sy',
+          hpath: '/专题/主题-机器学习-索引',
+        },
+      ],
+    })
+
+    expect(payload.actionCandidates.length).toBeGreaterThan(0)
+    expect(payload.actionCandidates).toEqual(expect.arrayContaining([
+      expect.objectContaining({
+        type: 'repair-link',
+        title: '修复孤立文档：AI 与机器学习整理',
+        focusDocumentIds: ['doc-1'],
+        recommendedTargets: expect.arrayContaining([
+          expect.objectContaining({
+            documentId: 'doc-theme-ai',
+            title: '主题-AI-索引',
+            kind: 'theme-document',
+          }),
+        ]),
+        expectedBenefits: expect.arrayContaining([
+          expect.stringContaining('移出孤立文档'),
+        ]),
+        priorityScore: expect.any(Number),
+        impactScore: expect.any(Number),
+        urgencyScore: expect.any(Number),
+        actionabilityScore: expect.any(Number),
+        confidence: expect.stringMatching(/high|medium|low/),
+      }),
+    ]))
+  })
+
   it('uses compact capacity to reduce the number of included signals', () => {
     const service = createAiInboxService({
       forwardProxy: async () => {
@@ -146,6 +235,7 @@ describe('ai inbox payload', () => {
       timeRange: '7d',
       dormantDays: 30,
       contextCapacity: 'compact',
+      themeDocuments: [],
     })
 
     expect(payload.context.capacity).toBe('compact')
@@ -155,6 +245,7 @@ describe('ai inbox payload', () => {
     expect(payload.signals.bridges).toHaveLength(3)
     expect(payload.signals.newConnections).toHaveLength(2)
     expect(payload.signals.brokenConnections).toHaveLength(2)
+    expect(payload.actionCandidates).toHaveLength(3)
   })
 
   it('uses full capacity to include a wider signal window', () => {
@@ -179,6 +270,7 @@ describe('ai inbox payload', () => {
       timeRange: '7d',
       dormantDays: 30,
       contextCapacity: 'full',
+      themeDocuments: [],
     })
 
     expect(payload.context.capacity).toBe('full')
@@ -188,6 +280,7 @@ describe('ai inbox payload', () => {
     expect(payload.signals.propagation).toHaveLength(9)
     expect(payload.signals.newConnections).toHaveLength(7)
     expect(payload.signals.brokenConnections).toHaveLength(7)
+    expect(payload.actionCandidates.length).toBeGreaterThan(6)
   })
 })
 
@@ -245,8 +338,14 @@ describe('ai inbox request options', () => {
       expect(body.max_tokens).toBe(2048)
       expect(body.temperature).toBe(0.2)
       expect(body.messages).toEqual([
-        { role: 'system', content: '你是思源笔记文档引用网络的整理助手。 你要根据给定的结构化分析结果，输出今天最值得优先处理的整理待办。 必须只输出 JSON，不要输出 Markdown、解释或代码块。 JSON 结构必须是 {"summary": string, "items": AiInboxItem[]}。 items 中每项必须包含 id、type、title、priority、why、action、benefit，可选 documentIds。 type 只能是 document、connection、topic-page、bridge-risk。 priority 用 P1、P2、P3。 优先关注孤立文档、沉没文档、桥接风险、缺主题页社区、趋势变化和关键连接补齐。' },
-        { role: 'user', content: expect.stringContaining('请基于下面的文档级引用网络分析结果') },
+        {
+          role: 'system',
+          content: expect.stringContaining('优先使用 actionCandidates 中已经给出的推荐目标、证据、收益预估和评分'),
+        },
+        {
+          role: 'user',
+          content: expect.stringContaining('请基于下面的文档级引用网络分析结果'),
+        },
       ])
 
       return {
@@ -265,6 +364,17 @@ describe('ai inbox request options', () => {
                       why: 'because',
                       action: 'act',
                       benefit: 'benefit',
+                      confidence: 'high',
+                      recommendedTargets: [
+                        {
+                          documentId: 'doc-theme-ai',
+                          title: '主题-AI-索引',
+                          reason: '主题页可作为稳定入口',
+                        },
+                      ],
+                      evidence: ['当前窗口内孤立', '主题匹配命中 4 次'],
+                      expectedChanges: ['孤立文档数预计减少 1'],
+                      draftText: '可归入 AI 主题：((doc-theme-ai "主题-AI-索引"))',
                     },
                   ],
                 }),
@@ -308,6 +418,18 @@ describe('ai inbox request options', () => {
 
     expect(result.summary).toBe('summary')
     expect(result.items).toHaveLength(1)
+    expect(result.items[0]).toEqual(expect.objectContaining({
+      confidence: 'high',
+      recommendedTargets: [
+        expect.objectContaining({
+          documentId: 'doc-theme-ai',
+          title: '主题-AI-索引',
+        }),
+      ],
+      evidence: ['当前窗口内孤立', '主题匹配命中 4 次'],
+      expectedChanges: ['孤立文档数预计减少 1'],
+      draftText: '可归入 AI 主题：((doc-theme-ai "主题-AI-索引"))',
+    }))
   })
 
   it('adds timeout troubleshooting details and emits debug logs when forward proxy throws', async () => {

@@ -7,6 +7,8 @@ import type {
   TrendReport,
 } from './analysis'
 import type { SummaryCardItem } from './summary-details'
+import { parseSiyuanTimestamp } from './document-utils'
+import { countThemeMatchesForDocument, type ThemeDocument } from './theme-documents'
 import {
   DEFAULT_AI_MAX_CONTEXT_MESSAGES,
   DEFAULT_AI_MAX_TOKENS,
@@ -27,6 +29,9 @@ type ForwardProxyFn = (
 type AiLogger = Pick<Console, 'info' | 'warn' | 'error'>
 
 export type AiContextCapacity = 'compact' | 'balanced' | 'full'
+export type AiInboxTargetKind = 'theme-document' | 'core-document' | 'community-hub' | 'related-document'
+export type AiInboxActionCandidateType = 'repair-link' | 'create-topic-page' | 'maintain-bridge' | 'archive-dormant'
+export type AiInboxConfidence = 'high' | 'medium' | 'low'
 
 type AiConfig = Pick<
   PluginConfig,
@@ -44,6 +49,21 @@ type ChatCompletionMessage = { role: 'system' | 'user' | 'assistant', content: s
 
 export type AiInboxItemType = 'document' | 'connection' | 'topic-page' | 'bridge-risk'
 
+export interface AiInboxRecommendedTarget {
+  documentId?: string
+  title: string
+  kind: AiInboxTargetKind
+  reason: string
+}
+
+export interface AiInboxPriorityBreakdown {
+  impactScore: number
+  urgencyScore: number
+  actionabilityScore: number
+  confidenceScore: number
+  priorityScore: number
+}
+
 export interface AiInboxItem {
   id: string
   type: AiInboxItemType
@@ -53,6 +73,25 @@ export interface AiInboxItem {
   action: string
   benefit: string
   documentIds?: string[]
+  confidence?: AiInboxConfidence
+  recommendedTargets?: AiInboxRecommendedTarget[]
+  evidence?: string[]
+  expectedChanges?: string[]
+  draftText?: string
+  priorityBreakdown?: AiInboxPriorityBreakdown
+}
+
+export interface AiInboxActionCandidate extends AiInboxPriorityBreakdown {
+  id: string
+  type: AiInboxActionCandidateType
+  title: string
+  focusDocumentIds: string[]
+  confidence: AiInboxConfidence
+  recommendedAction: string
+  recommendedTargets: AiInboxRecommendedTarget[]
+  evidence: string[]
+  expectedBenefits: string[]
+  draftText?: string
 }
 
 export interface AiInboxResult {
@@ -80,6 +119,7 @@ export interface AiInboxPayload {
     }
     summaryCards: Array<{ key: string, label: string, value: string, hint: string }>
   }
+  actionCandidates: AiInboxActionCandidate[]
   signals: {
     ranking: Array<{ documentId: string, title: string, inboundReferences: number, distinctSourceDocuments: number, outboundReferences: number }>
     orphans: Array<{ documentId: string, title: string, updatedAt: string, historicalReferenceCount: number, hasSparseEvidence: boolean }>
@@ -104,6 +144,7 @@ export interface AiInboxService {
     timeRange: TimeRange
     dormantDays: number
     contextCapacity?: AiContextCapacity
+    themeDocuments?: ThemeDocument[]
   }) => AiInboxPayload
   generateInbox: (params: {
     config: AiConfig
@@ -118,21 +159,25 @@ const CAPACITY_LIMITS: Record<AiContextCapacity, {
   signalLimit: number
   connectionLimit: number
   summaryCardLimit: number
+  actionCandidateLimit: number
 }> = {
   compact: {
     signalLimit: 3,
     connectionLimit: 2,
     summaryCardLimit: 4,
+    actionCandidateLimit: 3,
   },
   balanced: {
     signalLimit: 6,
     connectionLimit: 5,
     summaryCardLimit: 6,
+    actionCandidateLimit: 6,
   },
   full: {
     signalLimit: 10,
     connectionLimit: 8,
     summaryCardLimit: 12,
+    actionCandidateLimit: 10,
   },
 }
 
@@ -141,9 +186,13 @@ const SYSTEM_PROMPT = [
   '你要根据给定的结构化分析结果，输出今天最值得优先处理的整理待办。',
   '必须只输出 JSON，不要输出 Markdown、解释或代码块。',
   'JSON 结构必须是 {"summary": string, "items": AiInboxItem[]}。',
-  'items 中每项必须包含 id、type、title、priority、why、action、benefit，可选 documentIds。',
+  'items 中每项必须包含 id、type、title、priority、why、action、benefit，可选 documentIds、confidence、recommendedTargets、evidence、expectedChanges、draftText、priorityBreakdown。',
   'type 只能是 document、connection、topic-page、bridge-risk。',
   'priority 用 P1、P2、P3。',
+  '优先使用 actionCandidates 中已经给出的推荐目标、证据、收益预估和评分，不要自己发明不存在的文档或主题页。',
+  '如果 actionCandidates 中有 focusDocumentIds，请把对应主对象 id 填到 documentIds。',
+  '如果有 recommendedTargets，action 必须点名目标标题，不能只写“补链接”“完善结构”这类泛动作。',
+  'why 必须引用至少 1 条结构证据；benefit 必须写成处理后可观察到的变化。',
   '优先关注孤立文档、沉没文档、桥接风险、缺主题页社区、趋势变化和关键连接补齐。',
 ].join(' ')
 
@@ -176,8 +225,9 @@ export function createAiInboxService(deps: {
             role: 'user',
             content: [
               '请基于下面的文档级引用网络分析结果，给出“今天优先处理什么”的统一待办列表。',
-              '优先输出 5 到 8 项，尽量覆盖文档整理、补连接、补主题页、桥接风险。',
-              '如果证据不足，不要硬造。',
+              '优先输出 5 到 8 项，优先从 actionCandidates 中挑选高分候选。',
+              '每项建议尽量写清：现在处理哪个对象、补到哪里/建什么页、为什么、处理后会改善什么。',
+              '如果证据不足，不要硬造；如果没有明确目标，就如实保留为空。',
               JSON.stringify(params.payload),
             ].join('\n'),
           },
@@ -220,6 +270,7 @@ function buildAiInboxPayload(params: {
   timeRange: TimeRange
   dormantDays: number
   contextCapacity?: AiContextCapacity
+  themeDocuments?: ThemeDocument[]
 }): AiInboxPayload {
   const documentMap = new Map(params.documents.map(document => [document.id, document]))
   const communityById = new Map(params.report.communities.map(community => [community.id, community]))
@@ -245,6 +296,13 @@ function buildAiInboxPayload(params: {
         hint: card.hint,
       })),
     },
+    actionCandidates: buildActionCandidates({
+      documentMap,
+      report: params.report,
+      trends: params.trends,
+      themeDocuments: params.themeDocuments ?? [],
+      actionCandidateLimit: limits.actionCandidateLimit,
+    }),
     signals: {
       ranking: params.report.ranking.slice(0, limits.signalLimit).map(item => ({
         documentId: item.documentId,
@@ -305,6 +363,352 @@ function buildAiInboxPayload(params: {
   }
 }
 
+function buildActionCandidates(params: {
+  documentMap: Map<string, DocumentRecord>
+  report: ReferenceGraphReport
+  trends: TrendReport
+  themeDocuments: ThemeDocument[]
+  actionCandidateLimit: number
+}): AiInboxActionCandidate[] {
+  const candidates: AiInboxActionCandidate[] = []
+  const usedIds = new Set<string>()
+
+  for (const item of params.report.orphans) {
+    const candidate = buildRepairLinkCandidate({
+      orphan: item,
+      documentMap: params.documentMap,
+      ranking: params.report.ranking,
+      themeDocuments: params.themeDocuments,
+    })
+    if (candidate && !usedIds.has(candidate.id)) {
+      usedIds.add(candidate.id)
+      candidates.push(candidate)
+    }
+  }
+
+  for (const item of params.trends.communityTrends) {
+    const community = params.report.communities.find(entry => entry.id === item.communityId)
+    if (!community?.missingTopicPage) {
+      continue
+    }
+    const candidate = buildTopicPageCandidate({
+      community,
+      trend: item,
+      documentMap: params.documentMap,
+    })
+    if (candidate && !usedIds.has(candidate.id)) {
+      usedIds.add(candidate.id)
+      candidates.push(candidate)
+    }
+  }
+
+  for (const item of params.report.bridgeDocuments) {
+    const candidate = buildBridgeRiskCandidate({
+      bridge: item,
+      communities: params.report.communities,
+      ranking: params.report.ranking,
+      documentMap: params.documentMap,
+    })
+    if (candidate && !usedIds.has(candidate.id)) {
+      usedIds.add(candidate.id)
+      candidates.push(candidate)
+    }
+  }
+
+  for (const item of params.report.dormantDocuments) {
+    const candidate = buildArchiveCandidate({
+      dormant: item,
+      documentMap: params.documentMap,
+      ranking: params.report.ranking,
+      themeDocuments: params.themeDocuments,
+    })
+    if (candidate && !usedIds.has(candidate.id)) {
+      usedIds.add(candidate.id)
+      candidates.push(candidate)
+    }
+  }
+
+  return candidates
+    .sort((left, right) => right.priorityScore - left.priorityScore || left.title.localeCompare(right.title, 'zh-CN'))
+    .slice(0, params.actionCandidateLimit)
+}
+
+function buildRepairLinkCandidate(params: {
+  orphan: ReferenceGraphReport['orphans'][number]
+  documentMap: Map<string, DocumentRecord>
+  ranking: ReferenceGraphReport['ranking']
+  themeDocuments: ThemeDocument[]
+}): AiInboxActionCandidate | null {
+  const document = params.documentMap.get(params.orphan.documentId)
+  if (!document) {
+    return null
+  }
+  const documentTitle = resolveDocumentTitle(params.documentMap, params.orphan.documentId)
+
+  const themeMatches = countThemeMatchesForDocument({
+    document,
+    themeDocuments: params.themeDocuments,
+  }).slice(0, 2)
+
+  const recommendedTargets: AiInboxRecommendedTarget[] = [
+    ...themeMatches.map(match => ({
+      documentId: match.themeDocumentId,
+      title: match.themeDocumentTitle,
+      kind: 'theme-document' as const,
+      reason: `主题匹配命中 ${match.matchCount} 次，适合作为稳定入口`,
+    })),
+    ...params.ranking
+      .filter(item => item.documentId !== params.orphan.documentId && !themeMatches.some(match => match.themeDocumentId === item.documentId))
+      .slice(0, themeMatches.length ? 1 : 2)
+      .map(item => ({
+        documentId: item.documentId,
+        title: item.title,
+        kind: 'core-document' as const,
+        reason: `当前是高引用核心文档，被 ${item.distinctSourceDocuments} 个文档引用`,
+      })),
+  ].slice(0, 3)
+
+  const impactScore = clampScore(45 + params.orphan.historicalReferenceCount * 6 + themeMatches.length * 10)
+  const urgencyScore = buildUrgencyScore(params.orphan.updatedAt)
+  const actionabilityScore = clampScore(35 + recommendedTargets.length * 18 + themeMatches.length * 8)
+  const confidenceScore = clampScore(30 + themeMatches.length * 25 + (params.orphan.hasSparseEvidence ? 10 : 5))
+  const priorityScore = combinePriorityScores({
+    impactScore,
+    urgencyScore,
+    actionabilityScore,
+    confidenceScore,
+  })
+
+  const primaryTarget = recommendedTargets[0]
+  const expectedBenefits = [
+    '预计移出孤立文档列表',
+    primaryTarget ? `为 ${primaryTarget.title} 增加 1 条入链` : '为当前网络补回 1 个入口连接',
+    themeMatches.length ? `补全 ${themeMatches.map(item => item.themeName).join('、')} 主题的网络覆盖` : '降低后续继续沉没的风险',
+  ]
+
+  return {
+    id: `repair-link:${params.orphan.documentId}`,
+    type: 'repair-link',
+    title: `修复孤立文档：${documentTitle}`,
+    focusDocumentIds: [params.orphan.documentId],
+    confidence: confidenceScore >= 75 ? 'high' : confidenceScore >= 50 ? 'medium' : 'low',
+    impactScore,
+    urgencyScore,
+    actionabilityScore,
+    confidenceScore,
+    priorityScore,
+    recommendedTargets,
+    evidence: [
+      '当前窗口内没有有效文档级连接',
+      `历史上出现过 ${params.orphan.historicalReferenceCount} 条连接证据`,
+      ...themeMatches.map(match => `${match.themeName} 主题匹配命中 ${match.matchCount} 次`),
+    ].slice(0, 4),
+    recommendedAction: recommendedTargets.length
+      ? `先补到 ${recommendedTargets.map(target => target.title).join('、')}，并补一句说明这篇笔记属于哪个主题。`
+      : '先补 1 条回到核心网络的连接，并补一句说明当前文档的归属主题。',
+    expectedBenefits,
+    draftText: primaryTarget?.documentId
+      ? `可归入 ${primaryTarget.title}：((` + `${primaryTarget.documentId} "${primaryTarget.title}"))`
+      : undefined,
+  }
+}
+
+function buildTopicPageCandidate(params: {
+  community: ReferenceGraphReport['communities'][number]
+  trend: TrendReport['communityTrends'][number]
+  documentMap: Map<string, DocumentRecord>
+}): AiInboxActionCandidate | null {
+  const suggestedTitle = buildSuggestedTopicPageTitle(params.community)
+  const recommendedTargets = params.community.hubDocumentIds
+    .slice(0, 3)
+    .map(documentId => ({
+      documentId,
+      title: resolveDocumentTitle(params.documentMap, documentId),
+      kind: 'community-hub' as const,
+      reason: '这是当前社区的 hub 文档，适合作为主题页的首批入口',
+    }))
+
+  const impactScore = clampScore(40 + params.community.size * 10 + Math.max(params.trend.delta, 0) * 6)
+  const urgencyScore = clampScore(35 + Math.max(params.trend.delta, 0) * 15)
+  const actionabilityScore = clampScore(60 + recommendedTargets.length * 8 + (params.community.topTags.length ? 10 : 0))
+  const confidenceScore = clampScore(40 + (params.community.topTags.length ? 25 : 10) + recommendedTargets.length * 10)
+
+  return {
+    id: `topic-page:${params.community.id}`,
+    type: 'create-topic-page',
+    title: `创建主题页：${suggestedTitle}`,
+    focusDocumentIds: [...params.community.documentIds],
+    confidence: confidenceScore >= 75 ? 'high' : confidenceScore >= 50 ? 'medium' : 'low',
+    impactScore,
+    urgencyScore,
+    actionabilityScore,
+    confidenceScore,
+    priorityScore: combinePriorityScores({
+      impactScore,
+      urgencyScore,
+      actionabilityScore,
+      confidenceScore,
+    }),
+    recommendedTargets,
+    evidence: [
+      `社区规模 ${params.community.size} 篇文档`,
+      `当前缺少主题页，最近关系变化 ${formatSignedDelta(params.trend.delta)}`,
+      params.community.topTags.length ? `高频标签：${params.community.topTags.join('、')}` : '高频标签证据较弱',
+    ],
+    recommendedAction: `新建 ${suggestedTitle}，并先挂入 ${recommendedTargets.map(target => target.title).join('、') || '社区 hub 文档'}。`,
+    expectedBenefits: [
+      '为该社区建立统一入口页',
+      `把 ${params.community.size} 篇文档收束到可导航的主题结构中`,
+      '后续补链和归档动作会更集中',
+    ],
+    draftText: `建议主题页标题：${suggestedTitle}`,
+  }
+}
+
+function buildBridgeRiskCandidate(params: {
+  bridge: ReferenceGraphReport['bridgeDocuments'][number]
+  communities: ReferenceGraphReport['communities']
+  ranking: ReferenceGraphReport['ranking']
+  documentMap: Map<string, DocumentRecord>
+}): AiInboxActionCandidate | null {
+  const relatedCommunities = params.communities.filter(community => community.documentIds.includes(params.bridge.documentId))
+  const relatedTargets = relatedCommunities
+    .flatMap(community => community.hubDocumentIds)
+    .filter(documentId => documentId !== params.bridge.documentId)
+  const recommendedTargets = [...new Set(relatedTargets)]
+    .slice(0, 3)
+    .map(documentId => ({
+      documentId,
+      title: resolveDocumentTitle(params.documentMap, documentId),
+      kind: 'community-hub' as const,
+      reason: '补到相邻社区 hub，可以减少该桥接点成为唯一路径',
+    }))
+
+  if (recommendedTargets.length === 0) {
+    recommendedTargets.push(
+      ...params.ranking
+        .filter(item => item.documentId !== params.bridge.documentId)
+        .slice(0, 2)
+        .map(item => ({
+          documentId: item.documentId,
+          title: item.title,
+          kind: 'related-document' as const,
+          reason: '当前网络中的高连接文档，可作为替代入口',
+        })),
+    )
+  }
+
+  const impactScore = clampScore(45 + params.bridge.degree * 8 + relatedCommunities.length * 8)
+  const urgencyScore = clampScore(40 + params.bridge.degree * 4)
+  const actionabilityScore = clampScore(35 + recommendedTargets.length * 18)
+  const confidenceScore = clampScore(35 + relatedCommunities.length * 15 + recommendedTargets.length * 10)
+
+  return {
+    id: `bridge-risk:${params.bridge.documentId}`,
+    type: 'maintain-bridge',
+    title: `降低桥接风险：${params.bridge.title}`,
+    focusDocumentIds: [params.bridge.documentId],
+    confidence: confidenceScore >= 75 ? 'high' : confidenceScore >= 50 ? 'medium' : 'low',
+    impactScore,
+    urgencyScore,
+    actionabilityScore,
+    confidenceScore,
+    priorityScore: combinePriorityScores({
+      impactScore,
+      urgencyScore,
+      actionabilityScore,
+      confidenceScore,
+    }),
+    recommendedTargets,
+    evidence: [
+      `当前连接 ${params.bridge.degree} 条关系`,
+      relatedCommunities.length ? `同时出现在 ${relatedCommunities.length} 个社区中` : '当前缺少明确的社区替代入口',
+      recommendedTargets.length ? `可优先补到 ${recommendedTargets.map(target => target.title).join('、')}` : '当前未找到足够清晰的替代目标',
+    ],
+    recommendedAction: recommendedTargets.length
+      ? `在 ${params.bridge.title} 中补一段上下游导航，显式链接到 ${recommendedTargets.map(target => target.title).join('、')}。`
+      : `为 ${params.bridge.title} 补一段上下游导航，避免它成为单点桥接。`,
+    expectedBenefits: [
+      '降低单点桥接导致社区断裂的风险',
+      recommendedTargets.length ? `为 ${recommendedTargets.length} 个替代入口补齐导航` : '为相邻主题补出替代入口',
+    ],
+    draftText: recommendedTargets.length
+      ? `上游/下游入口：${recommendedTargets.map(target => `((` + `${target.documentId} "${target.title}"))`).join(' / ')}`
+      : undefined,
+  }
+}
+
+function buildArchiveCandidate(params: {
+  dormant: ReferenceGraphReport['dormantDocuments'][number]
+  documentMap: Map<string, DocumentRecord>
+  ranking: ReferenceGraphReport['ranking']
+  themeDocuments: ThemeDocument[]
+}): AiInboxActionCandidate | null {
+  const document = params.documentMap.get(params.dormant.documentId)
+  const documentTitle = resolveDocumentTitle(params.documentMap, params.dormant.documentId)
+  const themeMatches = document
+    ? countThemeMatchesForDocument({
+        document,
+        themeDocuments: params.themeDocuments,
+      }).slice(0, 1)
+    : []
+  const recommendedTargets: AiInboxRecommendedTarget[] = themeMatches.map(match => ({
+    documentId: match.themeDocumentId,
+    title: match.themeDocumentTitle,
+    kind: 'theme-document',
+    reason: '如果仍有保留价值，先补到主题页再归档更容易回查',
+  }))
+
+  if (recommendedTargets.length === 0) {
+    recommendedTargets.push(
+      ...params.ranking
+        .filter(item => item.documentId !== params.dormant.documentId)
+        .slice(0, 1)
+        .map(item => ({
+          documentId: item.documentId,
+          title: item.title,
+          kind: 'core-document' as const,
+          reason: '可先补到一个仍活跃的索引入口，再决定是否归档',
+        })),
+    )
+  }
+
+  const impactScore = clampScore(30 + Math.min(params.dormant.historicalReferenceCount * 8, 35))
+  const urgencyScore = clampScore(25 + Math.min(Math.floor(params.dormant.inactivityDays / 3), 45))
+  const actionabilityScore = clampScore(30 + recommendedTargets.length * 18)
+  const confidenceScore = clampScore(35 + (params.dormant.historicalReferenceCount > 0 ? 20 : 0) + recommendedTargets.length * 10)
+
+  return {
+    id: `archive-dormant:${params.dormant.documentId}`,
+    type: 'archive-dormant',
+    title: `处理沉没文档：${documentTitle}`,
+    focusDocumentIds: [params.dormant.documentId],
+    confidence: confidenceScore >= 75 ? 'high' : confidenceScore >= 50 ? 'medium' : 'low',
+    impactScore,
+    urgencyScore,
+    actionabilityScore,
+    confidenceScore,
+    priorityScore: combinePriorityScores({
+      impactScore,
+      urgencyScore,
+      actionabilityScore,
+      confidenceScore,
+    }),
+    recommendedTargets,
+    evidence: [
+      `${params.dormant.inactivityDays} 天未产生有效连接`,
+      `历史上出现过 ${params.dormant.historicalReferenceCount} 条连接证据`,
+    ],
+    recommendedAction: recommendedTargets.length
+      ? `先补到 ${recommendedTargets[0].title} 留下回查入口；如果后续不再维护，再归档。`
+      : '先确认是否仍需保留；如无持续维护计划，归档并补一条索引说明。',
+    expectedBenefits: [
+      '减少沉没文档堆积',
+      '保留必要回查入口，避免后续完全失联',
+    ],
+  }
+}
+
 function mapTrendItem(item: TrendDocumentItem) {
   return {
     documentId: item.documentId,
@@ -322,6 +726,46 @@ function resolveDocumentTitle(documentMap: Map<string, DocumentRecord>, document
 
 function buildConnectionTitle(documentMap: Map<string, DocumentRecord>, documentIds: string[]): string {
   return documentIds.map(documentId => resolveDocumentTitle(documentMap, documentId)).join(' <-> ')
+}
+
+function buildSuggestedTopicPageTitle(community: ReferenceGraphReport['communities'][number]) {
+  const topic = community.topTags[0] || community.hubDocumentIds[0] || community.documentIds[0] || '未命名主题'
+  return `主题-${topic}-索引`
+}
+
+function buildUrgencyScore(updatedAt?: string) {
+  const updatedTime = parseSiyuanTimestamp(updatedAt ?? '')
+  if (!updatedTime) {
+    return 40
+  }
+  const daysAgo = Math.max(0, Math.floor((Date.now() - updatedTime) / (24 * 60 * 60 * 1000)))
+  if (daysAgo <= 3) {
+    return 90
+  }
+  if (daysAgo <= 7) {
+    return 75
+  }
+  if (daysAgo <= 30) {
+    return 60
+  }
+  return 45
+}
+
+function combinePriorityScores(scores: Omit<AiInboxPriorityBreakdown, 'priorityScore'>) {
+  return clampScore(Math.round(
+    scores.impactScore * 0.35
+    + scores.urgencyScore * 0.25
+    + scores.actionabilityScore * 0.25
+    + scores.confidenceScore * 0.15,
+  ))
+}
+
+function clampScore(value: number) {
+  return Math.max(0, Math.min(100, Math.round(value)))
+}
+
+function formatSignedDelta(delta: number) {
+  return delta > 0 ? `+${delta}` : String(delta)
 }
 
 async function requestChatCompletion(params: {
@@ -517,6 +961,14 @@ function normalizeAiInboxItem(value: any, index: number): AiInboxItem | null {
   const documentIds = Array.isArray(value?.documentIds)
     ? value.documentIds.filter((item: unknown): item is string => typeof item === 'string' && item.trim().length > 0)
     : undefined
+  const recommendedTargets = normalizeRecommendedTargets(value?.recommendedTargets)
+  const evidence = normalizeStringList(value?.evidence)
+  const expectedChanges = normalizeStringList(value?.expectedChanges)
+  const draftText = typeof value?.draftText === 'string' && value.draftText.trim()
+    ? value.draftText.trim()
+    : undefined
+  const priorityBreakdown = normalizePriorityBreakdown(value?.priorityBreakdown)
+  const confidence = normalizeConfidence(value?.confidence)
 
   return {
     id: typeof value?.id === 'string' && value.id.trim()
@@ -529,6 +981,12 @@ function normalizeAiInboxItem(value: any, index: number): AiInboxItem | null {
     action,
     benefit,
     documentIds: documentIds?.length ? documentIds : undefined,
+    confidence,
+    recommendedTargets,
+    evidence,
+    expectedChanges,
+    draftText,
+    priorityBreakdown,
   }
 }
 
@@ -544,6 +1002,93 @@ function normalizePriority(value: unknown): string {
     return value
   }
   return 'P2'
+}
+
+function normalizeConfidence(value: unknown): AiInboxConfidence | undefined {
+  if (value === 'high' || value === 'medium' || value === 'low') {
+    return value
+  }
+  return undefined
+}
+
+function normalizeRecommendedTargets(value: unknown): AiInboxRecommendedTarget[] | undefined {
+  if (!Array.isArray(value)) {
+    return undefined
+  }
+
+  const targets = value
+    .map((item) => {
+      const title = typeof item?.title === 'string' ? item.title.trim() : ''
+      const reason = typeof item?.reason === 'string' ? item.reason.trim() : ''
+      if (!title || !reason) {
+        return null
+      }
+      const documentId = typeof item?.documentId === 'string' && item.documentId.trim()
+        ? item.documentId.trim()
+        : undefined
+      return {
+        documentId,
+        title,
+        reason,
+        kind: normalizeTargetKind(item?.kind),
+      }
+    })
+    .filter((item): item is AiInboxRecommendedTarget => item !== null)
+
+  return targets.length ? targets : undefined
+}
+
+function normalizeTargetKind(value: unknown): AiInboxTargetKind {
+  if (value === 'theme-document' || value === 'core-document' || value === 'community-hub' || value === 'related-document') {
+    return value
+  }
+  return 'related-document'
+}
+
+function normalizeStringList(value: unknown): string[] | undefined {
+  if (!Array.isArray(value)) {
+    return undefined
+  }
+  const items = value
+    .filter((item): item is string => typeof item === 'string')
+    .map(item => item.trim())
+    .filter(Boolean)
+  return items.length ? items : undefined
+}
+
+function normalizePriorityBreakdown(value: unknown): AiInboxPriorityBreakdown | undefined {
+  if (!value || typeof value !== 'object') {
+    return undefined
+  }
+
+  const impactScore = clampScore(readNumericField((value as any).impactScore))
+  const urgencyScore = clampScore(readNumericField((value as any).urgencyScore))
+  const actionabilityScore = clampScore(readNumericField((value as any).actionabilityScore))
+  const confidenceScore = clampScore(readNumericField((value as any).confidenceScore))
+  const priorityScore = clampScore(readNumericField((value as any).priorityScore))
+
+  if ([impactScore, urgencyScore, actionabilityScore, confidenceScore, priorityScore].every(item => item === 0)) {
+    return undefined
+  }
+
+  return {
+    impactScore,
+    urgencyScore,
+    actionabilityScore,
+    confidenceScore,
+    priorityScore,
+  }
+}
+
+function readNumericField(value: unknown) {
+  if (typeof value === 'number' && Number.isFinite(value)) {
+    return value
+  }
+  if (typeof value === 'string' && value.trim()) {
+    const parsed = Number.parseFloat(value)
+    return Number.isFinite(parsed) ? parsed : 0
+  }
+  return 0
 }
 
 function normalizePositiveInteger(value: unknown, fallback: number): number {

@@ -105,6 +105,53 @@
             <p><strong>为什么先做：</strong>{{ item.why }}</p>
             <p><strong>推荐动作：</strong>{{ item.action }}</p>
             <p><strong>预估收益：</strong>{{ item.benefit }}</p>
+
+            <div v-if="item.recommendedTargets?.length" class="ai-inbox-panel__detail-group">
+              <p class="ai-inbox-panel__detail-title">推荐目标</p>
+              <div class="ai-inbox-panel__targets">
+                <div
+                  v-for="target in item.recommendedTargets"
+                  :key="`${item.id}-${target.title}`"
+                  class="ai-inbox-panel__target"
+                >
+                  <button
+                    v-if="target.documentId"
+                    class="ghost-button ai-inbox-panel__target-button"
+                    type="button"
+                    @click="openDocument(target.documentId)"
+                  >
+                    {{ target.title }}
+                  </button>
+                  <span v-else class="ai-inbox-panel__target-label">{{ target.title }}</span>
+                  <p>{{ target.reason }}</p>
+                </div>
+              </div>
+            </div>
+
+            <div v-if="item.evidence?.length" class="ai-inbox-panel__detail-group">
+              <p class="ai-inbox-panel__detail-title">证据</p>
+              <ul class="ai-inbox-panel__detail-list">
+                <li v-for="evidence in item.evidence" :key="`${item.id}-${evidence}`">
+                  {{ evidence }}
+                </li>
+              </ul>
+            </div>
+
+            <div v-if="item.expectedChanges?.length" class="ai-inbox-panel__detail-group">
+              <p class="ai-inbox-panel__detail-title">处理后变化</p>
+              <ul class="ai-inbox-panel__detail-list">
+                <li v-for="change in item.expectedChanges" :key="`${item.id}-${change}`">
+                  {{ change }}
+                </li>
+              </ul>
+            </div>
+
+            <div v-if="item.draftText" class="ai-inbox-panel__detail-group">
+              <p class="ai-inbox-panel__detail-title">建议草稿</p>
+              <div class="ai-inbox-panel__draft">
+                {{ item.draftText }}
+              </div>
+            </div>
           </article>
         </div>
       </div>
@@ -336,6 +383,62 @@ function resolveTypeLabel(type: AiInboxItemType) {
 
 .ai-inbox-panel__item p {
   line-height: 1.7;
+}
+
+.ai-inbox-panel__detail-group {
+  display: grid;
+  gap: 8px;
+  padding-top: 4px;
+  border-top: 1px dashed color-mix(in srgb, var(--b3-theme-on-background) 10%, transparent);
+}
+
+.ai-inbox-panel__detail-title {
+  font-size: 12px;
+  font-weight: 700;
+  color: color-mix(in srgb, var(--accent-cool, var(--b3-theme-primary)) 72%, var(--b3-theme-on-background));
+}
+
+.ai-inbox-panel__targets {
+  display: grid;
+  gap: 10px;
+}
+
+.ai-inbox-panel__target {
+  display: grid;
+  gap: 4px;
+  padding: 10px 12px;
+  border-radius: 12px;
+  background: color-mix(in srgb, var(--accent-cool, var(--b3-theme-primary)) 6%, var(--surface-card-soft, var(--b3-theme-surface)));
+}
+
+.ai-inbox-panel__target-button,
+.ai-inbox-panel__target-label {
+  width: fit-content;
+}
+
+.ai-inbox-panel__target-label {
+  font-weight: 600;
+  color: var(--b3-theme-on-background);
+}
+
+.ai-inbox-panel__detail-list {
+  margin: 0;
+  padding-left: 18px;
+  display: grid;
+  gap: 6px;
+}
+
+.ai-inbox-panel__detail-list li {
+  line-height: 1.6;
+}
+
+.ai-inbox-panel__draft {
+  padding: 10px 12px;
+  border-radius: 12px;
+  background: color-mix(in srgb, var(--accent-warm, var(--b3-theme-primary)) 8%, var(--surface-card-soft, var(--b3-theme-surface)));
+  font-family: var(--b3-font-family-code, monospace);
+  white-space: pre-wrap;
+  line-height: 1.6;
 }
 
 .ai-inbox-panel__item-top,

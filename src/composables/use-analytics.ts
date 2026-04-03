@@ -667,6 +667,7 @@ export function useAnalyticsState(params: UseAnalyticsParams) {
         timeRange: timeRange.value,
         dormantDays: dormantDays.value,
         contextCapacity: params.config.aiContextCapacity,
+        themeDocuments: themeDocuments.value,
       })
       aiInboxResult.value = await aiInboxService.generateInbox({
         config: params.config,

@@ -1,0 +1,68 @@
+import { describe, expect, it } from 'vitest'
+import { createSSRApp, h } from 'vue'
+import { renderToString } from '@vue/server-renderer'
+
+import AIInboxPanel from './AIInboxPanel.vue'
+
+describe('AIInboxPanel', () => {
+  it('renders concrete targets, evidence, expected changes and draft text for inbox items', async () => {
+    const app = createSSRApp({
+      render: () => h(AIInboxPanel, {
+        enabled: true,
+        isConfigured: true,
+        isExpanded: true,
+        loading: false,
+        testingConnection: false,
+        error: '',
+        connectionMessage: '',
+        onGenerate: () => {},
+        onTestConnection: () => {},
+        onTogglePanel: () => {},
+        openDocument: () => {},
+        result: {
+          generatedAt: '2026-04-03T08:00:00.000Z',
+          summary: '今天先补 AI 主题连接。',
+          items: [
+            {
+              id: 'task-doc-1',
+              type: 'document',
+              title: '修复孤立文档：AI 与机器学习整理',
+              priority: 'P1',
+              why: '当前窗口内孤立，但和 AI 主题页、机器学习主题页都有明显匹配。',
+              action: '先补到主题-AI-索引，再补到主题-机器学习-索引。',
+              benefit: '能移出孤立文档，并把主题社区规模从 8 提升到 9。',
+              documentIds: ['doc-1'],
+              recommendedTargets: [
+                {
+                  documentId: 'doc-theme-ai',
+                  title: '主题-AI-索引',
+                  reason: '承担主题入口角色',
+                },
+                {
+                  documentId: 'doc-theme-ml',
+                  title: '主题-机器学习-索引',
+                  reason: '补足相关专题归属',
+                },
+              ],
+              evidence: ['当前窗口内孤立', '主题匹配命中 4 次'],
+              expectedChanges: ['孤立文档数预计减少 1', 'AI 社区规模预计 +1'],
+              draftText: '可归入 AI 主题：((doc-theme-ai "主题-AI-索引"))',
+            },
+          ],
+        },
+      }),
+    })
+
+    const html = await renderToString(app)
+
+    expect(html).toContain('推荐目标')
+    expect(html).toContain('主题-AI-索引')
+    expect(html).toContain('承担主题入口角色')
+    expect(html).toContain('证据')
+    expect(html).toContain('主题匹配命中 4 次')
+    expect(html).toContain('处理后变化')
+    expect(html).toContain('AI 社区规模预计 +1')
+    expect(html).toContain('建议草稿')
+    expect(html).toContain('可归入 AI 主题')
+  })
+})
