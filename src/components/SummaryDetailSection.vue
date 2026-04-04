@@ -116,12 +116,22 @@
                     <span class="badge">{{ item.priority }}</span>
                   </div>
                 </div>
-                <DocumentTitle
+                <div
                   v-if="resolveAiInboxItemDocumentId(item)"
-                  :document-id="resolveAiInboxItemDocumentId(item)"
-                  :title="item.title"
-                  :open-document="openDocument"
-                />
+                  class="ai-suggestion-panel__source-title"
+                >
+                  <span
+                    v-if="resolveAiInboxItemTitleParts(item.title).prefix"
+                    class="ai-suggestion-panel__source-prefix"
+                  >
+                    {{ resolveAiInboxItemTitleParts(item.title).prefix }}
+                  </span>
+                  <DocumentTitle
+                    :document-id="resolveAiInboxItemDocumentId(item)"
+                    :title="resolveAiInboxItemTitleParts(item.title).documentTitle"
+                    :open-document="openDocument"
+                  />
+                </div>
                 <h3 v-else>{{ item.title }}</h3>
 
                 <div
@@ -135,17 +145,13 @@
                       :key="`${item.id}-${target.title}`"
                       class="ai-suggestion-panel__target"
                     >
-                      <button
+                      <DocumentTitle
                         v-if="target.documentId"
-                        :class="[
-                          'ai-suggestion-panel__target-button',
-                          { 'ai-suggestion-panel__target-button--active': isAiInboxTargetActive(item, target) },
-                        ]"
-                        type="button"
-                        @click="handleAiInboxTargetClick(item, target)"
-                      >
-                        {{ target.title }}
-                      </button>
+                        :document-id="target.documentId"
+                        :title="target.title"
+                        :open-document="openDocument"
+                        variant="compact"
+                      />
                       <span v-else class="ai-suggestion-panel__target-label">{{ target.title }}</span>
                       <p>{{ target.reason }}</p>
                     </div>
@@ -154,7 +160,30 @@
 
                 <div class="ai-suggestion-panel__detail-group">
                   <p class="ai-suggestion-panel__detail-title">推荐动作</p>
-                  <p class="ai-suggestion-panel__merged-copy">{{ item.action }}</p>
+                  <div
+                    v-if="resolveAiInboxActionTargets(item).length"
+                    class="ai-suggestion-panel__action-pills"
+                  >
+                    <button
+                      v-for="target in resolveAiInboxActionTargets(item)"
+                      :key="`${item.id}-${target.title}-action`"
+                      :class="[
+                        'ai-suggestion-panel__action-pill',
+                        { 'ai-suggestion-panel__action-pill--active': isAiInboxTargetActive(item, target) },
+                      ]"
+                      type="button"
+                      @click="handleAiInboxActionTargetClick(item, target)"
+                    >
+                      {{ target.title }}
+                    </button>
+                  </div>
+                  <p
+                    v-for="line in resolveAiInboxActionLines(item.action)"
+                    :key="`${item.id}-${line}`"
+                    class="ai-suggestion-panel__merged-copy"
+                  >
+                    {{ line }}
+                  </p>
                 </div>
 
                 <div class="ai-suggestion-panel__detail-group">
@@ -588,9 +617,15 @@ import type { OrphanAiSuggestionState } from '@/analytics/ai-link-suggestions'
 import type { LinkDirection } from '@/analytics/link-sync'
 import type { DetailSuggestion, SummaryDetailSection as SummaryDetailSectionType } from '@/analytics/summary-details'
 import type { ReadCardMode } from '@/analytics/read-status'
-import type { ThemeDocumentMatch } from '@/analytics/theme-documents'
+import type { ThemeDocument, ThemeDocumentMatch } from '@/analytics/theme-documents'
 import type { PathScope } from '@/composables/use-analytics-derived'
-import { resolveAiInboxItemDocumentId, resolveAiInboxTargetIntent } from '@/components/ai-inbox-detail'
+import {
+  resolveAiInboxActionTargets as resolveAiInboxActionTargetsFromData,
+  resolveAiInboxActionLines,
+  resolveAiInboxItemDocumentId,
+  resolveAiInboxTargetIntent,
+  splitAiInboxItemTitle,
+} from '@/components/ai-inbox-detail'
 import DocumentTitle from '@/components/DocumentTitle.vue'
 import DormantDetailPanel from '@/components/DormantDetailPanel.vue'
 import OrphanDetailPanel from '@/components/OrphanDetailPanel.vue'
@@ -657,6 +692,7 @@ const props = defineProps<{
   syncAssociation: (coreDocumentId: string, targetDocumentId: string, direction: LinkDirection) => Promise<void>
   formatDelta: (delta: number) => string
   themeDocumentIds: Set<string>
+  themeDocuments: ThemeDocument[]
   selectCommunity: (communityId: string) => void
 }>()
 
@@ -718,6 +754,17 @@ function resolveAiInboxTypeLabel(type: AiInboxItemType) {
   return '整理文档'
 }
 
+function resolveAiInboxItemTitleParts(title: string) {
+  return splitAiInboxItemTitle(title)
+}
+
+function resolveAiInboxActionTargets(item: NonNullable<SummaryDetailSectionType & { kind: 'aiInbox' }>['result']['items'][number]) {
+  return resolveAiInboxActionTargetsFromData({
+    item,
+    themeDocuments: props.themeDocuments,
+  }).filter(target => Boolean(target.documentId?.trim()))
+}
+
 function isAiInboxTargetActive(item: NonNullable<SummaryDetailSectionType & { kind: 'aiInbox' }>['result']['items'][number], target: NonNullable<SummaryDetailSectionType & { kind: 'aiInbox' }>['result']['items'][number]['recommendedTargets'][number]) {
   const intent = resolveAiInboxTargetIntent(item, target)
   return intent.kind === 'toggle-link'
@@ -725,7 +772,7 @@ function isAiInboxTargetActive(item: NonNullable<SummaryDetailSectionType & { ki
     : false
 }
 
-async function handleAiInboxTargetClick(
+async function handleAiInboxActionTargetClick(
   item: NonNullable<SummaryDetailSectionType & { kind: 'aiInbox' }>['result']['items'][number],
   target: NonNullable<SummaryDetailSectionType & { kind: 'aiInbox' }>['result']['items'][number]['recommendedTargets'][number],
 ) {
@@ -921,6 +968,18 @@ async function handleAiInboxTargetClick(
   white-space: pre-wrap;
 }
 
+.ai-suggestion-panel__source-title {
+  display: flex;
+  gap: 6px;
+  align-items: baseline;
+  flex-wrap: wrap;
+}
+
+.ai-suggestion-panel__source-prefix {
+  font-weight: 600;
+  color: color-mix(in srgb, var(--b3-theme-on-background) 76%, transparent);
+}
+
 .ai-suggestion-panel__item-top,
 .ai-suggestion-panel__badges {
   display: flex;
@@ -959,12 +1018,21 @@ async function handleAiInboxTargetClick(
   background: color-mix(in srgb, var(--accent-cool) 6%, var(--surface-card-soft));
 }
 
-.ai-suggestion-panel__target-button,
 .ai-suggestion-panel__target-label {
   width: fit-content;
 }
 
-.ai-suggestion-panel__target-button {
+.ai-suggestion-panel__target :deep(.document-title__button--compact) {
+  font-size: 12px;
+}
+
+.ai-suggestion-panel__action-pills {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.ai-suggestion-panel__action-pill {
   border: 0;
   border-radius: 999px;
   padding: 7px 12px;
@@ -977,11 +1045,11 @@ async function handleAiInboxTargetClick(
   transition: background-color 0.2s, color 0.2s, transform 0.2s;
 }
 
-.ai-suggestion-panel__target-button:hover {
+.ai-suggestion-panel__action-pill:hover {
   background: color-mix(in srgb, var(--b3-theme-primary) 18%, transparent);
 }
 
-.ai-suggestion-panel__target-button--active {
+.ai-suggestion-panel__action-pill--active {
   background: var(--b3-theme-primary);
   color: var(--b3-theme-on-primary, #fff);
 }

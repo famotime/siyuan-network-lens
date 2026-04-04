@@ -1,6 +1,12 @@
 import { describe, expect, it } from 'vitest'
 
-import { resolveAiInboxItemDocumentId, resolveAiInboxTargetIntent } from './ai-inbox-detail'
+import {
+  resolveAiInboxActionTargets,
+  resolveAiInboxActionLines,
+  resolveAiInboxItemDocumentId,
+  resolveAiInboxTargetIntent,
+  splitAiInboxItemTitle,
+} from './ai-inbox-detail'
 
 describe('ai inbox detail helpers', () => {
   it('resolves the primary document id from inbox items', () => {
@@ -13,7 +19,7 @@ describe('ai inbox detail helpers', () => {
     } as any)).toBe('')
   })
 
-  it('treats document-type target pills as direct link insert actions', () => {
+  it('treats theme-document target pills as direct link insert actions for document suggestions', () => {
     expect(resolveAiInboxTargetIntent(
       {
         type: 'document',
@@ -22,6 +28,7 @@ describe('ai inbox detail helpers', () => {
       {
         documentId: 'doc-theme-ai',
         title: '主题-AI-索引',
+        kind: 'theme-document',
       } as any,
     )).toEqual({
       kind: 'toggle-link',
@@ -31,7 +38,24 @@ describe('ai inbox detail helpers', () => {
     })
   })
 
-  it('keeps non-document target pills as open-document actions', () => {
+  it('keeps non-theme targets as open-document actions even for document suggestions', () => {
+    expect(resolveAiInboxTargetIntent(
+      {
+        type: 'document',
+        documentIds: ['doc-orphan'],
+      } as any,
+      {
+        documentId: 'doc-core',
+        title: 'AI 总览',
+        kind: 'core-document',
+      } as any,
+    )).toEqual({
+      kind: 'open-document',
+      documentId: 'doc-core',
+    })
+  })
+
+  it('keeps theme-document targets as open-document actions for non-document suggestions', () => {
     expect(resolveAiInboxTargetIntent(
       {
         type: 'bridge-risk',
@@ -40,10 +64,61 @@ describe('ai inbox detail helpers', () => {
       {
         documentId: 'doc-hub',
         title: 'Hub',
+        kind: 'theme-document',
       } as any,
     )).toEqual({
       kind: 'open-document',
       documentId: 'doc-hub',
     })
+  })
+
+  it('splits actionable prefixes from the real document title', () => {
+    expect(splitAiInboxItemTitle('修复孤立文档：AI 与机器学习整理')).toEqual({
+      prefix: '修复孤立文档：',
+      documentTitle: 'AI 与机器学习整理',
+    })
+
+    expect(splitAiInboxItemTitle('Alpha')).toEqual({
+      prefix: '',
+      documentTitle: 'Alpha',
+    })
+  })
+
+  it('sanitizes inline block references in action copy before display', () => {
+    expect(resolveAiInboxActionLines('先补到主题-AI-索引。\n可归入 AI 主题：((doc-theme-ai "主题-AI-索引"))')).toEqual([
+      '先补到主题-AI-索引。',
+      '可归入 AI 主题：主题-AI-索引',
+    ])
+  })
+
+  it('falls back to theme document pills mentioned only in action text', () => {
+    expect(resolveAiInboxActionTargets({
+      item: {
+        action: '补到 ~OpenClaw、~Skills，并说明属于哪个主题',
+      } as any,
+      themeDocuments: [
+        {
+          documentId: 'doc-openclaw',
+          title: '~OpenClaw',
+          themeName: 'OpenClaw',
+        },
+        {
+          documentId: 'doc-skills',
+          title: '~Skills',
+          themeName: 'Skills',
+        },
+      ] as any,
+    })).toEqual([
+      expect.objectContaining({
+        documentId: 'doc-openclaw',
+        title: '~OpenClaw',
+        kind: 'theme-document',
+      }),
+      expect.objectContaining({
+        documentId: 'doc-skills',
+        title: '~Skills',
+        kind: 'theme-document',
+      }),
+    ])
   })
 })

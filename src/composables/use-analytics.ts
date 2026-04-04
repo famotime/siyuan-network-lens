@@ -930,6 +930,7 @@ export function useAnalyticsState(params: UseAnalyticsParams) {
     filteredDocuments,
     sampleDocumentIds,
     sampleDocumentMap,
+    themeDocuments,
     themeDocumentIds,
     report,
     trendDays,

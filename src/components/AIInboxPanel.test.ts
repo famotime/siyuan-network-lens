@@ -19,6 +19,8 @@ describe('AIInboxPanel', () => {
         onTestConnection: () => {},
         onTogglePanel: () => {},
         openDocument: () => {},
+        toggleAiLinkSuggestion: () => {},
+        isAiLinkSuggestionActive: () => true,
         result: {
           generatedAt: '2026-04-03T08:00:00.000Z',
           summary: '今天先补 AI 主题连接。',
@@ -36,11 +38,13 @@ describe('AIInboxPanel', () => {
                   documentId: 'doc-theme-ai',
                   title: '主题-AI-索引',
                   reason: '承担主题入口角色',
+                  kind: 'theme-document',
                 },
                 {
-                  documentId: 'doc-theme-ml',
-                  title: '主题-机器学习-索引',
+                  documentId: 'doc-core-ai',
+                  title: 'AI 总览',
                   reason: '补足相关专题归属',
+                  kind: 'core-document',
                 },
               ],
               evidence: ['当前窗口内孤立', '主题匹配命中 4 次'],
@@ -55,8 +59,10 @@ describe('AIInboxPanel', () => {
 
     expect(html).toContain('推荐动作')
     expect(html).toContain('推荐理由')
+    expect(html).toContain('修复孤立文档：')
+    expect(html).toContain('AI 与机器学习整理')
     expect(html).toContain('先补到主题-AI-索引，再补到主题-机器学习-索引。')
-    expect(html).toContain('可归入 AI 主题：((doc-theme-ai &quot;主题-AI-索引&quot;))')
+    expect(html).toContain('可归入 AI 主题：主题-AI-索引')
     expect(html).toContain('当前窗口内孤立，但和 AI 主题页、机器学习主题页都有明显匹配。')
     expect(html).toContain('能移出孤立文档，并把主题社区规模从 8 提升到 9。')
     expect(html.indexOf('推荐动作')).toBeLessThan(html.indexOf('推荐理由'))
@@ -64,11 +70,17 @@ describe('AIInboxPanel', () => {
     expect(html).not.toContain('预估收益')
     expect(html).not.toContain('建议草稿')
     expect(html).toContain('推荐目标')
+    expect(html).toContain('ai-inbox-panel__action-pills')
+    expect(html).toContain('ai-inbox-panel__action-pill')
+    expect((html.match(/ai-inbox-panel__action-pill--active/g) ?? [])).toHaveLength(1)
     expect(html).toContain('主题-AI-索引')
+    expect(html).toContain('AI 总览')
     expect(html).toContain('承担主题入口角色')
     expect(html).toContain('证据')
     expect(html).toContain('主题匹配命中 4 次')
     expect(html).toContain('处理后变化')
     expect(html).toContain('AI 社区规模预计 +1')
+    expect(html).not.toContain('doc-theme-ai')
+    expect(html).not.toContain('doc-core-ai')
   })
 })

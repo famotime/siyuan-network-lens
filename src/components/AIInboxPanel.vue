@@ -101,8 +101,49 @@
                 打开文档
               </button>
             </div>
-            <h3>{{ item.title }}</h3>
-            <p class="ai-inbox-panel__merged-copy"><strong>推荐动作：</strong>{{ item.action }}</p>
+            <div
+              v-if="resolveAiInboxItemDocumentId(item)"
+              class="ai-inbox-panel__source-title"
+            >
+              <span
+                v-if="resolveAiInboxItemTitleParts(item.title).prefix"
+                class="ai-inbox-panel__source-prefix"
+              >
+                {{ resolveAiInboxItemTitleParts(item.title).prefix }}
+              </span>
+              <DocumentTitle
+                :document-id="resolveAiInboxItemDocumentId(item)"
+                :title="resolveAiInboxItemTitleParts(item.title).documentTitle"
+                :open-document="openDocument"
+              />
+            </div>
+            <h3 v-else>{{ item.title }}</h3>
+
+            <div class="ai-inbox-panel__detail-group">
+              <p class="ai-inbox-panel__detail-title">推荐动作</p>
+              <div v-if="resolveAiInboxActionTargets(item).length" class="ai-inbox-panel__action-pills">
+                <button
+                  v-for="target in resolveAiInboxActionTargets(item)"
+                  :key="`${item.id}-${target.title}-action`"
+                  :class="[
+                    'ai-inbox-panel__action-pill',
+                    { 'ai-inbox-panel__action-pill--active': isAiInboxTargetActive(item, target) },
+                  ]"
+                  type="button"
+                  @click="handleAiInboxActionTargetClick(item, target)"
+                >
+                  {{ target.title }}
+                </button>
+              </div>
+              <p
+                v-for="line in resolveAiInboxActionLines(item.action)"
+                :key="`${item.id}-${line}`"
+                class="ai-inbox-panel__merged-copy"
+              >
+                {{ line }}
+              </p>
+            </div>
+
             <p class="ai-inbox-panel__merged-copy"><strong>推荐理由：</strong>{{ item.reason }}</p>
 
             <div v-if="item.recommendedTargets?.length" class="ai-inbox-panel__detail-group">
@@ -161,8 +202,15 @@
 
 <script setup lang="ts">
 import type { AiInboxItemType, AiInboxResult } from '@/analytics/ai-inbox'
+import {
+  resolveAiInboxActionLines,
+  resolveAiInboxItemDocumentId,
+  resolveAiInboxTargetIntent,
+  splitAiInboxItemTitle,
+} from '@/components/ai-inbox-detail'
+import DocumentTitle from '@/components/DocumentTitle.vue'
 
-defineProps<{
+const props = defineProps<{
   enabled: boolean
   isConfigured: boolean
   isExpanded: boolean
@@ -175,6 +223,8 @@ defineProps<{
   onTestConnection: () => void | Promise<void>
   onTogglePanel: () => void
   openDocument: (documentId: string) => void
+  toggleAiLinkSuggestion?: (sourceDocumentId: string, targetDocumentId: string, targetDocumentTitle: string) => void | Promise<void>
+  isAiLinkSuggestionActive?: (sourceDocumentId: string, targetDocumentId: string) => boolean
 }>()
 
 function resolveTypeLabel(type: AiInboxItemType) {
@@ -188,6 +238,39 @@ function resolveTypeLabel(type: AiInboxItemType) {
     return '桥接风险'
   }
   return '整理文档'
+}
+
+function resolveAiInboxItemTitleParts(title: string) {
+  return splitAiInboxItemTitle(title)
+}
+
+function resolveAiInboxActionTargets(item: NonNullable<AiInboxResult>['items'][number]) {
+  return (item.recommendedTargets ?? []).filter(target => Boolean(target.documentId?.trim()))
+}
+
+function isAiInboxTargetActive(
+  item: NonNullable<AiInboxResult>['items'][number],
+  target: NonNullable<AiInboxResult>['items'][number]['recommendedTargets'][number],
+) {
+  const intent = resolveAiInboxTargetIntent(item, target)
+  return intent.kind === 'toggle-link'
+    ? props.isAiLinkSuggestionActive?.(intent.sourceDocumentId, intent.targetDocumentId) ?? false
+    : false
+}
+
+async function handleAiInboxActionTargetClick(
+  item: NonNullable<AiInboxResult>['items'][number],
+  target: NonNullable<AiInboxResult>['items'][number]['recommendedTargets'][number],
+) {
+  const intent = resolveAiInboxTargetIntent(item, target)
+  if (intent.kind === 'toggle-link') {
+    await props.toggleAiLinkSuggestion?.(intent.sourceDocumentId, intent.targetDocumentId, intent.targetTitle)
+    return
+  }
+
+  if (intent.kind === 'open-document') {
+    props.openDocument(intent.documentId)
+  }
 }
 </script>
 
@@ -382,6 +465,18 @@ function resolveTypeLabel(type: AiInboxItemType) {
   white-space: pre-wrap;
 }
 
+.ai-inbox-panel__source-title {
+  display: flex;
+  gap: 6px;
+  align-items: baseline;
+  flex-wrap: wrap;
+}
+
+.ai-inbox-panel__source-prefix {
+  font-weight: 600;
+  color: color-mix(in srgb, var(--b3-theme-on-background) 76%, transparent);
+}
+
 .ai-inbox-panel__detail-group {
   display: grid;
   gap: 8px;
@@ -398,6 +493,34 @@ function resolveTypeLabel(type: AiInboxItemType) {
 .ai-inbox-panel__targets {
   display: grid;
   gap: 10px;
+}
+
+.ai-inbox-panel__action-pills {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.ai-inbox-panel__action-pill {
+  border: 0;
+  border-radius: 999px;
+  padding: 7px 12px;
+  cursor: pointer;
+  font: inherit;
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--b3-theme-primary);
+  background: color-mix(in srgb, var(--b3-theme-primary) 10%, transparent);
+  transition: background-color 0.2s, color 0.2s, transform 0.2s;
+}
+
+.ai-inbox-panel__action-pill:hover {
+  background: color-mix(in srgb, var(--b3-theme-primary) 18%, transparent);
+}
+
+.ai-inbox-panel__action-pill--active {
+  background: var(--b3-theme-primary);
+  color: var(--b3-theme-on-primary, #fff);
 }
 
 .ai-inbox-panel__target {

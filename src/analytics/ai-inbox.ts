@@ -185,8 +185,8 @@ const CAPACITY_LIMITS: Record<AiContextCapacity, {
 }
 
 const SYSTEM_PROMPT = [
-  '你是思源笔记文档引用网络的整理助手。',
-  '你要根据给定的结构化分析结果，输出今天最值得优先处理的整理待办。',
+  '你是思源笔记文档库的整理助手。',
+  '你要根据用户近期收集和创作的笔记文档以及相关网络结构分析结果，输出今天最值得优先处理的整理待办，目标是将相关文档构建成为围绕主题笔记的知识体系，而不是散落的文档。',
   '必须只输出 JSON，不要输出 Markdown、解释或代码块。',
   'JSON 结构必须是 {"summary": string, "items": AiInboxItem[]}。',
   'items 中每项必须包含 id、type、title、priority、action、reason，可选 documentIds、confidence、recommendedTargets、evidence、expectedChanges、priorityBreakdown。',
@@ -195,8 +195,8 @@ const SYSTEM_PROMPT = [
   '优先使用 actionCandidates 中已经给出的推荐目标、证据、收益预估和评分，不要自己发明不存在的文档或主题页。',
   '如果 actionCandidates 中有 focusDocumentIds，请把对应主对象 id 填到 documentIds。',
   '如果有 recommendedTargets，action 必须点名目标标题，不能只写“补链接”“完善结构”这类泛动作。',
-  'action 要直接写成可展示的“推荐动作”；如果有建议草稿、可直接复用的话术或拟定标题，要合并进 action，不要额外拆出单独草稿段落。',
-  'reason 要直接写成可展示的“推荐理由”，把“为什么先做”和“预估收益”合并到同一段里，并至少引用 1 条结构证据。',
+  'action 要直接写成可展示的“推荐动作”。',
+  'reason 要直接写成可展示的“推荐理由”，并至少引用 1 条结构证据。',
   '优先关注孤立文档、沉没文档、桥接风险、缺主题页社区、趋势变化和关键连接补齐。',
   '所有面向用户展示的文本字段都必须使用简体中文，包括 summary、title、action、reason、recommendedTargets.reason、evidence、expectedChanges。',
   '允许保留文档标题、标签名、模型名等专有名词，但禁止输出整句英文说明。',
@@ -232,7 +232,7 @@ export function createAiInboxService(deps: {
             content: [
               '请基于下面的文档级引用网络分析结果，给出“今天优先处理什么”的统一待办列表。',
               '优先输出 5 到 8 项，优先从 actionCandidates 中挑选高分候选。',
-              '输出结构要更紧凑：把推荐动作和建议草稿合并到 action，把为什么先做和预估收益合并成推荐理由写到 reason。',
+              '输出结构要更紧凑：把推荐动作和建议合并到 action，把为什么先做和预估收益合并成推荐理由写到 reason。',
               '每项建议尽量写清：现在处理哪个对象、补到哪里/建什么页、推荐理由是什么。',
               '如果证据不足，不要硬造；如果没有明确目标，就如实保留为空。',
               JSON.stringify(params.payload),

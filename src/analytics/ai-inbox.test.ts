@@ -340,11 +340,11 @@ describe('ai inbox request options', () => {
       expect(body.messages).toHaveLength(2)
       expect(body.messages[0]).toEqual(expect.objectContaining({
         role: 'system',
-        content: expect.stringMatching(/推荐动作.*建议草稿.*合并/),
+        content: expect.stringMatching(/文档库.*知识体系.*推荐动作.*推荐理由/),
       }))
       expect(body.messages[1]).toEqual(expect.objectContaining({
         role: 'user',
-        content: expect.stringMatching(/推荐动作.*建议草稿.*合并.*为什么先做.*预估收益.*推荐理由/),
+        content: expect.stringMatching(/推荐动作.*建议.*合并.*为什么先做.*预估收益.*推荐理由/),
       }))
 
       return {

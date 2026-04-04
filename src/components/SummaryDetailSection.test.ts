@@ -56,6 +56,7 @@ const baseProps = {
   syncAssociation: vi.fn(),
   formatDelta: (delta: number) => delta > 0 ? `+${delta}` : String(delta),
   themeDocumentIds: new Set<string>(['doc-a']),
+  themeDocuments: [],
   selectCommunity: vi.fn(),
 }
 
@@ -168,6 +169,7 @@ describe('SummaryDetailSection', () => {
     const app = createSSRApp({
       render: () => h(SummaryDetailSection, {
         ...baseProps,
+        isAiLinkSuggestionActive: vi.fn(() => true),
         selectedSummaryCount: 2,
         detail: {
           key: 'todaySuggestions',
@@ -183,15 +185,21 @@ describe('SummaryDetailSection', () => {
                 type: 'document',
                 title: '修复孤立文档：AI 与机器学习整理',
                 priority: 'P1',
-                action: '先补到主题-AI-索引，再补到主题-机器学习-索引。\n可归入 AI 主题：((doc-a "主题-AI-索引"))',
+                action: '将文档链接到主题-AI-索引和 AI 总览。\n可归入 AI 主题：((doc-theme-ai "主题-AI-索引"))',
                 reason: '当前窗口内孤立，但和 AI 主题页、机器学习主题页都有明显匹配。能移出孤立文档，并把主题社区规模从 8 提升到 9。',
-                documentIds: ['doc-a'],
+                documentIds: ['doc-orphan'],
                 recommendedTargets: [
                   {
-                    documentId: 'doc-a',
+                    documentId: 'doc-theme-ai',
                     title: '主题-AI-索引',
                     reason: '承担主题入口角色',
                     kind: 'theme-document',
+                  },
+                  {
+                    documentId: 'doc-core-ai',
+                    title: 'AI 总览',
+                    reason: '可作为相关核心文档继续查看',
+                    kind: 'core-document',
                   },
                 ],
                 evidence: ['当前窗口内孤立', '主题匹配命中 4 次'],
@@ -213,25 +221,93 @@ describe('SummaryDetailSection', () => {
     expect(html).toContain('2 项建议')
     expect(html).toContain('重新分析')
     expect(html).toContain('今天先补 AI 主题连接。')
+    expect(html).toContain('修复孤立文档：')
+    expect(html).toContain('AI 与机器学习整理')
     expect(html).toContain('document-title__button--default')
     expect(html).not.toContain('打开文档')
     expect(html).toContain('推荐目标')
     expect(html).toContain('推荐动作')
     expect(html).toContain('推荐理由')
-    expect(html).toContain('先补到主题-AI-索引，再补到主题-机器学习-索引。')
-    expect(html).toContain('可归入 AI 主题：((doc-a &quot;主题-AI-索引&quot;))')
+    expect(html).toContain('将文档链接到主题-AI-索引和 AI 总览。')
+    expect(html).toContain('可归入 AI 主题：主题-AI-索引')
     expect(html).toContain('当前窗口内孤立，但和 AI 主题页、机器学习主题页都有明显匹配。')
     expect(html).toContain('能移出孤立文档，并把主题社区规模从 8 提升到 9。')
     expect(html).toContain('当前窗口内孤立')
     expect(html).toContain('孤立文档数预计减少 1')
     expect(html.indexOf('推荐目标')).toBeLessThan(html.indexOf('推荐动作'))
     expect(html.indexOf('推荐动作')).toBeLessThan(html.indexOf('推荐理由'))
+    expect(html).toContain('ai-suggestion-panel__action-pills')
+    expect(html).toContain('ai-suggestion-panel__action-pill')
     expect(html).not.toContain('为什么先做')
     expect(html).not.toContain('预估收益')
     expect(html).not.toContain('建议草稿')
     expect(html).toContain('主题-AI-索引')
+    expect(html).toContain('AI 总览')
+    expect((html.match(/ai-suggestion-panel__action-pill--active/g) ?? [])).toHaveLength(1)
+    expect(html).not.toContain('doc-theme-ai')
+    expect(html).not.toContain('doc-core-ai')
     expect(html).not.toContain('>证据<')
     expect(html).not.toContain('>处理后变化<')
     expect(html).not.toContain('测试连接')
+  })
+
+  it('renders theme action pills from action text when recommended targets are missing', async () => {
+    const app = createSSRApp({
+      render: () => h(SummaryDetailSection, {
+        ...baseProps,
+        isAiLinkSuggestionActive: vi.fn((sourceDocumentId: string, targetDocumentId: string) => {
+          return sourceDocumentId === 'doc-orphan' && targetDocumentId === 'doc-openclaw'
+        }),
+        themeDocuments: [
+          {
+            documentId: 'doc-openclaw',
+            title: '~OpenClaw',
+            themeName: 'OpenClaw',
+            matchTerms: ['OpenClaw'],
+            box: 'box-1',
+            path: '/topics/openclaw.sy',
+            hpath: '/主题笔记/~OpenClaw',
+          },
+          {
+            documentId: 'doc-skills',
+            title: '~Skills',
+            themeName: 'Skills',
+            matchTerms: ['Skills'],
+            box: 'box-1',
+            path: '/topics/skills.sy',
+            hpath: '/主题笔记/~Skills',
+          },
+        ],
+        detail: {
+          key: 'todaySuggestions',
+          title: '今日建议详情',
+          description: '按优先级提供建议',
+          kind: 'aiInbox',
+          result: {
+            generatedAt: '2026-04-03T08:00:00.000Z',
+            summary: '今天先修复孤立文档。',
+            items: [
+              {
+                id: 'task-doc-2',
+                type: 'document',
+                title: '修复孤立文档：阿兰：第一周优秀笔记摘抄',
+                priority: 'P2',
+                action: '补到 ~OpenClaw、~Skills，并说明属于哪个主题',
+                reason: '当前无文档级连接，OpenClaw 与 Skills 主题都有命中。',
+                documentIds: ['doc-orphan'],
+              },
+            ],
+          },
+        },
+      }),
+    })
+
+    const html = await renderToString(app)
+
+    expect(html).toContain('~OpenClaw')
+    expect(html).toContain('~Skills')
+    expect(html).toContain('ai-suggestion-panel__action-pills')
+    expect((html.match(/ai-suggestion-panel__action-pill/g) ?? []).length).toBeGreaterThanOrEqual(2)
+    expect((html.match(/ai-suggestion-panel__action-pill--active/g) ?? [])).toHaveLength(1)
   })
 })

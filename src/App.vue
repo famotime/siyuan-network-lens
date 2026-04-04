@@ -218,6 +218,7 @@
         :sync-association="syncAssociation"
         :format-delta="formatDelta"
         :theme-document-ids="themeDocumentIds"
+        :theme-documents="themeDocuments"
         :select-community="selectCommunity"
       />
     </template>
@@ -289,6 +290,7 @@ const {
   summaryCards,
   selectedSummaryDetail,
   selectedSummaryCount,
+  themeDocuments,
   themeDocumentIds,
   orphanDetailItems,
   orphanThemeSuggestions,
