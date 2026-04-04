@@ -23,7 +23,6 @@
           :aria-label="isExpanded ? '折叠详情' : '展开详情'"
           @click="onTogglePanel()"
         >
-          {{ isExpanded ? '折叠' : '展开' }}
           <span
             class="panel-toggle__caret"
             aria-hidden="true"
@@ -116,19 +115,14 @@
                     <span class="badge badge--cool">{{ resolveAiInboxTypeLabel(item.type) }}</span>
                     <span class="badge">{{ item.priority }}</span>
                   </div>
-                  <button
-                    v-if="item.documentIds?.length"
-                    class="ghost-button"
-                    type="button"
-                    @click="openDocument(item.documentIds[0])"
-                  >
-                    打开文档
-                  </button>
                 </div>
-                <h3>{{ item.title }}</h3>
-                <p><strong>为什么先做：</strong>{{ item.why }}</p>
-                <p><strong>推荐动作：</strong>{{ item.action }}</p>
-                <p><strong>预估收益：</strong>{{ item.benefit }}</p>
+                <DocumentTitle
+                  v-if="resolveAiInboxItemDocumentId(item)"
+                  :document-id="resolveAiInboxItemDocumentId(item)"
+                  :title="item.title"
+                  :open-document="openDocument"
+                />
+                <h3 v-else>{{ item.title }}</h3>
 
                 <div
                   v-if="item.recommendedTargets?.length"
@@ -143,9 +137,12 @@
                     >
                       <button
                         v-if="target.documentId"
-                        class="ghost-button ai-suggestion-panel__target-button"
+                        :class="[
+                          'ai-suggestion-panel__target-button',
+                          { 'ai-suggestion-panel__target-button--active': isAiInboxTargetActive(item, target) },
+                        ]"
                         type="button"
-                        @click="openDocument(target.documentId)"
+                        @click="handleAiInboxTargetClick(item, target)"
                       >
                         {{ target.title }}
                       </button>
@@ -155,39 +152,24 @@
                   </div>
                 </div>
 
-                <div
-                  v-if="item.evidence?.length"
-                  class="ai-suggestion-panel__detail-group"
-                >
-                  <p class="ai-suggestion-panel__detail-title">证据</p>
-                  <ul class="ai-suggestion-panel__detail-list">
-                    <li v-for="evidence in item.evidence" :key="`${item.id}-${evidence}`">
-                      {{ evidence }}
-                    </li>
-                  </ul>
+                <div class="ai-suggestion-panel__detail-group">
+                  <p class="ai-suggestion-panel__detail-title">推荐动作</p>
+                  <p class="ai-suggestion-panel__merged-copy">{{ item.action }}</p>
                 </div>
 
-                <div
-                  v-if="item.expectedChanges?.length"
-                  class="ai-suggestion-panel__detail-group"
-                >
-                  <p class="ai-suggestion-panel__detail-title">处理后变化</p>
-                  <ul class="ai-suggestion-panel__detail-list">
-                    <li v-for="change in item.expectedChanges" :key="`${item.id}-${change}`">
+                <div class="ai-suggestion-panel__detail-group">
+                  <p class="ai-suggestion-panel__detail-title">推荐理由</p>
+                  <p class="ai-suggestion-panel__merged-copy">{{ item.reason }}</p>
+                  <ul v-if="item.evidence?.length || item.expectedChanges?.length" class="ai-suggestion-panel__detail-list">
+                    <li v-for="evidence in item.evidence ?? []" :key="`${item.id}-${evidence}`">
+                      {{ evidence }}
+                    </li>
+                    <li v-for="change in item.expectedChanges ?? []" :key="`${item.id}-${change}`">
                       {{ change }}
                     </li>
                   </ul>
                 </div>
 
-                <div
-                  v-if="item.draftText"
-                  class="ai-suggestion-panel__detail-group"
-                >
-                  <p class="ai-suggestion-panel__detail-title">建议草稿</p>
-                  <div class="ai-suggestion-panel__draft">
-                    {{ item.draftText }}
-                  </div>
-                </div>
               </article>
             </div>
           </div>
@@ -608,6 +590,7 @@ import type { DetailSuggestion, SummaryDetailSection as SummaryDetailSectionType
 import type { ReadCardMode } from '@/analytics/read-status'
 import type { ThemeDocumentMatch } from '@/analytics/theme-documents'
 import type { PathScope } from '@/composables/use-analytics-derived'
+import { resolveAiInboxItemDocumentId, resolveAiInboxTargetIntent } from '@/components/ai-inbox-detail'
 import DocumentTitle from '@/components/DocumentTitle.vue'
 import DormantDetailPanel from '@/components/DormantDetailPanel.vue'
 import OrphanDetailPanel from '@/components/OrphanDetailPanel.vue'
@@ -734,6 +717,27 @@ function resolveAiInboxTypeLabel(type: AiInboxItemType) {
   }
   return '整理文档'
 }
+
+function isAiInboxTargetActive(item: NonNullable<SummaryDetailSectionType & { kind: 'aiInbox' }>['result']['items'][number], target: NonNullable<SummaryDetailSectionType & { kind: 'aiInbox' }>['result']['items'][number]['recommendedTargets'][number]) {
+  const intent = resolveAiInboxTargetIntent(item, target)
+  return intent.kind === 'toggle-link'
+    ? props.isAiLinkSuggestionActive(intent.sourceDocumentId, intent.targetDocumentId)
+    : false
+}
+
+async function handleAiInboxTargetClick(
+  item: NonNullable<SummaryDetailSectionType & { kind: 'aiInbox' }>['result']['items'][number],
+  target: NonNullable<SummaryDetailSectionType & { kind: 'aiInbox' }>['result']['items'][number]['recommendedTargets'][number],
+) {
+  const intent = resolveAiInboxTargetIntent(item, target)
+  if (intent.kind === 'toggle-link') {
+    await props.toggleOrphanAiLinkSuggestion(intent.sourceDocumentId, intent.targetDocumentId, intent.targetTitle)
+    return
+  }
+  if (intent.kind === 'open-document') {
+    props.openDocument(intent.documentId)
+  }
+}
 </script>
 
 <style scoped>
@@ -814,22 +818,24 @@ function resolveAiInboxTypeLabel(type: AiInboxItemType) {
 }
 
 .panel-toggle {
-  border: 0;
+  width: 32px;
+  height: 32px;
+  padding: 0;
+  border: 1px solid var(--panel-border);
   cursor: pointer;
   font: inherit;
-  font-size: 13px;
-  padding: 6px 12px;
   border-radius: 999px;
-  background: var(--surface-card-soft);
+  background: transparent;
   color: var(--b3-theme-on-background);
   display: inline-flex;
   align-items: center;
-  gap: 6px;
-  transition: background-color 0.2s, color 0.2s;
+  justify-content: center;
+  transition: background-color 0.2s, color 0.2s, border-color 0.2s;
 }
 
 .panel-toggle:hover {
-  background: var(--surface-card);
+  background: var(--surface-card-soft);
+  border-color: color-mix(in srgb, var(--b3-theme-primary) 22%, var(--panel-border));
 }
 
 .panel-toggle__caret {
@@ -911,6 +917,10 @@ function resolveAiInboxTypeLabel(type: AiInboxItemType) {
   line-height: 1.7;
 }
 
+.ai-suggestion-panel__merged-copy {
+  white-space: pre-wrap;
+}
+
 .ai-suggestion-panel__item-top,
 .ai-suggestion-panel__badges {
   display: flex;
@@ -954,6 +964,28 @@ function resolveAiInboxTypeLabel(type: AiInboxItemType) {
   width: fit-content;
 }
 
+.ai-suggestion-panel__target-button {
+  border: 0;
+  border-radius: 999px;
+  padding: 7px 12px;
+  cursor: pointer;
+  font: inherit;
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--b3-theme-primary);
+  background: color-mix(in srgb, var(--b3-theme-primary) 10%, transparent);
+  transition: background-color 0.2s, color 0.2s, transform 0.2s;
+}
+
+.ai-suggestion-panel__target-button:hover {
+  background: color-mix(in srgb, var(--b3-theme-primary) 18%, transparent);
+}
+
+.ai-suggestion-panel__target-button--active {
+  background: var(--b3-theme-primary);
+  color: var(--b3-theme-on-primary, #fff);
+}
+
 .ai-suggestion-panel__target-label {
   font-weight: 600;
   color: var(--b3-theme-on-background);
@@ -967,15 +999,6 @@ function resolveAiInboxTypeLabel(type: AiInboxItemType) {
 }
 
 .ai-suggestion-panel__detail-list li {
-  line-height: 1.6;
-}
-
-.ai-suggestion-panel__draft {
-  padding: 10px 12px;
-  border-radius: 12px;
-  background: color-mix(in srgb, var(--accent-warm) 8%, var(--surface-card-soft));
-  font-family: var(--b3-font-family-code, monospace);
-  white-space: pre-wrap;
   line-height: 1.6;
 }
 

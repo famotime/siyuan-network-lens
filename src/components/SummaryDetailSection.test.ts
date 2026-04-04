@@ -83,12 +83,16 @@ describe('SummaryDetailSection', () => {
     })
 
     const html = await renderToString(app)
+    const toggleMarkup = html.match(/<button class="panel-toggle"[\s\S]*?<\/button>/)?.[0] ?? ''
 
     expect(html).toContain('文档样本详情')
     expect(html).toContain('summary-detail-item')
     expect(html).toContain('Alpha')
     expect(html).toContain('主题文档')
-    expect(html).toContain('折叠')
+    expect(toggleMarkup).toContain('aria-label="折叠详情"')
+    expect(toggleMarkup).toContain('panel-toggle__caret')
+    expect(toggleMarkup).not.toMatch(/>\s*折叠\s*<span/)
+    expect(toggleMarkup).not.toMatch(/>\s*展开\s*<span/)
   })
 
   it('renders propagation detail items and path controls', async () => {
@@ -179,9 +183,8 @@ describe('SummaryDetailSection', () => {
                 type: 'document',
                 title: '修复孤立文档：AI 与机器学习整理',
                 priority: 'P1',
-                why: '当前窗口内孤立，但和 AI 主题页、机器学习主题页都有明显匹配。',
-                action: '先补到主题-AI-索引，再补到主题-机器学习-索引。',
-                benefit: '能移出孤立文档，并把主题社区规模从 8 提升到 9。',
+                action: '先补到主题-AI-索引，再补到主题-机器学习-索引。\n可归入 AI 主题：((doc-a "主题-AI-索引"))',
+                reason: '当前窗口内孤立，但和 AI 主题页、机器学习主题页都有明显匹配。能移出孤立文档，并把主题社区规模从 8 提升到 9。',
                 documentIds: ['doc-a'],
                 recommendedTargets: [
                   {
@@ -193,7 +196,6 @@ describe('SummaryDetailSection', () => {
                 ],
                 evidence: ['当前窗口内孤立', '主题匹配命中 4 次'],
                 expectedChanges: ['孤立文档数预计减少 1'],
-                draftText: '可归入 AI 主题：((doc-a "主题-AI-索引"))',
               },
             ],
           },
@@ -211,8 +213,25 @@ describe('SummaryDetailSection', () => {
     expect(html).toContain('2 项建议')
     expect(html).toContain('重新分析')
     expect(html).toContain('今天先补 AI 主题连接。')
+    expect(html).toContain('document-title__button--default')
+    expect(html).not.toContain('打开文档')
     expect(html).toContain('推荐目标')
+    expect(html).toContain('推荐动作')
+    expect(html).toContain('推荐理由')
+    expect(html).toContain('先补到主题-AI-索引，再补到主题-机器学习-索引。')
+    expect(html).toContain('可归入 AI 主题：((doc-a &quot;主题-AI-索引&quot;))')
+    expect(html).toContain('当前窗口内孤立，但和 AI 主题页、机器学习主题页都有明显匹配。')
+    expect(html).toContain('能移出孤立文档，并把主题社区规模从 8 提升到 9。')
+    expect(html).toContain('当前窗口内孤立')
+    expect(html).toContain('孤立文档数预计减少 1')
+    expect(html.indexOf('推荐目标')).toBeLessThan(html.indexOf('推荐动作'))
+    expect(html.indexOf('推荐动作')).toBeLessThan(html.indexOf('推荐理由'))
+    expect(html).not.toContain('为什么先做')
+    expect(html).not.toContain('预估收益')
+    expect(html).not.toContain('建议草稿')
     expect(html).toContain('主题-AI-索引')
+    expect(html).not.toContain('>证据<')
+    expect(html).not.toContain('>处理后变化<')
     expect(html).not.toContain('测试连接')
   })
 })

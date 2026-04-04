@@ -69,15 +69,13 @@ export interface AiInboxItem {
   type: AiInboxItemType
   title: string
   priority: string
-  why: string
   action: string
-  benefit: string
+  reason: string
   documentIds?: string[]
   confidence?: AiInboxConfidence
   recommendedTargets?: AiInboxRecommendedTarget[]
   evidence?: string[]
   expectedChanges?: string[]
-  draftText?: string
   priorityBreakdown?: AiInboxPriorityBreakdown
 }
 
@@ -191,14 +189,17 @@ const SYSTEM_PROMPT = [
   '你要根据给定的结构化分析结果，输出今天最值得优先处理的整理待办。',
   '必须只输出 JSON，不要输出 Markdown、解释或代码块。',
   'JSON 结构必须是 {"summary": string, "items": AiInboxItem[]}。',
-  'items 中每项必须包含 id、type、title、priority、why、action、benefit，可选 documentIds、confidence、recommendedTargets、evidence、expectedChanges、draftText、priorityBreakdown。',
+  'items 中每项必须包含 id、type、title、priority、action、reason，可选 documentIds、confidence、recommendedTargets、evidence、expectedChanges、priorityBreakdown。',
   'type 只能是 document、connection、topic-page、bridge-risk。',
   'priority 用 P1、P2、P3。',
   '优先使用 actionCandidates 中已经给出的推荐目标、证据、收益预估和评分，不要自己发明不存在的文档或主题页。',
   '如果 actionCandidates 中有 focusDocumentIds，请把对应主对象 id 填到 documentIds。',
   '如果有 recommendedTargets，action 必须点名目标标题，不能只写“补链接”“完善结构”这类泛动作。',
-  'why 必须引用至少 1 条结构证据；benefit 必须写成处理后可观察到的变化。',
+  'action 要直接写成可展示的“推荐动作”；如果有建议草稿、可直接复用的话术或拟定标题，要合并进 action，不要额外拆出单独草稿段落。',
+  'reason 要直接写成可展示的“推荐理由”，把“为什么先做”和“预估收益”合并到同一段里，并至少引用 1 条结构证据。',
   '优先关注孤立文档、沉没文档、桥接风险、缺主题页社区、趋势变化和关键连接补齐。',
+  '所有面向用户展示的文本字段都必须使用简体中文，包括 summary、title、action、reason、recommendedTargets.reason、evidence、expectedChanges。',
+  '允许保留文档标题、标签名、模型名等专有名词，但禁止输出整句英文说明。',
 ].join(' ')
 
 export function isAiConfigComplete(config: AiConfig): boolean {
@@ -231,7 +232,8 @@ export function createAiInboxService(deps: {
             content: [
               '请基于下面的文档级引用网络分析结果，给出“今天优先处理什么”的统一待办列表。',
               '优先输出 5 到 8 项，优先从 actionCandidates 中挑选高分候选。',
-              '每项建议尽量写清：现在处理哪个对象、补到哪里/建什么页、为什么、处理后会改善什么。',
+              '输出结构要更紧凑：把推荐动作和建议草稿合并到 action，把为什么先做和预估收益合并成推荐理由写到 reason。',
+              '每项建议尽量写清：现在处理哪个对象、补到哪里/建什么页、推荐理由是什么。',
               '如果证据不足，不要硬造；如果没有明确目标，就如实保留为空。',
               JSON.stringify(params.payload),
             ].join('\n'),
@@ -796,6 +798,10 @@ async function requestChatCompletion(params: {
     max_tokens: params.maxTokensOverride ?? requestOptions.maxTokens,
     temperature: requestOptions.temperature,
   })
+  const requestHeaders = [
+    { Authorization: `Bearer ${params.config.aiApiKey}` },
+    { Accept: 'application/json' },
+  ]
   const requestTrace = {
     endpoint,
     timeoutMs: requestOptions.timeoutMs,
@@ -807,8 +813,16 @@ async function requestChatCompletion(params: {
     sentMessages: messages.length,
     requestBytes: body.length,
   }
+  const requestDetail = [
+    '请求方法：POST',
+    `请求地址：${endpoint}`,
+    '请求头：' + JSON.stringify(maskHeadersForLogging(requestHeaders)),
+    '内容类型：application/json',
+    `完整请求体：${body}`,
+  ].join('\n')
 
   params.logger.info('[NetworkLens][AI] Request start', requestTrace)
+  params.logger.info('[NetworkLens][AI] Request start detail', requestDetail)
 
   let response: IResForwardProxy
   try {
@@ -816,10 +830,7 @@ async function requestChatCompletion(params: {
       endpoint,
       'POST',
       body,
-      [
-        { Authorization: `Bearer ${params.config.aiApiKey}` },
-        { Accept: 'application/json' },
-      ],
+      requestHeaders,
       requestOptions.timeoutMs,
       'application/json',
     )
@@ -852,6 +863,18 @@ async function requestChatCompletion(params: {
       ...requestTrace,
       status,
       responseBody: response?.body?.slice(0, 500) ?? '',
+    })
+    params.logger.warn(
+      '[NetworkLens][AI] Non-2xx response detail',
+      `状态码：${status}\n完整响应：${response?.body ?? ''}`,
+    )
+    params.logger.warn('[NetworkLens][AI] Non-2xx response raw', {
+      status,
+      elapsed: response?.elapsed ?? 'unknown',
+      contentType: response?.contentType ?? '',
+      headers: response?.headers ?? {},
+      url: response?.url ?? endpoint,
+      body: response?.body ?? '',
     })
     throw buildAiNonOkResponseError({
       endpoint,
@@ -1039,11 +1062,10 @@ function normalizeAiInboxResult(value: any): AiInboxResult {
 
 function normalizeAiInboxItem(value: any, index: number): AiInboxItem | null {
   const title = typeof value?.title === 'string' ? value.title.trim() : ''
-  const why = typeof value?.why === 'string' ? value.why.trim() : ''
   const action = typeof value?.action === 'string' ? value.action.trim() : ''
-  const benefit = typeof value?.benefit === 'string' ? value.benefit.trim() : ''
+  const reason = typeof value?.reason === 'string' ? value.reason.trim() : ''
 
-  if (!title || !why || !action || !benefit) {
+  if (!title || !action || !reason) {
     return null
   }
 
@@ -1055,9 +1077,6 @@ function normalizeAiInboxItem(value: any, index: number): AiInboxItem | null {
   const recommendedTargets = normalizeRecommendedTargets(value?.recommendedTargets)
   const evidence = normalizeStringList(value?.evidence)
   const expectedChanges = normalizeStringList(value?.expectedChanges)
-  const draftText = typeof value?.draftText === 'string' && value.draftText.trim()
-    ? value.draftText.trim()
-    : undefined
   const priorityBreakdown = normalizePriorityBreakdown(value?.priorityBreakdown)
   const confidence = normalizeConfidence(value?.confidence)
 
@@ -1068,15 +1087,13 @@ function normalizeAiInboxItem(value: any, index: number): AiInboxItem | null {
     type,
     title,
     priority,
-    why,
     action,
-    benefit,
+    reason,
     documentIds: documentIds?.length ? documentIds : undefined,
     confidence,
     recommendedTargets,
     evidence,
     expectedChanges,
-    draftText,
     priorityBreakdown,
   }
 }
@@ -1270,4 +1287,28 @@ function isLikelyMissingV1Path(endpoint: string): boolean {
   } catch {
     return false
   }
+}
+
+function maskHeadersForLogging(headers: any[]) {
+  return headers.map((header) => {
+    if (!header || typeof header !== 'object') {
+      return header
+    }
+
+    const normalized = { ...header }
+    if (typeof normalized.Authorization === 'string') {
+      normalized.Authorization = maskAuthorizationValue(normalized.Authorization)
+    }
+    return normalized
+  })
+}
+
+function maskAuthorizationValue(value: string) {
+  const [scheme = '', token = ''] = value.split(/\s+/, 2)
+  if (!token) {
+    return value
+  }
+
+  const visiblePrefix = token.slice(0, 3)
+  return `${scheme} ${visiblePrefix}***`.trim()
 }

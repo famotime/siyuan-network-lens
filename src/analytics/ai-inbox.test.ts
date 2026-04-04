@@ -337,16 +337,15 @@ describe('ai inbox request options', () => {
       expect(body.model).toBe('gpt-4.1-mini')
       expect(body.max_tokens).toBe(2048)
       expect(body.temperature).toBe(0.2)
-      expect(body.messages).toEqual([
-        {
-          role: 'system',
-          content: expect.stringContaining('优先使用 actionCandidates 中已经给出的推荐目标、证据、收益预估和评分'),
-        },
-        {
-          role: 'user',
-          content: expect.stringContaining('请基于下面的文档级引用网络分析结果'),
-        },
-      ])
+      expect(body.messages).toHaveLength(2)
+      expect(body.messages[0]).toEqual(expect.objectContaining({
+        role: 'system',
+        content: expect.stringMatching(/推荐动作.*建议草稿.*合并/),
+      }))
+      expect(body.messages[1]).toEqual(expect.objectContaining({
+        role: 'user',
+        content: expect.stringMatching(/推荐动作.*建议草稿.*合并.*为什么先做.*预估收益.*推荐理由/),
+      }))
 
       return {
         body: JSON.stringify({
@@ -354,16 +353,15 @@ describe('ai inbox request options', () => {
             {
               message: {
                 content: JSON.stringify({
-                  summary: 'summary',
+                  summary: '已整理出当前窗口的优先处理建议。',
                   items: [
                     {
                       id: 'item-1',
                       type: 'document',
                       title: '整理 Doc 1',
                       priority: 'P1',
-                      why: 'because',
-                      action: 'act',
-                      benefit: 'benefit',
+                      action: '先补到主题-AI-索引，并补一句归属说明。\n可归入 AI 主题：((doc-theme-ai "主题-AI-索引"))',
+                      reason: '当前窗口内孤立，且主题匹配信号明确。可减少 1 篇孤立文档，并恢复主题入口。',
                       confidence: 'high',
                       recommendedTargets: [
                         {
@@ -374,7 +372,6 @@ describe('ai inbox request options', () => {
                       ],
                       evidence: ['当前窗口内孤立', '主题匹配命中 4 次'],
                       expectedChanges: ['孤立文档数预计减少 1'],
-                      draftText: '可归入 AI 主题：((doc-theme-ai "主题-AI-索引"))',
                     },
                   ],
                 }),
@@ -416,9 +413,11 @@ describe('ai inbox request options', () => {
       }),
     })
 
-    expect(result.summary).toBe('summary')
+    expect(result.summary).toBe('已整理出当前窗口的优先处理建议。')
     expect(result.items).toHaveLength(1)
     expect(result.items[0]).toEqual(expect.objectContaining({
+      action: '先补到主题-AI-索引，并补一句归属说明。\n可归入 AI 主题：((doc-theme-ai "主题-AI-索引"))',
+      reason: '当前窗口内孤立，且主题匹配信号明确。可减少 1 篇孤立文档，并恢复主题入口。',
       confidence: 'high',
       recommendedTargets: [
         expect.objectContaining({
@@ -428,7 +427,107 @@ describe('ai inbox request options', () => {
       ],
       evidence: ['当前窗口内孤立', '主题匹配命中 4 次'],
       expectedChanges: ['孤立文档数预计减少 1'],
-      draftText: '可归入 AI 主题：((doc-theme-ai "主题-AI-索引"))',
+    }))
+  })
+
+  it('returns the first inbox result directly even when it contains english text', async () => {
+    const requests: Array<{ url: string, messages: Array<{ role: string, content: string }> }> = []
+    const forwardProxy = async (
+      url: string,
+      method?: string,
+      payload?: any,
+      headers?: any[],
+      timeout?: number,
+      contentType?: string,
+    ) => {
+      const body = JSON.parse(payload)
+      requests.push({
+        url,
+        messages: body.messages,
+      })
+
+      return {
+        body: JSON.stringify({
+          choices: [
+            {
+              message: {
+                content: JSON.stringify({
+                  summary: '5 high-priority items: create a topic page and repair orphan links.',
+                  items: [
+                    {
+                      id: 'item-1',
+                      type: 'topic-page',
+                      title: 'Creating topic page: 主题-五星-索引',
+                      priority: 'P1',
+                      action: 'Create the page and link it to 技能, Uber AI开发实况, MiniMax M2.7. Suggested title: 主题-五星-索引',
+                      reason: 'Community with 3 hub documents lacks a topic page and gained 2 new links recently. Unified entry point for this community and clearer navigation.',
+                      recommendedTargets: [
+                        {
+                          documentId: 'doc-1',
+                          title: '技能',
+                          reason: 'Useful entry point for the first navigation layer.',
+                        },
+                      ],
+                      evidence: ['Missing topic page', 'Recent community growth'],
+                      expectedChanges: ['Community becomes easier to navigate'],
+                    },
+                  ],
+                }),
+              },
+            },
+          ],
+        }),
+        contentType: 'application/json',
+        elapsed: 12,
+        headers: {},
+        status: 200,
+        url,
+      } as any
+    }
+
+    const service = createAiInboxService({ forwardProxy })
+
+    const result = await service.generateInbox({
+      config: {
+        aiEnabled: true,
+        aiBaseUrl: 'https://api.example.com/v1',
+        aiApiKey: 'sk-test',
+        aiModel: 'gpt-4.1-mini',
+        aiRequestTimeoutSeconds: 45,
+        aiMaxTokens: 2048,
+        aiTemperature: 0.2,
+        aiMaxContextMessages: 3,
+      } as any,
+      payload: service.buildPayload({
+        documents,
+        report,
+        trends,
+        summaryCards: [
+          { key: 'todaySuggestions', label: '今日建议', value: '5', hint: '当前窗口内最值得优先处理的待办' },
+        ] as any,
+        filters: {},
+        timeRange: '7d',
+        dormantDays: 30,
+      }),
+    })
+
+    expect(requests).toHaveLength(1)
+    expect(result).toEqual(expect.objectContaining({
+      summary: '5 high-priority items: create a topic page and repair orphan links.',
+      items: [
+        expect.objectContaining({
+          title: 'Creating topic page: 主题-五星-索引',
+          action: 'Create the page and link it to 技能, Uber AI开发实况, MiniMax M2.7. Suggested title: 主题-五星-索引',
+          reason: 'Community with 3 hub documents lacks a topic page and gained 2 new links recently. Unified entry point for this community and clearer navigation.',
+          recommendedTargets: [
+            expect.objectContaining({
+              reason: 'Useful entry point for the first navigation layer.',
+            }),
+          ],
+          evidence: ['Missing topic page', 'Recent community growth'],
+          expectedChanges: ['Community becomes easier to navigate'],
+        }),
+      ],
     }))
   })
 
@@ -529,6 +628,116 @@ describe('ai inbox request options', () => {
         aiModel: 'deepseek-ai/DeepSeek-V3',
       } as any,
     })).rejects.toThrow(/Base URL 很可能应包含 \/v1/)
+  })
+
+  it('logs status code and full response result for non-2xx responses', async () => {
+    const logger = {
+      info: vi.fn(),
+      warn: vi.fn(),
+      error: vi.fn(),
+    }
+    const service = createAiInboxService({
+      forwardProxy: async () => ({
+        body: '{"error":{"message":"max_tokens too large","type":"invalid_request_error"}}',
+        contentType: 'application/json',
+        elapsed: 18,
+        headers: {},
+        status: 400,
+        url: 'https://api.siliconflow.cn/v1/chat/completions',
+      } as any),
+      logger,
+    })
+
+    await expect(service.testConnection({
+      config: {
+        aiEnabled: true,
+        aiBaseUrl: 'https://api.siliconflow.cn/v1',
+        aiApiKey: 'sk-test',
+        aiModel: 'deepseek-ai/DeepSeek-V3',
+      } as any,
+    })).rejects.toThrow(/400/)
+
+    expect(logger.warn).toHaveBeenCalledWith(
+      '[NetworkLens][AI] Non-2xx response detail',
+      expect.stringContaining('状态码：400'),
+    )
+    expect(logger.warn).toHaveBeenCalledWith(
+      '[NetworkLens][AI] Non-2xx response detail',
+      expect.stringContaining('完整响应：{"error":{"message":"max_tokens too large","type":"invalid_request_error"}}'),
+    )
+  })
+
+  it('logs full outbound request detail with masked authorization header', async () => {
+    const logger = {
+      info: vi.fn(),
+      warn: vi.fn(),
+      error: vi.fn(),
+    }
+    const service = createAiInboxService({
+      forwardProxy: async (url) => ({
+        body: JSON.stringify({
+          choices: [
+            {
+              message: {
+                content: JSON.stringify({
+                  summary: '连接成功',
+                  items: [
+                    {
+                      id: 'item-1',
+                      type: 'document',
+                      title: '整理 Doc 1',
+                      priority: 'P1',
+                      action: '先补一条主题链接。',
+                      reason: '当前结构证据明确，适合立即处理。',
+                    },
+                  ],
+                }),
+              },
+            },
+          ],
+        }),
+        contentType: 'application/json',
+        elapsed: 9,
+        headers: {},
+        status: 200,
+        url,
+      } as any),
+      logger,
+    })
+
+    await service.testConnection({
+      config: {
+        aiEnabled: true,
+        aiBaseUrl: 'https://api.siliconflow.cn/v1',
+        aiApiKey: 'sk-test-secret',
+        aiModel: 'deepseek-ai/DeepSeek-V3',
+        aiRequestTimeoutSeconds: 60,
+        aiMaxTokens: 102400,
+        aiTemperature: 0.7,
+        aiMaxContextMessages: 7,
+      } as any,
+    })
+
+    expect(logger.info).toHaveBeenCalledWith(
+      '[NetworkLens][AI] Request start detail',
+      expect.stringContaining('请求方法：POST'),
+    )
+    expect(logger.info).toHaveBeenCalledWith(
+      '[NetworkLens][AI] Request start detail',
+      expect.stringContaining('请求地址：https://api.siliconflow.cn/v1/chat/completions'),
+    )
+    expect(logger.info).toHaveBeenCalledWith(
+      '[NetworkLens][AI] Request start detail',
+      expect.stringContaining('"Authorization":"Bearer sk-***"'),
+    )
+    expect(logger.info).toHaveBeenCalledWith(
+      '[NetworkLens][AI] Request start detail',
+      expect.stringContaining('"model":"deepseek-ai/DeepSeek-V3"'),
+    )
+    expect(logger.info).toHaveBeenCalledWith(
+      '[NetworkLens][AI] Request start detail',
+      expect.not.stringContaining('sk-test-secret'),
+    )
   })
 
   it('adds timeout troubleshooting details and emits debug logs when forward proxy throws', async () => {

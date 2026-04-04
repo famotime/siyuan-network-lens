@@ -102,9 +102,8 @@
               </button>
             </div>
             <h3>{{ item.title }}</h3>
-            <p><strong>为什么先做：</strong>{{ item.why }}</p>
-            <p><strong>推荐动作：</strong>{{ item.action }}</p>
-            <p><strong>预估收益：</strong>{{ item.benefit }}</p>
+            <p class="ai-inbox-panel__merged-copy"><strong>推荐动作：</strong>{{ item.action }}</p>
+            <p class="ai-inbox-panel__merged-copy"><strong>推荐理由：</strong>{{ item.reason }}</p>
 
             <div v-if="item.recommendedTargets?.length" class="ai-inbox-panel__detail-group">
               <p class="ai-inbox-panel__detail-title">推荐目标</p>
@@ -146,12 +145,6 @@
               </ul>
             </div>
 
-            <div v-if="item.draftText" class="ai-inbox-panel__detail-group">
-              <p class="ai-inbox-panel__detail-title">建议草稿</p>
-              <div class="ai-inbox-panel__draft">
-                {{ item.draftText }}
-              </div>
-            </div>
           </article>
         </div>
       </div>
@@ -385,6 +378,10 @@ function resolveTypeLabel(type: AiInboxItemType) {
   line-height: 1.7;
 }
 
+.ai-inbox-panel__merged-copy {
+  white-space: pre-wrap;
+}
+
 .ai-inbox-panel__detail-group {
   display: grid;
   gap: 8px;
@@ -429,15 +426,6 @@ function resolveTypeLabel(type: AiInboxItemType) {
 }
 
 .ai-inbox-panel__detail-list li {
-  line-height: 1.6;
-}
-
-.ai-inbox-panel__draft {
-  padding: 10px 12px;
-  border-radius: 12px;
-  background: color-mix(in srgb, var(--accent-warm, var(--b3-theme-primary)) 8%, var(--surface-card-soft, var(--b3-theme-surface)));
-  font-family: var(--b3-font-family-code, monospace);
-  white-space: pre-wrap;
   line-height: 1.6;
 }
 
