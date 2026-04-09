@@ -34,6 +34,14 @@ export interface AiWikiStore {
   savePageRecord: (record: WikiPageSnapshotRecord) => Promise<void>
 }
 
+export function createAiWikiStoreFromPlugin(plugin: PluginStorageLike | null | undefined): AiWikiStore | null {
+  if (!plugin?.loadData || !plugin?.saveData) {
+    return null
+  }
+
+  return createAiWikiStore(plugin)
+}
+
 export function createAiWikiStore(storage: PluginStorageLike): AiWikiStore {
   return {
     async loadSnapshot() {

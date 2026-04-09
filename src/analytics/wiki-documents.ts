@@ -680,7 +680,7 @@ function collectUniqueSourceDocumentIds(
   ])]
 }
 
-function buildSiblingDocumentPath(themeDocumentHPath: string, pageTitle: string): string {
+export function buildSiblingDocumentPath(themeDocumentHPath: string, pageTitle: string): string {
   const normalizedPath = normalizeDocumentPath(themeDocumentHPath)
   const lastSlashIndex = normalizedPath.lastIndexOf('/')
   if (lastSlashIndex <= 0) {

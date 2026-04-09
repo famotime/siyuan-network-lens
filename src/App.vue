@@ -34,6 +34,13 @@
         >
           重置排序
         </button>
+        <button
+          class="ghost-button"
+          type="button"
+          @click="toggleWikiMaintainPanel"
+        >
+          {{ showWikiMaintainPanel ? '收起 LLM Wiki' : '维护 LLM Wiki' }}
+        </button>
       </div>
     </div>
 
@@ -84,6 +91,20 @@
         </label>
       </div>
     </div>
+
+    <WikiMaintainPanel
+      v-if="showWikiMaintainPanel"
+      :wiki-enabled="Boolean(props.config.wikiEnabled)"
+      :ai-enabled="Boolean(props.config.aiEnabled)"
+      :ai-config-ready="aiConfigReady"
+      :preview-loading="wikiPreviewLoading"
+      :apply-loading="wikiApplyLoading"
+      :error="wikiError"
+      :preview="wikiPreview"
+      :prepare-wiki-preview="prepareWikiPreview"
+      :apply-wiki-changes="applyWikiChanges"
+      :open-wiki-document="openWikiDocument"
+    />
 
     <div
       v-if="errorMessage"
@@ -226,16 +247,17 @@
 </template>
 
 <script setup lang="ts">
-import { computed, watch } from 'vue'
+import { computed, ref, watch } from 'vue'
 import { openTab, showMessage, type Plugin } from 'siyuan'
 
 import FilterSelect from '@/components/FilterSelect.vue'
 import SummaryCardsGrid from '@/components/SummaryCardsGrid.vue'
 import SummaryDetailSection from '@/components/SummaryDetailSection.vue'
 import ThemeMultiSelect from '@/components/ThemeMultiSelect.vue'
+import WikiMaintainPanel from '@/components/WikiMaintainPanel.vue'
 import { isSummaryCardVisible } from '@/analytics/summary-card-config'
 import { useAnalyticsState } from '@/composables/use-analytics'
-import { appendBlock, deleteBlock, forwardProxy, getBlockAttrs, getBlockKramdown, getChildBlocks, prependBlock, setBlockAttrs, updateBlock } from '@/api'
+import { appendBlock, createDocWithMd, deleteBlock, forwardProxy, getBlockAttrs, getBlockKramdown, getChildBlocks, getIDsByHPath, prependBlock, setBlockAttrs, updateBlock } from '@/api'
 import { ensureConfigDefaults, type PluginConfig } from '@/types/config'
 import pluginIconUrl from '../icon.png'
 
@@ -255,6 +277,8 @@ const analytics = useAnalyticsState({
   prependBlock,
   deleteBlock,
   updateBlock,
+  createDocWithMd,
+  getIDsByHPath,
   getChildBlocks,
   getBlockKramdown,
   getBlockAttrs,
@@ -303,8 +327,14 @@ const {
   aiLinkSuggestionConfigReady,
   aiInboxLoading,
   aiInboxError,
+  wikiPreviewLoading,
+  wikiApplyLoading,
+  wikiError,
+  wikiPreview,
   refresh,
   generateAiInbox,
+  prepareWikiPreview,
+  applyWikiChanges,
   generateOrphanAiSuggestion,
   selectEvidence,
   selectCommunity,
@@ -325,6 +355,7 @@ const {
   resolveTitle,
   resolveNotebookName,
   openDocument,
+  openWikiDocument,
   formatTimestamp,
   formatDelta,
   toggleOrphanThemeSuggestion,
@@ -334,6 +365,8 @@ const {
   toggleOrphanAiTagSuggestion,
   isAiTagSuggestionActive,
 } = analytics
+
+const showWikiMaintainPanel = ref(false)
 
 const visibleSummaryCards = computed(() => {
   if (!props.config.showSummaryCards) {
@@ -392,6 +425,10 @@ function updateFromDocumentId(value: string) {
 
 function updateToDocumentId(value: string) {
   toDocumentId.value = value
+}
+
+function toggleWikiMaintainPanel() {
+  showWikiMaintainPanel.value = !showWikiMaintainPanel.value
 }
 </script>
 

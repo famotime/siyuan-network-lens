@@ -1,6 +1,6 @@
 # 项目结构
 
-更新时间：2026-03-14
+更新时间：2026-04-10
 
 ## 顶层目录
 
@@ -54,11 +54,31 @@
   - 当前活动文档同步。
 - `src/analytics/ui-copy.ts`
   - 建议标签等文案映射。
+- `src/analytics/ai-document-summary.ts`
+  - 通用文档摘要补建与 freshness 复用，供孤立文档 AI 补链和 wiki 维护共用。
+- `src/analytics/ai-index-store.ts`
+  - AI 私有索引读写，保存文档语义摘要、证据片段和建议缓存。
+- `src/analytics/wiki-scope.ts`
+  - 基于当前筛选结果构建 wiki 维护范围，输出主题分组、未归类来源和排除的 wiki 页面。
+- `src/analytics/wiki-generation.ts`
+  - 将主题分组、摘要索引和结构信号组合为主题 wiki 生成 payload。
+- `src/analytics/wiki-ai.ts`
+  - 调用 OpenAI 兼容接口生成主题 wiki 的结构化 JSON section 内容。
+- `src/analytics/wiki-renderer.ts`
+  - 将结构化 wiki section 渲染为稳定 markdown 草稿与 section metadata。
+- `src/analytics/wiki-diff.ts`
+  - 对 AI 管理区计算页面级 diff、指纹和冲突状态。
+- `src/analytics/wiki-store.ts`
+  - 维护 `ai-wiki-index.json` 快照，记录 wiki 页映射、预览和写入结果。
+- `src/analytics/wiki-documents.ts`
+  - 负责主题 wiki 页、索引页和维护日志页的创建、更新与回写。
+- `src/analytics/wiki-page-model.ts`
+  - 集中定义 wiki 页面类型、section key、预览状态和块属性约定。
 
 ## 组合式状态层
 
 - `src/composables/use-analytics.ts`
-  - 主状态容器。负责组合快照、筛选、分析结果、watcher、公开 API 与 UI 联动状态。
+  - 主状态容器。负责组合快照、筛选、分析结果、AI Inbox、LLM Wiki 预览/写入状态、watcher、公开 API 与 UI 联动状态。
 - `src/composables/use-analytics-derived.ts`
   - 新增纯派生选择器。负责标签选项、路径候选、孤立主题建议映射、详情计数和关联映射构建。
 - `src/composables/use-analytics-interactions.ts`
@@ -67,9 +87,9 @@
 ## UI 层
 
 - `src/App.vue`
-  - 主界面，消费 `useAnalyticsState`，负责筛选器、顶部操作区和页面级布局组装。
+  - 主界面，消费 `useAnalyticsState`，负责筛选器、顶部操作区、LLM Wiki 维护入口和页面级布局组装。
 - `src/components/SettingPanel.vue`
-  - 设置界面，负责主题文档、统计卡片开关与已读规则配置。
+  - 设置界面，负责主题文档、统计卡片开关、已读规则、AI 接入和 LLM Wiki 配置。
 - `src/components/setting-panel-data.ts`
   - 新增设置页数据 helper，负责默认值修正、标签选项收集和笔记本/标签初始化加载。
 - `src/components/RankingPanel.vue`
@@ -82,6 +102,8 @@
   - 新增顶部统计卡片展示组件，内聚拖拽排序和已读卡片切换按钮。
 - `src/components/SummaryDetailSection.vue`
   - 新增详情区展示组件，内聚列表、传播路径、趋势详情和排行详情的渲染分支。
+- `src/components/WikiMaintainPanel.vue`
+  - LLM Wiki 维护面板，负责作用域摘要、页面预览、冲突提示、确认写入和结果页快捷打开。
 - `src/components/ThemeMultiSelect.vue`
   - 主题/标签多选控件。
 - `src/components/FilterSelect.vue`
@@ -105,12 +127,12 @@
 ## 测试分布
 
 - `src/analytics/*.test.ts`
-  - 覆盖图分析、趋势、fallback 引用采集、主题文档、已读规则、卡片详情与共享 helper。
+  - 覆盖图分析、趋势、fallback 引用采集、主题文档、已读规则、wiki 生成/写入流程、卡片详情与共享 helper。
 - `src/composables/use-analytics.test.ts`
-  - 覆盖主 composable 的公开行为。
+  - 覆盖主 composable 的公开行为，包括 LLM Wiki 预览与写入闭环。
 - `src/composables/use-analytics-derived.test.ts`
   - 覆盖新拆分出的纯派生选择器。
 - `src/components/*.test.ts`
-  - 覆盖关键 UI 组件、统计卡片区、详情区与设置界面结构。
+  - 覆盖关键 UI 组件、统计卡片区、详情区、LLM Wiki 面板与设置界面结构。
 - `src/App.test.ts`
   - 覆盖主界面关键结构与布局约束。

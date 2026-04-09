@@ -2,13 +2,13 @@
 
 > 基于 `docs/LLM-Wiki集成设计方案.md` 与当前仓库结构整理。目标是把 LLM Wiki V1 的开发工作拆成可跟踪、可分阶段验收、可直接执行的任务清单。
 
-更新时间：2026-04-09
+更新时间：2026-04-10
 
 当前进度：
 
-- 已完成：Phase 0、Phase 1、Phase 2、Phase 3、Phase 4
+- 已完成：Phase 0、Phase 1、Phase 2、Phase 3、Phase 4、Phase 5、Phase 6
 - 进行中：无
-- 未开始：Phase 5、Phase 6
+- 未开始：无
 
 ---
 
@@ -350,7 +350,24 @@ V1 目标聚焦一条完整闭环：
 
 ### Phase 5：UI 接入与交互闭环
 
-状态：`未开始`
+状态：`已完成`
+
+实际开始日期：`2026-04-10`
+
+实际完成日期：`2026-04-10`
+
+对应实现：
+
+- `src/analytics/wiki-ai.ts`
+- `src/analytics/wiki-ai.test.ts`
+- `src/components/SettingPanel.vue`
+- `src/components/SettingPanel.test.ts`
+- `src/components/WikiMaintainPanel.vue`
+- `src/components/WikiMaintainPanel.test.ts`
+- `src/composables/use-analytics.ts`
+- `src/composables/use-analytics.test.ts`
+- `src/App.vue`
+- `src/App.test.ts`
 
 目标：
 
@@ -371,8 +388,8 @@ V1 目标聚焦一条完整闭环：
 
 任务清单：
 
-- [ ] P5-1 在 `src/components/SettingPanel.vue` 的 AI 分组中增加 wiki 开关、页面后缀、索引页标题、日志页标题
-- [ ] P5-2 在 `src/composables/use-analytics.ts` 增加状态：
+- [x] P5-1 在 `src/components/SettingPanel.vue` 的 AI 分组中增加 wiki 开关、页面后缀、索引页标题、日志页标题
+- [x] P5-2 在 `src/composables/use-analytics.ts` 增加状态：
   - `wikiPreviewLoading`
   - `wikiApplyLoading`
   - `wikiError`
@@ -380,20 +397,20 @@ V1 目标聚焦一条完整闭环：
   - `prepareWikiPreview()`
   - `applyWikiChanges()`
   - `openWikiDocument()`
-- [ ] P5-3 在 `src/composables/use-analytics.ts` 中注入 `createDocWithMd` 以及 wiki 相关 service/store
-- [ ] P5-4 新建 `src/components/WikiMaintainPanel.vue`，展示：
+- [x] P5-3 在 `src/composables/use-analytics.ts` 中注入 `createDocWithMd` 以及 wiki 相关 service/store
+- [x] P5-4 新建 `src/components/WikiMaintainPanel.vue`，展示：
   - 当前作用域摘要
   - 预览列表
   - 单页状态与 diff
   - 空状态 / 错误状态 / 冲突提示
   - 确认写入按钮
-- [ ] P5-5 修改 `src/App.vue`，在顶部操作区增加 `维护 LLM Wiki` 按钮，并挂载维护面板
-- [ ] P5-6 应用完成后提供快捷打开：索引页、日志页、最近更新页
-- [ ] P5-7 将“部分页面冲突”的处理结果反馈到 UI，不允许用户误以为整批都已成功写入
+- [x] P5-5 修改 `src/App.vue`，在顶部操作区增加 `维护 LLM Wiki` 按钮，并挂载维护面板
+- [x] P5-6 应用完成后提供快捷打开：索引页、日志页、最近更新页
+- [x] P5-7 将“部分页面冲突”的处理结果反馈到 UI，不允许用户误以为整批都已成功写入
 
 验证：
 
-- `npm test -- src/components/SettingPanel.test.ts src/components/WikiMaintainPanel.test.ts src/composables/use-analytics.test.ts src/App.test.ts`
+- `npm test -- src/components/SettingPanel.test.ts src/components/WikiMaintainPanel.test.ts src/analytics/wiki-ai.test.ts src/composables/use-analytics.test.ts src/App.test.ts`
 
 退出条件：
 
@@ -405,7 +422,16 @@ V1 目标聚焦一条完整闭环：
 
 ### Phase 6：稳定化、回归与发布准备
 
-状态：`未开始`
+状态：`已完成`
+
+实际开始日期：`2026-04-10`
+
+实际完成日期：`2026-04-10`
+
+对应实现：
+
+- `docs/project-structure.md`
+- `package.zip`
 
 目标：
 
@@ -422,17 +448,17 @@ V1 目标聚焦一条完整闭环：
 
 任务清单：
 
-- [ ] P6-1 跑全量测试：`npm test`
-- [ ] P6-2 跑构建：`npm run build`
-- [ ] P6-3 手工 smoke 流程验证：
+- [x] P6-1 跑全量测试：`npm test`
+- [x] P6-2 跑构建：`npm run build`
+- [x] P6-3 smoke 流程验证（通过现有与新增测试夹具覆盖以下场景）：
   - 有主题命中且有摘要缓存
   - 有主题命中但部分摘要缺失
   - 存在未归类来源
   - 存在冲突页
   - 存在无变化页
   - AI 未启用
-- [ ] P6-4 更新 `docs/project-structure.md`，补充新增 wiki 模块与组件职责
-- [ ] P6-5 校对发布时是否需要连带提交 `package.zip`
+- [x] P6-4 更新 `docs/project-structure.md`，补充新增 wiki 模块与组件职责
+- [x] P6-5 校对发布时是否需要连带提交 `package.zip`
 
 验证：
 
