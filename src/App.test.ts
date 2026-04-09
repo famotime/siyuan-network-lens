@@ -7,8 +7,10 @@ describe('App trend detail layout', () => {
 
     expect(source).toContain("import SummaryCardsGrid from '@/components/SummaryCardsGrid.vue'")
     expect(source).toContain("import SummaryDetailSection from '@/components/SummaryDetailSection.vue'")
+    expect(source).toContain("import WikiMaintainPanel from '@/components/WikiMaintainPanel.vue'")
     expect(source).toContain('<SummaryCardsGrid')
     expect(source).toContain('<SummaryDetailSection')
+    expect(source).toContain('<WikiMaintainPanel')
     expect(source).not.toContain('draggable="true"')
   })
 
@@ -45,6 +47,14 @@ describe('App trend detail layout', () => {
     expect(source).not.toContain("if (card.key === 'dormant')")
     expect(source).not.toContain("if (card.key === 'bridges')")
     expect(source).not.toContain('showOrphanBridge')
+  })
+
+  it('adds a wiki maintenance entry in the hero actions area', async () => {
+    const source = await readFile(new URL('./App.vue', import.meta.url), 'utf8')
+
+    expect(source).toContain('维护 LLM Wiki')
+    expect(source).toContain('showWikiMaintainPanel')
+    expect(source).toContain('toggleWikiMaintainPanel')
   })
 
   it('shows an in-panel loading skeleton for the first analytics load', async () => {

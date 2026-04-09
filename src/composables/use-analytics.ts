@@ -46,21 +46,58 @@ import {
   createThemeSuggestionController,
 } from './use-analytics-interactions'
 import { createAiInboxService, isAiConfigComplete, type AiInboxResult, type AiInboxService } from '@/analytics/ai-inbox'
-import { buildDocumentSummary } from '@/analytics/ai-document-summary'
+import { buildDocumentSummary, ensureDocumentSummary } from '@/analytics/ai-document-summary'
 import {
   createAiDocumentIndexStoreFromPlugin,
   type AiDocumentIndexStore,
 } from '@/analytics/ai-index-store'
+import { createAiWikiService, type AiWikiService } from '@/analytics/wiki-ai'
 import {
   createAiLinkSuggestionService,
   isAiLinkSuggestionConfigComplete,
   type AiLinkSuggestionService,
   type OrphanAiSuggestionState,
 } from '@/analytics/ai-link-suggestions'
+import { buildWikiScope, type WikiScopeSummary } from '@/analytics/wiki-scope'
+import { buildWikiGenerationPayloads } from '@/analytics/wiki-generation'
+import { renderThemeWikiDraft, type RenderedWikiDraft } from '@/analytics/wiki-renderer'
+import { buildWikiPreview, type WikiPagePreviewResult } from '@/analytics/wiki-diff'
+import { applyWikiDocuments, buildSiblingDocumentPath, type WikiApplyBatchResult } from '@/analytics/wiki-documents'
+import {
+  buildWikiPageStorageKey,
+  createAiWikiStoreFromPlugin,
+  type AiWikiStore,
+  type WikiPageSnapshotRecord,
+} from '@/analytics/wiki-store'
 import { normalizeTags, resolveDocumentTitle } from '@/analytics/document-utils'
 import type { PluginConfig } from '@/types/config'
 
 export type { PathScope } from './use-analytics-derived'
+
+export interface WikiPreviewThemePageItem {
+  pageTitle: string
+  themeName: string
+  themeDocumentId: string
+  themeDocumentTitle: string
+  themeDocumentBox: string
+  themeDocumentHPath: string
+  sourceDocumentIds: string[]
+  preview: WikiPagePreviewResult
+  draft: RenderedWikiDraft
+  hasManualNotes: boolean
+}
+
+export interface WikiPreviewState {
+  generatedAt: string
+  scope: {
+    summary: WikiScopeSummary
+    descriptionLines: string[]
+  }
+  themePages: WikiPreviewThemePageItem[]
+  unclassifiedDocuments: Array<{ documentId: string, title: string }>
+  excludedWikiDocuments: Array<{ documentId: string, title: string }>
+  applyResult?: WikiApplyBatchResult
+}
 
 const panelKeys = [
   'summary-detail',
@@ -85,6 +122,8 @@ type ShowMessageFn = (text: string, timeout?: number, type?: 'info' | 'error') =
 type BlockWriteFn = (dataType: 'markdown' | 'dom', data: string, parentID: string) => Promise<any>
 type BlockDeleteFn = (id: string) => Promise<any>
 type BlockUpdateFn = (dataType: 'markdown' | 'dom', data: string, id: string) => Promise<any>
+type CreateDocWithMdFn = (notebook: string, path: string, markdown: string) => Promise<string>
+type GetIDsByHPathFn = (notebook: string, path: string) => Promise<string[]>
 type GetChildBlocksFn = (id: string) => Promise<Array<{ id: string, type?: string }>>
 type GetBlockKramdownFn = (id: string) => Promise<{ id: string, kramdown: string }>
 type GetBlockAttrsFn = (id: string) => Promise<{ [key: string]: string }>
@@ -111,14 +150,18 @@ type UseAnalyticsParams = {
   prependBlock: BlockWriteFn
   deleteBlock: BlockDeleteFn
   updateBlock: BlockUpdateFn
+  createDocWithMd?: CreateDocWithMdFn
+  getIDsByHPath?: GetIDsByHPathFn
   getChildBlocks: GetChildBlocksFn
   getBlockKramdown: GetBlockKramdownFn
   getBlockAttrs?: GetBlockAttrsFn
   setBlockAttrs?: SetBlockAttrsFn
   forwardProxy?: ForwardProxyFn
   createAiInboxService?: (deps: { forwardProxy: ForwardProxyFn }) => AiInboxService
+  createAiWikiService?: (deps: { forwardProxy: ForwardProxyFn }) => AiWikiService
   createAiLinkSuggestionService?: (deps: { forwardProxy: ForwardProxyFn }) => AiLinkSuggestionService
   aiIndexStore?: AiDocumentIndexStore | null
+  aiWikiStore?: AiWikiStore | null
 }
 
 export function useAnalyticsState(params: UseAnalyticsParams) {
@@ -132,6 +175,8 @@ export function useAnalyticsState(params: UseAnalyticsParams) {
   const prependBlock = params.prependBlock
   const deleteBlock = params.deleteBlock
   const updateBlock = params.updateBlock
+  const createDocWithMd = params.createDocWithMd
+  const getIDsByHPath = params.getIDsByHPath
   const getChildBlocks = params.getChildBlocks
   const getBlockKramdown = params.getBlockKramdown
   const getBlockAttrs = params.getBlockAttrs
@@ -139,10 +184,14 @@ export function useAnalyticsState(params: UseAnalyticsParams) {
   const aiInboxService = params.forwardProxy
     ? (params.createAiInboxService?.({ forwardProxy: params.forwardProxy }) ?? createAiInboxService({ forwardProxy: params.forwardProxy }))
     : null
+  const aiWikiService = params.forwardProxy
+    ? (params.createAiWikiService?.({ forwardProxy: params.forwardProxy }) ?? createAiWikiService({ forwardProxy: params.forwardProxy }))
+    : null
   const aiLinkSuggestionService = params.forwardProxy
     ? (params.createAiLinkSuggestionService?.({ forwardProxy: params.forwardProxy }) ?? createAiLinkSuggestionService({ forwardProxy: params.forwardProxy }))
     : null
   const aiIndexStore = params.aiIndexStore ?? createAiDocumentIndexStoreFromPlugin(params.plugin)
+  const aiWikiStore = params.aiWikiStore ?? createAiWikiStoreFromPlugin(params.plugin)
 
   const loading = ref(false)
   const errorMessage = ref('')
@@ -174,6 +223,10 @@ export function useAnalyticsState(params: UseAnalyticsParams) {
   const aiConnectionMessage = ref('')
   const aiInboxResult = ref<AiInboxResult | null>(null)
   const orphanAiSuggestionStates = ref<Map<string, OrphanAiSuggestionState>>(new Map())
+  const wikiPreviewLoading = ref(false)
+  const wikiApplyLoading = ref(false)
+  const wikiError = ref('')
+  const wikiPreview = ref<WikiPreviewState | null>(null)
   const timeRangeOptions = computed(() => buildTimeRangeOptions())
   let disposeActiveDocumentSync: (() => void) | null = null
 
@@ -606,6 +659,8 @@ export function useAnalyticsState(params: UseAnalyticsParams) {
       aiConnectionMessage.value = ''
       aiInboxResult.value = null
       orphanAiSuggestionStates.value = new Map()
+      wikiError.value = ''
+      wikiPreview.value = null
     } catch (error) {
       const message = error instanceof Error ? error.message : '读取思源数据失败'
       errorMessage.value = message
@@ -702,6 +757,237 @@ export function useAnalyticsState(params: UseAnalyticsParams) {
 
   function formatDelta(delta: number) {
     return delta > 0 ? `+${delta}` : delta.toString()
+  }
+
+  async function prepareWikiPreview() {
+    wikiPreviewLoading.value = true
+    wikiError.value = ''
+
+    try {
+      if (!params.config.wikiEnabled) {
+        throw new Error('请先在设置中启用 LLM Wiki')
+      }
+      if (!params.config.aiEnabled || !aiConfigReady.value) {
+        throw new Error('需要先启用 AI 今日建议并补齐 AI 接入配置')
+      }
+      if (!snapshot.value || !report.value || !trends.value) {
+        throw new Error('当前分析结果还未准备好，请先刷新分析')
+      }
+      if (!aiWikiService) {
+        throw new Error('AI 网络代理未初始化')
+      }
+      if (!aiWikiStore) {
+        throw new Error('LLM Wiki 存储未初始化')
+      }
+
+      const generatedAt = new Date().toISOString()
+      const scope = buildWikiScope({
+        documents: filteredDocuments.value,
+        config: params.config,
+        themeDocuments: themeDocuments.value,
+      })
+      const scopeDescriptionLines = buildWikiScopeDescriptionLines({
+        timeRange: timeRange.value,
+        filters: filters.value,
+        resolveNotebookName,
+      })
+      const sourceSummaryMap = await buildWikiSourceSummaryMap({
+        sourceDocuments: scope.sourceDocuments,
+        config: params.config,
+        aiIndexStore,
+        generatedAt,
+      })
+      const payloads = buildWikiGenerationPayloads({
+        config: params.config,
+        scope,
+        report: report.value,
+        trends: trends.value,
+        documentMap: new Map(filteredDocuments.value.map(document => [document.id, document])),
+        getDocumentSummary: (document) => sourceSummaryMap.get(document.id) ?? {
+          ...buildDocumentSummary(document),
+          updatedAt: generatedAt,
+        },
+      })
+
+      const themePages = await Promise.all(payloads.themes.map(async (payload) => {
+        const themeDocument = themeDocuments.value.find(document => document.documentId === payload.themeDocumentId)
+        if (!themeDocument) {
+          return null
+        }
+
+        const llmOutput = await aiWikiService.generateThemeSections({
+          config: params.config,
+          payload,
+        })
+        const draft = renderThemeWikiDraft({
+          pageTitle: payload.pageTitle,
+          pairedThemeTitle: payload.themeDocumentTitle,
+          generatedAt,
+          model: params.config.aiModel?.trim() || 'unknown',
+          sourceDocumentCount: payload.sourceDocuments.length,
+          llmOutput: llmOutput as any,
+        })
+        const pageKey = buildWikiPageStorageKey({
+          pageType: 'theme',
+          pageTitle: payload.pageTitle,
+          themeDocumentId: payload.themeDocumentId,
+        })
+        const storedRecord = await aiWikiStore.getPageRecord(pageKey)
+        const existingPage = await resolveExistingWikiPage({
+          notebook: themeDocument.box,
+          pageHPath: buildSiblingDocumentPath(themeDocument.hpath, payload.pageTitle),
+          storedRecord,
+          getIDsByHPath,
+          getBlockKramdown,
+        })
+        const preview = buildWikiPreview({
+          pageType: 'theme',
+          pageTitle: payload.pageTitle,
+          sourceDocumentIds: payload.sourceDocuments.map(document => document.documentId),
+          generatedAt,
+          nextDraft: draft,
+          existingPage: existingPage?.managedMarkdown
+            ? {
+                managedMarkdown: existingPage.managedMarkdown,
+              }
+            : undefined,
+          storedRecord: storedRecord ?? undefined,
+        })
+
+        const nextRecord: WikiPageSnapshotRecord = {
+          pageType: 'theme',
+          pageTitle: payload.pageTitle,
+          pageId: existingPage?.pageId ?? storedRecord?.pageId,
+          themeDocumentId: payload.themeDocumentId,
+          themeDocumentTitle: payload.themeDocumentTitle,
+          sourceDocumentIds: payload.sourceDocuments.map(document => document.documentId),
+          pageFingerprint: preview.pageFingerprint,
+          managedFingerprint: preview.managedFingerprint,
+          lastGeneratedAt: generatedAt,
+          lastPreview: {
+            generatedAt,
+            status: preview.status,
+            sourceDocumentIds: payload.sourceDocuments.map(document => document.documentId),
+            pageFingerprint: preview.pageFingerprint,
+            managedFingerprint: preview.managedFingerprint,
+          },
+          lastApply: storedRecord?.lastApply,
+        }
+        await aiWikiStore.savePageRecord(nextRecord)
+
+        return {
+          pageTitle: payload.pageTitle,
+          themeName: payload.themeName,
+          themeDocumentId: payload.themeDocumentId,
+          themeDocumentTitle: payload.themeDocumentTitle,
+          themeDocumentBox: themeDocument.box,
+          themeDocumentHPath: themeDocument.hpath,
+          sourceDocumentIds: payload.sourceDocuments.map(document => document.documentId),
+          preview,
+          draft,
+          hasManualNotes: existingPage?.hasManualNotes ?? false,
+        } satisfies WikiPreviewThemePageItem
+      }))
+
+      wikiPreview.value = {
+        generatedAt,
+        scope: {
+          summary: scope.summary,
+          descriptionLines: scopeDescriptionLines,
+        },
+        themePages: themePages.filter((item): item is WikiPreviewThemePageItem => item !== null),
+        unclassifiedDocuments: payloads.unclassifiedDocuments.map(document => ({
+          documentId: document.documentId,
+          title: document.title,
+        })),
+        excludedWikiDocuments: scope.excludedWikiDocuments.map(document => ({
+          documentId: document.id,
+          title: resolveDocumentTitle(document),
+        })),
+      }
+    } catch (error) {
+      const message = error instanceof Error ? error.message : 'LLM Wiki 预览生成失败'
+      wikiError.value = message
+      wikiPreview.value = null
+      notify(message, 5000, 'error')
+    } finally {
+      wikiPreviewLoading.value = false
+    }
+  }
+
+  async function applyWikiChanges(overwriteConflicts = false) {
+    wikiApplyLoading.value = true
+    wikiError.value = ''
+
+    try {
+      if (!wikiPreview.value) {
+        throw new Error('当前还没有 LLM Wiki 预览结果')
+      }
+      if (!aiWikiStore) {
+        throw new Error('LLM Wiki 存储未初始化')
+      }
+      if (!createDocWithMd || !getIDsByHPath || !getBlockAttrs || !setBlockAttrs) {
+        throw new Error('LLM Wiki 写入能力未初始化')
+      }
+
+      const result = await applyWikiDocuments({
+        config: {
+          themeNotebookId: params.config.themeNotebookId,
+          themeDocumentPath: params.config.themeDocumentPath,
+          wikiIndexTitle: params.config.wikiIndexTitle ?? 'LLM-Wiki-索引',
+          wikiLogTitle: params.config.wikiLogTitle ?? 'LLM-Wiki-维护日志',
+          wikiPageSuffix: params.config.wikiPageSuffix ?? '-llm-wiki',
+        },
+        generatedAt: new Date().toISOString(),
+        scopeSummary: {
+          sourceDocumentCount: wikiPreview.value.scope.summary.sourceDocumentCount,
+          themeGroupCount: wikiPreview.value.scope.summary.themeGroupCount,
+          unclassifiedDocumentCount: wikiPreview.value.scope.summary.unclassifiedDocumentCount,
+          excludedWikiDocumentCount: wikiPreview.value.scope.summary.excludedWikiDocumentCount,
+        },
+        scopeDescriptionLines: wikiPreview.value.scope.descriptionLines,
+        themePages: wikiPreview.value.themePages.map(page => ({
+          pageTitle: page.pageTitle,
+          themeName: page.themeName,
+          themeDocumentId: page.themeDocumentId,
+          themeDocumentTitle: page.themeDocumentTitle,
+          themeDocumentBox: page.themeDocumentBox,
+          themeDocumentHPath: page.themeDocumentHPath,
+          sourceDocumentIds: page.sourceDocumentIds,
+          preview: page.preview,
+          draft: page.draft,
+        })),
+        unclassifiedDocuments: wikiPreview.value.unclassifiedDocuments,
+        overwriteConflicts,
+        store: aiWikiStore,
+        api: {
+          createDocWithMd,
+          getIDsByHPath,
+          prependBlock,
+          appendBlock,
+          updateBlock,
+          getChildBlocks,
+          getBlockKramdown,
+          getBlockAttrs,
+          setBlockAttrs,
+        },
+      })
+
+      wikiPreview.value = {
+        ...wikiPreview.value,
+        applyResult: result,
+      }
+    } catch (error) {
+      const message = error instanceof Error ? error.message : 'LLM Wiki 写入失败'
+      wikiError.value = message
+      notify(message, 5000, 'error')
+    } finally {
+      wikiApplyLoading.value = false
+    }
+  }
+
+  function openWikiDocument(documentId: string) {
+    openDocument(documentId)
   }
 
   async function testAiConnection() {
@@ -930,6 +1216,10 @@ export function useAnalyticsState(params: UseAnalyticsParams) {
     aiConnectionMessage,
     aiInboxResult,
     orphanAiSuggestionStates,
+    wikiPreviewLoading,
+    wikiApplyLoading,
+    wikiError,
+    wikiPreview,
     filters,
     notebookOptions,
     tagOptions,
@@ -976,9 +1266,12 @@ export function useAnalyticsState(params: UseAnalyticsParams) {
     resolveTitle,
     resolveNotebookName,
     openDocument,
+    openWikiDocument,
     formatTimestamp,
     formatDelta,
     generateAiInbox,
+    prepareWikiPreview,
+    applyWikiChanges,
     generateOrphanAiSuggestion,
     testAiConnection,
     toggleOrphanThemeSuggestion: themeSuggestionController.toggleOrphanThemeSuggestion,
@@ -992,4 +1285,85 @@ export function useAnalyticsState(params: UseAnalyticsParams) {
 
 function deduplicateStrings(values: string[]): string[] {
   return [...new Set(values.map(value => value.trim()).filter(Boolean))]
+}
+
+async function buildWikiSourceSummaryMap(params: {
+  sourceDocuments: DocumentRecord[]
+  config: PluginConfig
+  aiIndexStore: AiDocumentIndexStore | null
+  generatedAt: string
+}) {
+  const entries = await Promise.all(params.sourceDocuments.map(async (document) => {
+    const summary = await ensureDocumentSummary({
+      config: params.config,
+      sourceDocument: document,
+      indexStore: params.aiIndexStore,
+      updatedAt: params.generatedAt,
+    })
+
+    return [document.id, summary] as const
+  }))
+
+  return new Map(entries)
+}
+
+async function resolveExistingWikiPage(params: {
+  notebook: string
+  pageHPath: string
+  storedRecord: WikiPageSnapshotRecord | null
+  getIDsByHPath?: GetIDsByHPathFn
+  getBlockKramdown: GetBlockKramdownFn
+}): Promise<{
+  pageId: string
+  fullMarkdown: string
+  managedMarkdown: string
+  hasManualNotes: boolean
+} | null> {
+  const storedPageId = params.storedRecord?.pageId
+  let pageId = storedPageId
+
+  if (!pageId && params.getIDsByHPath) {
+    const ids = await params.getIDsByHPath(params.notebook, params.pageHPath)
+    pageId = ids[0] ?? ''
+  }
+
+  if (!pageId) {
+    return null
+  }
+
+  try {
+    const block = await params.getBlockKramdown(pageId)
+    const fullMarkdown = block?.kramdown ?? ''
+    return {
+      pageId,
+      fullMarkdown,
+      managedMarkdown: extractManagedMarkdown(fullMarkdown),
+      hasManualNotes: fullMarkdown.includes('\n## 人工备注'),
+    }
+  } catch {
+    return null
+  }
+}
+
+function buildWikiScopeDescriptionLines(params: {
+  timeRange: TimeRange
+  filters: AnalyticsFilters
+  resolveNotebookName: (notebookId: string) => string
+}) {
+  return [
+    `- 时间窗口：${params.timeRange}`,
+    `- 笔记本：${params.filters.notebook ? params.resolveNotebookName(params.filters.notebook) : '全部笔记本'}`,
+    `- 标签：${params.filters.tags?.length ? params.filters.tags.join('、') : '全部标签'}`,
+    `- 主题：${params.filters.themeNames?.length ? params.filters.themeNames.join('、') : '全部主题'}`,
+    `- 关键词：${params.filters.keyword?.trim() || '无'}`,
+  ]
+}
+
+function extractManagedMarkdown(fullMarkdown: string): string {
+  const manualHeading = '\n## 人工备注'
+  const manualHeadingIndex = fullMarkdown.indexOf(manualHeading)
+  if (manualHeadingIndex < 0) {
+    return fullMarkdown.trim()
+  }
+  return fullMarkdown.slice(0, manualHeadingIndex).trim()
 }

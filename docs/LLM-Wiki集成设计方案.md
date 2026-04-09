@@ -2,17 +2,19 @@
 
 ## 0. 开发进展
 
-截至 2026-04-09，已完成：
+截至 2026-04-10，已完成：
 
 - Phase 0：LLM Wiki 配置项、页面模型常量、`ai-wiki-index.json` 存储骨架
 - Phase 1：`-llm-wiki` 页面在主题识别、分析样本、AI Inbox 输入中的统一排除，以及 wiki scope 构造器
 - Phase 2：通用文档摘要服务、摘要 freshness 读取、wiki 生成 payload 与稳定 renderer
 - Phase 3：页面级预览状态、AI 管理区 diff、指纹冲突检测与预览摘要模型
 - Phase 4：主题 wiki 页安全写入、索引页重建、维护日志 append-only 记录，以及写后指纹回读刷新
+- Phase 5：设置页 LLM Wiki 配置、主界面维护入口、预览/写入状态闭环，以及结果页快捷打开
+- Phase 6：全量回归测试、构建验证、结构文档补齐与发布产物确认
 
 当前未完成：
 
-- Phase 5 及之后的 UI 闭环与发布准备
+- 暂无，V1 方案对应阶段已全部完成
 
 ## 1. 背景
 

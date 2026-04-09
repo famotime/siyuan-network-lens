@@ -135,6 +135,37 @@
           </span>
           <input type="checkbox" v-model="config.aiEnabled" class="b3-switch">
         </label>
+        <label class="setting-item setting-item--full">
+          <span class="setting-item__text">
+            <strong>启用 LLM Wiki</strong>
+            <span>开启后可基于当前筛选结果生成主题 wiki 预览并安全写回。</span>
+          </span>
+          <input type="checkbox" v-model="config.wikiEnabled" class="b3-switch">
+        </label>
+        <label class="setting-field">
+          <span>页面后缀</span>
+          <input
+            v-model.trim="config.wikiPageSuffix"
+            placeholder="-llm-wiki"
+            type="text"
+          >
+        </label>
+        <label class="setting-field">
+          <span>索引页标题</span>
+          <input
+            v-model.trim="config.wikiIndexTitle"
+            placeholder="LLM-Wiki-索引"
+            type="text"
+          >
+        </label>
+        <label class="setting-field">
+          <span>日志页标题</span>
+          <input
+            v-model.trim="config.wikiLogTitle"
+            placeholder="LLM-Wiki-维护日志"
+            type="text"
+          >
+        </label>
         <div class="setting-field setting-field--full">
           <span>AI 服务商</span>
           <div class="setting-field__inline">

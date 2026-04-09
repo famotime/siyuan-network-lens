@@ -1116,4 +1116,183 @@ describe('useAnalyticsState', () => {
     expect(notify).toHaveBeenCalled()
     expect(invalidateSuggestionCache).toHaveBeenCalledTimes(4)
   })
+
+  it('builds wiki previews from the current filtered scope and applies generated pages', async () => {
+    const generateThemeSections = vi.fn(async ({ payload }: any) => ({
+      overview: `${payload.themeName} 的主题概览`,
+      keyDocuments: payload.signals.coreDocuments.length
+        ? payload.signals.coreDocuments.map((item: any) => `优先维护 ${item.title}`)
+        : ['暂无核心文档'],
+      structureObservations: payload.signals.bridgeDocuments.length
+        ? [`桥接点集中在 ${payload.signals.bridgeDocuments[0].title}`]
+        : ['结构稳定'],
+      evidence: payload.evidence.length ? [payload.evidence[0]] : ['暂无证据'],
+      actions: payload.sourceDocuments.length
+        ? [`先补齐 ${payload.sourceDocuments[0].title} 的主题入口`]
+        : ['暂无动作'],
+    }))
+    const saveDocumentSummary = vi.fn(async () => undefined)
+    const savePageRecord = vi.fn(async () => undefined)
+    const openTab = vi.fn()
+    const createDocWithMd = vi.fn(async () => 'wiki-ai-page')
+    const getIDsByHPath = vi.fn(async () => [])
+
+    const state = useAnalyticsState({
+      plugin: {
+        eventBus: { on: () => {}, off: () => {} },
+        app: {},
+      } as any,
+      config: {
+        showSummaryCards: true,
+        showRanking: true,
+        showCommunities: true,
+        showOrphanBridge: true,
+        showTrends: true,
+        showPropagation: true,
+        themeNotebookId: 'box-1',
+        themeDocumentPath: '/专题',
+        themeNamePrefix: '主题-',
+        themeNameSuffix: '-索引',
+        aiEnabled: true,
+        aiBaseUrl: 'https://api.example.com/v1',
+        aiApiKey: 'sk-test',
+        aiModel: 'gpt-4.1-mini',
+        wikiEnabled: true,
+        wikiPageSuffix: '-llm-wiki',
+        wikiIndexTitle: 'LLM-Wiki-索引',
+        wikiLogTitle: 'LLM-Wiki-维护日志',
+      },
+      loadSnapshot: async () => snapshot as any,
+      nowProvider: () => now,
+      createActiveDocumentSync: () => () => {},
+      showMessage: () => {},
+      openTab,
+      appendBlock: async () => [],
+      prependBlock: async () => [],
+      deleteBlock: async () => [],
+      updateBlock: async () => [],
+      createDocWithMd,
+      getIDsByHPath,
+      getChildBlocks: async () => [],
+      getBlockKramdown: async (id: string) => ({ id, kramdown: '' }),
+      getBlockAttrs: async () => ({}),
+      setBlockAttrs: async () => null,
+      forwardProxy: async () => ({
+        body: '',
+        contentType: 'application/json',
+        elapsed: 1,
+        headers: {},
+        status: 200,
+        url: 'https://api.example.com/v1/chat/completions',
+      }),
+      createAiWikiService: () => ({
+        generateThemeSections,
+      }),
+      aiIndexStore: {
+        getFreshDocumentSummary: vi.fn(async () => null),
+        saveDocumentSummary,
+      } as any,
+      aiWikiStore: {
+        loadSnapshot: vi.fn(async () => ({ schemaVersion: 1, pages: {} })),
+        saveSnapshot: vi.fn(async () => undefined),
+        getPageRecord: vi.fn(async () => null),
+        savePageRecord,
+      } as any,
+    } as any)
+
+    await state.refresh()
+    await nextTick()
+
+    await (state as any).prepareWikiPreview()
+    await nextTick()
+
+    expect(generateThemeSections).toHaveBeenCalledTimes(1)
+    expect((state as any).wikiPreview.value).toEqual(expect.objectContaining({
+      themePages: expect.arrayContaining([
+        expect.objectContaining({
+          pageTitle: '主题-AI-索引-llm-wiki',
+          themeName: 'AI',
+          preview: expect.objectContaining({
+            status: 'create',
+          }),
+        }),
+      ]),
+      scope: expect.objectContaining({
+        summary: expect.objectContaining({
+          sourceDocumentCount: 5,
+          themeGroupCount: 1,
+          excludedWikiDocumentCount: 0,
+        }),
+      }),
+    }))
+    expect(saveDocumentSummary).toHaveBeenCalled()
+    expect(savePageRecord).toHaveBeenCalled()
+
+    await (state as any).applyWikiChanges()
+    await nextTick()
+
+    expect(createDocWithMd).toHaveBeenCalled()
+    expect((state as any).wikiPreview.value.applyResult).toEqual(expect.objectContaining({
+      indexPage: expect.objectContaining({
+        pageTitle: 'LLM-Wiki-索引',
+      }),
+      logPage: expect.objectContaining({
+        pageTitle: 'LLM-Wiki-维护日志',
+      }),
+    }))
+
+    ;(state as any).openWikiDocument('wiki-ai-page')
+    expect(openTab).toHaveBeenCalledWith({
+      app: {},
+      doc: {
+        id: 'wiki-ai-page',
+      },
+    })
+  })
+
+  it('surfaces a friendly wiki error when LLM Wiki or AI config is unavailable', async () => {
+    const generateThemeSections = vi.fn()
+    const state = useAnalyticsState({
+      plugin: {
+        eventBus: { on: () => {}, off: () => {} },
+        app: {},
+      } as any,
+      config: {
+        showSummaryCards: true,
+        showRanking: true,
+        showCommunities: true,
+        showOrphanBridge: true,
+        showTrends: true,
+        showPropagation: true,
+        themeNotebookId: 'box-1',
+        themeDocumentPath: '/专题',
+        themeNamePrefix: '主题-',
+        themeNameSuffix: '-索引',
+        aiEnabled: false,
+        wikiEnabled: false,
+      },
+      loadSnapshot: async () => snapshot as any,
+      nowProvider: () => now,
+      createActiveDocumentSync: () => () => {},
+      showMessage: () => {},
+      openTab: () => {},
+      appendBlock: async () => [],
+      prependBlock: async () => [],
+      deleteBlock: async () => [],
+      updateBlock: async () => [],
+      getChildBlocks: async () => [],
+      getBlockKramdown: async () => ({ id: '', kramdown: '' }),
+      createAiWikiService: () => ({
+        generateThemeSections,
+      }),
+    } as any)
+
+    await state.refresh()
+    await nextTick()
+    await (state as any).prepareWikiPreview()
+
+    expect((state as any).wikiError.value).toContain('LLM Wiki')
+    expect((state as any).wikiPreview.value).toBeNull()
+    expect(generateThemeSections).not.toHaveBeenCalled()
+  })
 })

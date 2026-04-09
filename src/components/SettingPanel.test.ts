@@ -61,6 +61,10 @@ describe('SettingPanel', () => {
           aiTemperature: 0.7,
           aiMaxContextMessages: 7,
           aiContextCapacity: 'compact',
+          wikiEnabled: true,
+          wikiPageSuffix: '-llm-wiki',
+          wikiIndexTitle: 'LLM-Wiki-索引',
+          wikiLogTitle: 'LLM-Wiki-维护日志',
         },
       }),
     })
@@ -96,6 +100,10 @@ describe('SettingPanel', () => {
     expect(html).toContain('Gemini')
     expect(html).toContain('自定义')
     expect(html).toContain('启用 AI 今日建议')
+    expect(html).toContain('启用 LLM Wiki')
+    expect(html).toContain('页面后缀')
+    expect(html).toContain('索引页标题')
+    expect(html).toContain('日志页标题')
     expect(html).toContain('Base URL')
     expect(html).toContain('https://api.siliconflow.cn/v1')
     expect(html).toContain('API Key')
