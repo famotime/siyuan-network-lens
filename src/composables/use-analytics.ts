@@ -99,6 +99,11 @@ export interface WikiPreviewState {
   applyResult?: WikiApplyBatchResult
 }
 
+export interface WikiPreviewRequest {
+  sourceDocumentIds?: string[]
+  scopeDescriptionLine?: string
+}
+
 const panelKeys = [
   'summary-detail',
 ] as const
@@ -759,7 +764,7 @@ export function useAnalyticsState(params: UseAnalyticsParams) {
     return delta > 0 ? `+${delta}` : delta.toString()
   }
 
-  async function prepareWikiPreview() {
+  async function prepareWikiPreview(request?: WikiPreviewRequest) {
     wikiPreviewLoading.value = true
     wikiError.value = ''
 
@@ -781,8 +786,14 @@ export function useAnalyticsState(params: UseAnalyticsParams) {
       }
 
       const generatedAt = new Date().toISOString()
+      const scopedDocuments = resolveWikiScopeDocuments({
+        sourceDocumentIds: request?.sourceDocumentIds,
+        fallbackDocuments: filteredDocuments.value,
+        associationDocumentMap: associationDocumentMap.value,
+        documentMap: documentMap.value,
+      })
       const scope = buildWikiScope({
-        documents: filteredDocuments.value,
+        documents: scopedDocuments,
         config: params.config,
         themeDocuments: themeDocuments.value,
       })
@@ -790,6 +801,7 @@ export function useAnalyticsState(params: UseAnalyticsParams) {
         timeRange: timeRange.value,
         filters: filters.value,
         resolveNotebookName,
+        scopeDescriptionLine: request?.scopeDescriptionLine,
       })
       const sourceSummaryMap = await buildWikiSourceSummaryMap({
         sourceDocuments: scope.sourceDocuments,
@@ -802,7 +814,7 @@ export function useAnalyticsState(params: UseAnalyticsParams) {
         scope,
         report: report.value,
         trends: trends.value,
-        documentMap: new Map(filteredDocuments.value.map(document => [document.id, document])),
+        documentMap: new Map(scopedDocuments.map(document => [document.id, document])),
         getDocumentSummary: (document) => sourceSummaryMap.get(document.id) ?? {
           ...buildDocumentSummary(document),
           updatedAt: generatedAt,
@@ -1349,14 +1361,41 @@ function buildWikiScopeDescriptionLines(params: {
   timeRange: TimeRange
   filters: AnalyticsFilters
   resolveNotebookName: (notebookId: string) => string
+  scopeDescriptionLine?: string
 }) {
   return [
+    params.scopeDescriptionLine ?? '- 范围来源：当前文档样本',
     `- 时间窗口：${params.timeRange}`,
     `- 笔记本：${params.filters.notebook ? params.resolveNotebookName(params.filters.notebook) : '全部笔记本'}`,
     `- 标签：${params.filters.tags?.length ? params.filters.tags.join('、') : '全部标签'}`,
     `- 主题：${params.filters.themeNames?.length ? params.filters.themeNames.join('、') : '全部主题'}`,
     `- 关键词：${params.filters.keyword?.trim() || '无'}`,
   ]
+}
+
+function resolveWikiScopeDocuments(params: {
+  sourceDocumentIds?: string[]
+  fallbackDocuments: DocumentRecord[]
+  associationDocumentMap: Map<string, DocumentRecord>
+  documentMap: Map<string, DocumentRecord>
+}): DocumentRecord[] {
+  if (!params.sourceDocumentIds?.length) {
+    return params.fallbackDocuments
+  }
+
+  const documents: DocumentRecord[] = []
+  const visited = new Set<string>()
+
+  for (const documentId of params.sourceDocumentIds) {
+    const document = params.associationDocumentMap.get(documentId) ?? params.documentMap.get(documentId)
+    if (!document || visited.has(document.id)) {
+      continue
+    }
+    documents.push(document)
+    visited.add(document.id)
+  }
+
+  return documents
 }
 
 function extractManagedMarkdown(fullMarkdown: string): string {

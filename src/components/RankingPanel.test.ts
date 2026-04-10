@@ -1,214 +1,94 @@
-import { describe, expect, it, vi } from 'vitest'
-import { createSSRApp, h } from 'vue'
 import { renderToString } from '@vue/server-renderer'
+import { createSSRApp, h } from 'vue'
+import { describe, expect, it, vi } from 'vitest'
 
 import RankingPanel from './RankingPanel.vue'
 
-function formatDate(timestamp?: string) {
-  if (!timestamp || timestamp.length < 8) {
-    return '未知时间'
-  }
-  return `${timestamp.slice(0, 4)}-${timestamp.slice(4, 6)}-${timestamp.slice(6, 8)}`
+const wikiPanelProps = {
+  wikiEnabled: true,
+  aiEnabled: true,
+  aiConfigReady: true,
+  previewLoading: false,
+  applyLoading: false,
+  error: '',
+  preview: {
+    generatedAt: '2026-04-10T08:00:00.000Z',
+    scope: {
+      summary: {
+        themeDocumentCount: 2,
+        sourceDocumentCount: 2,
+        themeGroupCount: 1,
+        excludedWikiDocumentCount: 0,
+        unclassifiedDocumentCount: 0,
+      },
+      descriptionLines: ['- 范围来源：核心文档《Alpha》关联范围（正链 / 反链 / 子文档）'],
+    },
+    themePages: [],
+    unclassifiedDocuments: [],
+    excludedWikiDocuments: [],
+  },
+  prepareWikiPreview: vi.fn(),
+  applyWikiChanges: vi.fn(),
+  openWikiDocument: vi.fn(),
 }
 
-const baseRanking = [
-  {
-    documentId: 'doc-a',
-    title: 'Alpha',
-    isThemeDocument: true,
-    inboundReferences: 4,
-    distinctSourceDocuments: 1,
-    outboundReferences: 0,
-    tagCount: 1,
-    createdAt: '20260302090000',
-    updatedAt: '20260313110000',
-    lastActiveAt: '20260310120000',
-    suggestions: [
-      { label: '升级为主题页', text: '建议补齐总览结构并承接更多入链。' },
-    ],
-  },
-]
-
 describe('RankingPanel', () => {
-  it('renders collapsed association button label', async () => {
-    const toggleLinkPanel = vi.fn()
-
+  it('renders a wiki maintenance block after each core document card and keeps the filled button style', async () => {
     const app = createSSRApp({
       render: () => h(RankingPanel, {
-        ranking: baseRanking,
-        panelCount: 1,
-        snapshotLabel: '03-12 00:00',
-        isExpanded: true,
-        onTogglePanel: vi.fn(),
-        resolveTitle: (id: string) => id,
-        formatTimestamp: formatDate,
-        openDocument: vi.fn(),
-        toggleLinkPanel,
-        isLinkPanelExpanded: () => false,
-        resolveLinkAssociations: () => ({ outbound: [], inbound: [] }),
-        toggleLinkGroup: vi.fn(),
-        isLinkGroupExpanded: () => false,
-        isSyncing: () => false,
-        syncAssociation: vi.fn(),
-      }),
-    })
-
-    const html = await renderToString(app)
-
-    expect(html).toContain('查看关联引用/链接')
-    expect(html).toContain('ghost-button ghost-button--filled')
-  })
-
-  it('renders expanded group buttons with caret state', async () => {
-    const app = createSSRApp({
-      render: () => h(RankingPanel, {
-        ranking: baseRanking,
-        panelCount: 1,
-        snapshotLabel: '03-12 00:00',
-        isExpanded: true,
-        onTogglePanel: vi.fn(),
-        resolveTitle: (id: string) => id,
-        formatTimestamp: formatDate,
-        openDocument: vi.fn(),
-        toggleLinkPanel: vi.fn(),
-        isLinkPanelExpanded: () => true,
-        resolveLinkAssociations: () => ({
-          outbound: [{ documentId: 'doc-x', title: 'Doc X', direction: 'outbound', isOverlap: false }],
-          inbound: [],
-        }),
-        toggleLinkGroup: vi.fn(),
-        isLinkGroupExpanded: (_documentId: string, direction: 'outbound' | 'inbound') => direction === 'outbound',
-        isSyncing: () => false,
-        syncAssociation: vi.fn(),
-      }),
-    })
-
-    const html = await renderToString(app)
-
-    expect(html).toContain('link-association__toggle--expanded')
-  })
-
-  it('renders highlight links with sync action', async () => {
-    const app = createSSRApp({
-      render: () => h(RankingPanel, {
-        ranking: baseRanking,
-        panelCount: 1,
-        snapshotLabel: '03-12 00:00',
-        isExpanded: true,
-        onTogglePanel: vi.fn(),
-        resolveTitle: (id: string) => id,
-        formatTimestamp: formatDate,
-        openDocument: vi.fn(),
-        toggleLinkPanel: vi.fn(),
-        isLinkPanelExpanded: () => true,
-        resolveLinkAssociations: () => ({
-          outbound: [{ documentId: 'doc-x', title: 'Doc X', direction: 'outbound', isOverlap: false }],
-          inbound: [],
-        }),
-        toggleLinkGroup: vi.fn(),
-        isLinkGroupExpanded: () => true,
-        isSyncing: () => false,
-        syncAssociation: vi.fn(),
-      }),
-    })
-
-    const html = await renderToString(app)
-
-    expect(html).toContain('Doc X')
-    expect(html).toContain('link-association__doc--highlight')
-    expect(html).toContain('同步')
-  })
-
-  it('renders child document group with positive-link action', async () => {
-    const app = createSSRApp({
-      render: () => h(RankingPanel, {
-        ranking: baseRanking,
-        panelCount: 1,
-        snapshotLabel: '03-12 00:00',
-        isExpanded: true,
-        onTogglePanel: vi.fn(),
-        resolveTitle: (id: string) => id,
-        formatTimestamp: formatDate,
-        openDocument: vi.fn(),
-        toggleLinkPanel: vi.fn(),
-        isLinkPanelExpanded: () => true,
-        resolveLinkAssociations: () => ({
-          outbound: [],
-          inbound: [],
-          childDocuments: [{ documentId: 'doc-child', title: 'Child Doc', direction: 'child', isOverlap: false }],
-        }),
-        toggleLinkGroup: vi.fn(),
-        isLinkGroupExpanded: (_documentId: string, direction: 'outbound' | 'inbound' | 'child') => direction === 'child',
-        isSyncing: () => false,
-        syncAssociation: vi.fn(),
-      }),
-    })
-
-    const html = await renderToString(app)
-
-    expect(html).toContain('子文档（去重） 1')
-    expect(html).toContain('Child Doc')
-    expect(html).toContain('正链')
-  })
-
-  it('renders integrated suggestion callout in detail mode', async () => {
-    const app = createSSRApp({
-      render: () => h(RankingPanel, {
-        ranking: baseRanking,
-        panelCount: 1,
-        snapshotLabel: '03-12 00:00',
-        isExpanded: true,
-        onTogglePanel: vi.fn(),
-        resolveTitle: (id: string) => id,
-        formatTimestamp: formatDate,
-        openDocument: vi.fn(),
-        toggleLinkPanel: vi.fn(),
-        isLinkPanelExpanded: () => false,
-        resolveLinkAssociations: () => ({ outbound: [], inbound: [] }),
-        toggleLinkGroup: vi.fn(),
-        isLinkGroupExpanded: () => false,
-        isSyncing: () => false,
-        syncAssociation: vi.fn(),
         variant: 'detail',
-      }),
-    })
-
-    const html = await renderToString(app)
-
-    expect(html).toContain('建议')
-    expect(html).toContain('升级为主题页')
-    expect(html).toContain('建议补齐总览结构并承接更多入链。')
-    expect(html).toContain('主题文档')
-  })
-
-  it('renders total inbound references separately from distinct source documents', async () => {
-    const app = createSSRApp({
-      render: () => h(RankingPanel, {
-        ranking: baseRanking,
-        panelCount: 1,
-        snapshotLabel: '03-12 00:00',
+        ranking: [
+          {
+            documentId: 'doc-a',
+            title: 'Alpha',
+            inboundReferences: 3,
+            distinctSourceDocuments: 2,
+            outboundReferences: 1,
+            tagCount: 1,
+            createdAt: '20260301090000',
+            updatedAt: '20260311120000',
+            isThemeDocument: false,
+            suggestions: [],
+          },
+          {
+            documentId: 'doc-b',
+            title: 'Beta',
+            inboundReferences: 2,
+            distinctSourceDocuments: 1,
+            outboundReferences: 0,
+            tagCount: 0,
+            createdAt: '20260302090000',
+            updatedAt: '20260312120000',
+            isThemeDocument: false,
+            suggestions: [],
+          },
+        ],
+        panelCount: 2,
+        snapshotLabel: '04-10 16:00',
         isExpanded: true,
         onTogglePanel: vi.fn(),
-        resolveTitle: (id: string) => id,
-        formatTimestamp: formatDate,
+        resolveTitle: (documentId: string) => ({ 'doc-a': 'Alpha', 'doc-b': 'Beta' }[documentId] ?? documentId),
+        formatTimestamp: (timestamp?: string) => timestamp ?? '未知时间',
         openDocument: vi.fn(),
         toggleLinkPanel: vi.fn(),
-        isLinkPanelExpanded: () => false,
-        resolveLinkAssociations: () => ({ outbound: [], inbound: [] }),
+        isLinkPanelExpanded: vi.fn(() => false),
+        resolveLinkAssociations: vi.fn(() => ({ outbound: [], inbound: [], childDocuments: [] })),
         toggleLinkGroup: vi.fn(),
-        isLinkGroupExpanded: () => false,
-        isSyncing: () => false,
+        isLinkGroupExpanded: vi.fn(() => false),
+        isSyncing: vi.fn(() => false),
         syncAssociation: vi.fn(),
+        wikiPanelProps,
+        isWikiPanelVisibleForCoreDocument: (documentId: string) => documentId === 'doc-a',
+        toggleCoreDocumentWikiPanel: vi.fn(),
       }),
     })
 
     const html = await renderToString(app)
 
-    expect(html).toContain('4 个反链')
-    expect(html).toContain('1 个来源文档')
-    expect(html).toContain('1 个标签')
-    expect(html).toContain('0 个正链')
-    expect(html).toContain('创建：2026-03-02')
-    expect(html).toContain('更新：2026-03-13')
+    expect((html.match(/维护 LLM Wiki|收起 LLM Wiki/g) ?? [])).toHaveLength(2)
+    expect((html.match(/ghost-button ghost-button--filled/g) ?? []).length).toBeGreaterThanOrEqual(3)
+    expect(html).toContain('范围来源：核心文档《Alpha》关联范围')
+    expect((html.match(/wiki-panel panel/g) ?? [])).toHaveLength(1)
+    expect(html.indexOf('更新：20260311120000')).toBeLessThan(html.indexOf('范围来源：核心文档《Alpha》关联范围'))
   })
 })

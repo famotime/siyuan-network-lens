@@ -32,177 +32,192 @@
         v-if="ranking.length"
         class="ranking-list"
       >
-        <article
+        <div
           v-for="item in ranking.slice(0, 12)"
           :key="item.documentId"
-          class="ranking-item"
+          class="ranking-entry"
         >
-          <DocumentTitle
-            :document-id="item.documentId"
-            :title="resolveTitle(item.documentId)"
-            :open-document="openDocument"
-            :is-theme-document="item.isThemeDocument"
-          />
-          <div class="ranking-item__meta">
-            <span>{{ item.inboundReferences }} 个反链</span>
-            <span>{{ item.distinctSourceDocuments }} 个来源文档</span>
-            <span>{{ item.tagCount }} 个标签</span>
-            <span>{{ item.outboundReferences }} 个正链</span>
-          </div>
-          <div class="ranking-item__timestamps">
-            <span>创建：{{ formatTimestamp(item.createdAt) }}</span>
-            <span>更新：{{ formatTimestamp(item.updatedAt) }}</span>
-          </div>
-          <div class="ranking-item__actions">
+          <article class="ranking-item">
+            <DocumentTitle
+              :document-id="item.documentId"
+              :title="resolveTitle(item.documentId)"
+              :open-document="openDocument"
+              :is-theme-document="item.isThemeDocument"
+            />
+            <div class="ranking-item__meta">
+              <span>{{ item.inboundReferences }} 个反链</span>
+              <span>{{ item.distinctSourceDocuments }} 个来源文档</span>
+              <span>{{ item.tagCount }} 个标签</span>
+              <span>{{ item.outboundReferences }} 个正链</span>
+            </div>
+            <div class="ranking-item__timestamps">
+              <span>创建：{{ formatTimestamp(item.createdAt) }}</span>
+              <span>更新：{{ formatTimestamp(item.updatedAt) }}</span>
+            </div>
+            <div class="ranking-item__actions">
+              <button
+                class="ghost-button ghost-button--filled"
+                type="button"
+                @click="toggleLinkPanel(item.documentId)"
+              >
+                {{ isLinkPanelExpanded(item.documentId) ? '收起关联引用/链接' : '查看关联引用/链接' }}
+              </button>
+            </div>
+            <div
+              v-if="isLinkPanelExpanded(item.documentId)"
+              class="link-association"
+            >
+              <div class="link-association__group">
+                <button
+                  :class="['link-association__toggle', { 'link-association__toggle--expanded': isLinkGroupExpanded(item.documentId, 'outbound') }]"
+                  type="button"
+                  :aria-expanded="isLinkGroupExpanded(item.documentId, 'outbound')"
+                  @click="toggleLinkGroup(item.documentId, 'outbound')"
+                >
+                  <span class="link-association__caret" aria-hidden="true" />
+                  正链（出链） {{ resolveAssociations(item.documentId).outbound.length }}
+                </button>
+                <div
+                  v-show="isLinkGroupExpanded(item.documentId, 'outbound')"
+                  class="link-association__list"
+                >
+                  <div
+                    v-for="link in resolveAssociations(item.documentId).outbound"
+                    :key="`outbound-${item.documentId}-${link.documentId}`"
+                    class="link-association__item"
+                  >
+                    <button
+                      class="link-association__doc"
+                      :class="{ 'link-association__doc--highlight': !link.isOverlap }"
+                      type="button"
+                      @click="openDocument(link.documentId)"
+                    >
+                      {{ link.title }}
+                    </button>
+                    <button
+                      v-if="!link.isOverlap"
+                      class="ghost-button"
+                      type="button"
+                      :disabled="isSyncing(item.documentId, link.documentId, 'outbound')"
+                      @click="syncAssociation(item.documentId, link.documentId, 'outbound')"
+                    >
+                      {{ isSyncing(item.documentId, link.documentId, 'outbound') ? '同步中...' : '同步' }}
+                    </button>
+                  </div>
+                  <p
+                    v-if="resolveAssociations(item.documentId).outbound.length === 0"
+                    class="empty-inline"
+                  >
+                    当前没有出链关联。
+                  </p>
+                </div>
+              </div>
+              <div class="link-association__group">
+                <button
+                  :class="['link-association__toggle', { 'link-association__toggle--expanded': isLinkGroupExpanded(item.documentId, 'inbound') }]"
+                  type="button"
+                  :aria-expanded="isLinkGroupExpanded(item.documentId, 'inbound')"
+                  @click="toggleLinkGroup(item.documentId, 'inbound')"
+                >
+                  <span class="link-association__caret" aria-hidden="true" />
+                  反链（入链） {{ resolveAssociations(item.documentId).inbound.length }}
+                </button>
+                <div
+                  v-show="isLinkGroupExpanded(item.documentId, 'inbound')"
+                  class="link-association__list"
+                >
+                  <div
+                    v-for="link in resolveAssociations(item.documentId).inbound"
+                    :key="`inbound-${item.documentId}-${link.documentId}`"
+                    class="link-association__item"
+                  >
+                    <button
+                      class="link-association__doc"
+                      :class="{ 'link-association__doc--highlight': !link.isOverlap }"
+                      type="button"
+                      @click="openDocument(link.documentId)"
+                    >
+                      {{ link.title }}
+                    </button>
+                    <button
+                      v-if="!link.isOverlap"
+                      class="ghost-button"
+                      type="button"
+                      :disabled="isSyncing(item.documentId, link.documentId, 'inbound')"
+                      @click="syncAssociation(item.documentId, link.documentId, 'inbound')"
+                    >
+                      {{ isSyncing(item.documentId, link.documentId, 'inbound') ? '同步中...' : '同步' }}
+                    </button>
+                  </div>
+                  <p
+                    v-if="resolveAssociations(item.documentId).inbound.length === 0"
+                    class="empty-inline"
+                  >
+                    当前没有入链关联。
+                  </p>
+                </div>
+              </div>
+              <div class="link-association__group">
+                <button
+                  :class="['link-association__toggle', { 'link-association__toggle--expanded': isLinkGroupExpanded(item.documentId, 'child') }]"
+                  type="button"
+                  :aria-expanded="isLinkGroupExpanded(item.documentId, 'child')"
+                  @click="toggleLinkGroup(item.documentId, 'child')"
+                >
+                  <span class="link-association__caret" aria-hidden="true" />
+                  子文档（去重） {{ resolveAssociations(item.documentId).childDocuments.length }}
+                </button>
+                <div
+                  v-show="isLinkGroupExpanded(item.documentId, 'child')"
+                  class="link-association__list"
+                >
+                  <div
+                    v-for="link in resolveAssociations(item.documentId).childDocuments"
+                    :key="`child-${item.documentId}-${link.documentId}`"
+                    class="link-association__item"
+                  >
+                    <button
+                      class="link-association__doc"
+                      :class="{ 'link-association__doc--highlight': true }"
+                      type="button"
+                      @click="openDocument(link.documentId)"
+                    >
+                      {{ link.title }}
+                    </button>
+                    <button
+                      class="ghost-button"
+                      type="button"
+                      :disabled="isSyncing(item.documentId, link.documentId, 'child')"
+                      @click="syncAssociation(item.documentId, link.documentId, 'child')"
+                    >
+                      {{ isSyncing(item.documentId, link.documentId, 'child') ? '正链中...' : '正链' }}
+                    </button>
+                  </div>
+                  <p
+                    v-if="resolveAssociations(item.documentId).childDocuments.length === 0"
+                    class="empty-inline"
+                  >
+                    当前没有可补充的子文档链接。
+                  </p>
+                </div>
+              </div>
+            </div>
+            <SuggestionCallout :suggestions="item.suggestions ?? []" />
+          </article>
+          <div class="ranking-item__wiki">
             <button
               class="ghost-button ghost-button--filled"
               type="button"
-              @click="toggleLinkPanel(item.documentId)"
+              @click="toggleCoreDocumentWikiPanel(item.documentId)"
             >
-              {{ isLinkPanelExpanded(item.documentId) ? '收起关联引用/链接' : '查看关联引用/链接' }}
+              {{ isWikiPanelVisibleForCoreDocument(item.documentId) ? '收起 LLM Wiki' : '维护 LLM Wiki' }}
             </button>
+            <WikiMaintainPanel
+              v-if="isWikiPanelVisibleForCoreDocument(item.documentId)"
+              v-bind="wikiPanelProps"
+            />
           </div>
-          <div
-            v-if="isLinkPanelExpanded(item.documentId)"
-            class="link-association"
-          >
-            <div class="link-association__group">
-              <button
-                :class="['link-association__toggle', { 'link-association__toggle--expanded': isLinkGroupExpanded(item.documentId, 'outbound') }]"
-                type="button"
-                :aria-expanded="isLinkGroupExpanded(item.documentId, 'outbound')"
-                @click="toggleLinkGroup(item.documentId, 'outbound')"
-              >
-                <span class="link-association__caret" aria-hidden="true" />
-                正链（出链） {{ resolveAssociations(item.documentId).outbound.length }}
-              </button>
-              <div
-                v-show="isLinkGroupExpanded(item.documentId, 'outbound')"
-                class="link-association__list"
-              >
-                <div
-                  v-for="link in resolveAssociations(item.documentId).outbound"
-                  :key="`outbound-${item.documentId}-${link.documentId}`"
-                  class="link-association__item"
-                >
-                  <button
-                    class="link-association__doc"
-                    :class="{ 'link-association__doc--highlight': !link.isOverlap }"
-                    type="button"
-                    @click="openDocument(link.documentId)"
-                  >
-                    {{ link.title }}
-                  </button>
-                  <button
-                    v-if="!link.isOverlap"
-                    class="ghost-button"
-                    type="button"
-                    :disabled="isSyncing(item.documentId, link.documentId, 'outbound')"
-                    @click="syncAssociation(item.documentId, link.documentId, 'outbound')"
-                  >
-                    {{ isSyncing(item.documentId, link.documentId, 'outbound') ? '同步中...' : '同步' }}
-                  </button>
-                </div>
-                <p
-                  v-if="resolveAssociations(item.documentId).outbound.length === 0"
-                  class="empty-inline"
-                >
-                  当前没有出链关联。
-                </p>
-              </div>
-            </div>
-            <div class="link-association__group">
-              <button
-                :class="['link-association__toggle', { 'link-association__toggle--expanded': isLinkGroupExpanded(item.documentId, 'inbound') }]"
-                type="button"
-                :aria-expanded="isLinkGroupExpanded(item.documentId, 'inbound')"
-                @click="toggleLinkGroup(item.documentId, 'inbound')"
-              >
-                <span class="link-association__caret" aria-hidden="true" />
-                反链（入链） {{ resolveAssociations(item.documentId).inbound.length }}
-              </button>
-              <div
-                v-show="isLinkGroupExpanded(item.documentId, 'inbound')"
-                class="link-association__list"
-              >
-                <div
-                  v-for="link in resolveAssociations(item.documentId).inbound"
-                  :key="`inbound-${item.documentId}-${link.documentId}`"
-                  class="link-association__item"
-                >
-                  <button
-                    class="link-association__doc"
-                    :class="{ 'link-association__doc--highlight': !link.isOverlap }"
-                    type="button"
-                    @click="openDocument(link.documentId)"
-                  >
-                    {{ link.title }}
-                  </button>
-                  <button
-                    v-if="!link.isOverlap"
-                    class="ghost-button"
-                    type="button"
-                    :disabled="isSyncing(item.documentId, link.documentId, 'inbound')"
-                    @click="syncAssociation(item.documentId, link.documentId, 'inbound')"
-                  >
-                    {{ isSyncing(item.documentId, link.documentId, 'inbound') ? '同步中...' : '同步' }}
-                  </button>
-                </div>
-                <p
-                  v-if="resolveAssociations(item.documentId).inbound.length === 0"
-                  class="empty-inline"
-                >
-                  当前没有入链关联。
-                </p>
-              </div>
-            </div>
-            <div class="link-association__group">
-              <button
-                :class="['link-association__toggle', { 'link-association__toggle--expanded': isLinkGroupExpanded(item.documentId, 'child') }]"
-                type="button"
-                :aria-expanded="isLinkGroupExpanded(item.documentId, 'child')"
-                @click="toggleLinkGroup(item.documentId, 'child')"
-              >
-                <span class="link-association__caret" aria-hidden="true" />
-                子文档（去重） {{ resolveAssociations(item.documentId).childDocuments.length }}
-              </button>
-              <div
-                v-show="isLinkGroupExpanded(item.documentId, 'child')"
-                class="link-association__list"
-              >
-                <div
-                  v-for="link in resolveAssociations(item.documentId).childDocuments"
-                  :key="`child-${item.documentId}-${link.documentId}`"
-                  class="link-association__item"
-                >
-                  <button
-                    class="link-association__doc"
-                    :class="{ 'link-association__doc--highlight': true }"
-                    type="button"
-                    @click="openDocument(link.documentId)"
-                  >
-                    {{ link.title }}
-                  </button>
-                  <button
-                    class="ghost-button"
-                    type="button"
-                    :disabled="isSyncing(item.documentId, link.documentId, 'child')"
-                    @click="syncAssociation(item.documentId, link.documentId, 'child')"
-                  >
-                    {{ isSyncing(item.documentId, link.documentId, 'child') ? '正链中...' : '正链' }}
-                  </button>
-                </div>
-                <p
-                  v-if="resolveAssociations(item.documentId).childDocuments.length === 0"
-                  class="empty-inline"
-                >
-                  当前没有可补充的子文档链接。
-                </p>
-              </div>
-            </div>
-          </div>
-          <SuggestionCallout :suggestions="item.suggestions ?? []" />
-        </article>
+        </div>
       </div>
       <div
         v-else
@@ -218,8 +233,10 @@
 import type { RankingDetailItem } from '@/analytics/summary-details'
 import type { LinkAssociations } from '@/analytics/link-associations'
 import type { LinkDirection } from '@/analytics/link-sync'
+import type { WikiPreviewState } from '@/composables/use-analytics'
 import DocumentTitle from './DocumentTitle.vue'
 import SuggestionCallout from './SuggestionCallout.vue'
+import WikiMaintainPanel from './WikiMaintainPanel.vue'
 
 const props = withDefaults(defineProps<{
   ranking: RankingDetailItem[]
@@ -237,6 +254,20 @@ const props = withDefaults(defineProps<{
   isLinkGroupExpanded: (documentId: string, direction: LinkDirection) => boolean
   isSyncing: (coreDocumentId: string, targetDocumentId: string, direction: LinkDirection) => boolean
   syncAssociation: (coreDocumentId: string, targetDocumentId: string, direction: LinkDirection) => void
+  wikiPanelProps: {
+    wikiEnabled: boolean
+    aiEnabled: boolean
+    aiConfigReady: boolean
+    previewLoading: boolean
+    applyLoading: boolean
+    error: string
+    preview: WikiPreviewState | null
+    prepareWikiPreview: () => void | Promise<void>
+    applyWikiChanges: (overwriteConflicts?: boolean) => void | Promise<void>
+    openWikiDocument: (documentId: string) => void
+  }
+  isWikiPanelVisibleForCoreDocument: (documentId: string) => boolean
+  toggleCoreDocumentWikiPanel: (documentId: string) => void | Promise<void>
   variant?: 'panel' | 'detail'
 }>(), {
   variant: 'panel',
@@ -341,6 +372,11 @@ function resolveAssociations(documentId: string): LinkAssociations {
   gap: 12px;
 }
 
+.ranking-entry {
+  display: grid;
+  gap: 10px;
+}
+
 .ranking-item {
   padding: 16px;
   border-radius: 12px;
@@ -361,6 +397,11 @@ function resolveAssociations(documentId: string): LinkAssociations {
   display: flex;
   gap: 12px;
   flex-wrap: wrap;
+}
+
+.ranking-item__wiki {
+  display: grid;
+  gap: 12px;
 }
 
 .ranking-item__timestamps {

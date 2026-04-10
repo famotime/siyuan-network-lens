@@ -1250,6 +1250,113 @@ describe('useAnalyticsState', () => {
     })
   })
 
+  it('builds wiki previews from a requested scoped document set instead of the whole sample', async () => {
+    const generateThemeSections = vi.fn(async ({ payload }: any) => ({
+      overview: `${payload.themeName} 的主题概览`,
+      keyDocuments: payload.signals.coreDocuments.length
+        ? payload.signals.coreDocuments.map((item: any) => `优先维护 ${item.title}`)
+        : ['暂无核心文档'],
+      structureObservations: ['结构稳定'],
+      evidence: payload.evidence.length ? [payload.evidence[0]] : ['暂无证据'],
+      actions: payload.sourceDocuments.length
+        ? [`先补齐 ${payload.sourceDocuments[0].title} 的主题入口`]
+        : ['暂无动作'],
+    }))
+
+    const state = useAnalyticsState({
+      plugin: {
+        eventBus: { on: () => {}, off: () => {} },
+        app: {},
+      } as any,
+      config: {
+        showSummaryCards: true,
+        showRanking: true,
+        showCommunities: true,
+        showOrphanBridge: true,
+        showTrends: true,
+        showPropagation: true,
+        themeNotebookId: 'box-1',
+        themeDocumentPath: '/专题',
+        themeNamePrefix: '主题-',
+        themeNameSuffix: '-索引',
+        aiEnabled: true,
+        aiBaseUrl: 'https://api.example.com/v1',
+        aiApiKey: 'sk-test',
+        aiModel: 'gpt-4.1-mini',
+        wikiEnabled: true,
+        wikiPageSuffix: '-llm-wiki',
+        wikiIndexTitle: 'LLM-Wiki-索引',
+        wikiLogTitle: 'LLM-Wiki-维护日志',
+      },
+      loadSnapshot: async () => snapshot as any,
+      nowProvider: () => now,
+      createActiveDocumentSync: () => () => {},
+      showMessage: () => {},
+      openTab: () => {},
+      appendBlock: async () => [],
+      prependBlock: async () => [],
+      deleteBlock: async () => [],
+      updateBlock: async () => [],
+      getChildBlocks: async () => [],
+      getBlockKramdown: async (id: string) => ({ id, kramdown: '' }),
+      getBlockAttrs: async () => ({}),
+      setBlockAttrs: async () => null,
+      forwardProxy: async () => ({
+        body: '',
+        contentType: 'application/json',
+        elapsed: 1,
+        headers: {},
+        status: 200,
+        url: 'https://api.example.com/v1/chat/completions',
+      }),
+      createAiWikiService: () => ({
+        generateThemeSections,
+      }),
+      aiIndexStore: {
+        getFreshDocumentSummary: vi.fn(async () => null),
+        saveDocumentSummary: vi.fn(async () => undefined),
+      } as any,
+      aiWikiStore: {
+        loadSnapshot: vi.fn(async () => ({ schemaVersion: 1, pages: {} })),
+        saveSnapshot: vi.fn(async () => undefined),
+        getPageRecord: vi.fn(async () => null),
+        savePageRecord: vi.fn(async () => undefined),
+      } as any,
+    } as any)
+
+    await state.refresh()
+    await nextTick()
+
+    await (state as any).prepareWikiPreview({
+      sourceDocumentIds: ['doc-a', 'doc-b'],
+      scopeDescriptionLine: '- 范围来源：核心文档《Beta》关联范围（正链 / 反链 / 子文档）',
+    })
+    await nextTick()
+
+    expect(generateThemeSections).toHaveBeenCalledTimes(1)
+    expect(generateThemeSections).toHaveBeenCalledWith(expect.objectContaining({
+      payload: expect.objectContaining({
+        sourceDocuments: [
+          expect.objectContaining({ documentId: 'doc-a', title: 'Alpha AI' }),
+        ],
+      }),
+    }))
+    expect((state as any).wikiPreview.value).toEqual(expect.objectContaining({
+      scope: expect.objectContaining({
+        summary: expect.objectContaining({
+          sourceDocumentCount: 2,
+        }),
+        descriptionLines: expect.arrayContaining(['- 范围来源：核心文档《Beta》关联范围（正链 / 反链 / 子文档）']),
+      }),
+      unclassifiedDocuments: [
+        expect.objectContaining({
+          documentId: 'doc-b',
+          title: 'Beta',
+        }),
+      ],
+    }))
+  })
+
   it('surfaces a friendly wiki error when LLM Wiki or AI config is unavailable', async () => {
     const generateThemeSections = vi.fn()
     const state = useAnalyticsState({

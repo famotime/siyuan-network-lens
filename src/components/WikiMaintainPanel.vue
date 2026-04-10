@@ -4,7 +4,7 @@
       <div>
         <p class="wiki-panel__eyebrow">LLM Wiki</p>
         <h2>LLM Wiki 维护</h2>
-        <p class="wiki-panel__description">基于当前筛选结果生成主题 wiki 预览，并在确认后写回主题页、索引页和维护日志。</p>
+        <p class="wiki-panel__description">基于当前作用范围生成主题 wiki 预览，并在确认后写回主题页、索引页和维护日志。</p>
       </div>
       <div class="wiki-panel__actions">
         <button

@@ -4,6 +4,19 @@ import { describe, expect, it, vi } from 'vitest'
 
 import SummaryDetailSection from './SummaryDetailSection.vue'
 
+const wikiPanelProps = {
+  wikiEnabled: true,
+  aiEnabled: true,
+  aiConfigReady: true,
+  previewLoading: false,
+  applyLoading: false,
+  error: '',
+  preview: null,
+  prepareWikiPreview: vi.fn(),
+  applyWikiChanges: vi.fn(),
+  openWikiDocument: vi.fn(),
+}
+
 const baseProps = {
   selectedSummaryCount: 1,
   isExpanded: true,
@@ -58,6 +71,9 @@ const baseProps = {
   themeDocumentIds: new Set<string>(['doc-a']),
   themeDocuments: [],
   selectCommunity: vi.fn(),
+  wikiPanelProps,
+  isCoreDocumentWikiPanelVisible: vi.fn(() => false),
+  toggleCoreDocumentWikiPanel: vi.fn(),
 }
 
 describe('SummaryDetailSection', () => {
@@ -94,6 +110,34 @@ describe('SummaryDetailSection', () => {
     expect(toggleMarkup).toContain('panel-toggle__caret')
     expect(toggleMarkup).not.toMatch(/>\s*折叠\s*<span/)
     expect(toggleMarkup).not.toMatch(/>\s*展开\s*<span/)
+  })
+
+  it('does not render the wiki maintenance entry inside the document sample detail card', async () => {
+    const app = createSSRApp({
+      render: () => h(SummaryDetailSection, {
+        ...baseProps,
+        detail: {
+          key: 'documents',
+          title: '文档样本详情',
+          description: '当前筛选条件命中的文档。',
+          kind: 'list',
+          items: [
+            {
+              documentId: 'doc-a',
+              title: 'Alpha',
+              meta: '/Alpha · 最近更新 2026-03-14',
+            },
+          ],
+        },
+      }),
+    })
+
+    const html = await renderToString(app)
+
+    expect(html).toContain('summary-detail-list')
+    expect(html).not.toContain('summary-detail-wiki-action')
+    expect(html).not.toContain('维护 LLM Wiki')
+    expect(html).not.toContain('wiki-panel panel')
   })
 
   it('renders propagation detail items and path controls', async () => {

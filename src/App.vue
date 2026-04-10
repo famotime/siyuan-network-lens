@@ -34,13 +34,6 @@
         >
           重置排序
         </button>
-        <button
-          class="ghost-button"
-          type="button"
-          @click="toggleWikiMaintainPanel"
-        >
-          {{ showWikiMaintainPanel ? '收起 LLM Wiki' : '维护 LLM Wiki' }}
-        </button>
       </div>
     </div>
 
@@ -91,20 +84,6 @@
         </label>
       </div>
     </div>
-
-    <WikiMaintainPanel
-      v-if="showWikiMaintainPanel"
-      :wiki-enabled="Boolean(props.config.wikiEnabled)"
-      :ai-enabled="Boolean(props.config.aiEnabled)"
-      :ai-config-ready="aiConfigReady"
-      :preview-loading="wikiPreviewLoading"
-      :apply-loading="wikiApplyLoading"
-      :error="wikiError"
-      :preview="wikiPreview"
-      :prepare-wiki-preview="prepareWikiPreview"
-      :apply-wiki-changes="applyWikiChanges"
-      :open-wiki-document="openWikiDocument"
-    />
 
     <div
       v-if="errorMessage"
@@ -241,7 +220,26 @@
         :theme-document-ids="themeDocumentIds"
         :theme-documents="themeDocuments"
         :select-community="selectCommunity"
+        :wiki-panel-props="wikiPanelProps"
+        :is-core-document-wiki-panel-visible="isCoreDocumentWikiPanelVisible"
+        :toggle-core-document-wiki-panel="toggleCoreDocumentWikiPanel"
       />
+      <div
+        v-if="visibleSummaryCards.length && selectedSummaryDetail?.key === 'documents'"
+        class="detail-wiki-stack"
+      >
+        <button
+          class="ghost-button ghost-button--filled detail-wiki-action"
+          type="button"
+          @click="toggleDocumentWikiPanel"
+        >
+          {{ wikiPanelPlacement === 'documents' ? '收起 LLM Wiki' : '维护 LLM Wiki' }}
+        </button>
+        <WikiMaintainPanel
+          v-if="wikiPanelPlacement === 'documents'"
+          v-bind="wikiPanelProps"
+        />
+      </div>
     </template>
   </div>
 </template>
@@ -256,7 +254,7 @@ import SummaryDetailSection from '@/components/SummaryDetailSection.vue'
 import ThemeMultiSelect from '@/components/ThemeMultiSelect.vue'
 import WikiMaintainPanel from '@/components/WikiMaintainPanel.vue'
 import { isSummaryCardVisible } from '@/analytics/summary-card-config'
-import { useAnalyticsState } from '@/composables/use-analytics'
+import { useAnalyticsState, type WikiPreviewRequest } from '@/composables/use-analytics'
 import { appendBlock, createDocWithMd, deleteBlock, forwardProxy, getBlockAttrs, getBlockKramdown, getChildBlocks, getIDsByHPath, prependBlock, setBlockAttrs, updateBlock } from '@/api'
 import { ensureConfigDefaults, type PluginConfig } from '@/types/config'
 import pluginIconUrl from '../icon.png'
@@ -307,6 +305,7 @@ const {
   largeDocumentCardMode,
   notebookOptions,
   tagOptions,
+  filteredDocuments,
   report,
   trends,
   selectedCommunity,
@@ -366,7 +365,22 @@ const {
   isAiTagSuggestionActive,
 } = analytics
 
-const showWikiMaintainPanel = ref(false)
+const wikiPanelPlacement = ref<'documents' | 'ranking' | ''>('')
+const wikiPanelCoreDocumentId = ref('')
+const activeWikiPreviewRequest = ref<WikiPreviewRequest | null>(null)
+
+const wikiPanelProps = computed(() => ({
+  wikiEnabled: Boolean(props.config.wikiEnabled),
+  aiEnabled: Boolean(props.config.aiEnabled),
+  aiConfigReady: aiConfigReady.value,
+  previewLoading: wikiPreviewLoading.value,
+  applyLoading: wikiApplyLoading.value,
+  error: wikiError.value,
+  preview: wikiPreview.value,
+  prepareWikiPreview: prepareCurrentWikiPreview,
+  applyWikiChanges,
+  openWikiDocument,
+}))
 
 const visibleSummaryCards = computed(() => {
   if (!props.config.showSummaryCards) {
@@ -427,8 +441,52 @@ function updateToDocumentId(value: string) {
   toDocumentId.value = value
 }
 
-function toggleWikiMaintainPanel() {
-  showWikiMaintainPanel.value = !showWikiMaintainPanel.value
+function isCoreDocumentWikiPanelVisible(documentId: string) {
+  return wikiPanelPlacement.value === 'ranking' && wikiPanelCoreDocumentId.value === documentId
+}
+
+async function prepareCurrentWikiPreview() {
+  await prepareWikiPreview(activeWikiPreviewRequest.value ?? undefined)
+}
+
+async function toggleDocumentWikiPanel() {
+  if (wikiPanelPlacement.value === 'documents') {
+    wikiPanelPlacement.value = ''
+    wikiPanelCoreDocumentId.value = ''
+    return
+  }
+
+  activeWikiPreviewRequest.value = {
+    sourceDocumentIds: filteredDocuments.value.map(document => document.id),
+    scopeDescriptionLine: '- 范围来源：当前文档样本',
+  }
+  wikiPanelPlacement.value = 'documents'
+  wikiPanelCoreDocumentId.value = ''
+  await prepareCurrentWikiPreview()
+}
+
+async function toggleCoreDocumentWikiPanel(documentId: string) {
+  if (isCoreDocumentWikiPanelVisible(documentId)) {
+    wikiPanelPlacement.value = ''
+    wikiPanelCoreDocumentId.value = ''
+    return
+  }
+
+  const associations = resolveLinkAssociations(documentId)
+  const sourceDocumentIds = [
+    documentId,
+    ...associations.outbound.map(item => item.documentId),
+    ...associations.inbound.map(item => item.documentId),
+    ...associations.childDocuments.map(item => item.documentId),
+  ]
+
+  activeWikiPreviewRequest.value = {
+    sourceDocumentIds: [...new Set(sourceDocumentIds)],
+    scopeDescriptionLine: `- 范围来源：核心文档《${resolveTitle(documentId)}》关联范围（正链 / 反链 / 子文档）`,
+  }
+  wikiPanelPlacement.value = 'ranking'
+  wikiPanelCoreDocumentId.value = documentId
+  await prepareCurrentWikiPreview()
 }
 </script>
 
@@ -1166,13 +1224,28 @@ input {
   color: var(--b3-theme-primary);
 }
 
+.ghost-button--filled {
+  background: color-mix(in srgb, var(--b3-theme-primary) 9%, var(--surface-card));
+  box-shadow: inset 0 1px 0 color-mix(in srgb, white 50%, transparent);
+}
+
 .ghost-button:hover {
   background: color-mix(in srgb, var(--b3-theme-primary) 15%, transparent);
+}
+
+.ghost-button--filled:hover {
+  background: color-mix(in srgb, var(--b3-theme-primary) 16%, var(--surface-card));
 }
 
 .ghost-button:disabled {
   opacity: 0.45;
   cursor: not-allowed;
+}
+
+.detail-wiki-stack {
+  display: grid;
+  gap: 12px;
+  margin-top: 12px;
 }
 
 .state-banner,

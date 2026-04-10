@@ -212,56 +212,55 @@
         </div>
       </template>
       <template v-else-if="detail.kind === 'list'">
-        <div
-          v-if="listItems.length"
-          class="summary-detail-list"
-        >
-          <article
-            v-for="item in listItems"
-            :key="`${detail.key}-${item.documentId}`"
-            class="summary-detail-item"
-          >
-            <div class="summary-detail-item__header">
-              <DocumentTitle
-                :document-id="item.documentId"
-                :title="item.title"
-                :open-document="openDocument"
-                :is-theme-document="item.isThemeDocument"
-              />
-              <span
-                v-if="item.badge"
-                class="badge"
-              >
-                {{ item.badge }}
-              </span>
-            </div>
-            <p class="summary-detail-item__meta">
-              {{ item.meta }}
-            </p>
-            <SuggestionCallout
-              v-if="hasSuggestionCallout(item)"
-              :suggestions="buildSuggestionCalloutItems(item)"
+        <template v-if="listItems.length">
+          <div class="summary-detail-list">
+            <article
+              v-for="item in listItems"
+              :key="`${detail.key}-${item.documentId}`"
+              class="summary-detail-item"
             >
-              <div
-                v-if="item.themeSuggestions?.length"
-                class="detail-theme-section"
-              >
-                <div class="detail-theme-tags">
-                  <button
-                    v-for="suggestion in item.themeSuggestions"
-                    :key="`${item.documentId}-${suggestion.themeDocumentId}`"
-                    :class="['detail-theme-tag', { 'detail-theme-tag--active': isThemeSuggestionActive(item.documentId, suggestion.themeDocumentId) }]"
-                    type="button"
-                    :title="`${suggestion.themeDocumentTitle} · 匹配 ${suggestion.matchCount} 次`"
-                    @click="toggleOrphanThemeSuggestion(item.documentId, suggestion.themeDocumentId)"
-                  >
-                    <span class="detail-theme-name">{{ suggestion.themeName }}</span>
-                  </button>
-                </div>
+              <div class="summary-detail-item__header">
+                <DocumentTitle
+                  :document-id="item.documentId"
+                  :title="item.title"
+                  :open-document="openDocument"
+                  :is-theme-document="item.isThemeDocument"
+                />
+                <span
+                  v-if="item.badge"
+                  class="badge"
+                >
+                  {{ item.badge }}
+                </span>
               </div>
-            </SuggestionCallout>
-          </article>
-        </div>
+              <p class="summary-detail-item__meta">
+                {{ item.meta }}
+              </p>
+              <SuggestionCallout
+                v-if="hasSuggestionCallout(item)"
+                :suggestions="buildSuggestionCalloutItems(item)"
+              >
+                <div
+                  v-if="item.themeSuggestions?.length"
+                  class="detail-theme-section"
+                >
+                  <div class="detail-theme-tags">
+                    <button
+                      v-for="suggestion in item.themeSuggestions"
+                      :key="`${item.documentId}-${suggestion.themeDocumentId}`"
+                      :class="['detail-theme-tag', { 'detail-theme-tag--active': isThemeSuggestionActive(item.documentId, suggestion.themeDocumentId) }]"
+                      type="button"
+                      :title="`${suggestion.themeDocumentTitle} · 匹配 ${suggestion.matchCount} 次`"
+                      @click="toggleOrphanThemeSuggestion(item.documentId, suggestion.themeDocumentId)"
+                    >
+                      <span class="detail-theme-name">{{ suggestion.themeName }}</span>
+                    </button>
+                  </div>
+                </div>
+              </SuggestionCallout>
+            </article>
+          </div>
+        </template>
         <div
           v-else
           class="empty-state"
@@ -407,6 +406,9 @@
           :is-link-group-expanded="isLinkGroupExpanded"
           :is-syncing="isSyncing"
           :sync-association="syncAssociation"
+          :wiki-panel-props="wikiPanelProps"
+          :is-wiki-panel-visible-for-core-document="isCoreDocumentWikiPanelVisible"
+          :toggle-core-document-wiki-panel="toggleCoreDocumentWikiPanel"
         />
       </template>
       <template v-else-if="detail.kind === 'trends'">
@@ -694,6 +696,20 @@ const props = defineProps<{
   themeDocumentIds: Set<string>
   themeDocuments: ThemeDocument[]
   selectCommunity: (communityId: string) => void
+  isCoreDocumentWikiPanelVisible: (documentId: string) => boolean
+  toggleCoreDocumentWikiPanel: (documentId: string) => void | Promise<void>
+  wikiPanelProps: {
+    wikiEnabled: boolean
+    aiEnabled: boolean
+    aiConfigReady: boolean
+    previewLoading: boolean
+    applyLoading: boolean
+    error: string
+    preview: any
+    prepareWikiPreview: () => void | Promise<void>
+    applyWikiChanges: (overwriteConflicts?: boolean) => void | Promise<void>
+    openWikiDocument: (documentId: string) => void
+  }
 }>()
 
 const summaryCountLabel = computed(() => props.detail.kind === 'aiInbox'
