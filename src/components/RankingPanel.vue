@@ -204,7 +204,10 @@
             </div>
             <SuggestionCallout :suggestions="item.suggestions ?? []" />
           </article>
-          <div class="ranking-item__wiki">
+          <div
+            v-if="showWikiPanelActions"
+            class="ranking-item__wiki"
+          >
             <button
               class="ghost-button ghost-button--filled"
               type="button"
@@ -268,8 +271,10 @@ const props = withDefaults(defineProps<{
   }
   isWikiPanelVisibleForCoreDocument: (documentId: string) => boolean
   toggleCoreDocumentWikiPanel: (documentId: string) => void | Promise<void>
+  showWikiPanelActions?: boolean
   variant?: 'panel' | 'detail'
 }>(), {
+  showWikiPanelActions: true,
   variant: 'panel',
 })
 

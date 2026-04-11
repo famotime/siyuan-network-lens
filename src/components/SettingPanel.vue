@@ -122,27 +122,27 @@
       </div>
     </div>
 
-    <div class="setting-group">
+    <div v-if="showAiSettingsGroup" class="setting-group">
       <div class="setting-header">
-        <h3>AI 接入</h3>
-        <p>配置兼容 OpenAI API 的服务，用于生成“今日建议”和孤立文档的 AI 补链建议。</p>
+        <h3>{{ aiSettingsTitle }}</h3>
+        <p>{{ aiSettingsDescription }}</p>
       </div>
       <div class="setting-form">
-        <label class="setting-item setting-item--full">
+        <label v-if="showAiServiceSettings" class="setting-item setting-item--full">
           <span class="setting-item__text">
             <strong>启用 AI 今日建议</strong>
             <span>开启后可在统计卡片中生成统一优先级的整理建议</span>
           </span>
           <input type="checkbox" v-model="config.aiEnabled" class="b3-switch">
         </label>
-        <label class="setting-item setting-item--full">
+        <label v-if="showWikiSettings" class="setting-item setting-item--full">
           <span class="setting-item__text">
             <strong>启用 LLM Wiki</strong>
             <span>开启后可基于当前筛选结果生成主题 wiki 预览并安全写回。</span>
           </span>
           <input type="checkbox" v-model="config.wikiEnabled" class="b3-switch">
         </label>
-        <label class="setting-field">
+        <label v-if="showWikiSettings" class="setting-field">
           <span>页面后缀</span>
           <input
             v-model.trim="config.wikiPageSuffix"
@@ -150,7 +150,7 @@
             type="text"
           >
         </label>
-        <label class="setting-field">
+        <label v-if="showWikiSettings" class="setting-field">
           <span>索引页标题</span>
           <input
             v-model.trim="config.wikiIndexTitle"
@@ -158,7 +158,7 @@
             type="text"
           >
         </label>
-        <label class="setting-field">
+        <label v-if="showWikiSettings" class="setting-field">
           <span>日志页标题</span>
           <input
             v-model.trim="config.wikiLogTitle"
@@ -166,7 +166,7 @@
             type="text"
           >
         </label>
-        <div class="setting-field setting-field--full">
+        <div v-if="showAiServiceSettings" class="setting-field setting-field--full">
           <span>AI 服务商</span>
           <div class="setting-field__inline">
             <select :value="selectedAiProviderPreset" @change="handleAiProviderPresetChange">
@@ -205,7 +205,7 @@
           <span v-if="aiTransferMessage" class="setting-feedback setting-feedback--success">{{ aiTransferMessage }}</span>
           <span v-if="aiTransferError" class="setting-feedback setting-feedback--error">{{ aiTransferError }}</span>
         </div>
-        <label class="setting-field setting-field--full">
+        <label v-if="showAiServiceSettings" class="setting-field setting-field--full">
           <span class="setting-field__label setting-field__label--hint" :title="AI_FIELD_TOOLTIPS.baseUrl">Base URL</span>
           <input
             v-model.trim="config.aiBaseUrl"
@@ -214,7 +214,7 @@
             type="text"
           >
         </label>
-        <label class="setting-field setting-field--full">
+        <label v-if="showAiServiceSettings" class="setting-field setting-field--full">
           <span>API Key</span>
           <div class="setting-input-with-action setting-input-with-action--overlay">
             <input
@@ -277,7 +277,7 @@
             </button>
           </div>
         </label>
-        <label class="setting-field setting-field--full">
+        <label v-if="showAiServiceSettings" class="setting-field setting-field--full">
           <span>Model</span>
           <select
             v-if="showSiliconFlowChatModelSelect"
@@ -302,7 +302,7 @@
             type="text"
           >
         </label>
-        <label class="setting-field setting-field--full">
+        <label v-if="showAiServiceSettings" class="setting-field setting-field--full">
           <span class="setting-field__label setting-field__label--hint" :title="AI_FIELD_TOOLTIPS.embeddingModel">Embedding Model（可选）</span>
           <select
             v-if="showSiliconFlowEmbeddingModelSelect"
@@ -328,7 +328,7 @@
             type="text"
           >
         </label>
-        <label class="setting-field">
+        <label v-if="showAiServiceSettings" class="setting-field">
           <span class="setting-field__label setting-field__label--hint" :title="AI_FIELD_TOOLTIPS.timeout">超时时间</span>
           <div class="setting-input-with-suffix">
             <input
@@ -341,7 +341,7 @@
             <span class="setting-input-with-suffix__unit">s</span>
           </div>
         </label>
-        <label class="setting-field">
+        <label v-if="showAiServiceSettings" class="setting-field">
           <span class="setting-field__label setting-field__label--hint" :title="AI_FIELD_TOOLTIPS.maxTokens">最大 Token 数</span>
           <input
             v-model.number="config.aiMaxTokens"
@@ -351,7 +351,7 @@
             type="number"
           >
         </label>
-        <label class="setting-field">
+        <label v-if="showAiServiceSettings" class="setting-field">
           <span class="setting-field__label setting-field__label--hint" :title="AI_FIELD_TOOLTIPS.temperature">温度</span>
           <input
             v-model.number="config.aiTemperature"
@@ -362,7 +362,7 @@
             type="number"
           >
         </label>
-        <label class="setting-field">
+        <label v-if="showAiServiceSettings" class="setting-field">
           <span class="setting-field__label setting-field__label--hint" :title="AI_FIELD_TOOLTIPS.maxContextMessages">最大上下文数</span>
           <input
             v-model.number="config.aiMaxContextMessages"
@@ -372,7 +372,7 @@
             type="number"
           >
         </label>
-        <label class="setting-field setting-field--full">
+        <label v-if="showAiServiceSettings" class="setting-field setting-field--full">
           <span>上下文容量</span>
           <select v-model="config.aiContextCapacity">
             <option value="compact">紧凑</option>
@@ -381,7 +381,7 @@
           </select>
         </label>
       </div>
-      <div class="setting-actions">
+      <div v-if="showAiServiceSettings" class="setting-actions">
         <button
           class="setting-button"
           type="button"
@@ -433,6 +433,7 @@ import {
 import { resolveSecretFieldMeta } from '@/components/setting-panel-secret-field'
 import { loadSettingPanelData, type NotebookOption } from '@/components/setting-panel-data'
 import ThemeMultiSelect from '@/components/ThemeMultiSelect.vue'
+import { isAlphaSettingVisible, isAlphaSummaryCardVisible } from '@/plugin/alpha-feature-config'
 import type { AiProviderPresetKey } from '@/types/ai-provider'
 import { ensureConfigDefaults, type PluginConfig } from '@/types/config'
 
@@ -444,7 +445,9 @@ ensureConfigDefaults(props.config)
 
 const notebooks = ref<NotebookOption[]>([])
 const readTagOptions = ref<Array<{ value: string, label: string, key: string }>>([])
-const summaryCardSettings = SUMMARY_CARD_DEFINITIONS.filter(item => item.showInSettings !== false)
+const summaryCardSettings = SUMMARY_CARD_DEFINITIONS
+  .filter(item => item.showInSettings !== false)
+  .filter(item => isAlphaSummaryCardVisible(item.key))
 const aiTestingConnection = ref(false)
 const aiConnectionMessage = ref('')
 const aiConnectionError = ref('')
@@ -458,6 +461,13 @@ const aiSettingsFileInput = ref<HTMLInputElement | null>(null)
 const aiTransferMessage = ref('')
 const aiTransferError = ref('')
 const isAiApiKeyVisible = ref(false)
+const showAiServiceSettings = isAlphaSettingVisible('ai-service')
+const showWikiSettings = isAlphaSettingVisible('llm-wiki')
+const showAiSettingsGroup = showAiServiceSettings || showWikiSettings
+const aiSettingsTitle = showAiServiceSettings ? 'AI 接入' : 'LLM Wiki'
+const aiSettingsDescription = showAiServiceSettings
+  ? '配置兼容 OpenAI API 的服务，用于生成“今日建议”和孤立文档的 AI 补链建议。'
+  : '配置 LLM Wiki 的开关和页面命名规则。'
 
 const aiService = createAiInboxService({ forwardProxy })
 const aiConfigComplete = computed(() => isAiConfigComplete(props.config))

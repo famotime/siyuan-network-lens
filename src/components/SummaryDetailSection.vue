@@ -409,6 +409,7 @@
           :wiki-panel-props="wikiPanelProps"
           :is-wiki-panel-visible-for-core-document="isCoreDocumentWikiPanelVisible"
           :toggle-core-document-wiki-panel="toggleCoreDocumentWikiPanel"
+          :show-wiki-panel-actions="showWikiPanelActions"
         />
       </template>
       <template v-else-if="detail.kind === 'trends'">
@@ -644,7 +645,7 @@ type DetailItemWithThemeSuggestions = {
   themeSuggestions: ThemeDocumentMatch[]
 }
 
-const props = defineProps<{
+const props = withDefaults(defineProps<{
   detail: SummaryDetailSectionType
   selectedSummaryCount: number
   isExpanded: boolean
@@ -698,6 +699,7 @@ const props = defineProps<{
   selectCommunity: (communityId: string) => void
   isCoreDocumentWikiPanelVisible: (documentId: string) => boolean
   toggleCoreDocumentWikiPanel: (documentId: string) => void | Promise<void>
+  showWikiPanelActions: boolean
   wikiPanelProps: {
     wikiEnabled: boolean
     aiEnabled: boolean
@@ -710,7 +712,9 @@ const props = defineProps<{
     applyWikiChanges: (overwriteConflicts?: boolean) => void | Promise<void>
     openWikiDocument: (documentId: string) => void
   }
-}>()
+}>(), {
+  showWikiPanelActions: true,
+})
 
 const summaryCountLabel = computed(() => props.detail.kind === 'aiInbox'
   ? `${props.selectedSummaryCount} 项建议`

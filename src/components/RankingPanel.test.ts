@@ -91,4 +91,50 @@ describe('RankingPanel', () => {
     expect((html.match(/wiki-panel panel/g) ?? [])).toHaveLength(1)
     expect(html.indexOf('更新：20260311120000')).toBeLessThan(html.indexOf('范围来源：核心文档《Alpha》关联范围'))
   })
+
+  it('hides core document wiki actions when the alpha gate disables wiki entry points', async () => {
+    const app = createSSRApp({
+      render: () => h(RankingPanel, {
+        variant: 'detail',
+        ranking: [
+          {
+            documentId: 'doc-a',
+            title: 'Alpha',
+            inboundReferences: 3,
+            distinctSourceDocuments: 2,
+            outboundReferences: 1,
+            tagCount: 1,
+            createdAt: '20260301090000',
+            updatedAt: '20260311120000',
+            isThemeDocument: false,
+            suggestions: [],
+          },
+        ],
+        panelCount: 1,
+        snapshotLabel: '04-10 16:00',
+        isExpanded: true,
+        onTogglePanel: vi.fn(),
+        resolveTitle: (documentId: string) => ({ 'doc-a': 'Alpha' }[documentId] ?? documentId),
+        formatTimestamp: (timestamp?: string) => timestamp ?? '未知时间',
+        openDocument: vi.fn(),
+        toggleLinkPanel: vi.fn(),
+        isLinkPanelExpanded: vi.fn(() => false),
+        resolveLinkAssociations: vi.fn(() => ({ outbound: [], inbound: [], childDocuments: [] })),
+        toggleLinkGroup: vi.fn(),
+        isLinkGroupExpanded: vi.fn(() => false),
+        isSyncing: vi.fn(() => false),
+        syncAssociation: vi.fn(),
+        wikiPanelProps,
+        isWikiPanelVisibleForCoreDocument: vi.fn(() => false),
+        toggleCoreDocumentWikiPanel: vi.fn(),
+        showWikiPanelActions: false,
+      }),
+    })
+
+    const html = await renderToString(app)
+
+    expect(html).not.toContain('维护 LLM Wiki')
+    expect(html).not.toContain('收起 LLM Wiki')
+    expect(html).not.toContain('wiki-panel panel')
+  })
 })

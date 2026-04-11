@@ -36,7 +36,10 @@ describe('App trend detail layout', () => {
     expect(source).toContain('visibleSummaryCards')
     expect(source).toContain('watch(visibleSummaryCards')
     expect(source).toContain("from '@/analytics/summary-card-config'")
+    expect(source).toContain("from '@/plugin/alpha-feature-config'")
     expect(source).toContain('isSummaryCardVisible')
+    expect(source).toContain('isAlphaSummaryCardVisible')
+    expect(source).toContain('isAlphaSettingVisible')
     expect(source).not.toContain("card.key === 'todaySuggestions'")
     expect(source).not.toContain("if (card.key === 'documents')")
     expect(source).not.toContain("if (card.key === 'read')")
@@ -56,6 +59,7 @@ describe('App trend detail layout', () => {
     expect(source).toContain('toggleDocumentWikiPanel')
     expect(source).toContain('toggleCoreDocumentWikiPanel')
     expect(source).toContain('detail-wiki-stack')
+    expect(source).toContain('showWikiFeature')
   })
 
   it('shows an in-panel loading skeleton for the first analytics load', async () => {

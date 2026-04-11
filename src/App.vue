@@ -220,12 +220,13 @@
         :theme-document-ids="themeDocumentIds"
         :theme-documents="themeDocuments"
         :select-community="selectCommunity"
+        :show-wiki-panel-actions="showWikiFeature"
         :wiki-panel-props="wikiPanelProps"
-        :is-core-document-wiki-panel-visible="isCoreDocumentWikiPanelVisible"
-        :toggle-core-document-wiki-panel="toggleCoreDocumentWikiPanel"
+        :is-core-document-wiki-panel-visible="showWikiFeature ? isCoreDocumentWikiPanelVisible : () => false"
+        :toggle-core-document-wiki-panel="showWikiFeature ? toggleCoreDocumentWikiPanel : () => {}"
       />
       <div
-        v-if="visibleSummaryCards.length && selectedSummaryDetail?.key === 'documents'"
+        v-if="showWikiFeature && visibleSummaryCards.length && selectedSummaryDetail?.key === 'documents'"
         class="detail-wiki-stack"
       >
         <button
@@ -256,6 +257,7 @@ import WikiMaintainPanel from '@/components/WikiMaintainPanel.vue'
 import { isSummaryCardVisible } from '@/analytics/summary-card-config'
 import { useAnalyticsState, type WikiPreviewRequest } from '@/composables/use-analytics'
 import { appendBlock, createDocWithMd, deleteBlock, forwardProxy, getBlockAttrs, getBlockKramdown, getChildBlocks, getIDsByHPath, prependBlock, setBlockAttrs, updateBlock } from '@/api'
+import { isAlphaSettingVisible, isAlphaSummaryCardVisible } from '@/plugin/alpha-feature-config'
 import { ensureConfigDefaults, type PluginConfig } from '@/types/config'
 import pluginIconUrl from '../icon.png'
 
@@ -381,12 +383,13 @@ const wikiPanelProps = computed(() => ({
   applyWikiChanges,
   openWikiDocument,
 }))
+const showWikiFeature = isAlphaSettingVisible('llm-wiki')
 
 const visibleSummaryCards = computed(() => {
   if (!props.config.showSummaryCards) {
     return []
   }
-  return summaryCards.value.filter(card => isSummaryCardVisible(props.config, card.key))
+  return summaryCards.value.filter(card => isSummaryCardVisible(props.config, card.key) && isAlphaSummaryCardVisible(card.key))
 })
 
 const timeRangeFilterOptions = computed(() => timeRangeOptions.value.map(option => ({
