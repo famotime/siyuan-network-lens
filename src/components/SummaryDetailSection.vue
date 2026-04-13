@@ -1,21 +1,21 @@
 <template>
   <section class="panel">
     <div class="panel-header">
-      <div>
+      <div class="panel-header__content">
         <h2>{{ detail.title }}</h2>
         <p>{{ detail.description }}</p>
-      </div>
-      <div class="panel-header__actions">
-        <span class="meta-text">{{ summaryCountLabel }}</span>
         <button
           v-if="detail.kind === 'aiInbox'"
-          class="action-button"
+          class="action-button panel-header__action-button"
           type="button"
           :disabled="aiSuggestionLoading || !aiSuggestionEnabled || !aiSuggestionConfigured"
           @click="generateAiInbox()"
         >
           {{ aiSuggestionLoading ? '分析中...' : detail.result ? '重新分析' : '今日建议' }}
         </button>
+      </div>
+      <div class="panel-header__actions">
+        <span class="meta-text">{{ summaryCountLabel }}</span>
         <button
           class="panel-toggle"
           type="button"
@@ -860,6 +860,13 @@ async function handleAiInboxActionTargetClick(
   margin-bottom: 20px;
 }
 
+.panel-header__content {
+  flex: 1;
+  min-width: 0;
+  display: grid;
+  gap: 8px;
+}
+
 .panel-header h2 {
   margin: 0 0 4px;
   font-size: 18px;
@@ -882,6 +889,11 @@ async function handleAiInboxActionTargetClick(
   display: inline-flex;
   align-items: center;
   gap: 12px;
+}
+
+.panel-header__action-button {
+  width: fit-content;
+  max-width: 100%;
 }
 
 .panel-toggle {

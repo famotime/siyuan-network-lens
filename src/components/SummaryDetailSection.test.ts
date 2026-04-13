@@ -261,9 +261,24 @@ describe('SummaryDetailSection', () => {
     })
 
     const html = await renderToString(app)
+    const headerContentStart = html.indexOf('panel-header__content')
+    const headerActionsStart = html.indexOf('panel-header__actions')
+    const toggleButtonEnd = html.indexOf('</button>', html.indexOf('panel-toggle', headerActionsStart))
+    const aiHeaderContentMarkup = headerContentStart >= 0 && headerActionsStart > headerContentStart
+      ? html.slice(headerContentStart, headerActionsStart)
+      : ''
+    const headerActionsMarkup = headerActionsStart >= 0 && toggleButtonEnd > headerActionsStart
+      ? html.slice(headerActionsStart, toggleButtonEnd)
+      : ''
 
     expect(html).toContain('2 项建议')
     expect(html).toContain('重新分析')
+    expect(aiHeaderContentMarkup).toContain('按优先级提供建议')
+    expect(aiHeaderContentMarkup).toContain('action-button')
+    expect(aiHeaderContentMarkup).toContain('重新分析')
+    expect(headerActionsMarkup).toContain('2 项建议')
+    expect(headerActionsMarkup).toContain('panel-toggle')
+    expect(headerActionsMarkup).not.toContain('action-button')
     expect(html).toContain('今天先补 AI 主题连接。')
     expect(html).toContain('修复孤立文档：')
     expect(html).toContain('AI 与机器学习整理')
