@@ -44,8 +44,10 @@ describe('SettingPanel', () => {
           showDormant: true,
           showBridges: true,
           showPropagation: true,
-          themeNotebookId: 'box-1',
-          themeDocumentPath: '/专题',
+          analysisExcludedPaths: '/知识库/排除区|/归档/临时',
+          analysisExcludedNamePrefixes: '临时-|草稿-',
+          analysisExcludedNameSuffixes: '-忽略',
+          themeDocumentPath: '/知识库/专题|/归档/主题',
           themeNamePrefix: '主题-',
           themeNameSuffix: '-索引',
           readTagNames: ['已读'],
@@ -75,11 +77,14 @@ describe('SettingPanel', () => {
     const hiddenSummaryCardKeys = new Set(ALPHA_FEATURE_HIDE_CONFIG.hiddenSummaryCardKeys)
     const hiddenSettingKeys = new Set(ALPHA_FEATURE_HIDE_CONFIG.hiddenSettingKeys)
 
+    expect(html.indexOf('分析范围')).toBeLessThan(html.indexOf('主题文档'))
     expect(html.indexOf('主题文档')).toBeLessThan(html.indexOf('已读标记'))
     expect(html.indexOf('已读标记')).toBeLessThan(html.indexOf('统计卡片'))
     expect(html.indexOf('统计卡片')).toBeLessThan(html.indexOf('AI 接入'))
     expect(html.indexOf('AI 接入')).toBeLessThan(html.indexOf('调试'))
     expect(html.indexOf('已读标记')).toBeLessThan(html.indexOf('传播与链路'))
+    expect(html).toContain('分析范围')
+    expect(html).toContain('排除路径')
     expect(html).toContain('主题文档路径')
     expect(html).toContain('已读目录')
     expect(html).toContain('已读标签')
@@ -92,6 +97,7 @@ describe('SettingPanel', () => {
     expectCardSettingVisibility(html, 'trends', '趋势观察卡片', hiddenSummaryCardKeys)
     expectCardSettingVisibility(html, 'communities', '主题社区卡片', hiddenSummaryCardKeys)
     expectCardSettingVisibility(html, 'orphans', '孤立文档卡片', hiddenSummaryCardKeys)
+    expect(html).toContain('多个路径用 | 分隔，支持包含笔记本的全路径')
     expect(html).not.toContain('今日建议卡片')
     expectCardSettingVisibility(html, 'dormant', '沉没文档卡片', hiddenSummaryCardKeys)
     expectCardSettingVisibility(html, 'bridges', '桥接节点卡片', hiddenSummaryCardKeys)
@@ -140,6 +146,7 @@ describe('SettingPanel', () => {
     expect(html).not.toContain('核心文档排行卡片')
     expect(html).not.toContain('孤立与桥接卡片')
     expect(html).not.toContain('整理建议卡片')
+    expect(html).not.toContain('主题笔记本')
   })
 
   it('hides alpha summary card settings and independent AI or wiki settings when configured', async () => {
@@ -164,8 +171,10 @@ describe('SettingPanel', () => {
             showDormant: true,
             showBridges: true,
             showPropagation: true,
-            themeNotebookId: 'box-1',
-            themeDocumentPath: '/专题',
+            analysisExcludedPaths: '',
+            analysisExcludedNamePrefixes: '',
+            analysisExcludedNameSuffixes: '',
+            themeDocumentPath: '/知识库/专题',
             themeNamePrefix: '主题-',
             themeNameSuffix: '-索引',
             readTagNames: ['已读'],
@@ -224,8 +233,10 @@ describe('SettingPanel', () => {
           showDormant: true,
           showBridges: true,
           showPropagation: true,
-          themeNotebookId: 'box-1',
-          themeDocumentPath: '/专题',
+          analysisExcludedPaths: '',
+          analysisExcludedNamePrefixes: '',
+          analysisExcludedNameSuffixes: '',
+          themeDocumentPath: '/知识库/专题',
           themeNamePrefix: '主题-',
           themeNameSuffix: '-索引',
           readTagNames: ['已读'],

@@ -48,7 +48,17 @@ export function buildSummaryDetailSections(params: {
   filters?: AnalyticsFilters
   themeDocumentIds?: Iterable<string>
   dormantDays: number
-  config?: Pick<PluginConfig, 'readTagNames' | 'readTitlePrefixes' | 'readTitleSuffixes' | 'readPaths' | 'wikiPageSuffix'>
+  config?: Pick<
+    PluginConfig,
+    'readTagNames'
+    | 'readTitlePrefixes'
+    | 'readTitleSuffixes'
+    | 'readPaths'
+    | 'wikiPageSuffix'
+    | 'analysisExcludedPaths'
+    | 'analysisExcludedNamePrefixes'
+    | 'analysisExcludedNameSuffixes'
+  >
   readCardMode?: ReadCardMode
   largeDocumentMetrics?: ReadonlyMap<string, LargeDocumentMetric>
   largeDocumentCardMode?: LargeDocumentCardMode
@@ -61,6 +71,10 @@ export function buildSummaryDetailSections(params: {
     timeRange: params.timeRange,
     filters: params.filters,
     wikiPageSuffix: params.config?.wikiPageSuffix,
+    excludedPaths: params.config?.analysisExcludedPaths,
+    excludedNamePrefixes: params.config?.analysisExcludedNamePrefixes,
+    excludedNameSuffixes: params.config?.analysisExcludedNameSuffixes,
+    notebooks: params.notebooks,
   })
   const documentMap = new Map(filteredDocuments.map(document => [document.id, document]))
   const activeReferences = filterActiveReferences({

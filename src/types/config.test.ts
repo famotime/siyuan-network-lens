@@ -31,6 +31,9 @@ describe('config defaults', () => {
     expect(config.showDormant).toBe(false)
     expect(config.showBridges).toBe(false)
     expect(config.showPropagation).toBe(true)
+    expect(config.analysisExcludedPaths).toBe('')
+    expect(config.analysisExcludedNamePrefixes).toBe('')
+    expect(config.analysisExcludedNameSuffixes).toBe('')
     expect(config.readPaths).toBe('')
     expect(config.aiEnabled).toBe(false)
     expect(config.aiBaseUrl).toBe('')
@@ -47,6 +50,7 @@ describe('config defaults', () => {
     expect(config.wikiPageSuffix).toBe('-llm-wiki')
     expect(config.wikiIndexTitle).toBe('LLM-Wiki-索引')
     expect(config.wikiLogTitle).toBe('LLM-Wiki-维护日志')
+    expect(config.themeDocumentPath).toBe('/box-1/专题')
   })
 
   it('restores the active ai config from the selected provider snapshot', () => {
@@ -116,5 +120,24 @@ describe('config defaults', () => {
     expect(config.wikiPageSuffix).toBe('-llm-wiki')
     expect(config.wikiIndexTitle).toBe('LLM-Wiki-索引')
     expect(config.wikiLogTitle).toBe('LLM-Wiki-维护日志')
+  })
+
+  it('preserves full-path theme document config and normalizes analysis exclusion fields', () => {
+    const config = {
+      showSummaryCards: true,
+      themeDocumentPath: '/知识库/专题|/归档/主题',
+      themeNamePrefix: '',
+      themeNameSuffix: '',
+      analysisExcludedPaths: null,
+      analysisExcludedNamePrefixes: 123,
+      analysisExcludedNameSuffixes: undefined,
+    } as any
+
+    ensureConfigDefaults(config)
+
+    expect(config.themeDocumentPath).toBe('/知识库/专题|/归档/主题')
+    expect(config.analysisExcludedPaths).toBe('')
+    expect(config.analysisExcludedNamePrefixes).toBe('')
+    expect(config.analysisExcludedNameSuffixes).toBe('')
   })
 })

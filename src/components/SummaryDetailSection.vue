@@ -699,7 +699,7 @@ const props = withDefaults(defineProps<{
   selectCommunity: (communityId: string) => void
   isCoreDocumentWikiPanelVisible: (documentId: string) => boolean
   toggleCoreDocumentWikiPanel: (documentId: string) => void | Promise<void>
-  showWikiPanelActions: boolean
+  showWikiPanelActions?: boolean
   wikiPanelProps: {
     wikiEnabled: boolean
     aiEnabled: boolean

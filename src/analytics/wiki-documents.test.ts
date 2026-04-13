@@ -8,6 +8,80 @@ import { applyWikiDocuments } from './wiki-documents'
 import { buildWikiPageStorageKey, createAiWikiStore } from './wiki-store'
 
 describe('wiki documents', () => {
+  it('derives wiki target notebook and directory from the first configured theme full path', async () => {
+    const kernel = createFakeWikiKernel()
+    const store = createMemoryWikiStore()
+    const themeDraft = renderThemeWikiDraft({
+      pageTitle: '主题-AI-索引-llm-wiki',
+      pairedThemeTitle: '主题-AI-索引',
+      generatedAt: '2026-04-09T12:00:00.000Z',
+      model: 'gpt-4.1-mini',
+      sourceDocumentCount: 1,
+      llmOutput: {
+        overview: '主题概览',
+        keyDocuments: ['AI 核心'],
+        structureObservations: ['结构观察'],
+        evidence: ['引用证据'],
+        actions: ['后续动作'],
+      },
+    })
+    const preview = buildWikiPreview({
+      pageType: 'theme',
+      pageTitle: '主题-AI-索引-llm-wiki',
+      sourceDocumentIds: ['doc-ai-core'],
+      generatedAt: '2026-04-09T12:00:00.000Z',
+      nextDraft: themeDraft,
+    })
+
+    await applyWikiDocuments({
+      config: {
+        themeDocumentPath: '/知识库/专题|/归档/主题',
+        wikiIndexTitle: 'LLM-Wiki-索引',
+        wikiLogTitle: 'LLM-Wiki-维护日志',
+        wikiPageSuffix: '-llm-wiki',
+      },
+      notebooks: [
+        { id: 'notebook-theme', name: '知识库' },
+      ],
+      generatedAt: '2026-04-09T12:05:00.000Z',
+      scopeSummary: {
+        sourceDocumentCount: 1,
+        themeGroupCount: 1,
+        unclassifiedDocumentCount: 0,
+        excludedWikiDocumentCount: 0,
+      },
+      scopeDescriptionLines: ['- 时间窗口：7d'],
+      themePages: [
+        {
+          pageTitle: '主题-AI-索引-llm-wiki',
+          themeName: 'AI',
+          themeDocumentId: 'doc-theme-ai',
+          themeDocumentTitle: '主题-AI-索引',
+          themeDocumentBox: 'notebook-theme',
+          themeDocumentHPath: '/专题/主题-AI-索引',
+          sourceDocumentIds: ['doc-ai-core'],
+          preview,
+          draft: themeDraft,
+        },
+      ],
+      unclassifiedDocuments: [],
+      overwriteConflicts: false,
+      store,
+      api: kernel.api,
+    })
+
+    expect(kernel.api.createDocWithMd).toHaveBeenCalledWith(
+      'notebook-theme',
+      '/专题/LLM-Wiki-索引',
+      expect.any(String),
+    )
+    expect(kernel.api.createDocWithMd).toHaveBeenCalledWith(
+      'notebook-theme',
+      '/专题/LLM-Wiki-维护日志',
+      expect.any(String),
+    )
+  })
+
   it('creates missing theme wiki pages and refreshes index and log documents', async () => {
     const kernel = createFakeWikiKernel()
     const store = createMemoryWikiStore()

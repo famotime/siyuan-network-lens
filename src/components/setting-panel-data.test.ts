@@ -4,6 +4,7 @@ import {
   collectTagOptions,
   ensureReadMarkerDefaults,
   loadSettingPanelData,
+  migrateLegacyThemeDocumentPath,
 } from './setting-panel-data'
 
 describe('setting-panel-data', () => {
@@ -61,5 +62,21 @@ describe('setting-panel-data', () => {
       { value: '知识', label: '知识', key: '知识' },
       { value: 'AI', label: 'AI', key: 'AI' },
     ])
+  })
+
+  it('migrates legacy theme notebook config to a notebook-scoped full path when notebook data is available', () => {
+    const config = {
+      showSummaryCards: true,
+      themeNotebookId: 'box-1',
+      themeDocumentPath: '/专题',
+      themeNamePrefix: '',
+      themeNameSuffix: '',
+    } as any
+
+    migrateLegacyThemeDocumentPath(config, [
+      { id: 'box-1', name: '知识库' },
+    ])
+
+    expect(config.themeDocumentPath).toBe('/知识库/专题')
   })
 })

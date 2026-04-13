@@ -1,4 +1,5 @@
 import type { DocumentRecord } from './analysis'
+import type { NotebookPathOption } from './document-paths'
 import { countThemeMatchesForDocument, collectThemeDocuments, type ThemeDocument } from './theme-documents'
 import { isWikiDocumentTitle } from './wiki-page-model'
 import type { PluginConfig } from '@/types/config'
@@ -32,12 +33,14 @@ export interface WikiScopeResult {
 export function buildWikiScope(params: {
   documents: DocumentRecord[]
   config: PluginConfig
+  notebooks?: NotebookPathOption[]
   themeDocuments?: ThemeDocument[]
   secondaryThemeScoreRatio?: number
 }): WikiScopeResult {
   const themeDocuments = params.themeDocuments ?? collectThemeDocuments({
     documents: params.documents,
     config: params.config,
+    notebooks: params.notebooks,
   })
   const wikiPageSuffix = params.config.wikiPageSuffix?.trim() ?? ''
   const themeDocumentIdSet = new Set(themeDocuments.map(item => item.documentId))

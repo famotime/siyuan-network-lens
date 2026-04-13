@@ -1,4 +1,5 @@
 import { normalizeTags } from '@/analytics/document-utils'
+import { normalizeDocumentPath } from '@/analytics/document-paths'
 import type { PluginConfig } from '@/types/config'
 
 export interface NotebookOption {
@@ -52,6 +53,25 @@ export function ensureReadMarkerDefaults(config: PluginConfig) {
   if (typeof config.readPaths !== 'string') {
     config.readPaths = ''
   }
+}
+
+export function migrateLegacyThemeDocumentPath(config: PluginConfig, notebooks: NotebookOption[]) {
+  const notebookId = config.themeNotebookId?.trim() ?? ''
+  const themeDocumentPath = config.themeDocumentPath?.trim() ?? ''
+
+  if (!notebookId || !themeDocumentPath || themeDocumentPath.includes('|') || themeDocumentPath.split('/').filter(Boolean).length >= 2) {
+    return
+  }
+
+  const notebook = notebooks.find(item => item.id === notebookId)
+  const notebookPrefix = notebook?.name?.trim() || notebookId
+  const normalizedPath = normalizeDocumentPath(themeDocumentPath)
+
+  if (!notebookPrefix || !normalizedPath) {
+    return
+  }
+
+  config.themeDocumentPath = `/${notebookPrefix}${normalizedPath}`
 }
 
 export function collectTagOptions(rows: Array<{ tag: string | null }>): Array<{ value: string, label: string, key: string }> {

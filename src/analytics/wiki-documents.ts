@@ -1,4 +1,5 @@
 import { buildDocLinkMarkdown } from './link-sync'
+import { resolveScopedPathTarget, type NotebookPathOption } from './document-paths'
 import { fingerprintWikiContent } from './wiki-diff'
 import {
   WIKI_BLOCK_ATTR_KEYS,
@@ -69,12 +70,13 @@ export interface WikiApplyBatchResult {
 
 export async function applyWikiDocuments(params: {
   config: {
-    themeNotebookId: string
+    themeNotebookId?: string
     themeDocumentPath: string
     wikiIndexTitle: string
     wikiLogTitle: string
     wikiPageSuffix: string
   }
+  notebooks?: NotebookPathOption[]
   generatedAt: string
   scopeSummary: WikiApplyScopeSummary
   scopeDescriptionLines: string[]
@@ -97,6 +99,11 @@ export async function applyWikiDocuments(params: {
     setBlockAttrs: SetBlockAttrsFn
   }
 }): Promise<WikiApplyBatchResult> {
+  const wikiTarget = resolveWikiTarget(params.config, params.notebooks)
+  if (!wikiTarget) {
+    throw new Error('未配置有效的主题文档路径，无法确定 LLM Wiki 写入位置')
+  }
+
   const themeResults: WikiApplyBatchResult['themePages'] = []
   const themeRecords = new Map<string, WikiPageSnapshotRecord>()
 
@@ -186,9 +193,9 @@ export async function applyWikiDocuments(params: {
     store: params.store,
     api: params.api,
   })
-  const indexPath = joinDocumentPath(params.config.themeDocumentPath, params.config.wikiIndexTitle)
+  const indexPath = joinDocumentPath(wikiTarget.path, params.config.wikiIndexTitle)
   const existingIndexPageId = await resolveExistingPageId({
-    notebook: params.config.themeNotebookId,
+    notebook: wikiTarget.notebook,
     hpath: indexPath,
     storedPageId: (await params.store.getPageRecord(buildWikiPageStorageKey({
       pageType: 'index',
@@ -198,7 +205,7 @@ export async function applyWikiDocuments(params: {
     getBlockKramdown: params.api.getBlockKramdown,
   })
   const indexWriteResult = await upsertManagedWikiPage({
-    notebook: params.config.themeNotebookId,
+    notebook: wikiTarget.notebook,
     hpath: indexPath,
     pageType: 'index',
     pageId: existingIndexPageId,
@@ -234,20 +241,20 @@ export async function applyWikiDocuments(params: {
     scopeDescriptionLines: params.scopeDescriptionLines,
     themeResults,
   })
-  const logPath = joinDocumentPath(params.config.themeDocumentPath, params.config.wikiLogTitle)
+  const logPath = joinDocumentPath(wikiTarget.path, params.config.wikiLogTitle)
   const existingLogPageRecord = await params.store.getPageRecord(buildWikiPageStorageKey({
     pageType: 'log',
     pageTitle: params.config.wikiLogTitle,
   }))
   const existingLogPageId = await resolveExistingPageId({
-    notebook: params.config.themeNotebookId,
+    notebook: wikiTarget.notebook,
     hpath: logPath,
     storedPageId: existingLogPageRecord?.pageId,
     getIDsByHPath: params.api.getIDsByHPath,
     getBlockKramdown: params.api.getBlockKramdown,
   })
   const logWriteResult = await appendLogDocument({
-    notebook: params.config.themeNotebookId,
+    notebook: wikiTarget.notebook,
     hpath: logPath,
     title: params.config.wikiLogTitle,
     pageId: existingLogPageId,
@@ -290,6 +297,30 @@ export async function applyWikiDocuments(params: {
       result: logWriteResult.result,
     },
     counts: buildThemeResultCounts(themeResults),
+  }
+}
+
+function resolveWikiTarget(
+  config: {
+    themeNotebookId?: string
+    themeDocumentPath: string
+  },
+  notebooks?: NotebookPathOption[],
+) {
+  const target = resolveScopedPathTarget(config.themeDocumentPath, notebooks)
+  if (target) {
+    return target
+  }
+
+  const legacyNotebookId = config.themeNotebookId?.trim() ?? ''
+  const normalizedPath = normalizeDocumentPath(config.themeDocumentPath)
+  if (!legacyNotebookId || normalizedPath === '/') {
+    return null
+  }
+
+  return {
+    notebook: legacyNotebookId,
+    path: normalizedPath,
   }
 }
 

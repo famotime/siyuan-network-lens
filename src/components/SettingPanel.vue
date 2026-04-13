@@ -2,28 +2,48 @@
   <div class="setting-panel">
     <div class="setting-group">
       <div class="setting-header">
+        <h3>分析范围</h3>
+        <p>指定不参与分析的路径范围；命中路径且符合名称规则的文档会被排除。</p>
+      </div>
+      <div class="setting-form">
+        <label class="setting-field setting-field--full">
+          <span>排除路径</span>
+          <input
+            v-model.trim="config.analysisExcludedPaths"
+            placeholder="多个路径用 | 分隔，支持包含笔记本的全路径，例如 /知识库/排除区|/归档/临时"
+            type="text"
+          >
+        </label>
+        <label class="setting-field">
+          <span>名称前缀</span>
+          <input
+            v-model.trim="config.analysisExcludedNamePrefixes"
+            placeholder="多个前缀用 | 分隔；留空则路径下全部排除"
+            type="text"
+          >
+        </label>
+        <label class="setting-field">
+          <span>名称后缀</span>
+          <input
+            v-model.trim="config.analysisExcludedNameSuffixes"
+            placeholder="多个后缀用 | 分隔；留空则路径下全部排除"
+            type="text"
+          >
+        </label>
+      </div>
+    </div>
+
+    <div class="setting-group">
+      <div class="setting-header">
         <h3>主题文档</h3>
         <p>指定主题页所在目录，生成主题筛选选项并为孤立文档提供链接建议。</p>
       </div>
       <div class="setting-form">
-        <label class="setting-field">
-          <span>主题笔记本</span>
-          <select v-model="config.themeNotebookId">
-            <option value="">请选择笔记本</option>
-            <option
-              v-for="notebook in notebooks"
-              :key="notebook.id"
-              :value="notebook.id"
-            >
-              {{ notebook.name }}
-            </option>
-          </select>
-        </label>
-        <label class="setting-field">
+        <label class="setting-field setting-field--full">
           <span>主题文档路径</span>
           <input
             v-model.trim="config.themeDocumentPath"
-            placeholder="/专题"
+            placeholder="多个路径用 | 分隔，支持包含笔记本的全路径，例如 /知识库/专题|/归档/主题"
             type="text"
           >
         </label>
@@ -426,7 +446,7 @@ import { onMounted, ref } from 'vue'
 
 import { lsNotebooks, sql } from '@/api'
 import { SUMMARY_CARD_DEFINITIONS } from '@/analytics/summary-card-config'
-import { loadSettingPanelData, type NotebookOption } from '@/components/setting-panel-data'
+import { loadSettingPanelData, migrateLegacyThemeDocumentPath, type NotebookOption } from '@/components/setting-panel-data'
 import { useSettingPanelAi } from '@/components/use-setting-panel-ai'
 import ThemeMultiSelect from '@/components/ThemeMultiSelect.vue'
 import { isAlphaSettingVisible, isAlphaSummaryCardVisible } from '@/plugin/alpha-feature-config'
@@ -493,6 +513,7 @@ onMounted(async () => {
   })
 
   notebooks.value = data.notebooks
+  migrateLegacyThemeDocumentPath(props.config, data.notebooks)
   readTagOptions.value = data.readTagOptions
 })
 </script>

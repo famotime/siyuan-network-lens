@@ -108,6 +108,45 @@ describe('analyzeReferenceGraph', () => {
     expect(filtered.map(document => document.id)).toEqual(['doc-a', 'doc-b', 'doc-c'])
   })
 
+  it('excludes documents under configured full paths before building the sample', () => {
+    const filtered = filterDocumentsByTimeRange({
+      documents: [
+        { id: 'doc-keep', box: 'box-1', path: '/notes/keep.sy', hpath: '/笔记/保留', title: '保留', tags: [], created: '20260309120000', updated: '20260310120000' },
+        { id: 'doc-excluded', box: 'box-1', path: '/excluded/ignore.sy', hpath: '/排除区/忽略', title: '忽略', tags: [], created: '20260309120000', updated: '20260310120000' },
+      ],
+      references: [],
+      now,
+      timeRange: 'all',
+      excludedPaths: '/Knowledge Base/排除区',
+      notebooks: [
+        { id: 'box-1', name: 'Knowledge Base' },
+      ],
+    })
+
+    expect(filtered.map(document => document.id)).toEqual(['doc-keep'])
+  })
+
+  it('excludes only documents whose names match the configured exclusion affixes', () => {
+    const filtered = filterDocumentsByTimeRange({
+      documents: [
+        { id: 'doc-keep', box: 'box-1', path: '/excluded/keep.sy', hpath: '/排除区/普通文档', title: '普通文档', tags: [], created: '20260309120000', updated: '20260310120000' },
+        { id: 'doc-drop-prefix', box: 'box-1', path: '/excluded/prefix.sy', hpath: '/排除区/临时-草稿', title: '临时-草稿', tags: [], created: '20260309120000', updated: '20260310120000' },
+        { id: 'doc-drop-suffix', box: 'box-1', path: '/excluded/suffix.sy', hpath: '/排除区/记录-忽略', title: '记录-忽略', tags: [], created: '20260309120000', updated: '20260310120000' },
+      ],
+      references: [],
+      now,
+      timeRange: 'all',
+      excludedPaths: '/Knowledge Base/排除区',
+      excludedNamePrefixes: '临时-',
+      excludedNameSuffixes: '-忽略',
+      notebooks: [
+        { id: 'box-1', name: 'Knowledge Base' },
+      ],
+    })
+
+    expect(filtered.map(document => document.id)).toEqual(['doc-keep'])
+  })
+
   it('uses time range filtered documents for all panel outputs', () => {
     const report = analyzeReferenceGraph({
       documents: [
@@ -155,6 +194,30 @@ describe('analyzeReferenceGraph', () => {
     expect(filtered.map(document => document.id)).toEqual(['doc-a', 'doc-b'])
     expect(report.summary.totalDocuments).toBe(2)
     expect(report.ranking.map(item => item.documentId)).toEqual(['doc-b'])
+  })
+
+  it('removes excluded documents and their edges from graph analysis', () => {
+    const report = analyzeReferenceGraph({
+      documents: [
+        { id: 'doc-theme', box: 'box-1', path: '/topics/theme.sy', hpath: '/专题/主题-AI-索引', title: '主题-AI-索引', tags: [], created: '20260309120000', updated: '20260310120000' },
+        { id: 'doc-source', box: 'box-1', path: '/notes/source.sy', hpath: '/笔记/来源', title: '来源', tags: [], created: '20260309120000', updated: '20260310120000' },
+        { id: 'doc-excluded', box: 'box-1', path: '/excluded/bridge.sy', hpath: '/排除区/桥接草稿', title: '桥接草稿', tags: [], created: '20260309120000', updated: '20260310120000' },
+      ],
+      references: [
+        { id: 'ref-1', sourceDocumentId: 'doc-source', sourceBlockId: 'blk-1', targetDocumentId: 'doc-theme', targetBlockId: 'blk-2', content: '[[主题-AI-索引]]', sourceUpdated: '20260310120000' },
+        { id: 'ref-2', sourceDocumentId: 'doc-excluded', sourceBlockId: 'blk-3', targetDocumentId: 'doc-theme', targetBlockId: 'blk-4', content: '[[主题-AI-索引]]', sourceUpdated: '20260310120000' },
+      ],
+      now,
+      timeRange: 'all',
+      excludedPaths: '/Knowledge Base/排除区',
+      notebooks: [
+        { id: 'box-1', name: 'Knowledge Base' },
+      ],
+    })
+
+    expect(report.summary.totalDocuments).toBe(2)
+    expect(report.summary.totalReferences).toBe(1)
+    expect(report.ranking.map(item => item.documentId)).toEqual(['doc-theme'])
   })
 
   it('aggregates ranking, communities, orphan documents, and actionable suggestions', () => {
@@ -371,6 +434,28 @@ describe('analyzeTrends', () => {
 
     expect(trends.current.referenceCount).toBe(1)
     expect(trends.risingDocuments.map(item => item.documentId)).toEqual(['doc-b'])
+  })
+
+  it('excludes matching documents from trend samples', () => {
+    const trends = analyzeTrends({
+      documents: [
+        { id: 'doc-a', box: 'box-1', path: '/notes/a.sy', hpath: '/笔记/A', title: 'A', tags: [], created: '20260309120000', updated: '20260310120000' },
+        { id: 'doc-b', box: 'box-1', path: '/excluded/b.sy', hpath: '/排除区/B', title: 'B', tags: [], created: '20260309120000', updated: '20260310120000' },
+      ],
+      references: [
+        { id: 'ref-1', sourceDocumentId: 'doc-a', sourceBlockId: 'blk-a1', targetDocumentId: 'doc-b', targetBlockId: 'blk-b1', content: '[[B]]', sourceUpdated: '20260310120000' },
+      ],
+      now,
+      days: 7,
+      timeRange: 'all',
+      excludedPaths: '/Knowledge Base/排除区',
+      notebooks: [
+        { id: 'box-1', name: 'Knowledge Base' },
+      ],
+    })
+
+    expect(trends.current.referenceCount).toBe(0)
+    expect(trends.risingDocuments).toEqual([])
   })
 
   it('deduplicates trend counts by document pairs', () => {

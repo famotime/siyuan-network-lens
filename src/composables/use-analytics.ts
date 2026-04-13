@@ -242,6 +242,7 @@ export function useAnalyticsState(params: UseAnalyticsParams) {
   const themeDocuments = computed(() => collectThemeDocuments({
     documents: snapshot.value?.documents ?? [],
     config: params.config,
+    notebooks: snapshot.value?.notebooks,
   }))
   const themeDocumentIds = computed(() => new Set(themeDocuments.value.map(document => document.documentId)))
   const themeOptions = computed(() => buildThemeOptions(themeDocuments.value))
@@ -293,6 +294,10 @@ export function useAnalyticsState(params: UseAnalyticsParams) {
       timeRange: timeRange.value,
       filters: filters.value,
       wikiPageSuffix: params.config.wikiPageSuffix,
+      excludedPaths: params.config.analysisExcludedPaths,
+      excludedNamePrefixes: params.config.analysisExcludedNamePrefixes,
+      excludedNameSuffixes: params.config.analysisExcludedNameSuffixes,
+      notebooks: snapshot.value.notebooks,
     })
   })
   const associationDocuments = computed(() => {
@@ -306,6 +311,10 @@ export function useAnalyticsState(params: UseAnalyticsParams) {
       timeRange: 'all',
       filters: filters.value,
       wikiPageSuffix: params.config.wikiPageSuffix,
+      excludedPaths: params.config.analysisExcludedPaths,
+      excludedNamePrefixes: params.config.analysisExcludedNamePrefixes,
+      excludedNameSuffixes: params.config.analysisExcludedNameSuffixes,
+      notebooks: snapshot.value.notebooks,
     })
   })
 
@@ -326,6 +335,10 @@ export function useAnalyticsState(params: UseAnalyticsParams) {
       orphanSort: orphanSort.value,
       dormantDays: dormantDays.value,
       wikiPageSuffix: params.config.wikiPageSuffix,
+      excludedPaths: params.config.analysisExcludedPaths,
+      excludedNamePrefixes: params.config.analysisExcludedNamePrefixes,
+      excludedNameSuffixes: params.config.analysisExcludedNameSuffixes,
+      notebooks: snapshot.value.notebooks,
     })
   })
 
@@ -350,6 +363,10 @@ export function useAnalyticsState(params: UseAnalyticsParams) {
       timeRange: timeRange.value,
       filters: filters.value,
       wikiPageSuffix: params.config.wikiPageSuffix,
+      excludedPaths: params.config.analysisExcludedPaths,
+      excludedNamePrefixes: params.config.analysisExcludedNamePrefixes,
+      excludedNameSuffixes: params.config.analysisExcludedNameSuffixes,
+      notebooks: snapshot.value.notebooks,
     })
   })
 
@@ -814,6 +831,7 @@ export function useAnalyticsState(params: UseAnalyticsParams) {
       const scope = buildWikiScope({
         documents: scopedDocuments,
         config: params.config,
+        notebooks: snapshot.value.notebooks,
         themeDocuments: themeDocuments.value,
       })
       const scopeDescriptionLines = buildWikiScopeDescriptionLines({
@@ -969,6 +987,7 @@ export function useAnalyticsState(params: UseAnalyticsParams) {
           wikiLogTitle: params.config.wikiLogTitle ?? 'LLM-Wiki-维护日志',
           wikiPageSuffix: params.config.wikiPageSuffix ?? '-llm-wiki',
         },
+        notebooks: snapshot.value?.notebooks,
         generatedAt: new Date().toISOString(),
         scopeSummary: {
           sourceDocumentCount: wikiPreview.value.scope.summary.sourceDocumentCount,

@@ -10,8 +10,7 @@ const config: PluginConfig = {
   showOrphanBridge: true,
   showTrends: true,
   showPropagation: true,
-  themeNotebookId: 'box-1',
-  themeDocumentPath: '/专题',
+  themeDocumentPath: '/知识库/专题|/Research Vault/专题',
   themeNamePrefix: '主题-',
   themeNameSuffix: '-索引',
   wikiPageSuffix: '-llm-wiki',
@@ -25,13 +24,18 @@ const documents = [
   { id: 'doc-theme-skills', box: 'box-1', path: '/topics/theme-skills.sy', hpath: '/专题/主题-Skills-索引', title: '主题-Skills-索引', name: 'skill', alias: 'abc,def', tags: [], created: '20260301090000', updated: '20260301120000' },
   { id: 'doc-theme-ignore', box: 'box-1', path: '/topics/theme-ignore.sy', hpath: '/专题/无前后缀', title: '无前后缀', tags: [], created: '20260301090000', updated: '20260301120000' },
   { id: 'doc-other-box', box: 'box-2', path: '/topics/theme-ai.sy', hpath: '/专题/主题-AI-索引', title: '主题-AI-索引', tags: [], created: '20260301090000', updated: '20260301120000' },
+  { id: 'doc-other-box-ml', box: 'box-2', path: '/topics/theme-ml.sy', hpath: '/专题/主题-机器学习-索引', title: '主题-机器学习-索引', tags: [], created: '20260301090000', updated: '20260301120000' },
 ] as const
 
 describe('theme documents', () => {
-  it('collects configured topic documents and strips prefix and suffix from theme names', () => {
+  it('collects configured topic documents from multiple full paths and strips prefix and suffix from theme names', () => {
     const themeDocuments = collectThemeDocuments({
       documents: [...documents],
       config,
+      notebooks: [
+        { id: 'box-1', name: '知识库' },
+        { id: 'box-2', name: 'Research Vault' },
+      ],
     })
 
     expect(themeDocuments).toHaveLength(3)
@@ -41,12 +45,18 @@ describe('theme documents', () => {
       expect.objectContaining({ documentId: 'doc-theme-skills', themeName: 'Skills' }),
     ]))
     expect(themeDocuments.some(item => item.documentId === 'doc-theme-ai-wiki')).toBe(false)
+    expect(themeDocuments.some(item => item.documentId === 'doc-other-box')).toBe(false)
+    expect(themeDocuments.some(item => item.documentId === 'doc-other-box-ml')).toBe(false)
   })
 
   it('counts theme matches in document title, path and tags and sorts by match count', () => {
     const themeDocuments = collectThemeDocuments({
       documents: [...documents],
       config,
+      notebooks: [
+        { id: 'box-1', name: '知识库' },
+        { id: 'box-2', name: 'Research Vault' },
+      ],
     })
 
     const matches = countThemeMatchesForDocument({
@@ -71,6 +81,10 @@ describe('theme documents', () => {
     const themeDocuments = collectThemeDocuments({
       documents: [...documents],
       config,
+      notebooks: [
+        { id: 'box-1', name: '知识库' },
+        { id: 'box-2', name: 'Research Vault' },
+      ],
     })
 
     const matches = countThemeMatchesForDocument({
@@ -94,6 +108,10 @@ describe('theme documents', () => {
     const themeDocuments = collectThemeDocuments({
       documents: [...documents],
       config,
+      notebooks: [
+        { id: 'box-1', name: '知识库' },
+        { id: 'box-2', name: 'Research Vault' },
+      ],
     })
 
     const matches = countThemeMatchesForDocument({
@@ -118,6 +136,10 @@ describe('theme documents', () => {
     const themeDocuments = collectThemeDocuments({
       documents: [...documents],
       config,
+      notebooks: [
+        { id: 'box-1', name: '知识库' },
+        { id: 'box-2', name: 'Research Vault' },
+      ],
     })
 
     expect(documentMatchesSelectedThemes({

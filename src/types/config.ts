@@ -34,10 +34,13 @@ export interface PluginConfig {
   showBridges?: boolean
   showPropagation?: boolean
   showOrphanBridge?: boolean
-  themeNotebookId: string
+  themeNotebookId?: string
   themeDocumentPath: string
   themeNamePrefix: string
   themeNameSuffix: string
+  analysisExcludedPaths?: string
+  analysisExcludedNamePrefixes?: string
+  analysisExcludedNameSuffixes?: string
   readTagNames?: string[]
   readTitlePrefixes?: string
   readTitleSuffixes?: string
@@ -69,6 +72,9 @@ export const DEFAULT_CONFIG: PluginConfig = {
   themeDocumentPath: '',
   themeNamePrefix: '',
   themeNameSuffix: '',
+  analysisExcludedPaths: '',
+  analysisExcludedNamePrefixes: '',
+  analysisExcludedNameSuffixes: '',
   readTagNames: [],
   readTitlePrefixes: '',
   readTitleSuffixes: '',
@@ -107,6 +113,30 @@ export function ensureConfigDefaults(config: PluginConfig) {
     }
 
     config[visibilityKey] = definition.defaultVisible
+  }
+  if (typeof config.themeNotebookId !== 'string') {
+    config.themeNotebookId = ''
+  }
+  if (typeof config.themeDocumentPath !== 'string') {
+    config.themeDocumentPath = ''
+  }
+  if (typeof config.themeNamePrefix !== 'string') {
+    config.themeNamePrefix = ''
+  }
+  if (typeof config.themeNameSuffix !== 'string') {
+    config.themeNameSuffix = ''
+  }
+  if (typeof config.analysisExcludedPaths !== 'string') {
+    config.analysisExcludedPaths = ''
+  }
+  if (typeof config.analysisExcludedNamePrefixes !== 'string') {
+    config.analysisExcludedNamePrefixes = ''
+  }
+  if (typeof config.analysisExcludedNameSuffixes !== 'string') {
+    config.analysisExcludedNameSuffixes = ''
+  }
+  if (config.themeNotebookId.trim() && config.themeDocumentPath.trim() && !looksLikeNotebookScopedPath(config.themeDocumentPath)) {
+    config.themeDocumentPath = `/${config.themeNotebookId.trim()}${normalizeLegacyPath(config.themeDocumentPath)}`
   }
   if (!Array.isArray(config.readTagNames)) {
     config.readTagNames = []
@@ -214,4 +244,18 @@ function normalizeNonEmptyString(value: unknown, fallback: string): string {
   return typeof value === 'string' && value.trim()
     ? value.trim()
     : fallback
+}
+
+function normalizeLegacyPath(value: string): string {
+  const normalized = value
+    .replace(/\\/g, '/')
+    .trim()
+  const withLeadingSlash = normalized.startsWith('/') ? normalized : `/${normalized}`
+  return withLeadingSlash === '/'
+    ? withLeadingSlash
+    : withLeadingSlash.replace(/\/+$/, '')
+}
+
+function looksLikeNotebookScopedPath(value: string): boolean {
+  return value.includes('|') || value.trim().split('/').filter(Boolean).length >= 2
 }

@@ -6,6 +6,7 @@ import {
   parseSiyuanTimestamp as parseTimestamp,
   resolveDocumentTitle,
 } from './document-utils'
+import { matchesAnyScopedPath, normalizeScopedPaths, splitDelimitedInput, type NotebookPathOption } from './document-paths'
 import { isWikiDocumentTitle } from './wiki-page-model'
 import type {
   AnalyticsFilters,
@@ -58,11 +59,22 @@ export function filterDocumentsByTimeRange(params: {
   timeRange: TimeRange
   filters?: AnalyticsFilters
   wikiPageSuffix?: string
+  excludedPaths?: string
+  excludedNamePrefixes?: string
+  excludedNameSuffixes?: string
+  notebooks?: NotebookPathOption[]
 }): DocumentRecord[] {
   const visibleDocuments = excludeWikiDocuments(params.documents, params.wikiPageSuffix)
-  const normalizedDocuments = normalizeDocuments(visibleDocuments)
+  const filteredVisibleDocuments = excludeConfiguredDocuments({
+    documents: visibleDocuments,
+    excludedPaths: params.excludedPaths,
+    excludedNamePrefixes: params.excludedNamePrefixes,
+    excludedNameSuffixes: params.excludedNameSuffixes,
+    notebooks: params.notebooks,
+  })
+  const normalizedDocuments = normalizeDocuments(filteredVisibleDocuments)
   const filteredDocuments = normalizedDocuments.filter(document => matchesFilters(document, params.filters))
-  const documentById = new Map(visibleDocuments.map(document => [document.id, document]))
+  const documentById = new Map(filteredVisibleDocuments.map(document => [document.id, document]))
 
   if (params.timeRange === 'all') {
     return filteredDocuments
@@ -99,7 +111,7 @@ export function filterDocumentsByTimeRange(params: {
       .map(document => document.id),
   )
 
-  return visibleDocuments.filter(document => windowDocumentIds.has(document.id))
+  return filteredVisibleDocuments.filter(document => windowDocumentIds.has(document.id))
 }
 
 export function buildGraphAnalysisContext(params: {
@@ -109,6 +121,10 @@ export function buildGraphAnalysisContext(params: {
   timeRange: TimeRange
   filters?: AnalyticsFilters
   wikiPageSuffix?: string
+  excludedPaths?: string
+  excludedNamePrefixes?: string
+  excludedNameSuffixes?: string
+  notebooks?: NotebookPathOption[]
 }): GraphAnalysisContext {
   const documentRecords = filterDocumentsByTimeRange({
     documents: params.documents,
@@ -117,6 +133,10 @@ export function buildGraphAnalysisContext(params: {
     timeRange: params.timeRange,
     filters: params.filters,
     wikiPageSuffix: params.wikiPageSuffix,
+    excludedPaths: params.excludedPaths,
+    excludedNamePrefixes: params.excludedNamePrefixes,
+    excludedNameSuffixes: params.excludedNameSuffixes,
+    notebooks: params.notebooks,
   })
   const documents = normalizeDocuments(documentRecords)
   const documentMap = new Map(documents.map(document => [document.id, document]))
@@ -150,6 +170,10 @@ export function buildTrendAnalysisContext(params: {
   timeRange: TimeRange
   filters?: AnalyticsFilters
   wikiPageSuffix?: string
+  excludedPaths?: string
+  excludedNamePrefixes?: string
+  excludedNameSuffixes?: string
+  notebooks?: NotebookPathOption[]
 }): TrendAnalysisContext {
   const documentRecords = filterDocumentsByTimeRange({
     documents: params.documents,
@@ -158,6 +182,10 @@ export function buildTrendAnalysisContext(params: {
     timeRange: params.timeRange,
     filters: params.filters,
     wikiPageSuffix: params.wikiPageSuffix,
+    excludedPaths: params.excludedPaths,
+    excludedNamePrefixes: params.excludedNamePrefixes,
+    excludedNameSuffixes: params.excludedNameSuffixes,
+    notebooks: params.notebooks,
   })
   const documents = normalizeDocuments(documentRecords)
   const documentMap = new Map(documents.map(document => [document.id, document]))
@@ -205,6 +233,37 @@ export function excludeWikiDocuments(documents: DocumentRecord[], wikiPageSuffix
   return documents.filter(document => !isWikiDocumentTitle(resolveDocumentTitle(document), wikiPageSuffix))
 }
 
+export function excludeConfiguredDocuments(params: {
+  documents: DocumentRecord[]
+  excludedPaths?: string
+  excludedNamePrefixes?: string
+  excludedNameSuffixes?: string
+  notebooks?: NotebookPathOption[]
+}): DocumentRecord[] {
+  const configuredPaths = normalizeScopedPaths(params.excludedPaths)
+  if (configuredPaths.length === 0) {
+    return params.documents
+  }
+
+  const notebookNameById = new Map((params.notebooks ?? []).map(notebook => [notebook.id, notebook.name]))
+  const prefixes = splitDelimitedInput(params.excludedNamePrefixes)
+  const suffixes = splitDelimitedInput(params.excludedNameSuffixes)
+
+  return params.documents.filter((document) => {
+    const isInExcludedPath = matchesAnyScopedPath({
+      document,
+      configuredPaths,
+      notebookName: notebookNameById.get(document.box),
+    })
+
+    if (!isInExcludedPath) {
+      return true
+    }
+
+    return !matchesExcludedTitle(resolveDocumentTitle(document), prefixes, suffixes)
+  })
+}
+
 export function matchesFilters(document: NormalizedDocument, filters?: AnalyticsFilters): boolean {
   if (!filters) {
     return true
@@ -233,6 +292,15 @@ export function matchesFilters(document: NormalizedDocument, filters?: Analytics
     }
   }
   return true
+}
+
+function matchesExcludedTitle(title: string, prefixes: string[], suffixes: string[]): boolean {
+  if (prefixes.length === 0 && suffixes.length === 0) {
+    return true
+  }
+
+  return prefixes.some(prefix => title.startsWith(prefix))
+    || suffixes.some(suffix => title.endsWith(suffix))
 }
 
 export function resolveDocumentTimestamp(document: NormalizedDocument): string {

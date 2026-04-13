@@ -199,6 +199,10 @@ export function analyzeReferenceGraph(params: {
   orphanSort?: OrphanSort
   dormantDays?: number
   wikiPageSuffix?: string
+  excludedPaths?: string
+  excludedNamePrefixes?: string
+  excludedNameSuffixes?: string
+  notebooks?: Array<{ id: string, name: string }>
 }): ReferenceGraphReport {
   const {
     documents,
@@ -215,6 +219,10 @@ export function analyzeReferenceGraph(params: {
     timeRange: params.timeRange,
     filters: params.filters,
     wikiPageSuffix: params.wikiPageSuffix,
+    excludedPaths: params.excludedPaths,
+    excludedNamePrefixes: params.excludedNamePrefixes,
+    excludedNameSuffixes: params.excludedNameSuffixes,
+    notebooks: params.notebooks,
   })
   const evidenceByDocument: Record<string, NormalizedReference[]> = {}
   const inboundByDocument = new Map<string, NormalizedReference[]>()
@@ -369,6 +377,10 @@ export function analyzeTrends(params: {
   timeRange: TimeRange
   filters?: AnalyticsFilters
   wikiPageSuffix?: string
+  excludedPaths?: string
+  excludedNamePrefixes?: string
+  excludedNameSuffixes?: string
+  notebooks?: Array<{ id: string, name: string }>
 }): TrendReport {
   const {
     documents,
@@ -384,6 +396,10 @@ export function analyzeTrends(params: {
     timeRange: params.timeRange,
     filters: params.filters,
     wikiPageSuffix: params.wikiPageSuffix,
+    excludedPaths: params.excludedPaths,
+    excludedNamePrefixes: params.excludedNamePrefixes,
+    excludedNameSuffixes: params.excludedNameSuffixes,
+    notebooks: params.notebooks,
   })
 
   const currentCounts = countByTarget(currentReferences)

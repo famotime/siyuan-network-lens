@@ -1,4 +1,5 @@
 import type { DocumentRecord } from './analysis'
+import { matchesScopedPath, normalizeScopedPaths } from './document-paths'
 import { normalizeTags, resolveDocumentTitle } from './document-utils'
 import type { PluginConfig } from '@/types/config'
 
@@ -83,9 +84,7 @@ function normalizeSelectedTags(tags?: readonly string[]): string[] {
 }
 
 function normalizeReadPaths(value?: string): string[] {
-  return normalizeTitleRules(value).map((item) => {
-    return normalizePath(item)
-  }).filter(Boolean)
+  return normalizeScopedPaths(value)
 }
 
 function matchesReadPath(
@@ -93,79 +92,9 @@ function matchesReadPath(
   readPath: string,
   notebookName?: string,
 ): boolean {
-  const candidates = buildReadPathCandidates(document, notebookName)
-  return candidates.some(candidate => matchesPathPrefix(candidate, readPath))
-}
-
-function buildReadPathCandidates(
-  document: Pick<DocumentRecord, 'box' | 'path' | 'hpath'>,
-  notebookName?: string,
-): string[] {
-  const candidates = new Set<string>()
-  const normalizedPath = normalizePath(document.path)
-  const normalizedHpath = normalizePath(document.hpath)
-
-  if (normalizedPath) {
-    candidates.add(normalizedPath)
-  }
-  if (normalizedHpath) {
-    candidates.add(normalizedHpath)
-  }
-
-  const notebookPrefix = normalizeNotebookPrefix(notebookName ?? document.box)
-  if (notebookPrefix) {
-    if (normalizedPath) {
-      candidates.add(joinNotebookPath(notebookPrefix, normalizedPath))
-    }
-    if (normalizedHpath) {
-      candidates.add(joinNotebookPath(notebookPrefix, normalizedHpath))
-    }
-  }
-
-  return [...candidates]
-}
-
-function normalizePath(value?: string): string {
-  if (!value) {
-    return ''
-  }
-
-  const normalized = value
-    .replace(/\\/g, '/')
-    .replace(/\.sy$/i, '')
-    .trim()
-  const withLeadingSlash = normalized.startsWith('/') ? normalized : `/${normalized}`
-  if (withLeadingSlash === '/') {
-    return withLeadingSlash
-  }
-  return withLeadingSlash.replace(/\/+$/, '')
-}
-
-function normalizeNotebookPrefix(value?: string): string {
-  if (!value) {
-    return ''
-  }
-
-  const normalized = value
-    .replace(/\\/g, '/')
-    .trim()
-    .replace(/^\/+/, '')
-    .replace(/\/+$/, '')
-
-  return normalized ? `/${normalized}` : ''
-}
-
-function joinNotebookPath(notebookPrefix: string, path: string): string {
-  if (!path || path === '/') {
-    return notebookPrefix
-  }
-  return `${notebookPrefix}${path}`
-}
-
-function matchesPathPrefix(value: string, readPath: string): boolean {
-  if (!value || !readPath) {
-    return false
-  }
-
-  return value === readPath || value.startsWith(`${readPath}/`)
+  return matchesScopedPath({
+    document,
+    configuredPath: readPath,
+    notebookName,
+  })
 }

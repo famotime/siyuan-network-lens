@@ -1,4 +1,5 @@
 import type { DocumentRecord } from './analysis'
+import { matchesAnyScopedPath, normalizeDocumentPath, normalizeScopedPaths, splitDelimitedInput, type NotebookPathOption } from './document-paths'
 import { normalizeTags, resolveDocumentTitle as resolveTitle } from './document-utils'
 import { isWikiDocumentTitle } from './wiki-page-model'
 import type { PluginConfig } from '@/types/config'
@@ -29,22 +30,32 @@ export interface ThemeOption {
 export function collectThemeDocuments(params: {
   documents: DocumentRecord[]
   config: PluginConfig
+  notebooks?: NotebookPathOption[]
 }): ThemeDocument[] {
-  const notebookId = params.config.themeNotebookId.trim()
-  const configuredPath = normalizePath(params.config.themeDocumentPath)
+  const configuredPaths = normalizeThemePaths(params.config)
   const prefix = params.config.themeNamePrefix.trim()
   const suffix = params.config.themeNameSuffix.trim()
   const wikiPageSuffix = params.config.wikiPageSuffix?.trim() ?? ''
+  const notebookNameById = new Map((params.notebooks ?? []).map(notebook => [notebook.id, notebook.name]))
 
-  if (!notebookId || !configuredPath) {
+  if (configuredPaths.length === 0) {
     return []
   }
 
   const themeDocuments = params.documents
-    .filter(document => document.box === notebookId)
-    .filter(document => isDocumentInConfiguredPath(document, configuredPath))
     .map((document) => {
-      const title = resolveTitle(document)
+      const matchedPathIndex = findMatchedPathIndex(document, configuredPaths, notebookNameById.get(document.box))
+      if (matchedPathIndex < 0) {
+        return null
+      }
+      return {
+        document,
+        matchedPathIndex,
+      }
+    })
+    .filter((item): item is { document: DocumentRecord, matchedPathIndex: number } => item !== null)
+    .map((document) => {
+      const title = resolveTitle(document.document)
       if (isWikiDocumentTitle(title, wikiPageSuffix)) {
         return null
       }
@@ -55,20 +66,22 @@ export function collectThemeDocuments(params: {
       if (!themeName) {
         return null
       }
-      const matchTerms = buildThemeMatchTerms(themeName, document.name, document.alias)
+      const matchTerms = buildThemeMatchTerms(themeName, document.document.name, document.document.alias)
       return {
-        documentId: document.id,
+        documentId: document.document.id,
         title,
         themeName,
         matchTerms,
-        box: document.box,
-        path: document.path,
-        hpath: document.hpath,
+        box: document.document.box,
+        path: document.document.path,
+        hpath: document.document.hpath,
+        matchedPathIndex: document.matchedPathIndex,
       }
     })
-    .filter((document): document is ThemeDocument => document !== null)
+    .filter((document): document is ThemeDocument & { matchedPathIndex: number } => document !== null)
     .sort((left, right) => {
       return left.themeName.localeCompare(right.themeName, 'zh-CN')
+        || left.matchedPathIndex - right.matchedPathIndex
         || left.hpath.localeCompare(right.hpath, 'zh-CN')
         || left.documentId.localeCompare(right.documentId)
     })
@@ -132,19 +145,19 @@ export function documentMatchesSelectedThemes(params: {
   })
 }
 
-function deduplicateThemeDocuments(themeDocuments: ThemeDocument[]): ThemeDocument[] {
+function deduplicateThemeDocuments(themeDocuments: Array<ThemeDocument & { matchedPathIndex: number }>): ThemeDocument[] {
   const byThemeName = new Map<string, ThemeDocument>()
 
   for (const themeDocument of themeDocuments) {
     const existing = byThemeName.get(themeDocument.themeName)
     if (!existing) {
-      byThemeName.set(themeDocument.themeName, themeDocument)
+      byThemeName.set(themeDocument.themeName, stripMatchedPathIndex(themeDocument))
       continue
     }
 
     if (themeDocument.hpath.length < existing.hpath.length
       || (themeDocument.hpath.length === existing.hpath.length && themeDocument.hpath.localeCompare(existing.hpath, 'zh-CN') < 0)) {
-      byThemeName.set(themeDocument.themeName, themeDocument)
+      byThemeName.set(themeDocument.themeName, stripMatchedPathIndex(themeDocument))
     }
   }
 
@@ -172,31 +185,48 @@ function stripAffixes(title: string, prefix: string, suffix: string): string {
   return value.trim()
 }
 
-function isDocumentInConfiguredPath(document: Pick<DocumentRecord, 'path' | 'hpath'>, configuredPath: string): boolean {
-  return matchesPathPrefix(normalizePath(document.hpath), configuredPath)
-    || matchesPathPrefix(normalizePath(document.path), configuredPath)
+function isDocumentInConfiguredPaths(
+  document: Pick<DocumentRecord, 'box' | 'path' | 'hpath'>,
+  configuredPaths: string[],
+  notebookName?: string,
+): boolean {
+  return matchesAnyScopedPath({
+    document,
+    configuredPaths,
+    notebookName,
+  })
 }
 
-function matchesPathPrefix(value: string, configuredPath: string): boolean {
-  if (!value || !configuredPath) {
-    return false
-  }
-  return value === configuredPath || value.startsWith(`${configuredPath}/`)
+function findMatchedPathIndex(
+  document: Pick<DocumentRecord, 'box' | 'path' | 'hpath'>,
+  configuredPaths: string[],
+  notebookName?: string,
+): number {
+  return configuredPaths.findIndex(configuredPath => matchesAnyScopedPath({
+    document,
+    configuredPaths: [configuredPath],
+    notebookName,
+  }))
 }
 
-function normalizePath(value?: string): string {
-  if (!value) {
-    return ''
+function normalizeThemePaths(config: PluginConfig): string[] {
+  const rawPaths = splitDelimitedInput(config.themeDocumentPath)
+  const legacyNotebookId = config.themeNotebookId?.trim() ?? ''
+  if (rawPaths.length === 1 && legacyNotebookId && rawPaths[0].split('/').filter(Boolean).length < 2) {
+    const legacyPath = normalizeDocumentPath(rawPaths[0])
+    return legacyPath ? [`/${legacyNotebookId}${legacyPath}`] : []
   }
-  const normalized = value
-    .replace(/\\/g, '/')
-    .replace(/\.sy$/i, '')
-    .trim()
-  const withLeadingSlash = normalized.startsWith('/') ? normalized : `/${normalized}`
-  if (withLeadingSlash === '/') {
-    return withLeadingSlash
+
+  const configuredPaths = normalizeScopedPaths(config.themeDocumentPath)
+  if (configuredPaths.length > 0) {
+    return configuredPaths
   }
-  return withLeadingSlash.replace(/\/+$/, '')
+  return []
+}
+
+function stripMatchedPathIndex(document: ThemeDocument & { matchedPathIndex: number }): ThemeDocument {
+  const { matchedPathIndex: _matchedPathIndex, ...themeDocument } = document
+  return themeDocument
 }
 
 function buildMatchFields(

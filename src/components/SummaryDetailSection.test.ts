@@ -77,6 +77,32 @@ const baseProps = {
 }
 
 describe('SummaryDetailSection', () => {
+  it('does not warn when showWikiPanelActions is omitted and the default is used', async () => {
+    const warnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {})
+
+    try {
+      const { showWikiPanelActions: _showWikiPanelActions, ...propsWithoutWikiToggle } = baseProps
+      const app = createSSRApp({
+        render: () => h(SummaryDetailSection, {
+          ...propsWithoutWikiToggle,
+          detail: {
+            key: 'documents',
+            title: '文档样本详情',
+            description: '当前筛选条件命中的文档。',
+            kind: 'list',
+            items: [],
+          },
+        }),
+      })
+
+      await renderToString(app)
+
+      expect(warnSpy).not.toHaveBeenCalled()
+    } finally {
+      warnSpy.mockRestore()
+    }
+  })
+
   it('renders generic list details inside a collapsible panel', async () => {
     const app = createSSRApp({
       render: () => h(SummaryDetailSection, {
