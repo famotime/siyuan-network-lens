@@ -400,6 +400,20 @@
 
     <div class="setting-group">
       <div class="setting-header">
+        <h3>调试</h3>
+        <p>控制插件在开发排查时输出到控制台的普通日志。</p>
+      </div>
+      <label class="setting-item">
+        <span class="setting-item__text">
+          <strong>在控制台打印日志</strong>
+          <span>error 日志始终保留，其他级别受此开关控制</span>
+        </span>
+        <input type="checkbox" v-model="config.enableConsoleLogging" class="b3-switch">
+      </label>
+    </div>
+
+    <div class="setting-group">
+      <div class="setting-header">
         <h3>传播与链路</h3>
         <p>传播节点详情中将包含关系传播路径视图。</p>
       </div>

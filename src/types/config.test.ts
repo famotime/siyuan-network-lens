@@ -42,6 +42,7 @@ describe('config defaults', () => {
     expect(config.aiTemperature).toBe(0.7)
     expect(config.aiMaxContextMessages).toBe(7)
     expect(config.aiContextCapacity).toBe('balanced')
+    expect(config.enableConsoleLogging).toBe(false)
     expect(config.wikiEnabled).toBe(false)
     expect(config.wikiPageSuffix).toBe('-llm-wiki')
     expect(config.wikiIndexTitle).toBe('LLM-Wiki-索引')
@@ -101,6 +102,7 @@ describe('config defaults', () => {
       themeDocumentPath: '/专题',
       themeNamePrefix: '',
       themeNameSuffix: '',
+      enableConsoleLogging: 'yes',
       wikiEnabled: 'yes',
       wikiPageSuffix: '   ',
       wikiIndexTitle: 123,
@@ -109,6 +111,7 @@ describe('config defaults', () => {
 
     ensureConfigDefaults(config)
 
+    expect(config.enableConsoleLogging).toBe(false)
     expect(config.wikiEnabled).toBe(false)
     expect(config.wikiPageSuffix).toBe('-llm-wiki')
     expect(config.wikiIndexTitle).toBe('LLM-Wiki-索引')

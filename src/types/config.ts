@@ -54,6 +54,7 @@ export interface PluginConfig {
   aiTemperature?: number
   aiMaxContextMessages?: number
   aiContextCapacity?: AiContextCapacity
+  enableConsoleLogging?: boolean
   wikiEnabled?: boolean
   wikiPageSuffix?: string
   wikiIndexTitle?: string
@@ -84,6 +85,7 @@ export const DEFAULT_CONFIG: PluginConfig = {
   aiTemperature: DEFAULT_AI_TEMPERATURE,
   aiMaxContextMessages: DEFAULT_AI_MAX_CONTEXT_MESSAGES,
   aiContextCapacity: 'balanced',
+  enableConsoleLogging: false,
   wikiEnabled: false,
   wikiPageSuffix: DEFAULT_WIKI_PAGE_SUFFIX,
   wikiIndexTitle: DEFAULT_WIKI_INDEX_TITLE,
@@ -162,6 +164,9 @@ export function ensureConfigDefaults(config: PluginConfig) {
   )
   if (config.aiContextCapacity !== 'compact' && config.aiContextCapacity !== 'balanced' && config.aiContextCapacity !== 'full') {
     config.aiContextCapacity = 'balanced'
+  }
+  if (typeof config.enableConsoleLogging !== 'boolean') {
+    config.enableConsoleLogging = false
   }
   if (typeof config.wikiEnabled !== 'boolean') {
     config.wikiEnabled = false

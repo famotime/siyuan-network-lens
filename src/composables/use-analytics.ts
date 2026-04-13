@@ -80,6 +80,7 @@ import {
 } from '@/analytics/wiki-store'
 import { normalizeTags, resolveDocumentTitle } from '@/analytics/document-utils'
 import type { PluginConfig } from '@/types/config'
+import { createPluginLogger } from '@/utils/plugin-logger'
 
 export type { PathScope } from './use-analytics-derived'
 export type { WikiPreviewRequest, WikiPreviewState, WikiPreviewThemePageItem } from './use-analytics-wiki'
@@ -142,7 +143,10 @@ type UseAnalyticsParams = {
   getBlockAttrs?: GetBlockAttrsFn
   setBlockAttrs?: SetBlockAttrsFn
   forwardProxy?: ForwardProxyFn
-  createAiInboxService?: (deps: { forwardProxy: ForwardProxyFn }) => AiInboxService
+  createAiInboxService?: (deps: {
+    forwardProxy: ForwardProxyFn
+    logger?: Pick<Console, 'info' | 'warn' | 'error'>
+  }) => AiInboxService
   createAiWikiService?: (deps: { forwardProxy: ForwardProxyFn }) => AiWikiService
   createAiLinkSuggestionService?: (deps: { forwardProxy: ForwardProxyFn }) => AiLinkSuggestionService
   aiIndexStore?: AiDocumentIndexStore | null
@@ -166,8 +170,15 @@ export function useAnalyticsState(params: UseAnalyticsParams) {
   const getBlockKramdown = params.getBlockKramdown
   const getBlockAttrs = params.getBlockAttrs
   const setBlockAttrs = params.setBlockAttrs
+  const pluginLogger = createPluginLogger(() => params.config.enableConsoleLogging === true)
   const aiInboxService = params.forwardProxy
-    ? (params.createAiInboxService?.({ forwardProxy: params.forwardProxy }) ?? createAiInboxService({ forwardProxy: params.forwardProxy }))
+    ? (params.createAiInboxService?.({
+        forwardProxy: params.forwardProxy,
+        logger: pluginLogger,
+      }) ?? createAiInboxService({
+        forwardProxy: params.forwardProxy,
+        logger: pluginLogger,
+      }))
     : null
   const aiWikiService = params.forwardProxy
     ? (params.createAiWikiService?.({ forwardProxy: params.forwardProxy }) ?? createAiWikiService({ forwardProxy: params.forwardProxy }))

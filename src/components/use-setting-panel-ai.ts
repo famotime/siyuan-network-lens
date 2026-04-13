@@ -27,9 +27,13 @@ import {
 import { resolveSecretFieldMeta } from '@/components/setting-panel-secret-field'
 import type { AiProviderPresetKey } from '@/types/ai-provider'
 import type { PluginConfig } from '@/types/config'
+import { createPluginLogger } from '@/utils/plugin-logger'
 
 export function useSettingPanelAi(config: PluginConfig) {
-  const aiService = createAiInboxService({ forwardProxy })
+  const aiService = createAiInboxService({
+    forwardProxy,
+    logger: createPluginLogger(() => config.enableConsoleLogging === true),
+  })
 
   const aiTestingConnection = ref(false)
   const aiConnectionMessage = ref('')

@@ -62,6 +62,7 @@ describe('SettingPanel', () => {
           aiTemperature: 0.7,
           aiMaxContextMessages: 7,
           aiContextCapacity: 'compact',
+          enableConsoleLogging: false,
           wikiEnabled: true,
           wikiPageSuffix: '-llm-wiki',
           wikiIndexTitle: 'LLM-Wiki-索引',
@@ -77,6 +78,7 @@ describe('SettingPanel', () => {
     expect(html.indexOf('主题文档')).toBeLessThan(html.indexOf('已读标记'))
     expect(html.indexOf('已读标记')).toBeLessThan(html.indexOf('统计卡片'))
     expect(html.indexOf('统计卡片')).toBeLessThan(html.indexOf('AI 接入'))
+    expect(html.indexOf('AI 接入')).toBeLessThan(html.indexOf('调试'))
     expect(html.indexOf('已读标记')).toBeLessThan(html.indexOf('传播与链路'))
     expect(html).toContain('主题文档路径')
     expect(html).toContain('已读目录')
@@ -122,6 +124,9 @@ describe('SettingPanel', () => {
     expect(html).toContain('上下文容量')
     expect(html).toContain('紧凑')
     expect(html).toContain('测试连接')
+    expect(html).toContain('调试')
+    expect(html).toContain('在控制台打印日志')
+    expect(html).toContain('error 日志始终保留，其他级别受此开关控制')
     expectSettingVisibility(html, 'llm-wiki', '启用 LLM Wiki', hiddenSettingKeys)
     expectSettingVisibility(html, 'llm-wiki', '页面后缀', hiddenSettingKeys)
     expectSettingVisibility(html, 'llm-wiki', '索引页标题', hiddenSettingKeys)
@@ -177,6 +182,7 @@ describe('SettingPanel', () => {
             aiTemperature: 0.7,
             aiMaxContextMessages: 7,
             aiContextCapacity: 'compact',
+            enableConsoleLogging: false,
             wikiEnabled: true,
             wikiPageSuffix: '-llm-wiki',
             wikiIndexTitle: 'LLM-Wiki-索引',
@@ -236,6 +242,7 @@ describe('SettingPanel', () => {
           aiTemperature: 0.7,
           aiMaxContextMessages: 7,
           aiContextCapacity: 'compact',
+          enableConsoleLogging: false,
         },
       }),
     })
