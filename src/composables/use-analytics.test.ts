@@ -990,6 +990,127 @@ describe('useAnalyticsState', () => {
     }))
   })
 
+  it('persists the latest three today suggestion snapshots and lets the detail switch to a selected history view', async () => {
+    const historyStorage = (() => {
+      const store = new Map<string, any>()
+      return {
+        async loadData(storageName: string) {
+          return store.get(storageName)
+        },
+        async saveData(storageName: string, value: any) {
+          store.set(storageName, value)
+        },
+      }
+    })()
+    let generatedCount = 0
+    const generateInbox = vi.fn(async () => {
+      generatedCount += 1
+      return {
+        generatedAt: `2026-03-12T0${generatedCount}:00:00.000Z`,
+        summary: `第 ${generatedCount} 次建议`,
+        items: [
+          {
+            id: `task-doc-orphan-${generatedCount}`,
+            type: 'document',
+            title: `AI 与 机器学习 AI #${generatedCount}`,
+            priority: 'P1',
+            action: '补 2 条到主题页的连接。',
+            reason: '当前窗口内孤立，但和主题 AI、机器学习都有明显语义相关。',
+            documentIds: ['doc-orphan'],
+          },
+        ],
+      }
+    })
+
+    const state = useAnalyticsState({
+      plugin: {
+        eventBus: { on: () => {}, off: () => {} },
+        app: {},
+        ...historyStorage,
+      } as any,
+      config: {
+        showSummaryCards: true,
+        showTodaySuggestions: true,
+        showRanking: true,
+        showCommunities: true,
+        showOrphanBridge: true,
+        showTrends: true,
+        showPropagation: true,
+        themeNotebookId: 'box-1',
+        themeDocumentPath: '/专题',
+        themeNamePrefix: '主题-',
+        themeNameSuffix: '-索引',
+        aiEnabled: true,
+        aiBaseUrl: 'https://api.example.com/v1',
+        aiApiKey: 'sk-test',
+        aiModel: 'gpt-4.1-mini',
+      },
+      loadSnapshot: async () => snapshot as any,
+      nowProvider: () => now,
+      createActiveDocumentSync: () => () => {},
+      showMessage: () => {},
+      openTab: () => {},
+      appendBlock: async () => [],
+      prependBlock: async () => [],
+      deleteBlock: async () => [],
+      updateBlock: async () => [],
+      getChildBlocks: async () => [],
+      getBlockKramdown: async () => ({ id: '', kramdown: '' }),
+      forwardProxy: async () => ({
+        body: '',
+        contentType: 'application/json',
+        elapsed: 1,
+        headers: {},
+        status: 200,
+        url: 'https://api.example.com/v1/chat/completions',
+      }),
+      createAiInboxService: () => ({
+        buildPayload: () => ({ focus: [] }) as any,
+        generateInbox,
+        testConnection: vi.fn().mockResolvedValue({
+          ok: true,
+          message: '连接成功',
+        }),
+      }),
+    } as any)
+
+    await state.refresh()
+    await nextTick()
+
+    await (state as any).generateAiInbox()
+    await (state as any).generateAiInbox()
+    await (state as any).generateAiInbox()
+    await (state as any).generateAiInbox()
+    await nextTick()
+
+    expect((state as any).aiInboxHistory.value).toHaveLength(3)
+    expect((state as any).aiInboxHistory.value.map((item: any) => item.generatedAt)).toEqual([
+      '2026-03-12T04:00:00.000Z',
+      '2026-03-12T03:00:00.000Z',
+      '2026-03-12T02:00:00.000Z',
+    ])
+
+    state.selectSummaryCard('todaySuggestions')
+    ;(state as any).selectAiInboxHistory((state as any).aiInboxHistory.value[1].id)
+    await nextTick()
+
+    expect((state as any).selectedAiInboxHistoryId.value).toBe((state as any).aiInboxHistory.value[1].id)
+    expect(state.selectedSummaryDetail.value).toEqual(expect.objectContaining({
+      key: 'todaySuggestions',
+      kind: 'aiInbox',
+      result: expect.objectContaining({
+        generatedAt: '2026-03-12T03:00:00.000Z',
+        summary: '第 3 次建议',
+      }),
+    }))
+
+    await state.refresh()
+    await nextTick()
+
+    expect((state as any).aiInboxHistory.value).toHaveLength(3)
+    expect((state as any).aiInboxHistory.value[0].generatedAt).toBe('2026-03-12T04:00:00.000Z')
+  })
+
   it('loads orphan AI suggestions on demand and exposes friendly progress state', async () => {
     const aiSuggestionResult = {
       generatedAt: '2026-03-12T08:00:00.000Z',

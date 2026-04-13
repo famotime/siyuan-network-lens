@@ -4,15 +4,32 @@
       <div class="panel-header__content">
         <h2>{{ detail.title }}</h2>
         <p>{{ detail.description }}</p>
-        <button
+        <div
           v-if="detail.kind === 'aiInbox'"
-          class="action-button panel-header__action-button"
-          type="button"
-          :disabled="aiSuggestionLoading || !aiSuggestionEnabled || !aiSuggestionConfigured"
-          @click="generateAiInbox()"
+          class="panel-header__ai-actions"
         >
-          {{ aiSuggestionLoading ? '分析中...' : detail.result ? '重新分析' : '今日建议' }}
-        </button>
+          <button
+            v-for="(entry, index) in aiInboxHistory"
+            :key="entry.id"
+            :class="[
+              'ai-history-button',
+              { 'history-button--active': entry.id === selectedAiInboxHistoryId },
+            ]"
+            type="button"
+            :title="buildAiInboxHistoryTooltip(entry)"
+            @click="selectAiInboxHistory(entry.id)"
+          >
+            {{ index + 1 }}
+          </button>
+          <button
+            class="action-button panel-header__action-button"
+            type="button"
+            :disabled="aiSuggestionLoading || !aiSuggestionEnabled || !aiSuggestionConfigured"
+            @click="generateAiInbox()"
+          >
+            {{ aiSuggestionLoading ? '分析中...' : detail.result ? '重新分析' : '今日建议' }}
+          </button>
+        </div>
       </div>
       <div class="panel-header__actions">
         <span class="meta-text">{{ summaryCountLabel }}</span>
@@ -620,6 +637,7 @@ import type { OrphanAiSuggestionState } from '@/analytics/ai-link-suggestions'
 import type { LinkDirection } from '@/analytics/link-sync'
 import type { DetailSuggestion, SummaryDetailSection as SummaryDetailSectionType } from '@/analytics/summary-details'
 import type { ReadCardMode } from '@/analytics/read-status'
+import type { TodaySuggestionHistoryEntry } from '@/analytics/today-suggestion-history-store'
 import type { ThemeDocument, ThemeDocumentMatch } from '@/analytics/theme-documents'
 import type { PathScope } from '@/composables/use-analytics-derived'
 import {
@@ -655,6 +673,9 @@ const props = withDefaults(defineProps<{
   aiSuggestionLoading: boolean
   aiSuggestionError: string
   generateAiInbox: () => void | Promise<void>
+  aiInboxHistory: TodaySuggestionHistoryEntry[]
+  selectedAiInboxHistoryId: string
+  selectAiInboxHistory: (historyId: string) => void
   orphanDetailItems: DetailItemWithThemeSuggestions[]
   orphanThemeSuggestions: Map<string, ThemeDocumentMatch[]>
   orphanSort: OrphanSort
@@ -785,6 +806,18 @@ function resolveAiInboxActionTargets(item: NonNullable<SummaryDetailSectionType 
   }).filter(target => Boolean(target.documentId?.trim()))
 }
 
+function buildAiInboxHistoryTooltip(entry: TodaySuggestionHistoryEntry) {
+  return [
+    `生成时间：${entry.generatedAt || '未知时间'}`,
+    `时间窗口：${entry.timeRange}`,
+    `建议数：${entry.summaryCount}`,
+    `笔记本：${entry.filters.notebook || '全部'}`,
+    `标签：${entry.filters.tags?.join(' / ') || '全部'}`,
+    `主题：${entry.filters.themeNames?.join(' / ') || '全部'}`,
+    `关键词：${entry.filters.keyword || '无'}`,
+  ].join('\n')
+}
+
 function isAiInboxTargetActive(item: NonNullable<SummaryDetailSectionType & { kind: 'aiInbox' }>['result']['items'][number], target: NonNullable<SummaryDetailSectionType & { kind: 'aiInbox' }>['result']['items'][number]['recommendedTargets'][number]) {
   const intent = resolveAiInboxTargetIntent(item, target)
   return intent.kind === 'toggle-link'
@@ -867,6 +900,14 @@ async function handleAiInboxActionTargetClick(
   gap: 8px;
 }
 
+.panel-header__ai-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+  width: 100%;
+}
+
 .panel-header h2 {
   margin: 0 0 4px;
   font-size: 18px;
@@ -894,6 +935,34 @@ async function handleAiInboxActionTargetClick(
 .panel-header__action-button {
   width: fit-content;
   max-width: 100%;
+  margin-left: auto;
+}
+
+.ai-history-button {
+  width: 28px;
+  height: 28px;
+  padding: 0;
+  border: 1px solid var(--panel-border);
+  border-radius: 999px;
+  background: var(--surface-card);
+  color: var(--panel-muted);
+  cursor: pointer;
+  font: inherit;
+  font-size: 12px;
+  font-weight: 700;
+  transition: background-color 0.2s, color 0.2s, border-color 0.2s;
+}
+
+.ai-history-button:hover {
+  color: var(--b3-theme-primary);
+  border-color: color-mix(in srgb, var(--b3-theme-primary) 24%, var(--panel-border));
+  background: color-mix(in srgb, var(--b3-theme-primary) 8%, var(--surface-card));
+}
+
+.history-button--active {
+  color: var(--b3-theme-primary);
+  border-color: color-mix(in srgb, var(--b3-theme-primary) 24%, var(--panel-border));
+  background: color-mix(in srgb, var(--b3-theme-primary) 12%, var(--surface-card));
 }
 
 .panel-toggle {

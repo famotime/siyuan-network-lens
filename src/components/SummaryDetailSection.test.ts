@@ -74,6 +74,9 @@ const baseProps = {
   wikiPanelProps,
   isCoreDocumentWikiPanelVisible: vi.fn(() => false),
   toggleCoreDocumentWikiPanel: vi.fn(),
+  aiInboxHistory: [],
+  selectedAiInboxHistoryId: '',
+  selectAiInboxHistory: vi.fn(),
 }
 
 describe('SummaryDetailSection', () => {
@@ -334,6 +337,140 @@ describe('SummaryDetailSection', () => {
     expect(html).not.toContain('>证据<')
     expect(html).not.toContain('>处理后变化<')
     expect(html).not.toContain('测试连接')
+  })
+
+  it('renders today suggestion history buttons before the reanalyze action and exposes tooltip metadata', async () => {
+    const app = createSSRApp({
+      render: () => h(SummaryDetailSection, {
+        ...baseProps,
+        detail: {
+          key: 'todaySuggestions',
+          title: '今日建议详情',
+          description: '按优先级提供建议',
+          kind: 'aiInbox',
+          result: {
+            generatedAt: '2026-04-03T08:00:00.000Z',
+            summary: '当前建议',
+            items: [
+              {
+                id: 'task-doc-current',
+                type: 'document',
+                title: '当前建议',
+                priority: 'P1',
+                action: '补到主题-AI-索引',
+                reason: '当前窗口内孤立。',
+              },
+            ],
+          },
+        },
+        aiInboxHistory: [
+          {
+            id: 'history-1',
+            generatedAt: '2026-04-03T07:30:00.000Z',
+            timeRange: '7d',
+            filters: {
+              notebook: 'box-1',
+              tags: ['AI'],
+              themeNames: ['AI'],
+              keyword: '机器学习',
+            },
+            summaryCount: 2,
+            result: {
+              generatedAt: '2026-04-03T07:30:00.000Z',
+              summary: '历史建议 1',
+              items: [
+                {
+                  id: 'task-doc-history-1',
+                  type: 'document',
+                  title: '历史建议 1',
+                  priority: 'P1',
+                  action: '补到主题-AI-索引',
+                  reason: '当前窗口内孤立。',
+                },
+              ],
+            },
+          },
+          {
+            id: 'history-2',
+            generatedAt: '2026-04-03T07:00:00.000Z',
+            timeRange: '30d',
+            filters: {
+              notebook: '',
+              tags: ['AI', 'ML'],
+              themeNames: ['AI', '机器学习'],
+              keyword: '',
+            },
+            summaryCount: 1,
+            result: {
+              generatedAt: '2026-04-03T07:00:00.000Z',
+              summary: '历史建议 2',
+              items: [
+                {
+                  id: 'task-doc-history-2',
+                  type: 'document',
+                  title: '历史建议 2',
+                  priority: 'P2',
+                  action: '补到主题-机器学习-索引',
+                  reason: '当前窗口内孤立。',
+                },
+              ],
+            },
+          },
+          {
+            id: 'history-3',
+            generatedAt: '2026-04-03T06:30:00.000Z',
+            timeRange: 'all',
+            filters: {
+              notebook: 'box-2',
+              tags: [],
+              themeNames: [],
+              keyword: '桥接',
+            },
+            summaryCount: 3,
+            result: {
+              generatedAt: '2026-04-03T06:30:00.000Z',
+              summary: '历史建议 3',
+              items: [
+                {
+                  id: 'task-doc-history-3',
+                  type: 'document',
+                  title: '历史建议 3',
+                  priority: 'P3',
+                  action: '补到桥接文档',
+                  reason: '当前窗口内孤立。',
+                },
+              ],
+            },
+          },
+        ],
+        selectedAiInboxHistoryId: 'history-2',
+      } as any),
+    })
+
+    const html = await renderToString(app)
+    const historyButtonsStart = html.indexOf('ai-history-button')
+    const actionButtonStart = html.indexOf('action-button')
+    const aiActionsStart = html.indexOf('panel-header__ai-actions')
+    const aiActionsEnd = html.indexOf('</div>', aiActionsStart)
+    const aiActionsMarkup = aiActionsStart >= 0 && aiActionsEnd > aiActionsStart
+      ? html.slice(aiActionsStart, aiActionsEnd)
+      : ''
+
+    expect(html).toContain('ai-history-button')
+    expect((html.match(/ai-history-button/g) ?? []).length).toBe(3)
+    expect(html).toContain('panel-header__ai-actions')
+    expect(historyButtonsStart).toBeGreaterThanOrEqual(0)
+    expect(actionButtonStart).toBeGreaterThan(historyButtonsStart)
+    expect(aiActionsMarkup).toContain('ai-history-button')
+    expect(aiActionsMarkup).toContain('action-button')
+    expect(html).toContain('>1<')
+    expect(html).toContain('>2<')
+    expect(html).toContain('>3<')
+    expect(html).toContain('生成时间')
+    expect(html).toContain('时间窗口')
+    expect(html).toContain('建议数')
+    expect(html).toContain('关键词')
+    expect(html).toContain('history-button--active')
   })
 
   it('renders theme action pills from action text when recommended targets are missing', async () => {

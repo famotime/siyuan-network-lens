@@ -78,7 +78,7 @@ export function createAnalyticsAiController(params: {
   async function generateAiInbox() {
     if (!params.report.value || !params.trends.value || !params.snapshot.value) {
       params.aiInboxError.value = '当前分析结果还未准备好，请先刷新分析'
-      return
+      return null
     }
 
     params.aiInboxLoading.value = true
@@ -105,10 +105,12 @@ export function createAnalyticsAiController(params: {
         config: params.config,
         payload,
       })
+      return params.aiInboxResult.value
     } catch (error) {
       const message = error instanceof Error ? error.message : 'AI 收件箱生成失败'
       params.aiInboxError.value = message
       params.notify(message, 5000, 'error')
+      return null
     } finally {
       params.aiInboxLoading.value = false
     }

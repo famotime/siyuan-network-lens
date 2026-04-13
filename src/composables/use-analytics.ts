@@ -78,6 +78,11 @@ import {
   createAiWikiStoreFromPlugin,
   type AiWikiStore,
 } from '@/analytics/wiki-store'
+import {
+  createTodaySuggestionHistoryStoreFromPlugin,
+  type TodaySuggestionHistoryEntry,
+  type TodaySuggestionHistoryStore,
+} from '@/analytics/today-suggestion-history-store'
 import { normalizeTags, resolveDocumentTitle } from '@/analytics/document-utils'
 import type { PluginConfig } from '@/types/config'
 import { createPluginLogger } from '@/utils/plugin-logger'
@@ -151,6 +156,7 @@ type UseAnalyticsParams = {
   createAiLinkSuggestionService?: (deps: { forwardProxy: ForwardProxyFn }) => AiLinkSuggestionService
   aiIndexStore?: AiDocumentIndexStore | null
   aiWikiStore?: AiWikiStore | null
+  todaySuggestionHistoryStore?: TodaySuggestionHistoryStore | null
 }
 
 export function useAnalyticsState(params: UseAnalyticsParams) {
@@ -188,6 +194,7 @@ export function useAnalyticsState(params: UseAnalyticsParams) {
     : null
   const aiIndexStore = params.aiIndexStore ?? createAiDocumentIndexStoreFromPlugin(params.plugin)
   const aiWikiStore = params.aiWikiStore ?? createAiWikiStoreFromPlugin(params.plugin)
+  const todaySuggestionHistoryStore = params.todaySuggestionHistoryStore ?? createTodaySuggestionHistoryStoreFromPlugin(params.plugin)
 
   const loading = ref(false)
   const errorMessage = ref('')
@@ -218,6 +225,8 @@ export function useAnalyticsState(params: UseAnalyticsParams) {
   const aiInboxError = ref('')
   const aiConnectionMessage = ref('')
   const aiInboxResult = ref<AiInboxResult | null>(null)
+  const aiInboxHistory = ref<TodaySuggestionHistoryEntry[]>([])
+  const selectedAiInboxHistoryId = ref('')
   const orphanAiSuggestionStates = ref<Map<string, OrphanAiSuggestionState>>(new Map())
   const wikiPreviewLoading = ref(false)
   const wikiApplyLoading = ref(false)
@@ -424,6 +433,8 @@ export function useAnalyticsState(params: UseAnalyticsParams) {
       return null
     }
 
+    const selectedAiInboxHistory = aiInboxHistory.value.find(item => item.id === selectedAiInboxHistoryId.value) ?? null
+
     return buildSummaryDetailSections({
       documents: snapshot.value.documents,
       references: snapshot.value.references,
@@ -439,7 +450,7 @@ export function useAnalyticsState(params: UseAnalyticsParams) {
       readCardMode: readCardMode.value,
       largeDocumentMetrics: largeDocumentMetrics.value,
       largeDocumentCardMode: largeDocumentCardMode.value,
-      aiInboxResult: aiInboxResult.value,
+      aiInboxResult: selectedAiInboxHistory?.result ?? aiInboxResult.value,
     })
   })
 
@@ -547,7 +558,7 @@ export function useAnalyticsState(params: UseAnalyticsParams) {
     aiIndexStore,
     notify,
   })
-  const { generateAiInbox, generateOrphanAiSuggestion, testAiConnection } = aiController
+  const { generateAiInbox: generateAiInboxInternal, generateOrphanAiSuggestion, testAiConnection } = aiController
 
   watch(pathOptions, (options) => {
     if (options.length === 0) {
@@ -692,11 +703,27 @@ export function useAnalyticsState(params: UseAnalyticsParams) {
     wikiPreview.value = null
   }
 
+  async function loadTodaySuggestionHistory() {
+    if (!todaySuggestionHistoryStore) {
+      aiInboxHistory.value = []
+      selectedAiInboxHistoryId.value = ''
+      return
+    }
+
+    const historySnapshot = await todaySuggestionHistoryStore.loadSnapshot()
+    aiInboxHistory.value = historySnapshot.entries
+
+    if (!historySnapshot.entries.some(entry => entry.id === selectedAiInboxHistoryId.value)) {
+      selectedAiInboxHistoryId.value = ''
+    }
+  }
+
   async function refresh() {
     loading.value = true
     errorMessage.value = ''
     analysisNow.value = nowProvider()
     try {
+      await loadTodaySuggestionHistory()
       snapshot.value = await loadSnapshot()
       largeDocumentMetrics.value = snapshot.value
         ? await loadLargeDocumentMetricsFn(snapshot.value.documents)
@@ -721,6 +748,10 @@ export function useAnalyticsState(params: UseAnalyticsParams) {
 
   function selectSummaryCard(cardKey: SummaryCardKey) {
     selectedSummaryCardKey.value = cardKey
+  }
+
+  function selectAiInboxHistory(historyId: string) {
+    selectedAiInboxHistoryId.value = selectedAiInboxHistoryId.value === historyId ? '' : historyId
   }
 
   function toggleReadCardMode() {
@@ -798,6 +829,38 @@ export function useAnalyticsState(params: UseAnalyticsParams) {
 
   function formatDelta(delta: number) {
     return delta > 0 ? `+${delta}` : delta.toString()
+  }
+
+  async function persistAiInboxHistory(result: AiInboxResult) {
+    if (!todaySuggestionHistoryStore) {
+      return
+    }
+
+    const entry: TodaySuggestionHistoryEntry = {
+      id: `ai-inbox:${result.generatedAt}`,
+      generatedAt: result.generatedAt,
+      timeRange: timeRange.value,
+      filters: {
+        notebook: filters.value.notebook,
+        tags: filters.value.tags ? [...filters.value.tags] : undefined,
+        themeNames: filters.value.themeNames ? [...filters.value.themeNames] : undefined,
+        keyword: filters.value.keyword,
+      },
+      summaryCount: result.items.length,
+      result,
+    }
+
+    const historySnapshot = await todaySuggestionHistoryStore.saveEntry(entry)
+    aiInboxHistory.value = historySnapshot.entries
+    selectedAiInboxHistoryId.value = ''
+  }
+
+  async function generateAiInbox() {
+    const result = await generateAiInboxInternal()
+    if (result) {
+      await persistAiInboxHistory(result)
+    }
+    return result
   }
 
   async function prepareWikiPreview(request?: WikiPreviewRequest) {
@@ -1089,6 +1152,8 @@ export function useAnalyticsState(params: UseAnalyticsParams) {
     aiInboxError,
     aiConnectionMessage,
     aiInboxResult,
+    aiInboxHistory,
+    selectedAiInboxHistoryId,
     orphanAiSuggestionStates,
     wikiPreviewLoading,
     wikiApplyLoading,
@@ -1124,6 +1189,7 @@ export function useAnalyticsState(params: UseAnalyticsParams) {
     selectEvidence,
     selectCommunity,
     selectSummaryCard,
+    selectAiInboxHistory,
     toggleReadCardMode,
     toggleLargeDocumentCardMode,
     reorderSummaryCard,

@@ -178,6 +178,9 @@
         :ai-suggestion-loading="aiInboxLoading"
         :ai-suggestion-error="aiInboxError"
         :generate-ai-inbox="generateAiInbox"
+        :ai-inbox-history="aiInboxHistory"
+        :selected-ai-inbox-history-id="selectedAiInboxHistoryId"
+        :select-ai-inbox-history="selectAiInboxHistory"
         :orphan-detail-items="orphanDetailItems"
         :orphan-theme-suggestions="orphanThemeSuggestions"
         :orphan-sort="orphanSort"
@@ -329,6 +332,8 @@ const {
   aiLinkSuggestionConfigReady,
   aiInboxLoading,
   aiInboxError,
+  aiInboxHistory,
+  selectedAiInboxHistoryId,
   wikiPreviewLoading,
   wikiApplyLoading,
   wikiError,
@@ -341,6 +346,7 @@ const {
   selectEvidence,
   selectCommunity,
   selectSummaryCard,
+  selectAiInboxHistory,
   toggleReadCardMode,
   toggleLargeDocumentCardMode,
   reorderSummaryCard,
