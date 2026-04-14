@@ -613,31 +613,6 @@ export function useAnalyticsState(params: UseAnalyticsParams) {
     }
   }, { immediate: true })
 
-  watch(
-    [
-      selectedSummaryCardKey,
-      () => panelCollapseState.value['summary-detail'],
-      report,
-      trends,
-      snapshot,
-      aiConfigReady,
-      () => params.config.aiEnabled,
-    ],
-    ([cardKey, isDetailExpanded, nextReport, nextTrends, nextSnapshot, nextAiConfigReady, aiEnabled]) => {
-      if (cardKey !== 'todaySuggestions' || !isDetailExpanded) {
-        return
-      }
-      if (!aiEnabled || !nextAiConfigReady || !nextReport || !nextTrends || !nextSnapshot) {
-        return
-      }
-      if (aiInboxLoading.value || aiInboxResult.value) {
-        return
-      }
-      void generateAiInbox()
-    },
-    { immediate: true },
-  )
-
   watch(themeOptions, (options) => {
     const allowedThemes = new Set(options.map(option => option.value))
     selectedThemes.value = selectedThemes.value.filter(themeName => allowedThemes.has(themeName))

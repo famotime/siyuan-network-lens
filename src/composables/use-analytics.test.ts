@@ -906,7 +906,7 @@ describe('useAnalyticsState', () => {
     ])
   })
 
-  it('auto-generates today suggestions when the card detail is opened', async () => {
+  it('does not auto-generate today suggestions when the card detail is opened', async () => {
     const aiResult = {
       generatedAt: '2026-03-12T08:00:00.000Z',
       summary: '今天先处理断裂风险和孤立补链。',
@@ -979,6 +979,15 @@ describe('useAnalyticsState', () => {
     await nextTick()
     await Promise.resolve()
     await nextTick()
+
+    expect(generateInbox).not.toHaveBeenCalled()
+    expect(state.selectedSummaryDetail.value).toEqual(expect.objectContaining({
+      key: 'todaySuggestions',
+      kind: 'aiInbox',
+      result: null,
+    }))
+
+    await state.generateAiInbox()
 
     expect(generateInbox).toHaveBeenCalledTimes(1)
     expect(state.selectedSummaryDetail.value).toEqual(expect.objectContaining({

@@ -238,7 +238,7 @@ describe('SummaryDetailSection', () => {
     expect(html).toContain('AI')
   })
 
-  it('renders today suggestions inside the shared detail panel and uses reanalyze action text', async () => {
+  it('renders today suggestions with a separate toolbar row below the title area', async () => {
     const app = createSSRApp({
       render: () => h(SummaryDetailSection, {
         ...baseProps,
@@ -290,24 +290,28 @@ describe('SummaryDetailSection', () => {
     })
 
     const html = await renderToString(app)
-    const headerContentStart = html.indexOf('panel-header__content')
-    const headerActionsStart = html.indexOf('panel-header__actions')
-    const toggleButtonEnd = html.indexOf('</button>', html.indexOf('panel-toggle', headerActionsStart))
-    const aiHeaderContentMarkup = headerContentStart >= 0 && headerActionsStart > headerContentStart
-      ? html.slice(headerContentStart, headerActionsStart)
+    const headerMainStart = html.indexOf('panel-header__main')
+    const toolbarStart = html.indexOf('panel-header__ai-toolbar')
+    const detailBodyStart = html.indexOf('summary-detail-body')
+    const headerMainMarkup = headerMainStart >= 0 && toolbarStart > headerMainStart
+      ? html.slice(headerMainStart, toolbarStart)
       : ''
-    const headerActionsMarkup = headerActionsStart >= 0 && toggleButtonEnd > headerActionsStart
-      ? html.slice(headerActionsStart, toggleButtonEnd)
+    const toolbarMarkup = toolbarStart >= 0 && detailBodyStart > toolbarStart
+      ? html.slice(toolbarStart, detailBodyStart)
       : ''
 
     expect(html).toContain('2 项建议')
     expect(html).toContain('重新分析')
-    expect(aiHeaderContentMarkup).toContain('按优先级提供建议')
-    expect(aiHeaderContentMarkup).toContain('action-button')
-    expect(aiHeaderContentMarkup).toContain('重新分析')
-    expect(headerActionsMarkup).toContain('2 项建议')
-    expect(headerActionsMarkup).toContain('panel-toggle')
-    expect(headerActionsMarkup).not.toContain('action-button')
+    expect(headerMainMarkup).toContain('按优先级提供建议')
+    expect(headerMainMarkup).toContain('2 项建议')
+    expect(headerMainMarkup).toContain('panel-toggle')
+    expect(headerMainMarkup).not.toContain('action-button')
+    expect(headerMainMarkup).not.toContain('重新分析')
+    expect(headerMainMarkup).not.toContain('历史分析：')
+    expect(toolbarMarkup).toContain('panel-header__ai-toolbar')
+    expect(toolbarMarkup).toContain('action-button')
+    expect(toolbarMarkup).toContain('重新分析')
+    expect(toolbarMarkup).not.toContain('panel-toggle')
     expect(html).toContain('今天先补 AI 主题连接。')
     expect(html).toContain('修复孤立文档：')
     expect(html).toContain('AI 与机器学习整理')
@@ -339,7 +343,7 @@ describe('SummaryDetailSection', () => {
     expect(html).not.toContain('测试连接')
   })
 
-  it('renders today suggestion history buttons before the reanalyze action and exposes tooltip metadata', async () => {
+  it('renders today suggestion history buttons in a dedicated toolbar row before the reanalyze action and exposes tooltip metadata', async () => {
     const app = createSSRApp({
       render: () => h(SummaryDetailSection, {
         ...baseProps,
@@ -449,20 +453,28 @@ describe('SummaryDetailSection', () => {
 
     const html = await renderToString(app)
     const historyButtonsStart = html.indexOf('ai-history-button')
+    const historyLabelStart = html.indexOf('历史分析：')
     const actionButtonStart = html.indexOf('action-button')
-    const aiActionsStart = html.indexOf('panel-header__ai-actions')
-    const aiActionsEnd = html.indexOf('</div>', aiActionsStart)
-    const aiActionsMarkup = aiActionsStart >= 0 && aiActionsEnd > aiActionsStart
-      ? html.slice(aiActionsStart, aiActionsEnd)
+    const toolbarStart = html.indexOf('panel-header__ai-toolbar')
+    const detailBodyStart = html.indexOf('summary-detail-body')
+    const toolbarMarkup = toolbarStart >= 0 && detailBodyStart > toolbarStart
+      ? html.slice(toolbarStart, detailBodyStart)
       : ''
+    const historyButtonMatches = html.match(/<button class="ai-history-button(?: history-button--active)?"/g) ?? []
 
     expect(html).toContain('ai-history-button')
-    expect((html.match(/ai-history-button/g) ?? []).length).toBe(3)
-    expect(html).toContain('panel-header__ai-actions')
+    expect(historyButtonMatches).toHaveLength(3)
+    expect(html).toContain('panel-header__ai-toolbar')
+    expect(html).toContain('历史分析：')
+    expect(toolbarMarkup).toContain('panel-header__ai-history-group')
+    expect(toolbarMarkup).toContain('panel-header__ai-history-buttons')
     expect(historyButtonsStart).toBeGreaterThanOrEqual(0)
+    expect(historyLabelStart).toBeGreaterThanOrEqual(0)
+    expect(historyButtonsStart).toBeGreaterThan(historyLabelStart)
     expect(actionButtonStart).toBeGreaterThan(historyButtonsStart)
-    expect(aiActionsMarkup).toContain('ai-history-button')
-    expect(aiActionsMarkup).toContain('action-button')
+    expect(toolbarMarkup).toContain('ai-history-button')
+    expect(toolbarMarkup).toContain('action-button')
+    expect(toolbarMarkup).not.toContain('panel-toggle')
     expect(html).toContain('>1<')
     expect(html).toContain('>2<')
     expect(html).toContain('>3<')
@@ -471,6 +483,50 @@ describe('SummaryDetailSection', () => {
     expect(html).toContain('建议数')
     expect(html).toContain('关键词')
     expect(html).toContain('history-button--active')
+  })
+
+  it('hides the ai toolbar row when the detail panel is collapsed', async () => {
+    const app = createSSRApp({
+      render: () => h(SummaryDetailSection, {
+        ...baseProps,
+        isExpanded: false,
+        detail: {
+          key: 'todaySuggestions',
+          title: '今日建议详情',
+          description: '按优先级提供建议',
+          kind: 'aiInbox',
+          result: null,
+        },
+        aiInboxHistory: [
+          {
+            id: 'history-1',
+            generatedAt: '2026-04-03T07:30:00.000Z',
+            timeRange: '7d',
+            filters: {
+              notebook: '',
+              tags: [],
+              themeNames: [],
+              keyword: '',
+            },
+            summaryCount: 2,
+            result: {
+              generatedAt: '2026-04-03T07:30:00.000Z',
+              summary: '历史建议 1',
+              items: [],
+            },
+          },
+        ],
+      } as any),
+    })
+
+    const html = await renderToString(app)
+
+    expect(html).toContain('今日建议详情')
+    expect(html).toContain('1 项建议')
+    expect(html).toContain('panel-toggle')
+    expect(html).not.toContain('panel-header__ai-toolbar')
+    expect(html).not.toContain('历史分析：')
+    expect(html).not.toContain('action-button')
   })
 
   it('renders theme action pills from action text when recommended targets are missing', async () => {

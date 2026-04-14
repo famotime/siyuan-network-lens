@@ -1,49 +1,61 @@
 <template>
   <section class="panel">
     <div class="panel-header">
-      <div class="panel-header__content">
-        <h2>{{ detail.title }}</h2>
-        <p>{{ detail.description }}</p>
-        <div
-          v-if="detail.kind === 'aiInbox'"
-          class="panel-header__ai-actions"
-        >
+      <div class="panel-header__main">
+        <div class="panel-header__content">
+          <h2>{{ detail.title }}</h2>
+          <p>{{ detail.description }}</p>
+        </div>
+        <div class="panel-header__actions">
+          <span class="meta-text">{{ summaryCountLabel }}</span>
           <button
-            v-for="(entry, index) in aiInboxHistory"
-            :key="entry.id"
-            :class="[
-              'ai-history-button',
-              { 'history-button--active': entry.id === selectedAiInboxHistoryId },
-            ]"
+            class="panel-toggle"
             type="button"
-            :title="buildAiInboxHistoryTooltip(entry)"
-            @click="selectAiInboxHistory(entry.id)"
+            :aria-expanded="isExpanded"
+            :aria-label="isExpanded ? '折叠详情' : '展开详情'"
+            @click="onTogglePanel()"
           >
-            {{ index + 1 }}
-          </button>
-          <button
-            class="action-button panel-header__action-button"
-            type="button"
-            :disabled="aiSuggestionLoading || !aiSuggestionEnabled || !aiSuggestionConfigured"
-            @click="generateAiInbox()"
-          >
-            {{ aiSuggestionLoading ? '分析中...' : detail.result ? '重新分析' : '今日建议' }}
+            <span
+              class="panel-toggle__caret"
+              aria-hidden="true"
+            />
           </button>
         </div>
       </div>
-      <div class="panel-header__actions">
-        <span class="meta-text">{{ summaryCountLabel }}</span>
+      <div
+        v-if="detail.kind === 'aiInbox' && isExpanded"
+        class="panel-header__ai-toolbar"
+      >
+        <div class="panel-header__ai-history-slot">
+          <div
+            v-if="aiInboxHistory.length"
+            class="panel-header__ai-history-group"
+          >
+            <span class="panel-header__ai-history-label">历史分析：</span>
+            <div class="panel-header__ai-history-buttons">
+              <button
+                v-for="(entry, index) in aiInboxHistory"
+                :key="entry.id"
+                :class="[
+                  'ai-history-button',
+                  { 'history-button--active': entry.id === selectedAiInboxHistoryId },
+                ]"
+                type="button"
+                :title="buildAiInboxHistoryTooltip(entry)"
+                @click="selectAiInboxHistory(entry.id)"
+              >
+                {{ index + 1 }}
+              </button>
+            </div>
+          </div>
+        </div>
         <button
-          class="panel-toggle"
+          class="action-button panel-header__action-button"
           type="button"
-          :aria-expanded="isExpanded"
-          :aria-label="isExpanded ? '折叠详情' : '展开详情'"
-          @click="onTogglePanel()"
+          :disabled="aiSuggestionLoading || !aiSuggestionEnabled || !aiSuggestionConfigured"
+          @click="generateAiInbox()"
         >
-          <span
-            class="panel-toggle__caret"
-            aria-hidden="true"
-          />
+          {{ aiSuggestionLoading ? '分析中...' : detail.result ? '重新分析' : '今日建议' }}
         </button>
       </div>
     </div>
@@ -886,11 +898,16 @@ async function handleAiInboxActionTargetClick(
 }
 
 .panel-header {
+  display: grid;
+  gap: 16px;
+  margin-bottom: 20px;
+}
+
+.panel-header__main {
   display: flex;
-  justify-content: space-between;
   gap: 16px;
   align-items: flex-start;
-  margin-bottom: 20px;
+  justify-content: space-between;
 }
 
 .panel-header__content {
@@ -900,12 +917,40 @@ async function handleAiInboxActionTargetClick(
   gap: 8px;
 }
 
-.panel-header__ai-actions {
+.panel-header__ai-toolbar {
   display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  width: 100%;
+}
+
+.panel-header__ai-history-slot {
+  flex: 1;
+  min-width: 0;
+}
+
+.panel-header__ai-history-group {
+  display: flex;
+  align-items: center;
+  justify-content: flex-start;
+  gap: 8px;
+  max-width: 100%;
+  width: 100%;
+}
+
+.panel-header__ai-history-label {
+  color: var(--panel-muted);
+  font-size: 12px;
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+.panel-header__ai-history-buttons {
+  display: inline-flex;
   align-items: center;
   gap: 8px;
   flex-wrap: wrap;
-  width: 100%;
 }
 
 .panel-header h2 {
@@ -929,22 +974,24 @@ async function handleAiInboxActionTargetClick(
 .panel-header__actions {
   display: inline-flex;
   align-items: center;
+  justify-content: flex-end;
   gap: 12px;
+  flex-shrink: 0;
 }
 
 .panel-header__action-button {
   width: fit-content;
   max-width: 100%;
-  margin-left: auto;
+  flex-shrink: 0;
 }
 
 .ai-history-button {
   width: 28px;
   height: 28px;
   padding: 0;
-  border: 1px solid var(--panel-border);
+  border: 1px solid color-mix(in srgb, var(--b3-theme-primary) 12%, var(--panel-border));
   border-radius: 999px;
-  background: var(--surface-card);
+  background: color-mix(in srgb, var(--b3-theme-primary) 8%, var(--surface-card));
   color: var(--panel-muted);
   cursor: pointer;
   font: inherit;
@@ -955,14 +1002,14 @@ async function handleAiInboxActionTargetClick(
 
 .ai-history-button:hover {
   color: var(--b3-theme-primary);
-  border-color: color-mix(in srgb, var(--b3-theme-primary) 24%, var(--panel-border));
-  background: color-mix(in srgb, var(--b3-theme-primary) 8%, var(--surface-card));
+  border-color: color-mix(in srgb, var(--b3-theme-primary) 28%, var(--panel-border));
+  background: color-mix(in srgb, var(--b3-theme-primary) 12%, var(--surface-card));
 }
 
 .history-button--active {
   color: var(--b3-theme-primary);
-  border-color: color-mix(in srgb, var(--b3-theme-primary) 24%, var(--panel-border));
-  background: color-mix(in srgb, var(--b3-theme-primary) 12%, var(--surface-card));
+  border-color: color-mix(in srgb, var(--b3-theme-primary) 32%, var(--panel-border));
+  background: color-mix(in srgb, var(--b3-theme-primary) 16%, var(--surface-card));
 }
 
 .panel-toggle {
@@ -1567,12 +1614,21 @@ select {
 }
 
 @media (max-width: 720px) {
-  .panel-header {
+  .panel-header__main,
+  .panel-header__ai-toolbar {
     flex-direction: column;
   }
 
   .panel-header__actions {
-    flex-wrap: wrap;
+    width: 100%;
+    justify-content: flex-start;
+  }
+
+  .panel-header__ai-toolbar {
+    align-items: stretch;
+  }
+
+  .panel-header__ai-history-group {
     justify-content: flex-start;
   }
 
