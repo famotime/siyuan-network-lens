@@ -1,71 +1,28 @@
-# 一个想法：我们不需要更酷炫的关系图，我们需要一个能给出建议的仪表盘
+# Network Lens
 
-## 楔子
+Network Lens is a SiYuan plugin for document-level reference analytics.
 
-作为一个“松鼠症”患者，我在思源笔记里已经贮藏超过1万篇笔记，少部分是输出内容，大部分是从微信公众号、头条号、网站剪藏的内容。
+It focuses on structure, evidence, and cleanup actions, not large graph rendering.
 
-自从学习了著名的卡片笔记法，我就寄希望于能从笔记网络中产生链接和洞见，促进学习和输出。但在这样的体量下，思源笔记（或其他以双链为卖点的笔记软件）现有的链接管理功能对我实际帮助不大，点开“关系图”除了看到一大堆笔记节点喷薄而出的视觉愉悦感，我根本做不了什么，既无法从中产生洞见，也无从下手进一步维护笔记链接。
+## Key Features
 
-![image](https://raw.githubusercontent.com/famotime/siyuan-network-lens/main/assets/image-20260321125717-vlt9cbc.quickedit-convert-webp-1774075159634-20260321143919-1wi75gk.webp)
+- Link heat ranking
+- Theme community detection
+- Orphan, dormant, bridge detection
+- Trend analysis
+- Propagation paths
+- High-impact relay nodes
+- Raw reference evidence
+- Actionable suggestions
+- Linked summary-card details
+- Read / unread detection
+- Theme-doc repair suggestions
+- AI Inbox and LLM Wiki maintenance
 
-主要问题是笔记规模扩大后图谱变得十分混乱，图谱节点重叠、布局每次加载变化，导致难以分析和导航。关系图仅显示连接存在，却不揭示具体关系类型（如因果或包含），信息密度低，无法提供层级笔记那样的清晰结构。
+## Usage
 
-## 我们真正需要的是什么？
+Feature notes, usage tips, and discussion are in the SiYuan community thread:
 
-所以，我们真正需要的是什么？是在现有关系图上叠加“关系类型”，还是提供一个视觉上更友好更酷炫的关系图？
+[We don't need a cooler graph. We need a dashboard with actions.](https://ld246.com/article/1774075839744)
 
-给链接加“关系类型”，例如把链接标成 supporting、opposing、extends 之类，这样软件就能按关系分组 backlinks，也能让图谱按关系类型标注或筛选。但这会让链接体系迅速膨胀，很多非正式、非学术笔记难以稳定分类，最后可能仅仅是增加维护负担和用户压力，还是用不起来。
 
-同样，现有关系图的问题不在于图不够炫，而在于它没有回答“我现在该做什么”。 现有图谱最常见的实际用途，本来就不是洞见生成，而是找孤儿笔记、做局部过滤、看哪些节点更大或更重要，这天然更像诊断面板，而不是主工作台。
-
-于是，我有一个想法：也许我们不需要一个更复杂强大的关系图，也不需要一个更酷炫的关系图，我们需要一个能给出建议的仪表盘。
-
-为此，我尝试构建了一个插件——“脉络镜”（暂定名）——希望让隐没的知识，重现脉络。
-
-![image](https://raw.githubusercontent.com/famotime/siyuan-network-lens/main/assets/image-20260321143603-yyqht4u.quickedit-convert-webp-1774075160113-20260321143920-ed2ln0p.webp)
-
-![image](https://raw.githubusercontent.com/famotime/siyuan-network-lens/main/assets/image-20260321143824-1lckav4.quickedit-convert-webp-1774075160589-20260321143920-v297w9q.webp)
-
-‍
-## 如何使用？
-
-当前功能介绍、使用方法，以及基于试用的意见和建议，可以在思源社区的这个帖子中讨论：[一个想法：我们不需要更酷炫的关系图，我们需要一个能给出建议的仪表盘](https://ld246.com/article/1774075839744)
-
-## 当前实现概览
-
-当前插件聚焦“文档级引用网络”的结构分析与整理辅助，不做大型图谱渲染。主要能力包括：
-
-- 文档级引用热度排行
-- 主题社区发现
-- 孤立文档、沉没文档、桥接节点识别
-- 时间趋势分析
-- 传播路径与高传播价值节点识别
-- 原始引用证据查看
-- 可操作建议与顶部统计卡片详情联动
-- 已读/未读文档识别
-- 主题文档修复建议
-- AI Inbox 今日建议与 LLM Wiki 维护
-
-## 开发
-
-技术栈：
-
-- Vue 3
-- TypeScript
-- Vite
-- Vitest
-- 思源插件 API / SQL
-
-常用命令：
-
-```bash
-npm install --legacy-peer-deps
-npm test
-npm run build
-```
-
-说明：
-
-- `npm run build` 会更新根目录 `package.zip`，这是当前仓库的正常产物。
-- 当前主实现位于 `src/`，`plugin-sample-vite-vue/` 仅为样板目录。
-- 近期重构后，分析层、主 composable、设置页 AI 配置和 wiki 面板控制已拆分为更小的模块，便于继续维护和补测试。

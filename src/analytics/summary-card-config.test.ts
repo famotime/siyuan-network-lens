@@ -30,24 +30,24 @@ describe('summary card config', () => {
       key: 'read',
       visibilityConfigKey: 'showRead',
       defaultVisible: true,
-      settingLabel: '已读/未读文档卡片',
+      settingLabel: 'Read / unread card',
     }))
     expect(getSummaryCardDefinition('todaySuggestions')).toEqual(expect.objectContaining({
       key: 'todaySuggestions',
       visibilityConfigKey: 'showTodaySuggestions',
       defaultVisible: true,
-      settingLabel: '今日建议卡片',
+      settingLabel: 'Today suggestions card',
     }))
     expect(getSummaryCardDefinition('bridges')).toEqual(expect.objectContaining({
       key: 'bridges',
       visibilityConfigKey: 'showBridges',
       defaultVisible: false,
-      settingLabel: '桥接节点卡片',
+      settingLabel: 'Bridge docs card',
     }))
     expect(getSummaryCardDefinition('largeDocuments')).toEqual(expect.objectContaining({
       key: 'largeDocuments',
       visibilityConfigKey: 'showLargeDocuments',
-      settingLabel: '大文档卡片',
+      settingLabel: 'Large docs card',
     }))
   })
 

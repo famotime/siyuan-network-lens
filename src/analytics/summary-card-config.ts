@@ -1,4 +1,5 @@
 import type { SummaryCardKey } from './summary-details'
+import { pickUiText } from '@/i18n/ui'
 
 export type SummaryCardVisibilityConfigKey =
   | 'showDocuments'
@@ -26,93 +27,95 @@ export interface SummaryCardDefinition {
   legacyVisibilityConfigKey?: LegacySummaryCardVisibilityConfigKey
 }
 
+const uiText = (en_US: string, zh_CN: string) => pickUiText({ en_US, zh_CN })
+
 export const SUMMARY_CARD_DEFINITIONS: SummaryCardDefinition[] = [
   {
     key: 'read',
     visibilityConfigKey: 'showRead',
     defaultVisible: true,
-    settingLabel: '已读/未读文档卡片',
-    settingDescription: '展示已读状态统计，并支持在已读与未读之间切换',
+    settingLabel: uiText('Read / unread card', '已读 / 未读卡片'),
+    settingDescription: uiText('Show read status counts and switch between read and unread views', '显示已读状态统计，并支持在已读和未读视图间切换'),
   },
   {
     key: 'todaySuggestions',
     visibilityConfigKey: 'showTodaySuggestions',
     defaultVisible: true,
-    settingLabel: '今日建议卡片',
-    settingDescription: '展示 AI 汇总的今日整理建议数，并联动下方详情',
+    settingLabel: uiText('Today suggestions card', '今日建议卡片'),
+    settingDescription: uiText('Show AI-ranked cleanup suggestions and open the linked detail panel', '显示 AI 排序后的整理建议，并打开联动详情面板'),
     showInSettings: false,
   },
   {
     key: 'orphans',
     visibilityConfigKey: 'showOrphans',
     defaultVisible: true,
-    settingLabel: '孤立文档卡片',
-    settingDescription: '展示当前窗口内没有有效文档级连接的文档数',
+    settingLabel: uiText('Orphan docs card', '孤立文档卡片'),
+    settingDescription: uiText('Show docs without valid doc-level links in the current window', '显示当前窗口内没有有效文档级连接的文档'),
     legacyVisibilityConfigKey: 'showOrphanBridge',
   },
   {
     key: 'ranking',
     visibilityConfigKey: 'showRanking',
     defaultVisible: true,
-    settingLabel: '核心文档卡片',
-    settingDescription: '展示核心文档数量并联动详情',
+    settingLabel: uiText('Core docs card', '核心文档卡片'),
+    settingDescription: uiText('Show core doc counts and open linked details', '显示核心文档数量并打开联动详情'),
   },
   {
     key: 'documents',
     visibilityConfigKey: 'showDocuments',
     defaultVisible: false,
-    settingLabel: '文档样本卡片',
-    settingDescription: '展示当前筛选命中的文档数量',
+    settingLabel: uiText('Doc sample card', '文档样本卡片'),
+    settingDescription: uiText('Show the number of docs matched by the current filters', '显示当前筛选命中的文档数量'),
   },
   {
     key: 'largeDocuments',
     visibilityConfigKey: 'showLargeDocuments',
     defaultVisible: true,
-    settingLabel: '大文档卡片',
-    settingDescription: '展示按文字或资源阈值切换的大文档统计入口',
+    settingLabel: uiText('Large docs card', '大文档卡片'),
+    settingDescription: uiText('Show large docs by text or asset thresholds', '按文本或资源体积阈值显示大文档'),
   },
   {
     key: 'trends',
     visibilityConfigKey: 'showTrends',
     defaultVisible: false,
-    settingLabel: '趋势观察卡片',
-    settingDescription: '展示趋势变化并联动详情',
+    settingLabel: uiText('Trend watch card', '趋势观察卡片'),
+    settingDescription: uiText('Show trend changes and open linked details', '显示趋势变化并打开联动详情'),
   },
   {
     key: 'references',
     visibilityConfigKey: 'showReferences',
     defaultVisible: false,
-    settingLabel: '活跃关系卡片',
-    settingDescription: '展示当前窗口内的文档级引用次数',
+    settingLabel: uiText('Active links card', '活跃连接卡片'),
+    settingDescription: uiText('Show doc-level reference counts in the current window', '显示当前窗口内的文档级引用数量'),
   },
   {
     key: 'communities',
     visibilityConfigKey: 'showCommunities',
     defaultVisible: false,
-    settingLabel: '主题社区卡片',
-    settingDescription: '展示社区规模并联动详情',
+    settingLabel: uiText('Topic clusters card', '主题社区卡片'),
+    settingDescription: uiText('Show cluster scale and open linked details', '显示社区规模并打开联动详情'),
   },
   {
     key: 'propagation',
     visibilityConfigKey: 'showPropagation',
     defaultVisible: false,
-    settingLabel: '传播节点卡片',
-    settingDescription: '展示高传播价值节点汇总',
+    settingLabel: uiText('Propagation nodes card', '传播节点卡片'),
+    settingDescription: uiText('Show high-propagation-value node summaries', '显示高传播价值节点摘要'),
   },
   {
     key: 'bridges',
     visibilityConfigKey: 'showBridges',
     defaultVisible: false,
-    settingLabel: '桥接节点卡片',
-    settingDescription: '展示断开后会削弱社区连接的桥接文档数',
+    settingLabel: uiText('Bridge docs card', '桥接文档卡片'),
+    settingDescription: uiText('Show bridge docs whose removal weakens cluster connectivity', '显示移除后会削弱社区连通性的桥接文档'),
     legacyVisibilityConfigKey: 'showOrphanBridge',
   },
   {
     key: 'dormant',
     visibilityConfigKey: 'showDormant',
     defaultVisible: false,
-    settingLabel: '沉没文档卡片',
-    settingDescription: '展示超过阈值未产生有效连接的文档数',
+    settingLabel: uiText('Dormant docs card', '沉没文档卡片'),
+    settingDescription: uiText('Show docs past the inactivity threshold without valid links', '显示超过不活跃阈值且没有有效连接的文档'),
     legacyVisibilityConfigKey: 'showOrphanBridge',
   },
 ]

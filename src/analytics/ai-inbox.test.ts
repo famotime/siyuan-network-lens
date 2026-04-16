@@ -1,4 +1,4 @@
-import { describe, expect, it, vi } from 'vitest'
+import { afterEach, describe, expect, it, vi } from 'vitest'
 
 import { createAiInboxService, fetchSiliconFlowModelCatalog, limitChatCompletionMessages, resolveAiRequestOptions, resolveAiEndpoint } from './ai-inbox'
 
@@ -148,6 +148,10 @@ const trends = {
 } as any
 
 describe('ai inbox payload', () => {
+  afterEach(() => {
+    delete (globalThis as any).siyuan
+  })
+
   it('builds concrete action candidates with targets, score breakdown and expected benefits', () => {
     const service = createAiInboxService({
       forwardProxy: async () => {
@@ -192,7 +196,7 @@ describe('ai inbox payload', () => {
     expect(payload.actionCandidates).toEqual(expect.arrayContaining([
       expect.objectContaining({
         type: 'repair-link',
-        title: '修复孤立文档：AI 与机器学习整理',
+        title: 'Repair orphan doc: AI 与机器学习整理',
         focusDocumentIds: ['doc-1'],
         recommendedTargets: expect.arrayContaining([
           expect.objectContaining({
@@ -202,7 +206,7 @@ describe('ai inbox payload', () => {
           }),
         ]),
         expectedBenefits: expect.arrayContaining([
-          expect.stringContaining('移出孤立文档'),
+          expect.stringContaining('leave the orphan doc list'),
         ]),
         priorityScore: expect.any(Number),
         impactScore: expect.any(Number),
@@ -340,6 +344,10 @@ describe('ai inbox payload', () => {
 })
 
 describe('ai inbox request options', () => {
+  afterEach(() => {
+    delete (globalThis as any).siyuan
+  })
+
   it('sanitizes request options from config', () => {
     expect(resolveAiRequestOptions({
       aiRequestTimeoutSeconds: -1,
@@ -395,12 +403,14 @@ describe('ai inbox request options', () => {
       expect(body.messages).toHaveLength(2)
       expect(body.messages[0]).toEqual(expect.objectContaining({
         role: 'system',
-        content: expect.stringMatching(/文档库.*知识体系.*推荐动作.*推荐理由/),
+        content: expect.stringMatching(/knowledge-organization assistant.*recommended action text.*why-this-first text/),
       }))
       expect(body.messages[1]).toEqual(expect.objectContaining({
         role: 'user',
-        content: expect.stringMatching(/推荐动作.*建议.*合并.*为什么先做.*预估收益.*推荐理由/),
       }))
+      expect(body.messages[1].content).toContain('produce one unified task list for what should be handled first today')
+      expect(body.messages[1].content).toContain('merge recommended actions and suggestions into action')
+      expect(body.messages[1].content).toContain('merge why-this-first plus expected gains into reason')
 
       return {
         body: JSON.stringify({
@@ -682,7 +692,7 @@ describe('ai inbox request options', () => {
         aiApiKey: 'sk-test',
         aiModel: 'deepseek-ai/DeepSeek-V3',
       } as any,
-    })).rejects.toThrow(/Base URL 很可能应包含 \/v1/)
+    })).rejects.toThrow(/Base URL likely needs \/v1/)
   })
 
   it('logs status code and full response result for non-2xx responses', async () => {
@@ -714,11 +724,11 @@ describe('ai inbox request options', () => {
 
     expect(logger.warn).toHaveBeenCalledWith(
       '[NetworkLens][AI] Non-2xx response detail',
-      expect.stringContaining('状态码：400'),
+      expect.stringContaining('Status: 400'),
     )
     expect(logger.warn).toHaveBeenCalledWith(
       '[NetworkLens][AI] Non-2xx response detail',
-      expect.stringContaining('完整响应：{"error":{"message":"max_tokens too large","type":"invalid_request_error"}}'),
+      expect.stringContaining('Full response: {"error":{"message":"max_tokens too large","type":"invalid_request_error"}}'),
     )
   })
 
@@ -775,11 +785,11 @@ describe('ai inbox request options', () => {
 
     expect(logger.info).toHaveBeenCalledWith(
       '[NetworkLens][AI] Request start detail',
-      expect.stringContaining('请求方法：POST'),
+      expect.stringContaining('Request method: POST'),
     )
     expect(logger.info).toHaveBeenCalledWith(
       '[NetworkLens][AI] Request start detail',
-      expect.stringContaining('请求地址：https://api.siliconflow.cn/v1/chat/completions'),
+      expect.stringContaining('Request URL: https://api.siliconflow.cn/v1/chat/completions'),
     )
     expect(logger.info).toHaveBeenCalledWith(
       '[NetworkLens][AI] Request start detail',
@@ -819,7 +829,7 @@ describe('ai inbox request options', () => {
         aiTemperature: 0.7,
         aiMaxContextMessages: 7,
       } as any,
-    })).rejects.toThrow(/AI 请求超时/)
+    })).rejects.toThrow(/AI request timed out/)
 
     expect(logger.info).toHaveBeenCalledWith(
       '[NetworkLens][AI] Request start',
@@ -837,6 +847,44 @@ describe('ai inbox request options', () => {
         model: 'deepseek-ai/DeepSeek-V3',
         errorMessage: 'forward request failed: Post "https://api.siliconflow.cn/chat/completions": context deadline exceeded v3.6.1',
       }),
+    )
+  })
+
+  it('switches request errors and request-detail logs to Chinese when the workspace locale is zh_CN', async () => {
+    ;(globalThis as any).siyuan = {
+      config: {
+        lang: 'zh_CN',
+      },
+    }
+
+    const logger = {
+      info: vi.fn(),
+      warn: vi.fn(),
+      error: vi.fn(),
+    }
+    const service = createAiInboxService({
+      forwardProxy: async () => {
+        throw new Error('forward request failed: Post "https://api.siliconflow.cn/chat/completions": context deadline exceeded v3.6.1')
+      },
+      logger,
+    } as any)
+
+    await expect(service.testConnection({
+      config: {
+        aiEnabled: true,
+        aiBaseUrl: 'https://api.siliconflow.cn',
+        aiApiKey: 'sk-test',
+        aiModel: 'deepseek-ai/DeepSeek-V3',
+        aiRequestTimeoutSeconds: 30,
+        aiMaxTokens: 10240,
+        aiTemperature: 0.7,
+        aiMaxContextMessages: 7,
+      } as any,
+    })).rejects.toThrow(/AI 请求超时/)
+
+    expect(logger.info).toHaveBeenCalledWith(
+      '[NetworkLens][AI] Request start detail',
+      expect.stringContaining('Request method: POST'),
     )
   })
 })

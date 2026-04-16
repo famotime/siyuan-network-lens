@@ -4,16 +4,16 @@
       <div class="hero__intro">
         <div class="hero__copy-block">
           <p class="eyebrow">Network lens</p>
-          <h1>脉络镜</h1>
+          <h1>{{ pluginTitle }}</h1>
           <p class="hero-copy">
-            让隐没的知识，重现脉络
+            {{ pluginTagline }}
           </p>
         </div>
         <div class="hero__icon-shell">
           <img
             class="hero__icon"
             :src="pluginIconUrl"
-            alt="脉络镜插件图标"
+            :alt="pluginIconAlt"
           >
         </div>
       </div>
@@ -24,7 +24,7 @@
           :disabled="loading"
           @click="refresh"
         >
-          {{ loading ? '分析中...' : '刷新分析' }}
+          {{ loading ? uiText('Analyzing...', '分析中...') : uiText('Refresh analysis', '刷新分析') }}
         </button>
         <button
           class="ghost-button hero__reset-button"
@@ -32,7 +32,7 @@
           :disabled="loading || !visibleSummaryCards.length"
           @click="resetSummaryCardOrder"
         >
-          重置排序
+          {{ uiText('Reset order', '重置顺序') }}
         </button>
       </div>
     </div>
@@ -40,45 +40,45 @@
     <div class="filter-panel">
       <div class="filter-panel__row filter-panel__row--meta">
         <label class="filter-item">
-          <span>时间窗口</span>
+          <span>{{ uiText('Time window', '时间窗口') }}</span>
           <FilterSelect
             v-model="timeRange"
             :options="timeRangeFilterOptions"
           />
         </label>
         <label class="filter-item">
-          <span>笔记本</span>
+          <span>{{ uiText('Notebook', '笔记本') }}</span>
           <FilterSelect
             v-model="selectedNotebook"
             :options="notebookFilterOptions"
-            empty-label="暂无笔记本"
+            :empty-label="uiText('No notebooks', '无笔记本')"
           />
         </label>
         <label class="filter-item">
-          <span>标签</span>
+          <span>{{ uiText('Tags', '标签') }}</span>
           <ThemeMultiSelect
             v-model="selectedTags"
             :options="tagFilterOptions"
-            all-label="全部标签"
-            empty-label="暂无标签"
-            selection-unit="个标签"
+            :all-label="uiText('All tags', '全部标签')"
+            :empty-label="uiText('No tags', '无标签')"
+            :selection-unit="uiText('tags', '个标签')"
           />
         </label>
       </div>
 
       <div class="filter-panel__row filter-panel__row--focus">
         <label class="filter-item filter-item--theme">
-          <span>主题</span>
+          <span>{{ uiText('Topics', '主题') }}</span>
           <ThemeMultiSelect
             v-model="selectedThemes"
             :options="themeOptions"
           />
         </label>
         <label class="filter-item filter-item--keyword">
-          <span>关键词</span>
+          <span>{{ uiText('Keyword', '关键词') }}</span>
           <input
             v-model.trim="keyword"
-            placeholder="按标题、路径、标签筛选"
+            :placeholder="uiText('Filter by title, path, or tags', '按标题、路径或标签筛选')"
             type="search"
           >
         </label>
@@ -101,13 +101,13 @@
       <div class="loading-panel__header">
         <div class="loading-panel__copy">
           <p class="loading-panel__eyebrow">
-            Context loading
+            {{ uiText('Context loading', '上下文加载中') }}
           </p>
           <h2 class="loading-panel__title">
-            正在整理主题、标签与引用概览
+            {{ uiText('Preparing topic, tag, and reference overview', '正在准备主题、标签与引用概览') }}
           </h2>
           <p class="loading-panel__description">
-            首次打开时会先读取 blocks、refs 以及可用的主题和标签信息。
+            {{ uiText('On first open, the plugin reads blocks, refs, and available topics and tags.', '首次打开时，插件会读取 blocks、refs，以及可用主题和标签。') }}
           </p>
         </div>
         <div
@@ -237,7 +237,7 @@
           type="button"
           @click="toggleDocumentWikiPanel"
         >
-          {{ wikiPanelPlacement === 'documents' ? '收起 LLM Wiki' : '维护 LLM Wiki' }}
+          {{ wikiPanelPlacement === 'documents' ? uiText('Hide LLM Wiki', '收起 LLM Wiki') : uiText('Maintain LLM Wiki', '维护 LLM Wiki') }}
         </button>
         <WikiMaintainPanel
           v-if="wikiPanelPlacement === 'documents'"
@@ -262,6 +262,7 @@ import { useAnalyticsState } from '@/composables/use-analytics'
 import { createAppWikiPanelController } from '@/composables/use-app-wiki-panel'
 import { appendBlock, createDocWithMd, deleteBlock, forwardProxy, getBlockAttrs, getBlockKramdown, getChildBlocks, getIDsByHPath, prependBlock, setBlockAttrs, updateBlock } from '@/api'
 import { isAlphaSettingVisible, isAlphaSummaryCardVisible } from '@/plugin/alpha-feature-config'
+import { pickUiText } from '@/i18n/ui'
 import { ensureConfigDefaults, type PluginConfig } from '@/types/config'
 import pluginIconUrl from '../icon.png'
 
@@ -271,6 +272,11 @@ const props = defineProps<{
 }>()
 
 ensureConfigDefaults(props.config)
+
+const uiText = (en_US: string, zh_CN: string) => pickUiText({ en_US, zh_CN })
+const pluginTitle = computed(() => props.plugin.i18n?.pluginTitle ?? props.plugin.displayName ?? uiText('Network Lens', '脉络镜'))
+const pluginTagline = computed(() => props.plugin.i18n?.pluginTagline ?? uiText('Reveal structure in hidden knowledge.', '让隐没的知识，重现脉络'))
+const pluginIconAlt = computed(() => props.plugin.i18n?.pluginIconAlt ?? uiText('Network Lens plugin icon', '脉络镜插件图标'))
 
 const analytics = useAnalyticsState({
   plugin: props.plugin,
@@ -414,7 +420,7 @@ const timeRangeFilterOptions = computed(() => timeRangeOptions.value.map(option 
 })))
 
 const notebookFilterOptions = computed(() => [
-  { value: '', label: '全部笔记本' },
+  { value: '', label: uiText('All notebooks', '所有笔记本') },
   ...notebookOptions.value.map(notebook => ({
     value: notebook.id,
     label: notebook.name,

@@ -168,13 +168,13 @@ describe('setting panel ai transfer', () => {
   })
 
   it('rejects invalid ai settings payloads', () => {
-    expect(() => parseAiSettingsTransferPayload('{"kind":"other"}')).toThrow('AI 服务设置文件格式无效')
+    expect(() => parseAiSettingsTransferPayload('{"kind":"other"}')).toThrow('Invalid AI settings file format')
     expect(() => parseAiSettingsTransferPayload(JSON.stringify({
       aiEnabled: true,
       aiBaseUrl: 'https://api.openai.com/v1',
       aiApiKey: 'sk-openai',
       aiModel: 'gpt-5',
-    }))).toThrow('AI 服务设置文件格式无效')
-    expect(() => parseAiSettingsTransferPayload('not-json')).toThrow('AI 服务设置文件不是有效的 JSON')
+    }))).toThrow('Invalid AI settings file format')
+    expect(() => parseAiSettingsTransferPayload('not-json')).toThrow('AI settings file is not valid JSON')
   })
 })

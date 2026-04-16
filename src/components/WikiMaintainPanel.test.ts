@@ -1,8 +1,13 @@
-import { describe, expect, it } from 'vitest'
+import { afterEach, describe, expect, it, vi } from 'vitest'
 import { createSSRApp, h } from 'vue'
 import { renderToString } from '@vue/server-renderer'
 
 import WikiMaintainPanel from './WikiMaintainPanel.vue'
+
+afterEach(() => {
+  delete (globalThis as typeof globalThis & { siyuan?: unknown }).siyuan
+  vi.resetModules()
+})
 
 describe('WikiMaintainPanel', () => {
   it('renders scope summary, preview rows and apply shortcuts', async () => {
@@ -108,21 +113,21 @@ describe('WikiMaintainPanel', () => {
 
     const html = await renderToString(app)
 
-    expect(html).toContain('LLM Wiki 维护')
-    expect(html).toContain('生成预览')
-    expect(html).toContain('确认写入')
-    expect(html).toContain('命中源文档数')
+    expect(html).toContain('LLM Wiki maintenance')
+    expect(html).toContain('Generate preview')
+    expect(html).toContain('Apply changes')
+    expect(html).toContain('Matched source docs')
     expect(html).toContain('主题-AI-索引-llm-wiki')
-    expect(html).toContain('状态：更新')
-    expect(html).toContain('状态：冲突')
+    expect(html).toContain('Status: Update')
+    expect(html).toContain('Status: Conflict')
     expect(html).toContain('overview')
     expect(html).toContain('actions')
-    expect(html).toContain('人工备注区：已存在')
-    expect(html).toContain('人工备注区：首次写入时创建')
+    expect(html).toContain('Manual notes: Existing')
+    expect(html).toContain('Manual notes: Created on first write')
     expect(html).toContain('零散记录')
-    expect(html).toContain('打开索引页')
-    expect(html).toContain('打开日志页')
-    expect(html).toContain('打开最近更新页')
+    expect(html).toContain('Open index page')
+    expect(html).toContain('Open log page')
+    expect(html).toContain('Open latest updated page')
   })
 
   it('renders disabled states for missing configuration', async () => {
@@ -133,7 +138,7 @@ describe('WikiMaintainPanel', () => {
         aiConfigReady: false,
         previewLoading: false,
         applyLoading: false,
-        error: '请先启用 LLM Wiki',
+        error: 'Enable LLM Wiki first',
         preview: {
           generatedAt: '2026-04-10T08:00:00.000Z',
           scope: {
@@ -157,6 +162,60 @@ describe('WikiMaintainPanel', () => {
 
     const html = await renderToString(app)
 
-    expect(html).toContain('请先启用 LLM Wiki')
+    expect(html).toContain('Enable LLM Wiki first')
+  })
+
+  it('renders Chinese labels when the workspace locale is zh_CN', async () => {
+    ;(globalThis as typeof globalThis & {
+      siyuan?: {
+        config?: {
+          lang?: string
+        }
+      }
+    }).siyuan = {
+      config: {
+        lang: 'zh_CN',
+      },
+    }
+
+    vi.resetModules()
+
+    const { default: ZhWikiMaintainPanel } = await import('./WikiMaintainPanel.vue')
+    const app = createSSRApp({
+      render: () => h(ZhWikiMaintainPanel, {
+        wikiEnabled: true,
+        aiEnabled: true,
+        aiConfigReady: true,
+        previewLoading: false,
+        applyLoading: false,
+        error: '',
+        preview: {
+          generatedAt: '2026-04-10T08:00:00.000Z',
+          scope: {
+            summary: {
+              themeDocumentCount: 1,
+              sourceDocumentCount: 2,
+              themeGroupCount: 1,
+              excludedWikiDocumentCount: 0,
+              unclassifiedDocumentCount: 0,
+            },
+            descriptionLines: ['- 时间窗口：7d'],
+          },
+          themePages: [],
+          unclassifiedDocuments: [],
+        },
+        prepareWikiPreview: () => undefined,
+        applyWikiChanges: () => undefined,
+        openWikiDocument: () => undefined,
+      }),
+    })
+
+    const html = await renderToString(app)
+
+    expect(html).toContain('LLM Wiki 维护')
+    expect(html).toContain('生成预览')
+    expect(html).toContain('应用变更')
+    expect(html).toContain('允许覆盖冲突页面')
+    expect(html).toContain('命中源文档')
   })
 })

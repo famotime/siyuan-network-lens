@@ -4,17 +4,25 @@ import { fingerprintWikiContent } from './wiki-diff'
 import {
   WIKI_BLOCK_ATTR_KEYS,
   WIKI_PAGE_HEADINGS,
+  getWikiHeadingCandidates,
+  matchesWikiHeading,
   type WikiApplyResult,
   type WikiPageType,
 } from './wiki-page-model'
 import type { RenderedWikiDraft } from './wiki-renderer'
 import { buildWikiPageStorageKey, type AiWikiStore, type WikiPageSnapshotRecord } from './wiki-store'
 import type { WikiPagePreviewResult } from './wiki-diff'
+import { pickUiText } from '@/i18n/ui'
+
+const uiText = (en_US: string, zh_CN: string) => pickUiText({ en_US, zh_CN })
 
 const INDEX_MANUAL_NOTES_MARKDOWN = [
   `## ${WIKI_PAGE_HEADINGS.manualNotes}`,
   '',
-  '> 这里保留给人工补充，后续自动维护不会覆盖本区内容。',
+  uiText(
+    '> Reserved for manual notes. Later automated maintenance will not overwrite this section.',
+    '> 这里保留给人工补充，后续自动维护不会覆盖本区内容。',
+  ),
 ].join('\n')
 
 type BlockOpFn = (dataType: 'markdown' | 'dom', data: string, id: string) => Promise<any>
@@ -101,7 +109,10 @@ export async function applyWikiDocuments(params: {
 }): Promise<WikiApplyBatchResult> {
   const wikiTarget = resolveWikiTarget(params.config, params.notebooks)
   if (!wikiTarget) {
-    throw new Error('未配置有效的主题文档路径，无法确定 LLM Wiki 写入位置')
+    throw new Error(uiText(
+      'No valid topic doc path is configured, so the LLM Wiki target cannot be resolved',
+      '未配置有效的主题文档路径，无法确定 LLM Wiki 写入位置',
+    ))
   }
 
   const themeResults: WikiApplyBatchResult['themePages'] = []
@@ -433,29 +444,32 @@ async function buildIndexDraft(params: {
     '',
     `## ${WIKI_PAGE_HEADINGS.managedRoot}`,
     '',
-    '### 页面概览',
-    `- 最近维护时间：${params.generatedAt}`,
-    `- 主题 wiki 页数：${themeRows.length}`,
-    `- 未归类来源数：${params.unclassifiedDocuments.length}`,
-    `- 本轮命中主题数：${params.scopeSummary.themeGroupCount}`,
+    uiText('### Overview', '### 页面概览'),
+    uiText(`- Updated at: ${params.generatedAt}`, `- 最近维护时间：${params.generatedAt}`),
+    uiText(`- Topic wiki pages: ${themeRows.length}`, `- 主题 wiki 页数：${themeRows.length}`),
+    uiText(`- Unclassified sources: ${params.unclassifiedDocuments.length}`, `- 未归类来源数：${params.unclassifiedDocuments.length}`),
+    uiText(`- Matched topics this run: ${params.scopeSummary.themeGroupCount}`, `- 本轮命中主题数：${params.scopeSummary.themeGroupCount}`),
     '',
-    '### Wiki 页面清单',
+    uiText('### Wiki pages', '### Wiki 页面清单'),
     themeRows.length
       ? themeRows.map(({ record, summary }) => {
           const pageLink = record.pageId ? buildDocLinkMarkdown(record.pageId, record.pageTitle) : record.pageTitle
           const themeLink = record.themeDocumentId && record.themeDocumentTitle
             ? buildDocLinkMarkdown(record.themeDocumentId, record.themeDocumentTitle)
             : (record.themeDocumentTitle || '-')
-          return `- ${pageLink} | 配对主题页：${themeLink} | 摘要：${summary || '-'} | 源文档数：${record.sourceDocumentIds.length} | 最近更新时间：${record.lastApply?.appliedAt || record.lastGeneratedAt || '-'}`
+          return uiText(
+            `- ${pageLink} | Paired topic page: ${themeLink} | Summary: ${summary || '-'} | Source docs: ${record.sourceDocumentIds.length} | Updated at: ${record.lastApply?.appliedAt || record.lastGeneratedAt || '-'}`,
+            `- ${pageLink} | 配对主题页：${themeLink} | 摘要：${summary || '-'} | 源文档数：${record.sourceDocumentIds.length} | 最近更新时间：${record.lastApply?.appliedAt || record.lastGeneratedAt || '-'}`,
+          )
         }).join('\n')
-      : '- 暂无主题 wiki 页面',
+      : uiText('- No topic wiki pages yet', '- 暂无主题 wiki 页面'),
     '',
-    '### 未归类来源',
+    uiText('### Unclassified sources', '### 未归类来源'),
     params.unclassifiedDocuments.length
       ? params.unclassifiedDocuments
           .map(document => `- ${buildDocLinkMarkdown(document.documentId, document.title)}`)
           .join('\n')
-      : '- 无',
+      : uiText('- None', '- 无'),
   ].join('\n')
 
   return {
@@ -468,11 +482,11 @@ async function buildIndexDraft(params: {
     sectionMetadata: [
       {
         key: 'meta',
-        heading: '页面概览',
+        heading: uiText('Overview', '页面概览'),
         markdown: [
-          `- 最近维护时间：${params.generatedAt}`,
-          `- 主题 wiki 页数：${themeRows.length}`,
-          `- 未归类来源数：${params.unclassifiedDocuments.length}`,
+          uiText(`- Updated at: ${params.generatedAt}`, `- 最近维护时间：${params.generatedAt}`),
+          uiText(`- Topic wiki pages: ${themeRows.length}`, `- 主题 wiki 页数：${themeRows.length}`),
+          uiText(`- Unclassified sources: ${params.unclassifiedDocuments.length}`, `- 未归类来源数：${params.unclassifiedDocuments.length}`),
         ].join('\n'),
       },
     ],
@@ -487,22 +501,25 @@ function buildLogEntryMarkdown(params: {
 }): string {
   const counts = buildThemeResultCounts(params.themeResults)
   const touchedPages = params.themeResults
-    .map(item => `- ${item.result}：${item.pageId ? buildDocLinkMarkdown(item.pageId, item.pageTitle) : item.pageTitle}`)
+    .map(item => uiText(
+      `- ${formatApplyResultLabel(item.result)}: ${item.pageId ? buildDocLinkMarkdown(item.pageId, item.pageTitle) : item.pageTitle}`,
+      `- ${formatApplyResultLabel(item.result)}：${item.pageId ? buildDocLinkMarkdown(item.pageId, item.pageTitle) : item.pageTitle}`,
+    ))
     .join('\n')
 
   return [
     `## ${params.generatedAt}`,
     '',
     ...params.scopeDescriptionLines,
-    `- 命中源文档数：${params.scopeSummary.sourceDocumentCount}`,
-    `- 命中主题数：${params.scopeSummary.themeGroupCount}`,
-    `- 新建页面数：${counts.created}`,
-    `- 更新页面数：${counts.updated}`,
-    `- 无变化页面数：${counts.skipped}`,
-    `- 冲突页面数：${counts.conflict}`,
+    uiText(`- Matched source docs: ${params.scopeSummary.sourceDocumentCount}`, `- 命中源文档数：${params.scopeSummary.sourceDocumentCount}`),
+    uiText(`- Matched topics: ${params.scopeSummary.themeGroupCount}`, `- 命中主题数：${params.scopeSummary.themeGroupCount}`),
+    uiText(`- Created pages: ${counts.created}`, `- 新建页面数：${counts.created}`),
+    uiText(`- Updated pages: ${counts.updated}`, `- 更新页面数：${counts.updated}`),
+    uiText(`- Unchanged pages: ${counts.skipped}`, `- 无变化页面数：${counts.skipped}`),
+    uiText(`- Conflict pages: ${counts.conflict}`, `- 冲突页面数：${counts.conflict}`),
     '',
-    '### 本次触达页面',
-    touchedPages || '- 无',
+    uiText('### Touched pages this run', '### 本次触达页面'),
+    touchedPages || uiText('- None', '- 无'),
   ].join('\n')
 }
 
@@ -594,11 +611,11 @@ async function resolveWikiPageStructure(
   for (const child of children) {
     const markdown = await safeReadBlockMarkdown(child.id, api.getBlockKramdown)
     const trimmedMarkdown = markdown.trim()
-    if (trimmedMarkdown.startsWith(`## ${WIKI_PAGE_HEADINGS.managedRoot}`)) {
+    if (matchesWikiHeading(trimmedMarkdown, 'managedRoot', '##')) {
       managedBlockId = child.id
       continue
     }
-    if (trimmedMarkdown.startsWith(`## ${WIKI_PAGE_HEADINGS.manualNotes}`)) {
+    if (matchesWikiHeading(trimmedMarkdown, 'manualNotes', '##')) {
       manualBlockId = child.id
     }
   }
@@ -629,13 +646,13 @@ async function syncWikiBlockAttrs(params: {
   for (const child of children) {
     const markdown = await safeReadBlockMarkdown(child.id, params.api.getBlockKramdown)
     const trimmedMarkdown = markdown.trim()
-    if (trimmedMarkdown.startsWith(`## ${WIKI_PAGE_HEADINGS.managedRoot}`)) {
+    if (matchesWikiHeading(trimmedMarkdown, 'managedRoot', '##')) {
       await mergeBlockAttrs(child.id, {
         [WIKI_BLOCK_ATTR_KEYS.region]: 'managed',
       }, params.api)
       continue
     }
-    if (trimmedMarkdown.startsWith(`## ${WIKI_PAGE_HEADINGS.manualNotes}`)) {
+    if (matchesWikiHeading(trimmedMarkdown, 'manualNotes', '##')) {
       await mergeBlockAttrs(child.id, {
         [WIKI_BLOCK_ATTR_KEYS.region]: 'manual',
       }, params.api)
@@ -743,7 +760,7 @@ function normalizeDocumentPath(path: string): string {
 }
 
 function extractOverviewSummary(markdown: string): string {
-  const heading = '### 主题概览'
+  const heading = `### ${WIKI_PAGE_HEADINGS.overview}`
   const startIndex = markdown.indexOf(heading)
   if (startIndex < 0) {
     return ''
@@ -762,8 +779,10 @@ function extractOverviewSummary(markdown: string): string {
 }
 
 function extractManagedMarkdown(fullMarkdown: string): string {
-  const manualHeading = `\n## ${WIKI_PAGE_HEADINGS.manualNotes}`
-  const manualHeadingIndex = fullMarkdown.indexOf(manualHeading)
+  const manualHeadingIndex = getWikiHeadingCandidates('manualNotes', '##')
+    .map(heading => fullMarkdown.indexOf(`\n${heading}`))
+    .filter(index => index >= 0)
+    .sort((left, right) => left - right)[0] ?? -1
   if (manualHeadingIndex < 0) {
     return fullMarkdown.trim()
   }
@@ -776,5 +795,20 @@ async function safeReadBlockMarkdown(blockId: string, getBlockKramdown: GetBlock
     return block?.kramdown ?? ''
   } catch {
     return ''
+  }
+}
+
+function formatApplyResultLabel(result: WikiApplyResult): string {
+  switch (result) {
+    case 'created':
+      return uiText('created', '新建')
+    case 'updated':
+      return uiText('updated', '更新')
+    case 'skipped':
+      return uiText('skipped', '无变化')
+    case 'conflict':
+      return uiText('conflict', '冲突')
+    default:
+      return result
   }
 }

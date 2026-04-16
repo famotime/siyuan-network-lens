@@ -59,7 +59,7 @@ const baseProps = {
   pathChain: ['doc-a', 'doc-b'],
   resolveTitle: (documentId: string) => ({ 'doc-a': 'Alpha', 'doc-b': 'Beta' }[documentId] ?? documentId),
   snapshotLabel: '03-14 11:00',
-  formatTimestamp: (timestamp?: string) => timestamp ?? '未知时间',
+  formatTimestamp: (timestamp?: string) => timestamp ?? 'Unknown time',
   toggleLinkPanel: vi.fn(),
   isLinkPanelExpanded: vi.fn(() => false),
   resolveLinkAssociations: vi.fn(() => ({ outbound: [], inbound: [], childDocuments: [] })),
@@ -90,8 +90,8 @@ describe('SummaryDetailSection', () => {
           ...propsWithoutWikiToggle,
           detail: {
             key: 'documents',
-            title: '文档样本详情',
-            description: '当前筛选条件命中的文档。',
+            title: 'Doc sample',
+            description: 'Docs matched by the current filters.',
             kind: 'list',
             items: [],
           },
@@ -112,15 +112,15 @@ describe('SummaryDetailSection', () => {
         ...baseProps,
         detail: {
           key: 'documents',
-          title: '文档样本详情',
-          description: '当前筛选条件命中的文档。',
+          title: 'Doc sample',
+          description: 'Docs matched by the current filters.',
           kind: 'list',
           items: [
             {
               documentId: 'doc-a',
               title: 'Alpha',
-              meta: '/Alpha · 最近更新 2026-03-14',
-              badge: '主题文档',
+              meta: '/Alpha · Updated 2026-03-14',
+              badge: 'Topic doc',
               isThemeDocument: true,
             },
           ],
@@ -131,11 +131,11 @@ describe('SummaryDetailSection', () => {
     const html = await renderToString(app)
     const toggleMarkup = html.match(/<button class="panel-toggle"[\s\S]*?<\/button>/)?.[0] ?? ''
 
-    expect(html).toContain('文档样本详情')
+    expect(html).toContain('Doc sample')
     expect(html).toContain('summary-detail-item')
     expect(html).toContain('Alpha')
-    expect(html).toContain('主题文档')
-    expect(toggleMarkup).toContain('aria-label="折叠详情"')
+    expect(html).toContain('Topic doc')
+    expect(toggleMarkup).toContain('aria-label="Collapse details"')
     expect(toggleMarkup).toContain('panel-toggle__caret')
     expect(toggleMarkup).not.toMatch(/>\s*折叠\s*<span/)
     expect(toggleMarkup).not.toMatch(/>\s*展开\s*<span/)
@@ -147,14 +147,14 @@ describe('SummaryDetailSection', () => {
         ...baseProps,
         detail: {
           key: 'documents',
-          title: '文档样本详情',
-          description: '当前筛选条件命中的文档。',
+          title: 'Doc sample',
+          description: 'Docs matched by the current filters.',
           kind: 'list',
           items: [
             {
               documentId: 'doc-a',
               title: 'Alpha',
-              meta: '/Alpha · 最近更新 2026-03-14',
+              meta: '/Alpha · Updated 2026-03-14',
             },
           ],
         },
@@ -165,7 +165,7 @@ describe('SummaryDetailSection', () => {
 
     expect(html).toContain('summary-detail-list')
     expect(html).not.toContain('summary-detail-wiki-action')
-    expect(html).not.toContain('维护 LLM Wiki')
+    expect(html).not.toContain('Maintain LLM Wiki')
     expect(html).not.toContain('wiki-panel panel')
   })
 
@@ -175,17 +175,17 @@ describe('SummaryDetailSection', () => {
         ...baseProps,
         detail: {
           key: 'propagation',
-          title: '传播节点详情',
-          description: '高频出现在关键最短路径上的文档。',
+          title: 'Propagation nodes',
+          description: 'Docs that frequently appear on key shortest paths.',
           kind: 'propagation',
           items: [
             {
               documentId: 'doc-a',
               title: 'Alpha',
-              meta: '覆盖 2 个焦点文档 · 社区跨度 1',
-              badge: '3 分',
+              meta: 'Covers 2 focus docs · Community span 1',
+              badge: '3 pts',
               isThemeDocument: true,
-              suggestions: [{ label: '传播优化', text: '建议补充路径说明。' }],
+              suggestions: [{ label: 'Propagation optimization', text: 'Add path notes.' }],
             },
           ],
         },
@@ -194,11 +194,11 @@ describe('SummaryDetailSection', () => {
 
     const html = await renderToString(app)
 
-    expect(html).toContain('传播节点详情')
-    expect(html).toContain('关系传播路径')
-    expect(html).toContain('核心 + 桥接')
+    expect(html).toContain('Propagation nodes')
+    expect(html).toContain('Propagation paths')
+    expect(html).toContain('Core + bridge')
     expect(html).toContain('Alpha')
-    expect(html).toContain('3 分')
+    expect(html).toContain('3 pts')
     expect(html).toContain('path-node')
   })
 
@@ -213,16 +213,16 @@ describe('SummaryDetailSection', () => {
         ]),
         detail: {
           key: 'read',
-          title: '未读文档详情',
-          description: '未命中已读规则的文档。',
+          title: 'Unread docs',
+          description: 'Docs not matched by read rules.',
           kind: 'list',
           items: [
             {
               documentId: 'doc-orphan',
               title: 'Alpha',
-              meta: '创建于 2026-03-14',
-              badge: '待标记',
-              suggestions: [{ label: '补齐链接', text: '当前没有文档级连接。' }],
+              meta: 'Created 2026-03-14',
+              badge: 'Needs review',
+              suggestions: [{ label: 'Repair links', text: 'No doc-level links in the current window.' }],
             },
           ],
         },
@@ -231,10 +231,10 @@ describe('SummaryDetailSection', () => {
 
     const html = await renderToString(app)
 
-    expect(html).toContain('未读文档详情')
-    expect(html).toContain('创建于 2026-03-14')
-    expect(html).toContain('补齐链接')
-    expect(html).toContain('当前没有文档级连接，建议链接以下主题文档（点击添加）：')
+    expect(html).toContain('Unread docs')
+    expect(html).toContain('Created 2026-03-14')
+    expect(html).toContain('Repair links')
+    expect(html).toContain('No doc-level links in the current window, suggested topic docs below (click to add):')
     expect(html).toContain('AI')
   })
 
@@ -246,37 +246,37 @@ describe('SummaryDetailSection', () => {
         selectedSummaryCount: 2,
         detail: {
           key: 'todaySuggestions',
-          title: '今日建议详情',
-          description: '按优先级提供建议',
+          title: 'Today suggestions',
+          description: 'Suggestions ranked by priority.',
           kind: 'aiInbox',
           result: {
             generatedAt: '2026-04-03T08:00:00.000Z',
-            summary: '今天先补 AI 主题连接。',
+            summary: 'Repair AI topic links first today.',
             items: [
               {
                 id: 'task-doc-1',
                 type: 'document',
-                title: '修复孤立文档：AI 与机器学习整理',
+                title: 'Repair orphan doc: AI and machine learning notes',
                 priority: 'P1',
-                action: '将文档链接到主题-AI-索引和 AI 总览。\n可归入 AI 主题：((doc-theme-ai "主题-AI-索引"))',
-                reason: '当前窗口内孤立，但和 AI 主题页、机器学习主题页都有明显匹配。能移出孤立文档，并把主题社区规模从 8 提升到 9。',
+                action: 'Link this doc to Topic-AI-Index and AI Overview.\nCan fit the AI topic: ((doc-theme-ai "Topic-AI-Index"))',
+                reason: 'It is isolated in the current window, but strongly matches the AI and Machine Learning topic pages. This can remove one orphan doc and grow the topic cluster from 8 to 9.',
                 documentIds: ['doc-orphan'],
                 recommendedTargets: [
                   {
                     documentId: 'doc-theme-ai',
-                    title: '主题-AI-索引',
-                    reason: '承担主题入口角色',
+                    title: 'Topic-AI-Index',
+                    reason: 'Acts as a stable topic entry',
                     kind: 'theme-document',
                   },
                   {
                     documentId: 'doc-core-ai',
-                    title: 'AI 总览',
-                    reason: '可作为相关核心文档继续查看',
+                    title: 'AI Overview',
+                    reason: 'Can be used as a related core doc',
                     kind: 'core-document',
                   },
                 ],
-                evidence: ['当前窗口内孤立', '主题匹配命中 4 次'],
-                expectedChanges: ['孤立文档数预计减少 1'],
+                evidence: ['Isolated in the current window', 'Topic match hit 4 times'],
+                expectedChanges: ['Expected orphan count -1'],
               },
             ],
           },
@@ -300,47 +300,47 @@ describe('SummaryDetailSection', () => {
       ? html.slice(toolbarStart, detailBodyStart)
       : ''
 
-    expect(html).toContain('2 项建议')
-    expect(html).toContain('重新分析')
-    expect(headerMainMarkup).toContain('按优先级提供建议')
-    expect(headerMainMarkup).toContain('2 项建议')
+    expect(html).toContain('2 suggestions')
+    expect(html).toContain('Reanalyze')
+    expect(headerMainMarkup).toContain('Suggestions ranked by priority.')
+    expect(headerMainMarkup).toContain('2 suggestions')
     expect(headerMainMarkup).toContain('panel-toggle')
     expect(headerMainMarkup).not.toContain('action-button')
-    expect(headerMainMarkup).not.toContain('重新分析')
-    expect(headerMainMarkup).not.toContain('历史分析：')
+    expect(headerMainMarkup).not.toContain('Reanalyze')
+    expect(headerMainMarkup).not.toContain('History:')
     expect(toolbarMarkup).toContain('panel-header__ai-toolbar')
     expect(toolbarMarkup).toContain('action-button')
-    expect(toolbarMarkup).toContain('重新分析')
+    expect(toolbarMarkup).toContain('Reanalyze')
     expect(toolbarMarkup).not.toContain('panel-toggle')
-    expect(html).toContain('今天先补 AI 主题连接。')
-    expect(html).toContain('修复孤立文档：')
-    expect(html).toContain('AI 与机器学习整理')
+    expect(html).toContain('Repair AI topic links first today.')
+    expect(html).toContain('Repair orphan doc:')
+    expect(html).toContain('AI and machine learning notes')
     expect(html).toContain('document-title__button--default')
-    expect(html).not.toContain('打开文档')
-    expect(html).toContain('推荐目标')
-    expect(html).toContain('推荐动作')
-    expect(html).toContain('推荐理由')
-    expect(html).toContain('将文档链接到主题-AI-索引和 AI 总览。')
-    expect(html).toContain('可归入 AI 主题：主题-AI-索引')
-    expect(html).toContain('当前窗口内孤立，但和 AI 主题页、机器学习主题页都有明显匹配。')
-    expect(html).toContain('能移出孤立文档，并把主题社区规模从 8 提升到 9。')
-    expect(html).toContain('当前窗口内孤立')
-    expect(html).toContain('孤立文档数预计减少 1')
-    expect(html.indexOf('推荐目标')).toBeLessThan(html.indexOf('推荐动作'))
-    expect(html.indexOf('推荐动作')).toBeLessThan(html.indexOf('推荐理由'))
+    expect(html).not.toContain('Open document')
+    expect(html).toContain('Suggested targets')
+    expect(html).toContain('Recommended action')
+    expect(html).toContain('Why this first')
+    expect(html).toContain('Link this doc to Topic-AI-Index and AI Overview.')
+    expect(html).toContain('Can fit the AI topic: Topic-AI-Index')
+    expect(html).toContain('It is isolated in the current window, but strongly matches the AI and Machine Learning topic pages.')
+    expect(html).toContain('This can remove one orphan doc and grow the topic cluster from 8 to 9.')
+    expect(html).toContain('Isolated in the current window')
+    expect(html).toContain('Expected orphan count -1')
+    expect(html.indexOf('Suggested targets')).toBeLessThan(html.indexOf('Recommended action'))
+    expect(html.indexOf('Recommended action')).toBeLessThan(html.indexOf('Why this first'))
     expect(html).toContain('ai-suggestion-panel__action-pills')
     expect(html).toContain('ai-suggestion-panel__action-pill')
     expect(html).not.toContain('为什么先做')
     expect(html).not.toContain('预估收益')
     expect(html).not.toContain('建议草稿')
-    expect(html).toContain('主题-AI-索引')
-    expect(html).toContain('AI 总览')
+    expect(html).toContain('Topic-AI-Index')
+    expect(html).toContain('AI Overview')
     expect((html.match(/ai-suggestion-panel__action-pill--active/g) ?? [])).toHaveLength(1)
     expect(html).not.toContain('doc-theme-ai')
     expect(html).not.toContain('doc-core-ai')
     expect(html).not.toContain('>证据<')
     expect(html).not.toContain('>处理后变化<')
-    expect(html).not.toContain('测试连接')
+    expect(html).not.toContain('Test connection')
   })
 
   it('renders today suggestion history buttons in a dedicated toolbar row before the reanalyze action and exposes tooltip metadata', async () => {
@@ -349,20 +349,20 @@ describe('SummaryDetailSection', () => {
         ...baseProps,
         detail: {
           key: 'todaySuggestions',
-          title: '今日建议详情',
-          description: '按优先级提供建议',
+          title: 'Today suggestions',
+          description: 'Suggestions ranked by priority.',
           kind: 'aiInbox',
           result: {
             generatedAt: '2026-04-03T08:00:00.000Z',
-            summary: '当前建议',
+            summary: 'Current suggestions',
             items: [
               {
                 id: 'task-doc-current',
                 type: 'document',
-                title: '当前建议',
+                title: 'Current suggestion',
                 priority: 'P1',
-                action: '补到主题-AI-索引',
-                reason: '当前窗口内孤立。',
+                action: 'Add link to Topic-AI-Index',
+                reason: 'Isolated in the current window.',
               },
             ],
           },
@@ -376,20 +376,20 @@ describe('SummaryDetailSection', () => {
               notebook: 'box-1',
               tags: ['AI'],
               themeNames: ['AI'],
-              keyword: '机器学习',
+              keyword: 'machine learning',
             },
             summaryCount: 2,
             result: {
               generatedAt: '2026-04-03T07:30:00.000Z',
-              summary: '历史建议 1',
+              summary: 'History suggestion 1',
               items: [
                 {
                   id: 'task-doc-history-1',
                   type: 'document',
-                  title: '历史建议 1',
+                  title: 'History suggestion 1',
                   priority: 'P1',
-                  action: '补到主题-AI-索引',
-                  reason: '当前窗口内孤立。',
+                  action: 'Add link to Topic-AI-Index',
+                  reason: 'Isolated in the current window.',
                 },
               ],
             },
@@ -401,21 +401,21 @@ describe('SummaryDetailSection', () => {
             filters: {
               notebook: '',
               tags: ['AI', 'ML'],
-              themeNames: ['AI', '机器学习'],
+              themeNames: ['AI', 'Machine Learning'],
               keyword: '',
             },
             summaryCount: 1,
             result: {
               generatedAt: '2026-04-03T07:00:00.000Z',
-              summary: '历史建议 2',
+              summary: 'History suggestion 2',
               items: [
                 {
                   id: 'task-doc-history-2',
                   type: 'document',
-                  title: '历史建议 2',
+                  title: 'History suggestion 2',
                   priority: 'P2',
-                  action: '补到主题-机器学习-索引',
-                  reason: '当前窗口内孤立。',
+                  action: 'Add link to Topic-Machine-Learning-Index',
+                  reason: 'Isolated in the current window.',
                 },
               ],
             },
@@ -428,20 +428,20 @@ describe('SummaryDetailSection', () => {
               notebook: 'box-2',
               tags: [],
               themeNames: [],
-              keyword: '桥接',
+              keyword: 'bridge',
             },
             summaryCount: 3,
             result: {
               generatedAt: '2026-04-03T06:30:00.000Z',
-              summary: '历史建议 3',
+              summary: 'History suggestion 3',
               items: [
                 {
                   id: 'task-doc-history-3',
                   type: 'document',
-                  title: '历史建议 3',
+                  title: 'History suggestion 3',
                   priority: 'P3',
-                  action: '补到桥接文档',
-                  reason: '当前窗口内孤立。',
+                  action: 'Add link to bridge doc',
+                  reason: 'Isolated in the current window.',
                 },
               ],
             },
@@ -453,7 +453,7 @@ describe('SummaryDetailSection', () => {
 
     const html = await renderToString(app)
     const historyButtonsStart = html.indexOf('ai-history-button')
-    const historyLabelStart = html.indexOf('历史分析：')
+    const historyLabelStart = html.indexOf('History:')
     const actionButtonStart = html.indexOf('action-button')
     const toolbarStart = html.indexOf('panel-header__ai-toolbar')
     const detailBodyStart = html.indexOf('summary-detail-body')
@@ -465,7 +465,7 @@ describe('SummaryDetailSection', () => {
     expect(html).toContain('ai-history-button')
     expect(historyButtonMatches).toHaveLength(3)
     expect(html).toContain('panel-header__ai-toolbar')
-    expect(html).toContain('历史分析：')
+    expect(html).toContain('History:')
     expect(toolbarMarkup).toContain('panel-header__ai-history-group')
     expect(toolbarMarkup).toContain('panel-header__ai-history-buttons')
     expect(historyButtonsStart).toBeGreaterThanOrEqual(0)
@@ -478,10 +478,10 @@ describe('SummaryDetailSection', () => {
     expect(html).toContain('>1<')
     expect(html).toContain('>2<')
     expect(html).toContain('>3<')
-    expect(html).toContain('生成时间')
-    expect(html).toContain('时间窗口')
-    expect(html).toContain('建议数')
-    expect(html).toContain('关键词')
+    expect(html).toContain('Generated')
+    expect(html).toContain('Window')
+    expect(html).toContain('Count')
+    expect(html).toContain('Keyword')
     expect(html).toContain('history-button--active')
   })
 
@@ -492,8 +492,8 @@ describe('SummaryDetailSection', () => {
         isExpanded: false,
         detail: {
           key: 'todaySuggestions',
-          title: '今日建议详情',
-          description: '按优先级提供建议',
+          title: 'Today suggestions',
+          description: 'Suggestions ranked by priority.',
           kind: 'aiInbox',
           result: null,
         },
@@ -511,7 +511,7 @@ describe('SummaryDetailSection', () => {
             summaryCount: 2,
             result: {
               generatedAt: '2026-04-03T07:30:00.000Z',
-              summary: '历史建议 1',
+              summary: 'History suggestion 1',
               items: [],
             },
           },
@@ -521,11 +521,11 @@ describe('SummaryDetailSection', () => {
 
     const html = await renderToString(app)
 
-    expect(html).toContain('今日建议详情')
-    expect(html).toContain('1 项建议')
+    expect(html).toContain('Today suggestions')
+    expect(html).toContain('1 suggestions')
     expect(html).toContain('panel-toggle')
     expect(html).not.toContain('panel-header__ai-toolbar')
-    expect(html).not.toContain('历史分析：')
+    expect(html).not.toContain('History:')
     expect(html).not.toContain('action-button')
   })
 
@@ -558,20 +558,20 @@ describe('SummaryDetailSection', () => {
         ],
         detail: {
           key: 'todaySuggestions',
-          title: '今日建议详情',
-          description: '按优先级提供建议',
+          title: 'Today suggestions',
+          description: 'Suggestions ranked by priority.',
           kind: 'aiInbox',
           result: {
             generatedAt: '2026-04-03T08:00:00.000Z',
-            summary: '今天先修复孤立文档。',
+            summary: 'Repair orphan docs first today.',
             items: [
               {
                 id: 'task-doc-2',
                 type: 'document',
-                title: '修复孤立文档：阿兰：第一周优秀笔记摘抄',
+                title: 'Repair orphan doc: Alan first-week note excerpts',
                 priority: 'P2',
-                action: '补到 ~OpenClaw、~Skills，并说明属于哪个主题',
-                reason: '当前无文档级连接，OpenClaw 与 Skills 主题都有命中。',
+                action: 'Add links to ~OpenClaw and ~Skills, then note which topic it belongs to.',
+                reason: 'No doc-level links currently, with matches to both OpenClaw and Skills topics.',
                 documentIds: ['doc-orphan'],
               },
             ],

@@ -21,6 +21,7 @@ import {
 import { syncAssociation as syncAssociationCore, type LinkDirection } from '@/analytics/link-sync'
 import type { DocumentRecord } from '@/analytics/analysis'
 import type { ThemeDocument } from '@/analytics/theme-documents'
+import { pickUiText } from '@/i18n/ui'
 
 type ShowMessageFn = (text: string, timeout?: number, type?: 'info' | 'error') => void
 type BlockWriteFn = (dataType: 'markdown' | 'dom', data: string, parentID: string) => Promise<any>
@@ -30,6 +31,7 @@ type GetChildBlocksFn = (id: string) => Promise<Array<{ id: string, type?: strin
 type GetBlockKramdownFn = (id: string) => Promise<{ id: string, kramdown: string }>
 type GetBlockAttrsFn = (id: string) => Promise<{ [key: string]: string }>
 type SetBlockAttrsFn = (id: string, attrs: { [key: string]: string }) => Promise<any>
+const uiText = (en_US: string, zh_CN: string) => pickUiText({ en_US, zh_CN })
 
 export function createLinkAssociationInteractions(params: {
   resolveTitle: (documentId: string) => string
@@ -96,10 +98,10 @@ export function createLinkAssociationInteractions(params: {
         appendBlock: params.appendBlock,
         prependBlock: params.prependBlock,
       })
-      params.notify('已同步关联链接', 3000, 'info')
+      params.notify(uiText('Related link synced', '关联链接已同步'), 3000, 'info')
       await params.refresh()
     } catch (error) {
-      const message = error instanceof Error ? error.message : '同步失败'
+      const message = error instanceof Error ? error.message : uiText('Sync failed', '同步失败')
       params.notify(message, 5000, 'error')
     } finally {
       syncInProgress.value.delete(key)
@@ -154,9 +156,9 @@ export function createThemeSuggestionController(params: {
         } else {
           pendingThemeSuggestionBlocks.value.delete(orphanDocumentId)
         }
-        params.notify('已撤销主题链接建议', 3000, 'info')
+        params.notify(uiText('Topic link suggestion removed', '主题补链建议已移除'), 3000, 'info')
       } catch (error) {
-        const message = error instanceof Error ? error.message : '撤销主题链接失败'
+        const message = error instanceof Error ? error.message : uiText('Failed to remove topic link', '移除主题链接失败')
         params.notify(message, 5000, 'error')
       }
       return
@@ -164,7 +166,7 @@ export function createThemeSuggestionController(params: {
 
     const themeDocument = params.getThemeDocuments().find(item => item.documentId === themeDocumentId)
     if (!themeDocument) {
-      params.notify('未找到对应的主题文档', 5000, 'error')
+      params.notify(uiText('Matching topic doc not found', '未找到匹配的主题文档'), 5000, 'error')
       return
     }
 
@@ -186,9 +188,9 @@ export function createThemeSuggestionController(params: {
             prependBlock: params.prependBlock,
           })
       pendingThemeSuggestionBlocks.value.set(orphanDocumentId, change)
-      params.notify('已插入主题链接，刷新分析后将重新判断孤立状态', 3000, 'info')
+      params.notify(uiText('Topic link inserted. Refresh analysis to re-check orphan status.', '主题链接已插入。请刷新分析以重新检查孤立状态。'), 3000, 'info')
     } catch (error) {
-      const message = error instanceof Error ? error.message : '插入主题链接失败'
+      const message = error instanceof Error ? error.message : uiText('Failed to insert topic link', '插入主题链接失败')
       params.notify(message, 5000, 'error')
     }
   }
@@ -243,9 +245,9 @@ export function createAiSuggestionActions(params: {
           pendingAiLinkBlocks.value.delete(orphanDocumentId)
         }
         await invalidateSuggestionCache(params.invalidateAiSuggestionCache, orphanDocumentId)
-        params.notify('已撤销 AI 链接建议', 3000, 'info')
+        params.notify(uiText('AI link suggestion removed', 'AI 补链建议已移除'), 3000, 'info')
       } catch (error) {
-        const message = error instanceof Error ? error.message : '撤销 AI 链接失败'
+        const message = error instanceof Error ? error.message : uiText('Failed to remove AI link', '移除 AI 链接失败')
         params.notify(message, 5000, 'error')
       }
       return
@@ -270,9 +272,9 @@ export function createAiSuggestionActions(params: {
           })
       pendingAiLinkBlocks.value.set(orphanDocumentId, change)
       await invalidateSuggestionCache(params.invalidateAiSuggestionCache, orphanDocumentId)
-      params.notify('已插入 AI 建议链接，刷新分析后将重新判断孤立状态', 3000, 'info')
+      params.notify(uiText('AI suggested link inserted. Refresh analysis to re-check orphan status.', 'AI 建议链接已插入。请刷新分析以重新检查孤立状态。'), 3000, 'info')
     } catch (error) {
-      const message = error instanceof Error ? error.message : '插入 AI 建议链接失败'
+      const message = error instanceof Error ? error.message : uiText('Failed to insert AI suggested link', '插入 AI 建议链接失败')
       params.notify(message, 5000, 'error')
     }
   }
@@ -289,13 +291,13 @@ export function createAiSuggestionActions(params: {
   async function toggleOrphanAiTagSuggestion(documentId: string, tag: string) {
     const normalizedTag = normalizeTag(tag)
     if (!normalizedTag) {
-      params.notify('标签内容为空，无法写入', 5000, 'error')
+      params.notify(uiText('Tag is empty and cannot be written', '标签为空，无法写入'), 5000, 'error')
       return
     }
 
     const document = params.getDocumentById(documentId)
     if (!document) {
-      params.notify('未找到对应文档，无法写入标签', 5000, 'error')
+      params.notify(uiText('Matching doc not found. Cannot write tag.', '未找到匹配文档，无法写入标签。'), 5000, 'error')
       return
     }
 
@@ -304,7 +306,7 @@ export function createAiSuggestionActions(params: {
     const setBlockAttrs = params.setBlockAttrs
 
     if (!getBlockAttrs || !setBlockAttrs) {
-      params.notify('当前环境未提供文档标签接口，无法写入标签', 5000, 'error')
+      params.notify(uiText('The current environment does not provide a doc tag API. Cannot write tag.', '当前环境未提供文档标签 API，无法写入标签。'), 5000, 'error')
       return
     }
 
@@ -324,7 +326,7 @@ export function createAiSuggestionActions(params: {
           params.onDocumentTagsChanged?.(documentId, existingChange.baseTags)
         }
         await invalidateSuggestionCache(params.invalidateAiSuggestionCache, documentId)
-        params.notify('已撤销 AI 标签建议', 3000, 'info')
+        params.notify(uiText('AI tag suggestion removed', 'AI 标签建议已移除'), 3000, 'info')
       } else {
         const change = existingChange
           ? await addTagToDocumentChange({
@@ -342,10 +344,10 @@ export function createAiSuggestionActions(params: {
         pendingAiTagBlocks.value.set(documentId, change)
         params.onDocumentTagsChanged?.(documentId, [...change.baseTags, ...change.appliedTags])
         await invalidateSuggestionCache(params.invalidateAiSuggestionCache, documentId)
-        params.notify('已写入 AI 标签建议', 3000, 'info')
+        params.notify(uiText('AI tag suggestion written', 'AI 标签建议已写入'), 3000, 'info')
       }
     } catch (error) {
-      const message = error instanceof Error ? error.message : '写入 AI 标签失败'
+      const message = error instanceof Error ? error.message : uiText('Failed to write AI tag', '写入 AI 标签失败')
       params.notify(message, 5000, 'error')
     }
   }

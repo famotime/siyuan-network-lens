@@ -12,13 +12,16 @@
     "all"
   ],
   "displayName": {
-    "default": "脉络镜"
+    "default": "脉络镜",
+    "en_US": "Network Lens"
   },
   "description": {
-    "default": "分析思源文档级引用网络，识别核心节点、主题社区、孤立文档、趋势、路径和整理建议。"
+    "default": "分析思源文档级引用网络，识别核心节点、主题社区、孤立文档、趋势、路径和整理建议。",
+    "en_US": "Doc-link analytics for SiYuan: hubs, themes, orphans, trends, paths, and actions."
   },
   "readme": {
-    "default": "README.md"
+    "default": "README.md",
+    "en_US": "README_en_US.md"
   },
   "keywords": [
     "analytics",

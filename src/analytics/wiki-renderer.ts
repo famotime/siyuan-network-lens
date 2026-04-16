@@ -1,8 +1,10 @@
 import type { WikiSectionKey } from './wiki-page-model'
 import { WIKI_PAGE_HEADINGS } from './wiki-page-model'
 import type { WIKI_LLM_OUTPUT_KEYS } from './wiki-generation'
+import { pickUiText } from '@/i18n/ui'
 
 type ThemeWikiLlmOutput = Record<typeof WIKI_LLM_OUTPUT_KEYS[number], string | string[]>
+const uiText = (en_US: string, zh_CN: string) => pickUiText({ en_US, zh_CN })
 
 export interface WikiRenderedSectionMeta {
   key: Exclude<WikiSectionKey, 'manualNotes'>
@@ -29,10 +31,10 @@ export function renderThemeWikiDraft(params: {
       key: 'meta',
       heading: WIKI_PAGE_HEADINGS.meta,
       markdown: [
-        `- 配对主题页：${params.pairedThemeTitle}`,
-        `- 生成时间：${params.generatedAt}`,
-        `- 源文档数：${params.sourceDocumentCount}`,
-        `- 模型：${params.model}`,
+        uiText(`- Paired topic page: ${params.pairedThemeTitle}`, `- 配对主题页：${params.pairedThemeTitle}`),
+        uiText(`- Generated at: ${params.generatedAt}`, `- 生成时间：${params.generatedAt}`),
+        uiText(`- Source docs: ${params.sourceDocumentCount}`, `- 源文档数：${params.sourceDocumentCount}`),
+        uiText(`- Model: ${params.model}`, `- 模型：${params.model}`),
       ].join('\n'),
     },
     {
@@ -69,7 +71,7 @@ export function renderThemeWikiDraft(params: {
     '',
     ...sections.flatMap(section => [
       `### ${section.heading}`,
-      section.markdown || '- 暂无内容',
+      section.markdown || uiText('- No content yet', '- 暂无内容'),
       '',
     ]),
   ].join('\n').trim()
@@ -79,7 +81,7 @@ export function renderThemeWikiDraft(params: {
     '',
     `## ${WIKI_PAGE_HEADINGS.manualNotes}`,
     '',
-    '> 这里保留给人工补充，后续自动维护不会覆盖本区内容。',
+    uiText('> Reserved for manual notes. Later automated maintenance will not overwrite this section.', '> 这里保留给人工补充，后续自动维护不会覆盖本区内容。'),
   ].join('\n')
 
   return {

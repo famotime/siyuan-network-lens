@@ -1,4 +1,4 @@
-import { describe, expect, it } from 'vitest'
+import { afterEach, describe, expect, it } from 'vitest'
 
 import {
   resolveAiInboxActionTargets,
@@ -9,6 +9,10 @@ import {
 } from './ai-inbox-detail'
 
 describe('ai inbox detail helpers', () => {
+  afterEach(() => {
+    delete (globalThis as any).siyuan
+  })
+
   it('resolves the primary document id from inbox items', () => {
     expect(resolveAiInboxItemDocumentId({
       documentIds: ['doc-orphan', 'doc-backup'],
@@ -113,11 +117,41 @@ describe('ai inbox detail helpers', () => {
         documentId: 'doc-openclaw',
         title: '~OpenClaw',
         kind: 'theme-document',
+        reason: 'Action text mentions topic doc OpenClaw',
       }),
       expect.objectContaining({
         documentId: 'doc-skills',
         title: '~Skills',
         kind: 'theme-document',
+        reason: 'Action text mentions topic doc Skills',
+      }),
+    ])
+  })
+
+  it('switches fallback target reasons to Chinese when the workspace locale is zh_CN', () => {
+    ;(globalThis as any).siyuan = {
+      config: {
+        lang: 'zh_CN',
+      },
+    }
+
+    expect(resolveAiInboxActionTargets({
+      item: {
+        action: '补到 ~OpenClaw，并说明属于哪个主题',
+      } as any,
+      themeDocuments: [
+        {
+          documentId: 'doc-openclaw',
+          title: '~OpenClaw',
+          themeName: 'OpenClaw',
+        },
+      ] as any,
+    })).toEqual([
+      expect.objectContaining({
+        documentId: 'doc-openclaw',
+        title: '~OpenClaw',
+        kind: 'theme-document',
+        reason: '动作文案提及主题文档 OpenClaw',
       }),
     ])
   })

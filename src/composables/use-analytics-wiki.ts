@@ -7,13 +7,16 @@ import type {
 import type { AiDocumentIndexStore } from '@/analytics/ai-index-store'
 import type { WikiPagePreviewResult } from '@/analytics/wiki-diff'
 import type { WikiApplyBatchResult } from '@/analytics/wiki-documents'
+import { getWikiHeadingCandidates } from '@/analytics/wiki-page-model'
 import type { RenderedWikiDraft } from '@/analytics/wiki-renderer'
 import type { WikiScopeSummary } from '@/analytics/wiki-scope'
 import type { WikiPageSnapshotRecord } from '@/analytics/wiki-store'
+import { pickUiText } from '@/i18n/ui'
 import type { PluginConfig } from '@/types/config'
 
 type GetIDsByHPathFn = (notebook: string, path: string) => Promise<string[]>
 type GetBlockKramdownFn = (id: string) => Promise<{ id: string, kramdown: string }>
+const uiText = (en_US: string, zh_CN: string) => pickUiText({ en_US, zh_CN })
 
 export interface WikiPreviewThemePageItem {
   pageTitle: string
@@ -100,7 +103,8 @@ export async function resolveExistingWikiPage(params: {
       pageId,
       fullMarkdown,
       managedMarkdown: extractManagedMarkdown(fullMarkdown),
-      hasManualNotes: fullMarkdown.includes('\n## 人工备注'),
+      hasManualNotes: getWikiHeadingCandidates('manualNotes', '##')
+        .some(heading => fullMarkdown.includes(`\n${heading}`)),
     }
   } catch {
     return null
@@ -114,12 +118,12 @@ export function buildWikiScopeDescriptionLines(params: {
   scopeDescriptionLine?: string
 }) {
   return [
-    params.scopeDescriptionLine ?? '- 范围来源：当前文档样本',
-    `- 时间窗口：${params.timeRange}`,
-    `- 笔记本：${params.filters.notebook ? params.resolveNotebookName(params.filters.notebook) : '全部笔记本'}`,
-    `- 标签：${params.filters.tags?.length ? params.filters.tags.join('、') : '全部标签'}`,
-    `- 主题：${params.filters.themeNames?.length ? params.filters.themeNames.join('、') : '全部主题'}`,
-    `- 关键词：${params.filters.keyword?.trim() || '无'}`,
+    params.scopeDescriptionLine ?? uiText('- Scope source: current doc sample', '- 范围来源：当前文档样本'),
+    uiText(`- Time window: ${params.timeRange}`, `- 时间窗口：${params.timeRange}`),
+    uiText(`- Notebook: ${params.filters.notebook ? params.resolveNotebookName(params.filters.notebook) : 'All notebooks'}`, `- 笔记本：${params.filters.notebook ? params.resolveNotebookName(params.filters.notebook) : '所有笔记本'}`),
+    uiText(`- Tags: ${params.filters.tags?.length ? params.filters.tags.join(', ') : 'All tags'}`, `- 标签：${params.filters.tags?.length ? params.filters.tags.join(', ') : '全部标签'}`),
+    uiText(`- Topics: ${params.filters.themeNames?.length ? params.filters.themeNames.join(', ') : 'All topics'}`, `- 主题：${params.filters.themeNames?.length ? params.filters.themeNames.join(', ') : '全部主题'}`),
+    uiText(`- Keyword: ${params.filters.keyword?.trim() || 'None'}`, `- 关键词：${params.filters.keyword?.trim() || '无'}`),
   ]
 }
 
@@ -149,8 +153,10 @@ export function resolveWikiScopeDocuments(params: {
 }
 
 function extractManagedMarkdown(fullMarkdown: string): string {
-  const manualHeading = '\n## 人工备注'
-  const manualHeadingIndex = fullMarkdown.indexOf(manualHeading)
+  const manualHeadingIndex = getWikiHeadingCandidates('manualNotes', '##')
+    .map(heading => fullMarkdown.indexOf(`\n${heading}`))
+    .filter(index => index >= 0)
+    .sort((left, right) => left - right)[0] ?? -1
   if (manualHeadingIndex < 0) {
     return fullMarkdown.trim()
   }

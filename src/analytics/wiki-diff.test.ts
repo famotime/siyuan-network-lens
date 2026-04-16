@@ -114,6 +114,6 @@ describe('wiki diff', () => {
     })
 
     expect(preview.status).toBe('conflict')
-    expect(preview.conflictReason).toContain('当前 AI 管理区内容')
+    expect(preview.conflictReason).toContain('The current AI managed area')
   })
 })

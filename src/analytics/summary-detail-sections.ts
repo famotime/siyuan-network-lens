@@ -17,7 +17,7 @@ import {
   type LargeDocumentMetric,
 } from './large-documents'
 import { collectReadMatches, type ReadCardMode } from './read-status'
-import { SUGGESTION_TYPE_LABELS } from './ui-copy'
+import { getSuggestionTypeLabels } from './ui-copy'
 import {
   compareSiyuanTimestamps as compareTimestamp,
   formatCompactDate,
@@ -33,9 +33,11 @@ import type {
   SummaryDetailSection,
 } from './summary-detail-types'
 import type { PluginConfig } from '@/types/config'
+import { pickUiText } from '@/i18n/ui'
 
 type SuggestionType = ReferenceGraphReport['suggestions'][number]['type']
 type SuggestionMap = Map<string, Array<{ type: SuggestionType, suggestion: DetailSuggestion }>>
+const uiText = (en_US: string, zh_CN: string) => pickUiText({ en_US, zh_CN })
 
 export function buildSummaryDetailSections(params: {
   documents: DocumentRecord[]
@@ -111,8 +113,8 @@ export function buildSummaryDetailSections(params: {
     .map(document => ({
       documentId: document.id,
       title: resolveTitle(document),
-      meta: `创建于 ${formatCompactDate(document.created)}`,
-      badge: '待标记',
+      meta: uiText(`Created ${formatCompactDate(document.created)}`, `创建于 ${formatCompactDate(document.created)}`),
+      badge: uiText('Needs review', '待处理'),
       isThemeDocument: themeDocumentIdSet.has(document.id),
       suggestions: buildUnreadSuggestions({
         documentId: document.id,
@@ -124,24 +126,24 @@ export function buildSummaryDetailSections(params: {
   return {
     documents: {
       key: 'documents',
-      title: '文档样本详情',
-      description: '当前筛选条件命中的文档。',
+      title: uiText('Doc sample', '文档样本'),
+      description: uiText('Docs matched by the current filters.', '当前筛选命中的文档。'),
       kind: 'list',
       items: filteredDocuments
         .sort(compareDocumentsByRecentUpdate)
         .map(document => ({
           documentId: document.id,
           title: resolveTitle(document),
-          meta: `${document.hpath || document.path} · 最近更新 ${formatCompactDate(document.updated)}`,
+          meta: uiText(`${document.hpath || document.path} · Updated ${formatCompactDate(document.updated)}`, `${document.hpath || document.path} · 更新于 ${formatCompactDate(document.updated)}`),
           isThemeDocument: themeDocumentIdSet.has(document.id),
         })),
     },
     read: {
       key: 'read',
-      title: readCardMode === 'read' ? '已读文档详情' : '未读文档详情',
+      title: readCardMode === 'read' ? uiText('Read docs', '已读文档') : uiText('Unread docs', '未读文档'),
       description: readCardMode === 'read'
-        ? '命中已读目录、标签或标题规则的文档。'
-        : '未命中已读目录、标签或标题规则的文档。',
+        ? uiText('Docs matched by read paths, tags, or title rules.', '命中已读路径、标签或标题规则的文档。')
+        : uiText('Docs not matched by read paths, tags, or title rules.', '未命中已读路径、标签或标题规则的文档。'),
       kind: 'list',
       items: readCardMode === 'read'
         ? readMatches.map(item => ({
@@ -155,24 +157,24 @@ export function buildSummaryDetailSections(params: {
     },
     todaySuggestions: {
       key: 'todaySuggestions',
-      title: '今日建议详情',
-      description: '按优先级提供建议',
+      title: uiText('Today suggestions', '今日建议'),
+      description: uiText('Suggestions ranked by priority.', '按优先级排序的建议。'),
       kind: 'aiInbox',
       result: params.aiInboxResult ?? null,
     },
     largeDocuments: {
       key: 'largeDocuments',
-      title: largeDocumentCardMode === 'storage' ? '大文档详情（按资源）' : '大文档详情（按文字）',
+      title: largeDocumentCardMode === 'storage' ? uiText('Large docs (assets)', '大文档（资源）') : uiText('Large docs (text)', '大文档（正文）'),
       description: largeDocumentCardMode === 'storage'
-        ? '总大小超过 3 MB 的文档'
-        : '字数超过 10000 的文档',
+        ? uiText('Docs larger than 3 MB in total size.', '总大小超过 3 MB 的文档。')
+        : uiText('Docs with more than 10,000 words.', '字数超过 10,000 的文档。'),
       kind: 'list',
       items: largeDocumentItems,
     },
     references: {
       key: 'references',
-      title: '活跃关系详情',
-      description: '当前时间窗口内参与文档级连接的文档。',
+      title: uiText('Active links', '活跃连接'),
+      description: uiText('Docs participating in doc-level links in the current window.', '当前窗口内参与文档级连接的文档。'),
       kind: 'list',
       items: [...activeCounts.entries()]
         .map<SummaryDetailItem | null>(([documentId, counts]) => {
@@ -183,8 +185,8 @@ export function buildSummaryDetailSections(params: {
           return {
             documentId,
             title: resolveTitle(document),
-            meta: `入链 ${counts.inbound} / 出链 ${counts.outbound}`,
-            badge: `${counts.inbound + counts.outbound} 次参与`,
+            meta: uiText(`Inbound ${counts.inbound} / Outbound ${counts.outbound}`, `入链 ${counts.inbound} / 出链 ${counts.outbound}`),
+            badge: uiText(`${counts.inbound + counts.outbound} refs`, `${counts.inbound + counts.outbound} 条引用`),
             isThemeDocument: themeDocumentIdSet.has(documentId),
           }
         })
@@ -193,8 +195,8 @@ export function buildSummaryDetailSections(params: {
     },
     ranking: {
       key: 'ranking',
-      title: '核心文档详情',
-      description: '被引用频次最高的核心文档。',
+      title: uiText('Core docs', '核心文档'),
+      description: uiText('Most referenced docs.', '被引用最多的文档。'),
       kind: 'ranking',
       ranking: params.report.ranking.map((item) => {
         const document = documentMap.get(item.documentId)
@@ -211,8 +213,8 @@ export function buildSummaryDetailSections(params: {
     },
     trends: {
       key: 'trends',
-      title: '趋势观察详情',
-      description: '当前窗口与前一窗口的活跃变化对比。',
+      title: uiText('Trend watch', '趋势观察'),
+      description: uiText('Activity changes between the current and previous windows.', '当前窗口与上一窗口之间的活跃变化。'),
       kind: 'trends',
       trends: params.trends ?? {
         current: { referenceCount: 0 },
@@ -227,70 +229,70 @@ export function buildSummaryDetailSections(params: {
     },
     communities: {
       key: 'communities',
-      title: '主题社区详情',
-      description: '已归入主题社区的文档。',
+      title: uiText('Topic clusters', '主题社区'),
+      description: uiText('Docs grouped into topic clusters.', '按主题聚成社区的文档。'),
       kind: 'list',
       items: params.report.communities.flatMap(community => {
         const hasRecognizedThemeDocument = community.documentIds.some(documentId => themeDocumentIdSet.has(documentId))
         return community.documentIds.map((documentId) => ({
           documentId,
           title: documentMap.get(documentId)?.title ?? documentId,
-          meta: `社区标签：${community.topTags.join(' / ') || '未提取'} · 社区规模 ${community.size}`,
-          badge: community.missingTopicPage && !hasRecognizedThemeDocument ? '缺主题页' : undefined,
+          meta: uiText(`Cluster tags: ${community.topTags.join(' / ') || 'None'} · Cluster size ${community.size}`, `社区标签：${community.topTags.join(' / ') || '无'} · 社区规模 ${community.size}`),
+          badge: community.missingTopicPage && !hasRecognizedThemeDocument ? uiText('Missing topic page', '缺少主题页') : undefined,
           isThemeDocument: themeDocumentIdSet.has(documentId),
         }))
       }),
     },
     orphans: {
       key: 'orphans',
-      title: '孤立文档详情',
-      description: '当前窗口内没有有效文档级连接的文档。',
+      title: uiText('Orphan docs', '孤立文档'),
+      description: uiText('Docs with no valid doc-level links in the current window.', '当前窗口内没有有效文档级连接的文档。'),
       kind: 'list',
       items: params.report.orphans.map(item => ({
         documentId: item.documentId,
         title: item.title,
-        meta: `最近更新 ${formatCompactDate(item.updatedAt)} · 创建于 ${formatCompactDate(item.createdAt)}`,
+        meta: uiText(`Updated ${formatCompactDate(item.updatedAt)} · Created ${formatCompactDate(item.createdAt)}`, `更新于 ${formatCompactDate(item.updatedAt)} · 创建于 ${formatCompactDate(item.createdAt)}`),
         isThemeDocument: themeDocumentIdSet.has(item.documentId),
         suggestions: resolveSuggestions(suggestionMap, item.documentId, 'repair-orphan'),
       })),
     },
     dormant: {
       key: 'dormant',
-      title: '沉没文档详情',
-      description: `超过 ${params.dormantDays} 天未产生有效连接，但可能保留历史入链/出链。`,
+      title: uiText('Dormant docs', '沉没文档'),
+      description: uiText(`No valid links for more than ${params.dormantDays} days, with possible historical in/out links.`, `超过 ${params.dormantDays} 天没有有效连接，但可能存在历史入链或出链。`),
       kind: 'list',
       items: params.report.dormantDocuments.map(item => ({
         documentId: item.documentId,
         title: item.title,
-        meta: `${item.inactivityDays} 天未活跃 · 最近连接 ${formatCompactDate(item.lastConnectedAt || item.updatedAt)}`,
-        badge: item.hasSparseEvidence ? `${item.historicalReferenceCount} 条历史连接` : undefined,
+        meta: uiText(`${item.inactivityDays} inactive days · Last linked ${formatCompactDate(item.lastConnectedAt || item.updatedAt)}`, `${item.inactivityDays} 天未活跃 · 最近连接于 ${formatCompactDate(item.lastConnectedAt || item.updatedAt)}`),
+        badge: item.hasSparseEvidence ? uiText(`${item.historicalReferenceCount} historical links`, `${item.historicalReferenceCount} 条历史连接`) : undefined,
         isThemeDocument: themeDocumentIdSet.has(item.documentId),
         suggestions: resolveSuggestions(suggestionMap, item.documentId, 'archive-dormant'),
       })),
     },
     bridges: {
       key: 'bridges',
-      title: '桥接节点详情',
-      description: '断开后会削弱社区连通性的关键文档。',
+      title: uiText('Bridge docs', '桥接文档'),
+      description: uiText('Key docs whose removal weakens community connectivity.', '移除后会削弱社区连通性的关键文档。'),
       kind: 'list',
       items: params.report.bridgeDocuments.map(item => ({
         documentId: item.documentId,
         title: item.title,
-        meta: `连接度 ${item.degree}`,
+        meta: uiText(`Degree ${item.degree}`, `连接度 ${item.degree}`),
         isThemeDocument: themeDocumentIdSet.has(item.documentId),
         suggestions: resolveSuggestions(suggestionMap, item.documentId, 'maintain-bridge'),
       })),
     },
     propagation: {
       key: 'propagation',
-      title: '传播节点详情',
-      description: '高频出现在关键最短路径上的文档。',
+      title: uiText('Propagation nodes', '传播节点'),
+      description: uiText('Docs that frequently appear on key shortest paths.', '频繁出现在关键最短路径上的文档。'),
       kind: 'propagation',
       items: params.report.propagationNodes.map(item => ({
         documentId: item.documentId,
         title: item.title,
-        meta: `覆盖 ${item.focusDocumentCount} 个焦点文档 · 社区跨度 ${item.communitySpan || 1}`,
-        badge: `${item.score} 分`,
+        meta: uiText(`Covers ${item.focusDocumentCount} focus docs · Community span ${item.communitySpan || 1}`, `覆盖 ${item.focusDocumentCount} 个焦点文档 · 跨越 ${item.communitySpan || 1} 个社区`),
+        badge: uiText(`${item.score} pts`, `${item.score} 分`),
         isThemeDocument: themeDocumentIdSet.has(item.documentId),
         suggestions: [buildPropagationSuggestion(item)],
       })),
@@ -308,12 +310,13 @@ function compareReferenceItemsByParticipation(left: SummaryDetailItem, right: Su
 
 function buildSuggestionMap(report: ReferenceGraphReport): SuggestionMap {
   const map = new Map<string, Array<{ type: SuggestionType, suggestion: DetailSuggestion }>>()
+  const suggestionTypeLabels = getSuggestionTypeLabels()
   for (const item of report.suggestions) {
     const suggestions = map.get(item.documentId) ?? []
     suggestions.push({
       type: item.type,
       suggestion: {
-        label: SUGGESTION_TYPE_LABELS[item.type],
+        label: suggestionTypeLabels[item.type],
         text: item.reason,
       },
     })
@@ -333,10 +336,15 @@ function resolveSuggestions(
 }
 
 function buildPropagationSuggestion(item: ReferenceGraphReport['propagationNodes'][number]): DetailSuggestion {
-  const bridgeHint = item.bridgeRole ? '，同时承担社区桥接角色' : ''
+  const bridgeHint = item.bridgeRole
+    ? uiText(', also acting as a community bridge', '，同时承担社区桥接角色')
+    : ''
   return {
-    label: '传播优化',
-    text: `位于 ${item.pathPairCount} 条关键最短路径上，覆盖 ${item.focusDocumentCount} 个焦点文档${bridgeHint}，建议补充路径说明与上下游导航。`,
+    label: uiText('Propagation optimization', '传播优化'),
+    text: uiText(
+      `Appears on ${item.pathPairCount} key shortest paths, covering ${item.focusDocumentCount} focus docs${bridgeHint}. Add path notes and upstream/downstream navigation.`,
+      `出现在 ${item.pathPairCount} 条关键最短路径上，覆盖 ${item.focusDocumentCount} 个焦点文档${bridgeHint}。建议补充路径说明与上下游导航。`,
+    ),
   }
 }
 
@@ -357,8 +365,11 @@ function buildUnreadSuggestions(params: {
 
 function buildEmbeddedAssetCleanupSuggestion(metric: Pick<LargeDocumentMetric, 'assetCount' | 'assetBytes' | 'totalBytes'>): DetailSuggestion {
   return {
-    label: '清理内嵌资源',
-    text: `内嵌资源 ${metric.assetCount} 个，资源占用 ${formatBytes(metric.assetBytes)}，当前总大小 ${formatBytes(metric.totalBytes)}，建议清理不再需要的内嵌资源。`,
+    label: uiText('Clean embedded assets', '清理嵌入资源'),
+    text: uiText(
+      `${metric.assetCount} embedded assets use ${formatBytes(metric.assetBytes)}. Total size is ${formatBytes(metric.totalBytes)}. Remove assets that are no longer needed.`,
+      `${metric.assetCount} 个嵌入资源占用 ${formatBytes(metric.assetBytes)}，总大小为 ${formatBytes(metric.totalBytes)}。可清理不再需要的资源。`,
+    ),
   }
 }
 
@@ -366,16 +377,16 @@ function buildReadMeta(item: ReturnType<typeof collectReadMatches>[number]): str
   const parts: string[] = []
 
   if (item.matchedTags.length) {
-    parts.push(`命中标签：${item.matchedTags.join(' / ')}`)
+    parts.push(uiText(`Tags: ${item.matchedTags.join(' / ')}`, `标签：${item.matchedTags.join(' / ')}`))
   }
   if (item.matchedPrefixes.length) {
-    parts.push(`命中前缀：${item.matchedPrefixes.join(' / ')}`)
+    parts.push(uiText(`Prefixes: ${item.matchedPrefixes.join(' / ')}`, `前缀：${item.matchedPrefixes.join(' / ')}`))
   }
   if (item.matchedSuffixes.length) {
-    parts.push(`命中后缀：${item.matchedSuffixes.join(' / ')}`)
+    parts.push(uiText(`Suffixes: ${item.matchedSuffixes.join(' / ')}`, `后缀：${item.matchedSuffixes.join(' / ')}`))
   }
   if (item.matchedPaths.length) {
-    parts.push(`命中目录：${item.matchedPaths.join(' / ')}`)
+    parts.push(uiText(`Paths: ${item.matchedPaths.join(' / ')}`, `路径：${item.matchedPaths.join(' / ')}`))
   }
 
   return parts.join(' · ')
@@ -385,13 +396,13 @@ function buildReadBadge(item: ReturnType<typeof collectReadMatches>[number]): st
   const badges: string[] = []
 
   if (item.matchedTags.length) {
-    badges.push('标签命中')
+    badges.push(uiText('Tag match', '标签命中'))
   }
   if (item.matchedPrefixes.length || item.matchedSuffixes.length) {
-    badges.push('标题命中')
+    badges.push(uiText('Title match', '标题命中'))
   }
   if (item.matchedPaths.length) {
-    badges.push('目录命中')
+    badges.push(uiText('Path match', '路径命中'))
   }
 
   return badges.join(' / ') || undefined

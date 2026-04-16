@@ -177,9 +177,9 @@ describe('useAnalyticsState', () => {
     const documentCard = state.summaryCards.value.find(card => card.key === 'documents')
     const readCard = state.summaryCards.value.find(card => card.key === 'read')
     expect(documentCard?.value).toBe('7')
-    expect(readCard?.label).toBe('未读文档')
+    expect(readCard?.label).toBe('Unread docs')
     expect(readCard?.value).toBe('5')
-    expect(state.summaryCards.value.find(card => card.key === 'largeDocuments')?.label).toBe('大文档·文字')
+    expect(state.summaryCards.value.find(card => card.key === 'largeDocuments')?.label).toBe('Large docs · text')
     expect(state.summaryCards.value.find(card => card.key === 'largeDocuments')?.value).toBe('0')
     expect(state.report.value?.ranking.map(item => item.documentId)).toEqual(['doc-b'])
     expect(state.selectedEvidenceDocument.value).toBe('doc-b')
@@ -310,10 +310,10 @@ describe('useAnalyticsState', () => {
     await nextTick()
 
     expect(state.selectedSummaryDetail.value).toEqual(expect.objectContaining({
-      title: '未读文档详情',
+      title: 'Unread docs',
       kind: 'list',
       items: expect.arrayContaining([
-        expect.objectContaining({ documentId: 'doc-theme-ai', badge: '待标记' }),
+        expect.objectContaining({ documentId: 'doc-theme-ai', badge: 'Needs review' }),
       ]),
     }))
 
@@ -321,14 +321,14 @@ describe('useAnalyticsState', () => {
     await nextTick()
 
     expect(state.summaryCards.value.find(card => card.key === 'read')).toEqual(expect.objectContaining({
-      label: '已读文档',
+      label: 'Read docs',
       value: '2',
     }))
     expect(state.selectedSummaryDetail.value).toEqual(expect.objectContaining({
-      title: '已读文档详情',
+      title: 'Read docs',
       kind: 'list',
       items: expect.arrayContaining([
-        expect.objectContaining({ documentId: 'doc-a', badge: '标签命中' }),
+        expect.objectContaining({ documentId: 'doc-a', badge: 'Tag match' }),
       ]),
     }))
   })
@@ -382,14 +382,14 @@ describe('useAnalyticsState', () => {
     await nextTick()
 
     expect(state.summaryCards.value.find(card => card.key === 'largeDocuments')).toEqual(expect.objectContaining({
-      label: '大文档·文字',
+      label: 'Large docs · text',
       value: '2',
     }))
     expect(state.selectedSummaryDetail.value).toEqual(expect.objectContaining({
-      title: '大文档详情（按文字）',
+      title: 'Large docs (text)',
       items: [
-        expect.objectContaining({ documentId: 'doc-b', badge: '12000 字' }),
-        expect.objectContaining({ documentId: 'doc-a', badge: '10001 字' }),
+        expect.objectContaining({ documentId: 'doc-b', badge: '12000 words' }),
+        expect.objectContaining({ documentId: 'doc-a', badge: '10001 words' }),
       ],
     }))
 
@@ -397,11 +397,11 @@ describe('useAnalyticsState', () => {
     await nextTick()
 
     expect(state.summaryCards.value.find(card => card.key === 'largeDocuments')).toEqual(expect.objectContaining({
-      label: '大文档·资源',
+      label: 'Large docs · assets',
       value: '1',
     }))
     expect(state.selectedSummaryDetail.value).toEqual(expect.objectContaining({
-      title: '大文档详情（按资源）',
+      title: 'Large docs (assets)',
       items: [
         expect.objectContaining({ documentId: 'doc-a', badge: '4.0 MB' }),
       ],
@@ -456,7 +456,7 @@ describe('useAnalyticsState', () => {
     await nextTick()
 
     expect(state.summaryCards.value.find(card => card.key === 'read')).toEqual(expect.objectContaining({
-      label: '未读文档',
+      label: 'Unread docs',
       value: '1',
     }))
 
@@ -464,7 +464,7 @@ describe('useAnalyticsState', () => {
     await nextTick()
 
     expect(state.summaryCards.value.find(card => card.key === 'read')).toEqual(expect.objectContaining({
-      label: '已读文档',
+      label: 'Read docs',
       value: '1',
     }))
   })
@@ -893,7 +893,7 @@ describe('useAnalyticsState', () => {
     expect(generateInbox).toHaveBeenCalledTimes(1)
     expect((state as any).aiInboxResult.value).toEqual(aiResult)
     expect(state.summaryCards.value.find(card => card.key === 'todaySuggestions')).toEqual(expect.objectContaining({
-      label: '今日建议',
+      label: 'Today suggestions',
       value: '1',
     }))
     expect((state as any).aiInboxError.value).toBe('')

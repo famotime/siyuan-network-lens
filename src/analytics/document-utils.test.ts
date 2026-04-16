@@ -1,4 +1,4 @@
-import { describe, expect, it } from 'vitest'
+import { afterEach, describe, expect, it } from 'vitest'
 
 import {
   compareSiyuanTimestamps,
@@ -9,6 +9,10 @@ import {
 } from './document-utils'
 
 describe('document-utils', () => {
+  afterEach(() => {
+    delete (globalThis as any).siyuan
+  })
+
   it('normalizes tags from strings and arrays using the same split rules', () => {
     expect(normalizeTags(' AI,知识 #整理  机器学习 ')).toEqual(['AI', '知识', '整理', '机器学习'])
     expect(normalizeTags([' AI ', '', '知识 '])).toEqual(['AI', '知识'])
@@ -81,6 +85,16 @@ describe('document-utils', () => {
 
   it('formats compact dates directly from SiYuan timestamps', () => {
     expect(formatCompactDate('20260313213430')).toBe('2026-03-13')
+    expect(formatCompactDate('')).toBe('Unknown time')
+  })
+
+  it('switches unknown-time fallback to Chinese when the workspace locale is zh_CN', () => {
+    ;(globalThis as any).siyuan = {
+      config: {
+        lang: 'zh_CN',
+      },
+    }
+
     expect(formatCompactDate('')).toBe('未知时间')
   })
 })

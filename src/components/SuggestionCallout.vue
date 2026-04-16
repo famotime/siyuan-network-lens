@@ -3,7 +3,7 @@
     v-if="suggestions.length || Boolean($slots.default)"
     class="suggestion-callout"
   >
-    <span class="suggestion-callout__heading">建议</span>
+    <span class="suggestion-callout__heading">{{ uiText('Suggestions', '建议') }}</span>
     <div class="suggestion-callout__list">
       <div
         v-for="suggestion in suggestions"
@@ -25,10 +25,13 @@
 
 <script setup lang="ts">
 import type { DetailSuggestion } from '@/analytics/summary-details'
+import { pickUiText } from '@/i18n/ui'
 
 defineProps<{
   suggestions: DetailSuggestion[]
 }>()
+
+const uiText = (en_US: string, zh_CN: string) => pickUiText({ en_US, zh_CN })
 </script>
 
 <style scoped>

@@ -11,13 +11,14 @@
       v-if="isThemeDocument"
       class="document-title__marker"
     >
-      主题文档
+      {{ uiText('Topic doc', '主题文档') }}
     </span>
   </div>
 </template>
 
 <script setup lang="ts">
 import { computed } from 'vue'
+import { pickUiText } from '@/i18n/ui'
 
 const props = withDefaults(defineProps<{
   title: string
@@ -36,6 +37,8 @@ const buttonClass = computed(() => {
     `document-title__button--${props.variant}`,
   ]
 })
+
+const uiText = (en_US: string, zh_CN: string) => pickUiText({ en_US, zh_CN })
 </script>
 
 <style scoped>

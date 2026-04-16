@@ -48,8 +48,8 @@ describe('config defaults', () => {
     expect(config.enableConsoleLogging).toBe(false)
     expect(config.wikiEnabled).toBe(false)
     expect(config.wikiPageSuffix).toBe('-llm-wiki')
-    expect(config.wikiIndexTitle).toBe('LLM-Wiki-索引')
-    expect(config.wikiLogTitle).toBe('LLM-Wiki-维护日志')
+    expect(config.wikiIndexTitle).toBe('LLM-Wiki-Index')
+    expect(config.wikiLogTitle).toBe('LLM-Wiki-Maintenance-Log')
     expect(config.themeDocumentPath).toBe('/box-1/专题')
   })
 
@@ -118,8 +118,8 @@ describe('config defaults', () => {
     expect(config.enableConsoleLogging).toBe(false)
     expect(config.wikiEnabled).toBe(false)
     expect(config.wikiPageSuffix).toBe('-llm-wiki')
-    expect(config.wikiIndexTitle).toBe('LLM-Wiki-索引')
-    expect(config.wikiLogTitle).toBe('LLM-Wiki-维护日志')
+    expect(config.wikiIndexTitle).toBe('LLM-Wiki-Index')
+    expect(config.wikiLogTitle).toBe('LLM-Wiki-Maintenance-Log')
   })
 
   it('preserves full-path theme document config and normalizes analysis exclusion fields', () => {

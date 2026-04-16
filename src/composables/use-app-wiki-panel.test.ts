@@ -26,11 +26,11 @@ describe('createAppWikiPanelController', () => {
     expect(controller.wikiPanelCoreDocumentId.value).toBe('')
     expect(controller.activeWikiPreviewRequest.value).toEqual({
       sourceDocumentIds: ['doc-a', 'doc-b'],
-      scopeDescriptionLine: '- 范围来源：当前文档样本',
+      scopeDescriptionLine: '- Scope source: current doc sample',
     })
     expect(prepareWikiPreview).toHaveBeenCalledWith({
       sourceDocumentIds: ['doc-a', 'doc-b'],
-      scopeDescriptionLine: '- 范围来源：当前文档样本',
+      scopeDescriptionLine: '- Scope source: current doc sample',
     })
 
     await controller.toggleDocumentWikiPanel()
@@ -59,12 +59,12 @@ describe('createAppWikiPanelController', () => {
     expect(controller.wikiPanelCoreDocumentId.value).toBe('doc-a')
     expect(controller.activeWikiPreviewRequest.value).toEqual({
       sourceDocumentIds: ['doc-a', 'doc-b', 'doc-c', 'doc-d', 'doc-e'],
-      scopeDescriptionLine: '- 范围来源：核心文档《Beta》关联范围（正链 / 反链 / 子文档）',
+      scopeDescriptionLine: '- Scope source: related range for core doc "Beta" (outbound / inbound / child docs)',
     })
     expect(controller.isCoreDocumentWikiPanelVisible('doc-a')).toBe(true)
     expect(prepareWikiPreview).toHaveBeenCalledWith({
       sourceDocumentIds: ['doc-a', 'doc-b', 'doc-c', 'doc-d', 'doc-e'],
-      scopeDescriptionLine: '- 范围来源：核心文档《Beta》关联范围（正链 / 反链 / 子文档）',
+      scopeDescriptionLine: '- Scope source: related range for core doc "Beta" (outbound / inbound / child docs)',
     })
   })
 })

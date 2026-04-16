@@ -1,18 +1,41 @@
-import { describe, expect, it } from 'vitest'
+import { afterEach, describe, expect, it } from 'vitest'
 
-import { DOCUMENT_DETAIL_DESCRIPTION, SUGGESTION_TYPE_LABELS } from './ui-copy'
+import { getDocumentDetailDescription, getSuggestionTypeLabels } from './ui-copy'
 
 describe('ui copy', () => {
+  afterEach(() => {
+    delete (globalThis as any).siyuan
+  })
+
   it('describes document detail panel as following the active document', () => {
-    expect(DOCUMENT_DETAIL_DESCRIPTION)
-      .toBe('跟随主浏览区当前打开文档，汇总其社区位置、桥接角色与沉没风险。')
+    expect(getDocumentDetailDescription())
+      .toBe('Follow the active document and summarize its community role, bridge position, and dormant risk.')
   })
 
   it('exposes suggestion type labels', () => {
-    expect(SUGGESTION_TYPE_LABELS).toEqual({
-      'promote-hub': '升级为主题页',
+    expect(getSuggestionTypeLabels()).toEqual({
+      'promote-hub': 'Promote to topic page',
+      'repair-orphan': 'Repair links',
+      'maintain-bridge': 'Maintain bridge',
+      'archive-dormant': 'Archive dormant',
+    })
+  })
+
+  it('switches the shared copy to Chinese when the workspace locale is zh_CN', async () => {
+    ;(globalThis as any).siyuan = {
+      config: {
+        lang: 'zh_CN',
+      },
+    }
+
+    const uiCopy = await import('./ui-copy')
+
+    expect(uiCopy.getDocumentDetailDescription())
+      .toBe('跟随当前文档，概览其社区角色、桥接位置与沉没风险。')
+    expect(uiCopy.getSuggestionTypeLabels()).toEqual({
+      'promote-hub': '提升为主题页',
       'repair-orphan': '补齐链接',
-      'maintain-bridge': '重点维护',
+      'maintain-bridge': '维护桥接',
       'archive-dormant': '归档沉没',
     })
   })

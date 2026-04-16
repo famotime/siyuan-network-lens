@@ -1,6 +1,11 @@
-import { describe, expect, it } from 'vitest'
+import { afterEach, describe, expect, it, vi } from 'vitest'
 
 import { renderThemeWikiDraft } from './wiki-renderer'
+
+afterEach(() => {
+  delete (globalThis as typeof globalThis & { siyuan?: unknown }).siyuan
+  vi.resetModules()
+})
 
 describe('wiki renderer', () => {
   it('renders a stable managed markdown region and preserves a manual notes placeholder', () => {
@@ -27,10 +32,50 @@ describe('wiki renderer', () => {
       'evidence',
       'actions',
     ])
+    expect(rendered.managedMarkdown).toContain('## AI managed area')
+    expect(rendered.managedMarkdown).toContain('### Page meta')
+    expect(rendered.managedMarkdown).toContain('### Topic overview')
+    expect(rendered.managedMarkdown).toContain('### Cleanup actions')
+    expect(rendered.fullMarkdown).toContain('## Manual notes')
+    expect(rendered.fullMarkdown).toContain('> Reserved for manual notes')
+  })
+
+  it('renders Chinese headings and placeholders when the workspace locale is zh_CN', async () => {
+    ;(globalThis as typeof globalThis & {
+      siyuan?: {
+        config?: {
+          lang?: string
+        }
+      }
+    }).siyuan = {
+      config: {
+        lang: 'zh_CN',
+      },
+    }
+
+    vi.resetModules()
+
+    const { renderThemeWikiDraft: renderZhThemeWikiDraft } = await import('./wiki-renderer')
+
+    const rendered = renderZhThemeWikiDraft({
+      pageTitle: '主题-AI-索引-llm-wiki',
+      pairedThemeTitle: '主题-AI-索引',
+      generatedAt: '2026-04-09T12:00:00.000Z',
+      model: 'gpt-4.1-mini',
+      sourceDocumentCount: 2,
+      llmOutput: {
+        overview: '',
+        keyDocuments: [],
+        structureObservations: [],
+        evidence: [],
+        actions: [],
+      },
+    })
+
     expect(rendered.managedMarkdown).toContain('## AI 管理区')
     expect(rendered.managedMarkdown).toContain('### 页面头信息')
     expect(rendered.managedMarkdown).toContain('### 主题概览')
-    expect(rendered.managedMarkdown).toContain('### 整理动作')
+    expect(rendered.managedMarkdown).toContain('- 暂无内容')
     expect(rendered.fullMarkdown).toContain('## 人工备注')
     expect(rendered.fullMarkdown).toContain('> 这里保留给人工补充')
   })

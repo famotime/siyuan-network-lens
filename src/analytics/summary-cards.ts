@@ -5,6 +5,9 @@ import {
 } from './large-documents'
 import type { ReadCardMode } from './read-status'
 import type { SummaryCardItem } from './summary-detail-types'
+import { pickUiText } from '@/i18n/ui'
+
+const uiText = (en_US: string, zh_CN: string) => pickUiText({ en_US, zh_CN })
 
 export function buildSummaryCards(params: {
   report: ReferenceGraphReport
@@ -32,81 +35,81 @@ export function buildSummaryCards(params: {
   return [
     {
       key: 'documents',
-      label: '文档样本',
+      label: uiText('Doc sample', '文档样本'),
       value: (params.documentCount ?? params.report.summary.totalDocuments).toString(),
-      hint: '命中当前筛选条件的文档数',
+      hint: uiText('Docs matched by current filters', '当前筛选命中的文档'),
     },
     {
       key: 'read',
-      label: readCardMode === 'read' ? '已读文档' : '未读文档',
+      label: readCardMode === 'read' ? uiText('Read docs', '已读文档') : uiText('Unread docs', '未读文档'),
       value: (readCardMode === 'read' ? readDocumentCount : unreadDocumentCount).toString(),
       hint: readCardMode === 'read'
-        ? '命中已读标记规则的文档数'
-        : '未命中已读标记规则的文档数',
+        ? uiText('Docs matched by read rules', '命中已读规则的文档')
+        : uiText('Docs not matched by read rules', '未命中已读规则的文档'),
     },
     {
       key: 'todaySuggestions',
-      label: '今日建议',
+      label: uiText('Today suggestions', '今日建议'),
       value: (params.aiInboxCount ?? 0).toString(),
-      hint: 'AI 汇总出的今日整理建议数',
+      hint: uiText('AI-ranked suggestions for today', 'AI 排序的今日建议'),
     },
     {
       key: 'largeDocuments',
-      label: largeDocumentCardMode === 'storage' ? '大文档·资源' : '大文档·文字',
+      label: largeDocumentCardMode === 'storage' ? uiText('Large docs · assets', '大文档 · 资源') : uiText('Large docs · text', '大文档 · 正文'),
       value: (largeDocumentCardMode === 'storage'
         ? largeDocumentSummary.storageDocumentCount
         : largeDocumentSummary.wordDocumentCount).toString(),
       hint: largeDocumentCardMode === 'storage'
-        ? '按总大小超过 3 MB 的文档数量统计'
-        : '按字数超过 10000 的文档数量统计',
+        ? uiText('Docs larger than 3 MB in total size', '总大小超过 3 MB 的文档')
+        : uiText('Docs with more than 10,000 words', '字数超过 10,000 的文档'),
     },
     {
       key: 'references',
-      label: '活跃关系',
+      label: uiText('Active links', '活跃连接'),
       value: params.report.summary.totalReferences.toString(),
-      hint: '当前窗口内的文档级引用次数',
+      hint: uiText('Doc-level references in the current window', '当前窗口内的文档级引用'),
     },
     {
       key: 'ranking',
-      label: '核心文档',
+      label: uiText('Core docs', '核心文档'),
       value: params.report.ranking.length.toString(),
-      hint: '当前窗口内被引用的核心文档数',
+      hint: uiText('Most referenced docs in the current window', '当前窗口内被引用最多的文档'),
     },
     {
       key: 'trends',
-      label: '趋势观察',
+      label: uiText('Trend watch', '趋势观察'),
       value: trendCount.toString(),
-      hint: '当前窗口内出现变化的文档数',
+      hint: uiText('Docs with activity changes in the current window', '当前窗口内活动发生变化的文档'),
     },
     {
       key: 'communities',
-      label: '主题社区',
+      label: uiText('Topic clusters', '主题社区'),
       value: params.report.summary.communityCount.toString(),
-      hint: '按桥接节点拆分后的主题簇',
+      hint: uiText('Topic clusters split by bridge nodes', '按桥接节点拆分出的主题社区'),
     },
     {
       key: 'orphans',
-      label: '孤立文档',
+      label: uiText('Orphan docs', '孤立文档'),
       value: params.report.summary.orphanCount.toString(),
-      hint: '当前窗口内没有有效文档级连接',
+      hint: uiText('No valid doc-level links in the current window', '当前窗口内没有有效文档级连接'),
     },
     {
       key: 'dormant',
-      label: '沉没文档',
+      label: uiText('Dormant docs', '沉没文档'),
       value: params.report.summary.dormantCount.toString(),
-      hint: `超过 ${params.dormantDays} 天未产生有效连接`,
+      hint: uiText(`No valid links for more than ${params.dormantDays} days`, `超过 ${params.dormantDays} 天没有有效连接`),
     },
     {
       key: 'bridges',
-      label: '桥接节点',
+      label: uiText('Bridge docs', '桥接文档'),
       value: params.report.bridgeDocuments.length.toString(),
-      hint: '断开后会削弱社区连接的文档',
+      hint: uiText('Docs whose removal weakens community connectivity', '移除后会削弱社区连通性的文档'),
     },
     {
       key: 'propagation',
-      label: '传播节点',
+      label: uiText('Propagation nodes', '传播节点'),
       value: params.report.summary.propagationCount.toString(),
-      hint: '出现在关键路径上的高传播价值节点',
+      hint: uiText('High-impact relay nodes on key paths', '关键路径上的高影响中继节点'),
     },
   ]
 }

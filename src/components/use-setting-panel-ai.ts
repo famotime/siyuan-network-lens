@@ -4,13 +4,14 @@ import { forwardProxy } from '@/api'
 import { createAiInboxService, fetchSiliconFlowModelCatalog, isAiConfigComplete } from '@/analytics/ai-inbox'
 import {
   AI_PROVIDER_PRESETS,
-  AI_PROVIDER_PRESET_OPTIONS,
   applyAiProviderPreset,
+  buildAiProviderPresetOptions,
   buildAiModelOptionItems,
+  getAiProviderPresets,
 } from '@/components/ai-provider-presets'
 import {
-  AI_FIELD_TOOLTIPS,
   buildSiliconFlowModelSelectPlaceholder,
+  getAiFieldTooltips,
   shouldAutoLoadSiliconFlowModelCatalog,
 } from '@/components/setting-panel-ai'
 import {
@@ -25,11 +26,13 @@ import {
   syncAiProviderConfigSnapshot,
 } from '@/components/setting-panel-ai-state'
 import { resolveSecretFieldMeta } from '@/components/setting-panel-secret-field'
+import { pickUiText } from '@/i18n/ui'
 import type { AiProviderPresetKey } from '@/types/ai-provider'
 import type { PluginConfig } from '@/types/config'
 import { createPluginLogger } from '@/utils/plugin-logger'
 
 export function useSettingPanelAi(config: PluginConfig) {
+  const uiText = (en_US: string, zh_CN: string) => pickUiText({ en_US, zh_CN })
   const aiService = createAiInboxService({
     forwardProxy,
     logger: createPluginLogger(() => config.enableConsoleLogging === true),
@@ -48,10 +51,11 @@ export function useSettingPanelAi(config: PluginConfig) {
   const aiTransferMessage = ref('')
   const aiTransferError = ref('')
   const isAiApiKeyVisible = ref(false)
+  const aiFieldTooltips = computed(() => getAiFieldTooltips())
 
   const aiConfigComplete = computed(() => isAiConfigComplete(config))
-  const aiProviderPresetOptions = AI_PROVIDER_PRESET_OPTIONS
-  const aiProviderPresetMeta = computed(() => AI_PROVIDER_PRESETS[selectedAiProviderPreset.value])
+  const aiProviderPresetOptions = computed(() => buildAiProviderPresetOptions())
+  const aiProviderPresetMeta = computed(() => getAiProviderPresets()[selectedAiProviderPreset.value] ?? AI_PROVIDER_PRESETS[selectedAiProviderPreset.value])
   const aiApiKeyFieldMeta = computed(() => resolveSecretFieldMeta(isAiApiKeyVisible.value, 'API Key'))
   const showSiliconFlowModelSelects = computed(() => selectedAiProviderPreset.value === 'siliconflow')
   const canLoadSiliconFlowModels = computed(() => Boolean(config.aiApiKey?.trim()))
@@ -82,12 +86,12 @@ export function useSettingPanelAi(config: PluginConfig) {
     optionCount: siliconFlowEmbeddingModelOptions.value.length,
   }))
   const siliconFlowChatModelSelectTitle = computed(() => buildSiliconFlowModelSelectTitle({
-    baseTitle: AI_FIELD_TOOLTIPS.siliconFlowChatModel,
+    baseTitle: aiFieldTooltips.value.siliconFlowChatModel,
     placeholder: siliconFlowChatModelPlaceholder.value,
     error: siliconFlowModelCatalogError.value,
   }))
   const siliconFlowEmbeddingModelSelectTitle = computed(() => buildSiliconFlowModelSelectTitle({
-    baseTitle: AI_FIELD_TOOLTIPS.siliconFlowEmbeddingModel,
+    baseTitle: aiFieldTooltips.value.siliconFlowEmbeddingModel,
     placeholder: siliconFlowEmbeddingModelPlaceholder.value,
     error: siliconFlowModelCatalogError.value,
   }))
@@ -137,7 +141,7 @@ export function useSettingPanelAi(config: PluginConfig) {
       })
       aiConnectionMessage.value = result.message
     } catch (error) {
-      aiConnectionError.value = error instanceof Error ? error.message : 'AI 连接测试失败'
+      aiConnectionError.value = error instanceof Error ? error.message : 'AI connection test failed'
     } finally {
       aiTestingConnection.value = false
     }
@@ -171,9 +175,9 @@ export function useSettingPanelAi(config: PluginConfig) {
     try {
       const content = stringifyAiSettingsTransferPayload(config)
       downloadAiSettingsFile(content)
-      aiTransferMessage.value = '已导出 AI 服务设置'
+      aiTransferMessage.value = uiText('AI settings exported', 'AI 设置已导出')
     } catch (error) {
-      aiTransferError.value = error instanceof Error ? error.message : '导出 AI 服务设置失败'
+      aiTransferError.value = error instanceof Error ? error.message : uiText('Failed to export AI settings', '导出 AI 设置失败')
     }
   }
 
@@ -193,9 +197,9 @@ export function useSettingPanelAi(config: PluginConfig) {
       selectedAiProviderPreset.value = config.aiProviderPreset ?? imported.aiProviderPreset
       aiConnectionMessage.value = ''
       aiConnectionError.value = ''
-      aiTransferMessage.value = '已导入 AI 服务设置'
+      aiTransferMessage.value = uiText('AI settings imported', 'AI 设置已导入')
     } catch (error) {
-      aiTransferError.value = error instanceof Error ? error.message : '导入 AI 服务设置失败'
+      aiTransferError.value = error instanceof Error ? error.message : uiText('Failed to import AI settings', '导入 AI 设置失败')
     } finally {
       input.value = ''
     }
@@ -237,7 +241,7 @@ export function useSettingPanelAi(config: PluginConfig) {
       siliconFlowEmbeddingModelOptions.value = buildAiModelOptionItems(catalog.embeddingModels, config.aiEmbeddingModel)
       siliconFlowModelCatalogLoaded.value = true
     } catch (error) {
-      siliconFlowModelCatalogError.value = error instanceof Error ? error.message : '加载模型列表失败'
+      siliconFlowModelCatalogError.value = error instanceof Error ? error.message : 'Failed to load model list'
     } finally {
       siliconFlowModelCatalogLoading.value = false
     }
@@ -258,7 +262,7 @@ export function useSettingPanelAi(config: PluginConfig) {
 
   function downloadAiSettingsFile(content: string) {
     if (typeof document === 'undefined' || typeof URL === 'undefined' || typeof Blob === 'undefined') {
-      throw new Error('当前环境不支持导出文件')
+      throw new Error('File export is not supported in the current environment')
     }
 
     const blob = new Blob([content], { type: 'application/json;charset=utf-8' })
@@ -274,7 +278,7 @@ export function useSettingPanelAi(config: PluginConfig) {
   }
 
   return {
-    AI_FIELD_TOOLTIPS,
+    AI_FIELD_TOOLTIPS: aiFieldTooltips,
     aiTestingConnection,
     aiConnectionMessage,
     aiConnectionError,

@@ -3,9 +3,9 @@
     <div class="panel-header">
       <div class="ai-inbox-panel__header-copy">
         <p class="ai-inbox-panel__eyebrow">AI Inbox</p>
-        <h2>AI 整理收件箱</h2>
+        <h2>{{ uiText('AI cleanup inbox', 'AI 整理收件箱') }}</h2>
         <p class="ai-inbox-panel__description">
-          今天先处理什么？
+          {{ uiText('What should you handle first today?', '今天应优先处理什么？') }}
         </p>
       </div>
       <div class="panel-header__actions">
@@ -16,7 +16,7 @@
           :disabled="testingConnection"
           @click="onTestConnection"
         >
-          {{ testingConnection ? '测试中...' : '测试连接' }}
+          {{ testingConnection ? uiText('Testing...', '测试中...') : uiText('Test connection', '测试连接') }}
         </button>
         <button
           class="action-button"
@@ -24,7 +24,7 @@
           :disabled="loading || !enabled || !isConfigured"
           @click="onGenerate"
         >
-          {{ loading ? '生成中...' : '今日建议' }}
+          {{ loading ? uiText('Generating...', '生成中...') : uiText('Today suggestions', '今日建议') }}
         </button>
         <button
           class="panel-toggle"
@@ -33,7 +33,7 @@
           @click="onTogglePanel"
         >
           <span class="panel-toggle__caret" aria-hidden="true" />
-          {{ isExpanded ? '折叠' : '展开' }}
+          {{ isExpanded ? uiText('Collapse', '收起') : uiText('Expand', '展开') }}
         </button>
       </div>
     </div>
@@ -51,14 +51,14 @@
         v-if="!enabled"
         class="ai-inbox-panel__empty"
       >
-        在设置页启用 AI 整理收件箱后，这里会基于当前筛选结果生成今日优先待办。
+        {{ uiText('Enable the AI cleanup inbox in Settings to generate today\'s prioritized tasks from the current filters.', '请先在设置中启用 AI 整理收件箱，以基于当前筛选生成今日优先任务。') }}
       </div>
 
       <div
         v-else-if="!isConfigured"
         class="ai-inbox-panel__empty"
       >
-        还缺少 OpenAI 兼容配置。请在设置页补充 Base URL、API Key 和 Model。
+        {{ uiText('OpenAI-compatible settings are incomplete. Add Base URL, API Key, and Model in Settings.', '兼容 OpenAI 的设置不完整，请在设置中补充 Base URL、API Key 和 Model。') }}
       </div>
 
       <div
@@ -78,7 +78,7 @@
       >
         <div class="ai-inbox-panel__summary">
           <p>{{ result.summary }}</p>
-          <span class="ai-inbox-panel__meta">共 {{ result.items.length }} 项待办</span>
+          <span class="ai-inbox-panel__meta">{{ uiText(`${result.items.length} tasks`, `${result.items.length} 个任务`) }}</span>
         </div>
 
         <div class="ai-inbox-panel__list">
@@ -98,7 +98,7 @@
                 type="button"
                 @click="openDocument(item.documentIds[0])"
               >
-                打开文档
+                {{ uiText('Open doc', '打开文档') }}
               </button>
             </div>
             <div
@@ -120,7 +120,7 @@
             <h3 v-else>{{ item.title }}</h3>
 
             <div class="ai-inbox-panel__detail-group">
-              <p class="ai-inbox-panel__detail-title">推荐动作</p>
+              <p class="ai-inbox-panel__detail-title">{{ uiText('Recommended action', '推荐动作') }}</p>
               <div v-if="resolveAiInboxActionTargets(item).length" class="ai-inbox-panel__action-pills">
                 <button
                   v-for="target in resolveAiInboxActionTargets(item)"
@@ -144,10 +144,10 @@
               </p>
             </div>
 
-            <p class="ai-inbox-panel__merged-copy"><strong>推荐理由：</strong>{{ item.reason }}</p>
+            <p class="ai-inbox-panel__merged-copy"><strong>{{ uiText('Why this first:', '推荐理由') }}</strong>{{ item.reason }}</p>
 
             <div v-if="item.recommendedTargets?.length" class="ai-inbox-panel__detail-group">
-              <p class="ai-inbox-panel__detail-title">推荐目标</p>
+              <p class="ai-inbox-panel__detail-title">{{ uiText('Suggested targets', '推荐目标') }}</p>
               <div class="ai-inbox-panel__targets">
                 <div
                   v-for="target in item.recommendedTargets"
@@ -169,7 +169,7 @@
             </div>
 
             <div v-if="item.evidence?.length" class="ai-inbox-panel__detail-group">
-              <p class="ai-inbox-panel__detail-title">证据</p>
+              <p class="ai-inbox-panel__detail-title">{{ uiText('Evidence', '证据') }}</p>
               <ul class="ai-inbox-panel__detail-list">
                 <li v-for="evidence in item.evidence" :key="`${item.id}-${evidence}`">
                   {{ evidence }}
@@ -178,7 +178,7 @@
             </div>
 
             <div v-if="item.expectedChanges?.length" class="ai-inbox-panel__detail-group">
-              <p class="ai-inbox-panel__detail-title">处理后变化</p>
+              <p class="ai-inbox-panel__detail-title">{{ uiText('Expected changes', '处理后变化') }}</p>
               <ul class="ai-inbox-panel__detail-list">
                 <li v-for="change in item.expectedChanges" :key="`${item.id}-${change}`">
                   {{ change }}
@@ -194,7 +194,7 @@
         v-else
         class="ai-inbox-panel__empty"
       >
-        点击“今日建议”，把当前卡片与详情中的信号收束成统一优先级列表。
+        {{ uiText('Click Today suggestions to turn current card and detail signals into one prioritized list.', '点击“今日建议”，把当前卡片和详情信号整理成一份优先级列表。') }}
       </div>
     </div>
   </section>
@@ -202,6 +202,7 @@
 
 <script setup lang="ts">
 import type { AiInboxItemType, AiInboxResult } from '@/analytics/ai-inbox'
+import { pickUiText } from '@/i18n/ui'
 import {
   resolveAiInboxActionLines,
   resolveAiInboxItemDocumentId,
@@ -227,17 +228,19 @@ const props = defineProps<{
   isAiLinkSuggestionActive?: (sourceDocumentId: string, targetDocumentId: string) => boolean
 }>()
 
+const uiText = (en_US: string, zh_CN: string) => pickUiText({ en_US, zh_CN })
+
 function resolveTypeLabel(type: AiInboxItemType) {
   if (type === 'connection') {
-    return '补连接'
+    return uiText('Repair links', '补链修复')
   }
   if (type === 'topic-page') {
-    return '建主题页'
+    return uiText('Build topic page', '创建主题页')
   }
   if (type === 'bridge-risk') {
-    return '桥接风险'
+    return uiText('Bridge risk', '桥接风险')
   }
-  return '整理文档'
+  return uiText('Document cleanup', '文档整理')
 }
 
 function resolveAiInboxItemTitleParts(title: string) {

@@ -1,7 +1,9 @@
 import { normalizeTags } from './document-utils'
+import { pickUiText } from '@/i18n/ui'
 
 type GetBlockAttrsFn = (id: string) => Promise<{ [key: string]: string }>
 type SetBlockAttrsFn = (id: string, attrs: { [key: string]: string }) => Promise<any>
+const uiText = (en_US: string, zh_CN: string) => pickUiText({ en_US, zh_CN })
 
 export type AppliedTagSuggestionChange = {
   blockId: string
@@ -104,7 +106,7 @@ async function persistTagChange(params: {
 
   const verifiedTags = await readDocumentTags(params.documentId, params.getBlockAttrs)
   if (!sameTagMembers(verifiedTags, params.nextTags)) {
-    throw new Error('写入文档标签失败，请稍后重试')
+    throw new Error(uiText('Failed to write doc tags. Please try again later.', '写入文档标签失败，请稍后重试'))
   }
 }
 

@@ -10,6 +10,7 @@ import type { SummaryCardItem } from './summary-details'
 import { parseSiyuanTimestamp } from './document-utils'
 import { countThemeMatchesForDocument, type ThemeDocument } from './theme-documents'
 import { isWikiDocumentTitle } from './wiki-page-model'
+import { pickUiText } from '@/i18n/ui'
 import {
   DEFAULT_AI_MAX_CONTEXT_MESSAGES,
   DEFAULT_AI_MAX_TOKENS,
@@ -187,22 +188,23 @@ const CAPACITY_LIMITS: Record<AiContextCapacity, {
 }
 
 const SYSTEM_PROMPT = [
-  '你是思源笔记文档库的整理助手。',
-  '你要根据用户近期收集和创作的笔记文档以及相关网络结构分析结果，输出今天最值得优先处理的整理待办，目标是将相关文档构建成为围绕主题笔记的知识体系，而不是散落的文档。',
-  '必须只输出 JSON，不要输出 Markdown、解释或代码块。',
-  'JSON 结构必须是 {"summary": string, "items": AiInboxItem[]}。',
-  'items 中每项必须包含 id、type、title、priority、action、reason，可选 documentIds、confidence、recommendedTargets、evidence、expectedChanges、priorityBreakdown。',
-  'type 只能是 document、connection、topic-page、bridge-risk。',
-  'priority 用 P1、P2、P3。',
-  '优先使用 actionCandidates 中已经给出的推荐目标、证据、收益预估和评分，不要自己发明不存在的文档或主题页。',
-  '如果 actionCandidates 中有 focusDocumentIds，请把对应主对象 id 填到 documentIds。',
-  '如果有 recommendedTargets，action 必须点名目标标题，不能只写“补链接”“完善结构”这类泛动作。',
-  'action 要直接写成可展示的“推荐动作”。',
-  'reason 要直接写成可展示的“推荐理由”，并至少引用 1 条结构证据。',
-  '优先关注孤立文档、沉没文档、桥接风险、缺主题页社区、趋势变化和关键连接补齐。',
-  '所有面向用户展示的文本字段都必须使用简体中文，包括 summary、title、action、reason、recommendedTargets.reason、evidence、expectedChanges。',
-  '允许保留文档标题、标签名、模型名等专有名词，但禁止输出整句英文说明。',
+  'You are a knowledge-organization assistant for a SiYuan note library.',
+  'Based on recently collected or created notes and related network analysis signals, output the highest-priority cleanup tasks for today. The goal is to turn scattered notes into a topic-centered knowledge structure.',
+  'You must return JSON only. Do not output Markdown, explanations, or code blocks.',
+  'The JSON shape must be {"summary": string, "items": AiInboxItem[]}.',
+  'Each item must include id, type, title, priority, action, and reason, with optional documentIds, confidence, recommendedTargets, evidence, expectedChanges, and priorityBreakdown.',
+  'type must be one of document, connection, topic-page, or bridge-risk.',
+  'priority must be P1, P2, or P3.',
+  'Prefer using the recommended targets, evidence, estimated gains, and scores already provided in actionCandidates. Do not invent documents or topic pages that do not exist.',
+  'If an actionCandidate includes focusDocumentIds, put the related primary object ids into documentIds.',
+  'If recommendedTargets exist, action must mention the target titles explicitly instead of generic actions like "repair links" or "improve structure".',
+  'action should be directly usable as user-visible recommended action text.',
+  'reason should be directly usable as user-visible why-this-first text and must cite at least one structure signal.',
+  'Prioritize orphan docs, dormant docs, bridge risks, communities missing topic pages, trend changes, and critical link repair.',
+  'All user-visible text fields must follow the user interface language of the current workspace. Keep proper nouns such as document titles, tag names, and model names as needed.',
 ].join(' ')
+
+const uiText = (en_US: string, zh_CN: string) => pickUiText({ en_US, zh_CN })
 
 export function isAiConfigComplete(config: AiConfig): boolean {
   return Boolean(
@@ -232,11 +234,26 @@ export function createAiInboxService(deps: {
           {
             role: 'user',
             content: [
-              '请基于下面的文档级引用网络分析结果，给出“今天优先处理什么”的统一待办列表。',
-              '优先输出 5 到 8 项，优先从 actionCandidates 中挑选高分候选。',
-              '输出结构要更紧凑：把推荐动作和建议合并到 action，把为什么先做和预估收益合并成推荐理由写到 reason。',
-              '每项建议尽量写清：现在处理哪个对象、补到哪里/建什么页、推荐理由是什么。',
-              '如果证据不足，不要硬造；如果没有明确目标，就如实保留为空。',
+              uiText(
+                'Based on the doc-link network analysis below, produce one unified task list for what should be handled first today.',
+                '请基于下面的文档级引用网络分析结果，给出“今天优先处理什么”的统一待办列表。',
+              ),
+              uiText(
+                'Return 5 to 8 items when possible, preferring high-scoring candidates from actionCandidates.',
+                '优先输出 5 到 8 项，优先从 actionCandidates 中挑选高分候选。',
+              ),
+              uiText(
+                'Keep the structure compact: merge recommended actions and suggestions into action, and merge why-this-first plus expected gains into reason.',
+                '输出结构要更紧凑：把推荐动作和建议合并到 action，把为什么先做和预估收益合并成推荐理由写到 reason。',
+              ),
+              uiText(
+                'Each item should make clear what to handle now, where to link it or what page to create, and why it should be done first.',
+                '每项建议尽量写清：现在处理哪个对象、补到哪里/建什么页、推荐理由是什么。',
+              ),
+              uiText(
+                'Do not fabricate weak evidence. If no clear target exists, leave it empty honestly.',
+                '如果证据不足，不要硬造；如果没有明确目标，就如实保留为空。',
+              ),
               JSON.stringify(params.payload),
             ].join('\n'),
           },
@@ -251,20 +268,20 @@ export function createAiInboxService(deps: {
         forwardProxy: deps.forwardProxy,
         logger,
         messages: [
-          { role: 'system', content: '你是连接测试助手。只返回 OK。' },
-          { role: 'user', content: '请只回复 OK' },
+          { role: 'system', content: 'You are a connection test assistant. Return OK only.' },
+          { role: 'user', content: 'Reply with OK only.' },
         ],
         maxTokensOverride: 20,
       })
 
       const message = extractChatCompletionContent(response).trim()
       if (!message) {
-        throw new Error('AI 接口未返回可读内容')
+        throw new Error(uiText('AI did not return readable content', 'AI 接口未返回可读内容'))
       }
 
       return {
         ok: true,
-        message: '连接成功',
+        message: uiText('Connection successful', '连接成功'),
       }
     },
   }
@@ -469,7 +486,10 @@ function buildRepairLinkCandidate(params: {
       documentId: match.themeDocumentId,
       title: match.themeDocumentTitle,
       kind: 'theme-document' as const,
-      reason: `主题匹配命中 ${match.matchCount} 次，适合作为稳定入口`,
+      reason: uiText(
+        `Topic match hit ${match.matchCount} times and works as a stable entry point`,
+        `主题匹配命中 ${match.matchCount} 次，适合作为稳定入口`,
+      ),
     })),
     ...params.ranking
       .filter(item => item.documentId !== params.orphan.documentId && !themeMatches.some(match => match.themeDocumentId === item.documentId))
@@ -478,7 +498,10 @@ function buildRepairLinkCandidate(params: {
         documentId: item.documentId,
         title: item.title,
         kind: 'core-document' as const,
-        reason: `当前是高引用核心文档，被 ${item.distinctSourceDocuments} 个文档引用`,
+        reason: uiText(
+          `High-reference core doc, referenced by ${item.distinctSourceDocuments} docs`,
+          `当前是高引用核心文档，被 ${item.distinctSourceDocuments} 个文档引用`,
+        ),
       })),
   ].slice(0, 3)
 
@@ -495,15 +518,22 @@ function buildRepairLinkCandidate(params: {
 
   const primaryTarget = recommendedTargets[0]
   const expectedBenefits = [
-    '预计移出孤立文档列表',
-    primaryTarget ? `为 ${primaryTarget.title} 增加 1 条入链` : '为当前网络补回 1 个入口连接',
-    themeMatches.length ? `补全 ${themeMatches.map(item => item.themeName).join('、')} 主题的网络覆盖` : '降低后续继续沉没的风险',
+    uiText('Expected to leave the orphan doc list', '预计移出孤立文档列表'),
+    primaryTarget
+      ? uiText(`Add 1 inbound link to ${primaryTarget.title}`, `为 ${primaryTarget.title} 增加 1 条入链`)
+      : uiText('Restore one entry link to the current network', '为当前网络补回 1 个入口连接'),
+    themeMatches.length
+      ? uiText(
+          `Improve topic coverage for ${themeMatches.map(item => item.themeName).join(', ')}`,
+          `补全 ${themeMatches.map(item => item.themeName).join('、')} 主题的网络覆盖`,
+        )
+      : uiText('Reduce the risk of sinking further later', '降低后续继续沉没的风险'),
   ]
 
   return {
     id: `repair-link:${params.orphan.documentId}`,
     type: 'repair-link',
-    title: `修复孤立文档：${documentTitle}`,
+    title: uiText(`Repair orphan doc: ${documentTitle}`, `修复孤立文档：${documentTitle}`),
     focusDocumentIds: [params.orphan.documentId],
     confidence: confidenceScore >= 75 ? 'high' : confidenceScore >= 50 ? 'medium' : 'low',
     impactScore,
@@ -513,16 +543,31 @@ function buildRepairLinkCandidate(params: {
     priorityScore,
     recommendedTargets,
     evidence: [
-      '当前窗口内没有有效文档级连接',
-      `历史上出现过 ${params.orphan.historicalReferenceCount} 条连接证据`,
-      ...themeMatches.map(match => `${match.themeName} 主题匹配命中 ${match.matchCount} 次`),
+      uiText('No valid doc-level links in the current window', '当前窗口内没有有效文档级连接'),
+      uiText(
+        `${params.orphan.historicalReferenceCount} historical link traces exist`,
+        `历史上出现过 ${params.orphan.historicalReferenceCount} 条连接证据`,
+      ),
+      ...themeMatches.map(match => uiText(
+        `${match.themeName} topic match hit ${match.matchCount} times`,
+        `${match.themeName} 主题匹配命中 ${match.matchCount} 次`,
+      )),
     ].slice(0, 4),
     recommendedAction: recommendedTargets.length
-      ? `先补到 ${recommendedTargets.map(target => target.title).join('、')}，并补一句说明这篇笔记属于哪个主题。`
-      : '先补 1 条回到核心网络的连接，并补一句说明当前文档的归属主题。',
+      ? uiText(
+          `First link it to ${recommendedTargets.map(target => target.title).join(', ')}, then add one short note about which topic this note belongs to.`,
+          `先补到 ${recommendedTargets.map(target => target.title).join('、')}，并补一句说明这篇笔记属于哪个主题。`,
+        )
+      : uiText(
+          'First add one link back to the core network, then add one short note about the current doc topic.',
+          '先补 1 条回到核心网络的连接，并补一句说明当前文档的归属主题。',
+        ),
     expectedBenefits,
     draftText: primaryTarget?.documentId
-      ? `可归入 ${primaryTarget.title}：((` + `${primaryTarget.documentId} "${primaryTarget.title}"))`
+      ? uiText(
+          `Can fit under ${primaryTarget.title}: ((` + `${primaryTarget.documentId} "${primaryTarget.title}"))`,
+          `可归入 ${primaryTarget.title}：((` + `${primaryTarget.documentId} "${primaryTarget.title}"))`,
+        )
       : undefined,
   }
 }
@@ -539,7 +584,10 @@ function buildTopicPageCandidate(params: {
       documentId,
       title: resolveDocumentTitle(params.documentMap, documentId),
       kind: 'community-hub' as const,
-      reason: '这是当前社区的 hub 文档，适合作为主题页的首批入口',
+      reason: uiText(
+        'This is a hub doc in the current cluster and works well as an initial topic page entry.',
+        '这是当前社区的 hub 文档，适合作为主题页的首批入口',
+      ),
     }))
 
   const impactScore = clampScore(40 + params.community.size * 10 + Math.max(params.trend.delta, 0) * 6)
@@ -550,7 +598,7 @@ function buildTopicPageCandidate(params: {
   return {
     id: `topic-page:${params.community.id}`,
     type: 'create-topic-page',
-    title: `创建主题页：${suggestedTitle}`,
+    title: uiText(`Create topic page: ${suggestedTitle}`, `创建主题页：${suggestedTitle}`),
     focusDocumentIds: [...params.community.documentIds],
     confidence: confidenceScore >= 75 ? 'high' : confidenceScore >= 50 ? 'medium' : 'low',
     impactScore,
@@ -565,17 +613,28 @@ function buildTopicPageCandidate(params: {
     }),
     recommendedTargets,
     evidence: [
-      `社区规模 ${params.community.size} 篇文档`,
-      `当前缺少主题页，最近关系变化 ${formatSignedDelta(params.trend.delta)}`,
-      params.community.topTags.length ? `高频标签：${params.community.topTags.join('、')}` : '高频标签证据较弱',
+      uiText(`Cluster size: ${params.community.size} docs`, `社区规模 ${params.community.size} 篇文档`),
+      uiText(
+        `Missing topic page, recent link change ${formatSignedDelta(params.trend.delta)}`,
+        `当前缺少主题页，最近关系变化 ${formatSignedDelta(params.trend.delta)}`,
+      ),
+      params.community.topTags.length
+        ? uiText(`Top tags: ${params.community.topTags.join(', ')}`, `高频标签：${params.community.topTags.join('、')}`)
+        : uiText('Top tag evidence is weak', '高频标签证据较弱'),
     ],
-    recommendedAction: `新建 ${suggestedTitle}，并先挂入 ${recommendedTargets.map(target => target.title).join('、') || '社区 hub 文档'}。`,
+    recommendedAction: uiText(
+      `Create ${suggestedTitle}, then attach it first to ${recommendedTargets.map(target => target.title).join(', ') || 'cluster hub docs'}.`,
+      `新建 ${suggestedTitle}，并先挂入 ${recommendedTargets.map(target => target.title).join('、') || '社区 hub 文档'}。`,
+    ),
     expectedBenefits: [
-      '为该社区建立统一入口页',
-      `把 ${params.community.size} 篇文档收束到可导航的主题结构中`,
-      '后续补链和归档动作会更集中',
+      uiText('Build one unified entry page for this cluster', '为该社区建立统一入口页'),
+      uiText(
+        `Bring ${params.community.size} docs into one navigable topic structure`,
+        `把 ${params.community.size} 篇文档收束到可导航的主题结构中`,
+      ),
+      uiText('Follow-up link repair and archive work becomes more focused', '后续补链和归档动作会更集中'),
     ],
-    draftText: `建议主题页标题：${suggestedTitle}`,
+    draftText: uiText(`Suggested topic page title: ${suggestedTitle}`, `建议主题页标题：${suggestedTitle}`),
   }
 }
 
@@ -595,7 +654,10 @@ function buildBridgeRiskCandidate(params: {
       documentId,
       title: resolveDocumentTitle(params.documentMap, documentId),
       kind: 'community-hub' as const,
-      reason: '补到相邻社区 hub，可以减少该桥接点成为唯一路径',
+      reason: uiText(
+        'Linking to neighboring cluster hubs can reduce this bridge becoming the only path.',
+        '补到相邻社区 hub，可以减少该桥接点成为唯一路径',
+      ),
     }))
 
   if (recommendedTargets.length === 0) {
@@ -607,7 +669,10 @@ function buildBridgeRiskCandidate(params: {
           documentId: item.documentId,
           title: item.title,
           kind: 'related-document' as const,
-          reason: '当前网络中的高连接文档，可作为替代入口',
+          reason: uiText(
+            'A highly connected doc in the current network that can act as an alternative entry point.',
+            '当前网络中的高连接文档，可作为替代入口',
+          ),
         })),
     )
   }
@@ -620,7 +685,7 @@ function buildBridgeRiskCandidate(params: {
   return {
     id: `bridge-risk:${params.bridge.documentId}`,
     type: 'maintain-bridge',
-    title: `降低桥接风险：${params.bridge.title}`,
+    title: uiText(`Reduce bridge risk: ${params.bridge.title}`, `降低桥接风险：${params.bridge.title}`),
     focusDocumentIds: [params.bridge.documentId],
     confidence: confidenceScore >= 75 ? 'high' : confidenceScore >= 50 ? 'medium' : 'low',
     impactScore,
@@ -635,19 +700,34 @@ function buildBridgeRiskCandidate(params: {
     }),
     recommendedTargets,
     evidence: [
-      `当前连接 ${params.bridge.degree} 条关系`,
-      relatedCommunities.length ? `同时出现在 ${relatedCommunities.length} 个社区中` : '当前缺少明确的社区替代入口',
-      recommendedTargets.length ? `可优先补到 ${recommendedTargets.map(target => target.title).join('、')}` : '当前未找到足够清晰的替代目标',
+      uiText(`Currently connects ${params.bridge.degree} relationships`, `当前连接 ${params.bridge.degree} 条关系`),
+      relatedCommunities.length
+        ? uiText(`Appears in ${relatedCommunities.length} clusters`, `同时出现在 ${relatedCommunities.length} 个社区中`)
+        : uiText('No clear alternative cluster entry is available yet', '当前缺少明确的社区替代入口'),
+      recommendedTargets.length
+        ? uiText(`Can first link to ${recommendedTargets.map(target => target.title).join(', ')}`, `可优先补到 ${recommendedTargets.map(target => target.title).join('、')}`)
+        : uiText('No sufficiently clear alternative target was found', '当前未找到足够清晰的替代目标'),
     ],
     recommendedAction: recommendedTargets.length
-      ? `在 ${params.bridge.title} 中补一段上下游导航，显式链接到 ${recommendedTargets.map(target => target.title).join('、')}。`
-      : `为 ${params.bridge.title} 补一段上下游导航，避免它成为单点桥接。`,
+      ? uiText(
+          `Add an upstream/downstream navigation block in ${params.bridge.title} and link explicitly to ${recommendedTargets.map(target => target.title).join(', ')}.`,
+          `在 ${params.bridge.title} 中补一段上下游导航，显式链接到 ${recommendedTargets.map(target => target.title).join('、')}。`,
+        )
+      : uiText(
+          `Add an upstream/downstream navigation block for ${params.bridge.title} so it does not become a single bridge point.`,
+          `为 ${params.bridge.title} 补一段上下游导航，避免它成为单点桥接。`,
+        ),
     expectedBenefits: [
-      '降低单点桥接导致社区断裂的风险',
-      recommendedTargets.length ? `为 ${recommendedTargets.length} 个替代入口补齐导航` : '为相邻主题补出替代入口',
+      uiText('Reduce the risk of cluster fragmentation from a single bridge point', '降低单点桥接导致社区断裂的风险'),
+      recommendedTargets.length
+        ? uiText(`Add navigation for ${recommendedTargets.length} alternative entry points`, `为 ${recommendedTargets.length} 个替代入口补齐导航`)
+        : uiText('Add alternative entries for neighboring topics', '为相邻主题补出替代入口'),
     ],
     draftText: recommendedTargets.length
-      ? `上游/下游入口：${recommendedTargets.map(target => `((` + `${target.documentId} "${target.title}"))`).join(' / ')}`
+      ? uiText(
+          `Upstream/downstream entries: ${recommendedTargets.map(target => `((` + `${target.documentId} "${target.title}"))`).join(' / ')}`,
+          `上游/下游入口：${recommendedTargets.map(target => `((` + `${target.documentId} "${target.title}"))`).join(' / ')}`,
+        )
       : undefined,
   }
 }
@@ -670,7 +750,10 @@ function buildArchiveCandidate(params: {
     documentId: match.themeDocumentId,
     title: match.themeDocumentTitle,
     kind: 'theme-document',
-    reason: '如果仍有保留价值，先补到主题页再归档更容易回查',
+    reason: uiText(
+      'If this still has value, linking it to a topic page before archiving makes it easier to revisit later.',
+      '如果仍有保留价值，先补到主题页再归档更容易回查',
+    ),
   }))
 
   if (recommendedTargets.length === 0) {
@@ -682,7 +765,10 @@ function buildArchiveCandidate(params: {
           documentId: item.documentId,
           title: item.title,
           kind: 'core-document' as const,
-          reason: '可先补到一个仍活跃的索引入口，再决定是否归档',
+          reason: uiText(
+            'You can first link it to an active index entry, then decide whether to archive it.',
+            '可先补到一个仍活跃的索引入口，再决定是否归档',
+          ),
         })),
     )
   }
@@ -695,7 +781,7 @@ function buildArchiveCandidate(params: {
   return {
     id: `archive-dormant:${params.dormant.documentId}`,
     type: 'archive-dormant',
-    title: `处理沉没文档：${documentTitle}`,
+    title: uiText(`Handle dormant doc: ${documentTitle}`, `处理沉没文档：${documentTitle}`),
     focusDocumentIds: [params.dormant.documentId],
     confidence: confidenceScore >= 75 ? 'high' : confidenceScore >= 50 ? 'medium' : 'low',
     impactScore,
@@ -710,15 +796,24 @@ function buildArchiveCandidate(params: {
     }),
     recommendedTargets,
     evidence: [
-      `${params.dormant.inactivityDays} 天未产生有效连接`,
-      `历史上出现过 ${params.dormant.historicalReferenceCount} 条连接证据`,
+      uiText(`${params.dormant.inactivityDays} days without valid links`, `${params.dormant.inactivityDays} 天未产生有效连接`),
+      uiText(
+        `${params.dormant.historicalReferenceCount} historical link traces exist`,
+        `历史上出现过 ${params.dormant.historicalReferenceCount} 条连接证据`,
+      ),
     ],
     recommendedAction: recommendedTargets.length
-      ? `先补到 ${recommendedTargets[0].title} 留下回查入口；如果后续不再维护，再归档。`
-      : '先确认是否仍需保留；如无持续维护计划，归档并补一条索引说明。',
+      ? uiText(
+          `First link it to ${recommendedTargets[0].title} to keep a lookup entry; archive it later if you stop maintaining it.`,
+          `先补到 ${recommendedTargets[0].title} 留下回查入口；如果后续不再维护，再归档。`,
+        )
+      : uiText(
+          'First confirm whether it still needs to be kept. If not, archive it and add one index note.',
+          '先确认是否仍需保留；如无持续维护计划，归档并补一条索引说明。',
+        ),
     expectedBenefits: [
-      '减少沉没文档堆积',
-      '保留必要回查入口，避免后续完全失联',
+      uiText('Reduce buildup of dormant docs', '减少沉没文档堆积'),
+      uiText('Keep a necessary lookup entry and avoid losing it completely later', '保留必要回查入口，避免后续完全失联'),
     ],
   }
 }
@@ -796,8 +891,8 @@ function buildConnectionTitle(documentMap: Map<string, DocumentRecord>, document
 }
 
 function buildSuggestedTopicPageTitle(community: ReferenceGraphReport['communities'][number]) {
-  const topic = community.topTags[0] || community.hubDocumentIds[0] || community.documentIds[0] || '未命名主题'
-  return `主题-${topic}-索引`
+  const topic = community.topTags[0] || community.hubDocumentIds[0] || community.documentIds[0] || uiText('Untitled topic', '未命名主题')
+  return uiText(`Topic-${topic}-Index`, `主题-${topic}-索引`)
 }
 
 function buildUrgencyScore(updatedAt?: string) {
@@ -843,10 +938,10 @@ async function requestChatCompletion(params: {
   maxTokensOverride?: number
 }) {
   if (!params.config.aiEnabled) {
-    throw new Error('请先在设置中启用 AI 今日建议')
+    throw new Error(uiText('Enable today suggestions in Settings first', '请先在设置中启用 AI 今日建议'))
   }
   if (!isAiConfigComplete(params.config)) {
-    throw new Error('AI 接入配置不完整，请补充 Base URL、API Key 和 Model')
+    throw new Error(uiText('AI settings are incomplete. Add Base URL, API Key, and Model.', 'AI 接入配置不完整，请补充 Base URL、API Key 和 Model'))
   }
 
   const requestOptions = resolveAiRequestOptions(params.config)
@@ -874,11 +969,11 @@ async function requestChatCompletion(params: {
     requestBytes: body.length,
   }
   const requestDetail = [
-    '请求方法：POST',
-    `请求地址：${endpoint}`,
-    '请求头：' + JSON.stringify(maskHeadersForLogging(requestHeaders)),
-    '内容类型：application/json',
-    `完整请求体：${body}`,
+    'Request method: POST',
+    `Request URL: ${endpoint}`,
+    'Request headers: ' + JSON.stringify(maskHeadersForLogging(requestHeaders)),
+    'Content-Type: application/json',
+    `Full request body: ${body}`,
   ].join('\n')
 
   params.logger.info('[NetworkLens][AI] Request start', requestTrace)
@@ -918,7 +1013,7 @@ async function requestChatCompletion(params: {
   })
 
   if (!response || response.status < 200 || response.status >= 300) {
-    const status = response?.status ?? '未知状态'
+    const status = response?.status ?? 'unknown status'
     params.logger.warn('[NetworkLens][AI] Non-2xx response', {
       ...requestTrace,
       status,
@@ -926,7 +1021,7 @@ async function requestChatCompletion(params: {
     })
     params.logger.warn(
       '[NetworkLens][AI] Non-2xx response detail',
-      `状态码：${status}\n完整响应：${response?.body ?? ''}`,
+      `Status: ${status}\nFull response: ${response?.body ?? ''}`,
     )
     params.logger.warn('[NetworkLens][AI] Non-2xx response raw', {
       status,
@@ -952,7 +1047,7 @@ async function requestChatCompletion(params: {
       status: response.status,
       responseBody: response.body?.slice(0, 500) ?? '',
     })
-    throw new Error('AI 接口返回了无法解析的 JSON')
+    throw new Error(uiText('AI returned JSON that could not be parsed', 'AI 接口返回了无法解析的 JSON'))
   }
 
   return payload
@@ -995,7 +1090,7 @@ export async function fetchSiliconFlowModelCatalog(params: {
   const aiBaseUrl = params.config.aiBaseUrl?.trim()
   const aiApiKey = params.config.aiApiKey?.trim()
   if (!aiBaseUrl || !aiApiKey) {
-    throw new Error('加载模型列表前，请先填写 SiliconFlow 的 Base URL 和 API Key')
+    throw new Error(uiText('Before loading the model list, enter SiliconFlow Base URL and API Key first', '加载模型列表前，请先填写 SiliconFlow 的 Base URL 和 API Key'))
   }
 
   const requestOptions = resolveAiRequestOptions(params.config)
@@ -1039,7 +1134,7 @@ async function requestModelIds(params: {
   )
 
   if (!response || response.status < 200 || response.status >= 300) {
-    throw new Error(`模型列表请求失败（${response?.status ?? '未知状态'}）`)
+    throw new Error(uiText(`Model list request failed (${response?.status ?? 'unknown status'})`, `模型列表请求失败（${response?.status ?? '未知状态'}）`))
   }
 
   const payload = JSON.parse(response.body)
@@ -1080,7 +1175,7 @@ function extractChatCompletionContent(payload: any): string {
       })
       .join('')
   }
-  throw new Error('AI 接口未返回可读内容')
+  throw new Error(uiText('AI did not return readable content', 'AI 接口未返回可读内容'))
 }
 
 function parseJsonFromContent(payload: any) {
@@ -1096,7 +1191,7 @@ function parseJsonFromContent(payload: any) {
     if (startIndex >= 0 && endIndex > startIndex) {
       return JSON.parse(candidate.slice(startIndex, endIndex + 1))
     }
-    throw new Error('AI 返回内容不是合法 JSON')
+    throw new Error(uiText('AI did not return valid JSON', 'AI 返回内容不是合法 JSON'))
   }
 }
 
@@ -1108,14 +1203,14 @@ function normalizeAiInboxResult(value: any): AiInboxResult {
     : []
 
   if (items.length === 0) {
-    throw new Error('AI 未返回有效的整理待办')
+    throw new Error(uiText('AI did not return valid cleanup tasks', 'AI 未返回有效的整理待办'))
   }
 
   return {
     generatedAt: new Date().toISOString(),
     summary: typeof value?.summary === 'string' && value.summary.trim()
       ? value.summary.trim()
-      : '已根据当前引用网络生成整理优先级。',
+      : uiText('Cleanup priorities generated from the current reference network.', '已根据当前引用网络生成整理优先级。'),
     items,
   }
 }
@@ -1294,28 +1389,28 @@ function buildAiRequestError(params: {
 }) {
   const rawMessage = params.cause instanceof Error ? params.cause.message : String(params.cause)
   const hints: string[] = [
-    `请求地址：${params.endpoint}`,
-    `超时配置：${Math.round(params.timeoutMs / 1000)} 秒`,
-    `模型：${params.model}`,
+    `Request URL: ${params.endpoint}`,
+    `Timeout: ${Math.round(params.timeoutMs / 1000)}s`,
+    `Model: ${params.model}`,
     `max_tokens：${params.maxTokens}`,
     `temperature：${params.temperature}`,
-    `最大上下文数：${params.maxContextMessages}`,
+    `Max context messages: ${params.maxContextMessages}`,
   ]
 
   if (isLikelyMissingV1Path(params.endpoint)) {
-    hints.push(`Base URL 很可能应包含 /v1；当前请求落到了 ${params.endpoint}`)
+    hints.push(uiText(`Base URL likely needs /v1; current request resolved to ${params.endpoint}`, `Base URL 很可能应包含 /v1；当前请求落到了 ${params.endpoint}`))
   }
 
   if (params.endpoint.startsWith('https://api.siliconflow.cn/chat/completions')) {
-    hints.push('SiliconFlow 可优先检查 Base URL 是否填写为 https://api.siliconflow.cn/v1')
+    hints.push(uiText('For SiliconFlow, first verify that Base URL is https://api.siliconflow.cn/v1', 'SiliconFlow 可优先检查 Base URL 是否填写为 https://api.siliconflow.cn/v1'))
   }
 
   if (rawMessage.includes('context deadline exceeded')) {
-    hints.push('这是请求超时。优先检查 Base URL、网络连通性，并尝试切换为“紧凑”、降低最大 Token 数或继续增大超时时间')
-    return new Error(`AI 请求超时：${rawMessage}\n${hints.join('\n')}`)
+    hints.push(uiText('This was a timeout. Check Base URL and network connectivity first, then try Compact mode, fewer max tokens, or a longer timeout.', '这是请求超时。优先检查 Base URL、网络连通性，并尝试切换为“紧凑”、降低最大 Token 数或继续增大超时时间'))
+    return new Error(uiText(`AI request timed out: ${rawMessage}\n${hints.join('\n')}`, `AI 请求超时：${rawMessage}\n${hints.join('\n')}`))
   }
 
-  return new Error(`AI 请求失败：${rawMessage}\n${hints.join('\n')}`)
+  return new Error(uiText(`AI request failed: ${rawMessage}\n${hints.join('\n')}`, `AI 请求失败：${rawMessage}\n${hints.join('\n')}`))
 }
 
 function buildAiNonOkResponseError(params: {
@@ -1326,18 +1421,18 @@ function buildAiNonOkResponseError(params: {
   const hints: string[] = []
 
   if (isLikelyMissingV1Path(params.endpoint)) {
-    hints.push(`Base URL 很可能应包含 /v1；当前请求落到了 ${params.endpoint}`)
+    hints.push(uiText(`Base URL likely needs /v1; current request resolved to ${params.endpoint}`, `Base URL 很可能应包含 /v1；当前请求落到了 ${params.endpoint}`))
   }
 
   if (params.endpoint.startsWith('https://api.siliconflow.cn/chat/completions')) {
-    hints.push('SiliconFlow 可优先检查 Base URL 是否填写为 https://api.siliconflow.cn/v1')
+    hints.push(uiText('For SiliconFlow, first verify that Base URL is https://api.siliconflow.cn/v1', 'SiliconFlow 可优先检查 Base URL 是否填写为 https://api.siliconflow.cn/v1'))
   }
 
   const responseSummary = params.responseBody.trim().slice(0, 200)
-  const details = responseSummary ? `\n响应片段：${responseSummary}` : ''
+  const details = responseSummary ? uiText(`\nResponse snippet: ${responseSummary}`, `\n响应片段：${responseSummary}`) : ''
   const hintText = hints.length ? `\n${hints.join('\n')}` : ''
 
-  return new Error(`AI 请求失败（${params.status}）${details}${hintText}`)
+  return new Error(uiText(`AI request failed (${params.status})${details}${hintText}`, `AI 请求失败（${params.status}）${details}${hintText}`))
 }
 
 function isLikelyMissingV1Path(endpoint: string): boolean {

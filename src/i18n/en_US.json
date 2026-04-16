@@ -1,3 +1,8 @@
 {
-  "addTopBarIcon": "PluginSampleViteVue"
+  "addTopBarIcon": "Network Lens",
+  "openReferenceAnalytics": "Network Lens",
+  "settingsTitle": "Network Lens Settings",
+  "pluginTitle": "Network Lens",
+  "pluginTagline": "Bring hidden knowledge back into view.",
+  "pluginIconAlt": "Network Lens plugin icon"
 }

@@ -1,4 +1,4 @@
-import { describe, expect, it } from 'vitest'
+import { afterEach, describe, expect, it } from 'vitest'
 
 import {
   buildSiliconFlowModelSelectPlaceholder,
@@ -11,6 +11,10 @@ import {
 } from './setting-panel-ai-state'
 
 describe('setting panel ai helpers', () => {
+  afterEach(() => {
+    delete (globalThis as any).siyuan
+  })
+
   it('requests siliconflow model autoload only when api key is available and the catalog is not already ready', () => {
     expect(shouldAutoLoadSiliconFlowModelCatalog({
       apiKey: '',
@@ -56,7 +60,7 @@ describe('setting panel ai helpers', () => {
       loaded: false,
       error: '',
       optionCount: 0,
-    })).toBe('请先填写 API Key')
+    })).toBe('Enter API Key first')
 
     expect(buildSiliconFlowModelSelectPlaceholder({
       kind: 'chat',
@@ -65,7 +69,7 @@ describe('setting panel ai helpers', () => {
       loaded: false,
       error: '',
       optionCount: 0,
-    })).toBe('点击加载聊天模型')
+    })).toBe('Click to load chat models')
 
     expect(buildSiliconFlowModelSelectPlaceholder({
       kind: 'embedding',
@@ -74,7 +78,7 @@ describe('setting panel ai helpers', () => {
       loaded: false,
       error: '',
       optionCount: 0,
-    })).toBe('正在加载 embedding 模型...')
+    })).toBe('Loading embedding models...')
 
     expect(buildSiliconFlowModelSelectPlaceholder({
       kind: 'chat',
@@ -83,7 +87,7 @@ describe('setting panel ai helpers', () => {
       loaded: false,
       error: '模型列表请求失败',
       optionCount: 0,
-    })).toBe('加载失败，点击重试')
+    })).toBe('Load failed, click to retry')
 
     expect(buildSiliconFlowModelSelectPlaceholder({
       kind: 'chat',
@@ -92,7 +96,7 @@ describe('setting panel ai helpers', () => {
       loaded: true,
       error: '',
       optionCount: 3,
-    })).toBe('请选择聊天模型')
+    })).toBe('Select chat model')
   })
 
   it('mirrors the current provider fields into aiProviderConfigs for the selected provider', () => {
@@ -154,9 +158,26 @@ describe('setting panel ai helpers', () => {
 
   it('builds select titles with the last known error appended', () => {
     expect(buildSiliconFlowModelSelectTitle({
-      baseTitle: '点击下拉时自动加载 SiliconFlow 聊天模型清单',
-      placeholder: '加载失败，点击重试',
-      error: '模型接口超时',
-    })).toContain('最近一次加载失败：模型接口超时')
+      baseTitle: 'Automatically load SiliconFlow chat models when the select opens',
+      placeholder: 'Load failed, click to retry',
+      error: 'Model request timed out',
+    })).toContain('Last load failed: Model request timed out')
+  })
+
+  it('switches siliconflow placeholders to Chinese when the workspace locale is zh_CN', () => {
+    ;(globalThis as any).siyuan = {
+      config: {
+        lang: 'zh_CN',
+      },
+    }
+
+    expect(buildSiliconFlowModelSelectPlaceholder({
+      kind: 'chat',
+      apiKey: '',
+      loading: false,
+      loaded: false,
+      error: '',
+      optionCount: 0,
+    })).toBe('请先填写 API Key')
   })
 })

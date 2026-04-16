@@ -85,11 +85,11 @@ describe('RankingPanel', () => {
 
     const html = await renderToString(app)
 
-    expect((html.match(/维护 LLM Wiki|收起 LLM Wiki/g) ?? [])).toHaveLength(2)
+    expect((html.match(/Maintain LLM Wiki|Hide LLM Wiki/g) ?? [])).toHaveLength(2)
     expect((html.match(/ghost-button ghost-button--filled/g) ?? []).length).toBeGreaterThanOrEqual(3)
     expect(html).toContain('范围来源：核心文档《Alpha》关联范围')
     expect((html.match(/wiki-panel panel/g) ?? [])).toHaveLength(1)
-    expect(html.indexOf('更新：20260311120000')).toBeLessThan(html.indexOf('范围来源：核心文档《Alpha》关联范围'))
+    expect(html.indexOf('Updated: 20260311120000')).toBeLessThan(html.indexOf('范围来源：核心文档《Alpha》关联范围'))
   })
 
   it('hides core document wiki actions when the alpha gate disables wiki entry points', async () => {
@@ -133,8 +133,8 @@ describe('RankingPanel', () => {
 
     const html = await renderToString(app)
 
-    expect(html).not.toContain('维护 LLM Wiki')
-    expect(html).not.toContain('收起 LLM Wiki')
+    expect(html).not.toContain('Maintain LLM Wiki')
+    expect(html).not.toContain('Hide LLM Wiki')
     expect(html).not.toContain('wiki-panel panel')
   })
 })

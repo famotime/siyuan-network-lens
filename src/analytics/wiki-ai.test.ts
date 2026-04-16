@@ -1,8 +1,12 @@
-import { describe, expect, it, vi } from 'vitest'
+import { afterEach, describe, expect, it, vi } from 'vitest'
 
 import { createAiWikiService } from './wiki-ai'
 
 describe('ai wiki service', () => {
+  afterEach(() => {
+    delete (globalThis as any).siyuan
+  })
+
   it('requests structured theme wiki JSON and normalizes the response', async () => {
     const forwardProxy = vi.fn(async (
       url: string,
@@ -23,7 +27,8 @@ describe('ai wiki service', () => {
 
       const body = JSON.parse(payload)
       expect(body.model).toBe('gpt-4.1-mini')
-      expect(body.messages[0].content).toMatch(/主题 wiki 页面/)
+      expect(body.messages[0].content).toMatch(/topic wiki page/)
+      expect(body.messages[1].content).toMatch(/Generate structured content/)
       expect(body.messages[1].content).toMatch(/AI 核心/)
 
       return {
@@ -92,6 +97,66 @@ describe('ai wiki service', () => {
       structureObservations: ['桥接点集中在《AI 导航》'],
       evidence: ['AI 导航 -> AI 核心'],
       actions: ['补齐《AI 核心》的主题入口'],
+    })
+  })
+
+  it('switches prompt copy and fallbacks to Chinese when the workspace locale is zh_CN', async () => {
+    ;(globalThis as any).siyuan = {
+      config: {
+        lang: 'zh_CN',
+      },
+    }
+
+    const forwardProxy = vi.fn(async (_url: string, _method?: string, payload?: any) => {
+      const body = JSON.parse(payload)
+      expect(body.messages[1].content).toMatch(/请为主题 wiki 页面生成结构化内容/)
+
+      return {
+        body: JSON.stringify({
+          choices: [
+            {
+              message: {
+                content: JSON.stringify({}),
+              },
+            },
+          ],
+        }),
+        status: 200,
+      } as any
+    })
+
+    const service = createAiWikiService({ forwardProxy })
+    const result = await service.generateThemeSections({
+      config: {
+        aiEnabled: true,
+        aiBaseUrl: 'https://api.example.com/v1',
+        aiApiKey: 'sk-test',
+        aiModel: 'gpt-4.1-mini',
+      } as any,
+      payload: {
+        themeName: 'AI',
+        pageTitle: '主题-AI-索引-llm-wiki',
+        themeDocumentId: 'doc-theme-ai',
+        themeDocumentTitle: '主题-AI-索引',
+        sourceDocuments: [],
+        signals: {
+          coreDocuments: [],
+          bridgeDocuments: [],
+          propagationDocuments: [],
+          orphanDocuments: [],
+          risingDocuments: [],
+          fallingDocuments: [],
+        },
+        evidence: [],
+      },
+    })
+
+    expect(result).toEqual({
+      overview: '暂无明显主题概览',
+      keyDocuments: ['暂无关键文档建议'],
+      structureObservations: ['暂无明显结构观察'],
+      evidence: ['暂无明显关系证据'],
+      actions: ['暂无明确整理动作'],
     })
   })
 })

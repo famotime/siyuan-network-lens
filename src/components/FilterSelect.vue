@@ -44,7 +44,7 @@
         v-else
         class="filter-select__empty"
       >
-        {{ emptyLabel }}
+        {{ resolvedEmptyLabel }}
       </div>
     </div>
   </div>
@@ -52,6 +52,7 @@
 
 <script setup lang="ts">
 import { computed, onBeforeUnmount, onMounted, ref } from 'vue'
+import { pickUiText } from '@/i18n/ui'
 
 type FilterSelectOption = {
   value: string
@@ -63,7 +64,7 @@ const props = withDefaults(defineProps<{
   options: FilterSelectOption[]
   emptyLabel?: string
 }>(), {
-  emptyLabel: '暂无可选项',
+  emptyLabel: undefined,
 })
 
 const emit = defineEmits<{
@@ -72,11 +73,13 @@ const emit = defineEmits<{
 
 const open = ref(false)
 const rootRef = ref<HTMLElement | null>(null)
+const uiText = (en_US: string, zh_CN: string) => pickUiText({ en_US, zh_CN })
+const resolvedEmptyLabel = computed(() => props.emptyLabel ?? uiText('No options available', '暂无可选项'))
 
 const summaryLabel = computed(() => {
   return props.options.find(option => option.value === props.modelValue)?.label
     ?? props.options[0]?.label
-    ?? props.emptyLabel
+    ?? resolvedEmptyLabel.value
 })
 
 function toggleOpen() {

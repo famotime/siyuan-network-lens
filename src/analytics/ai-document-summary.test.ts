@@ -1,4 +1,4 @@
-import { describe, expect, it, vi } from 'vitest'
+import { afterEach, describe, expect, it, vi } from 'vitest'
 
 import { buildDocumentSummary, ensureDocumentSummary } from './ai-document-summary'
 import type { DocumentRecord } from './analysis'
@@ -15,10 +15,14 @@ const sourceDocument: DocumentRecord = {
 }
 
 describe('ai document summary', () => {
+  afterEach(() => {
+    delete (globalThis as any).siyuan
+  })
+
   it('builds a deterministic local summary from title, content, path and tags', () => {
     expect(buildDocumentSummary(sourceDocument)).toEqual({
       summaryShort: '第一段内容。 第二段内容。 第三段内容。',
-      summaryMedium: '标题：AI 索引实践；路径：/笔记/AI 索引实践；正文要点：第一段内容。 第二段内容。',
+      summaryMedium: 'Title: AI 索引实践; Path: /笔记/AI 索引实践; Key points: 第一段内容。 第二段内容。',
       keywords: ['AI', '知识管理', '索引实践'],
       evidenceSnippets: ['第一段内容。', '第二段内容。'],
     })
@@ -74,7 +78,7 @@ describe('ai document summary', () => {
 
     expect(result).toEqual({
       summaryShort: '第一段内容。 第二段内容。 第三段内容。',
-      summaryMedium: '标题：AI 索引实践；路径：/笔记/AI 索引实践；正文要点：第一段内容。 第二段内容。',
+      summaryMedium: 'Title: AI 索引实践; Path: /笔记/AI 索引实践; Key points: 第一段内容。 第二段内容。',
       keywords: ['AI', '知识管理', '索引实践'],
       evidenceSnippets: ['第一段内容。', '第二段内容。'],
       updatedAt: '2026-04-03T12:05:00.000Z',
@@ -83,10 +87,21 @@ describe('ai document summary', () => {
     expect(store.saveDocumentSummary).toHaveBeenCalledWith(expect.objectContaining({
       sourceDocument: expect.objectContaining({ id: 'doc-1' }),
       summaryShort: '第一段内容。 第二段内容。 第三段内容。',
-      summaryMedium: '标题：AI 索引实践；路径：/笔记/AI 索引实践；正文要点：第一段内容。 第二段内容。',
+      summaryMedium: 'Title: AI 索引实践; Path: /笔记/AI 索引实践; Key points: 第一段内容。 第二段内容。',
       keywords: ['AI', '知识管理', '索引实践'],
       evidenceSnippets: ['第一段内容。', '第二段内容。'],
       updatedAt: '2026-04-03T12:05:00.000Z',
     }))
+  })
+
+  it('switches rebuilt summaries to Chinese when the workspace locale is zh_CN', () => {
+    ;(globalThis as any).siyuan = {
+      config: {
+        lang: 'zh_CN',
+      },
+    }
+
+    expect(buildDocumentSummary(sourceDocument).summaryMedium)
+      .toBe('标题：AI 索引实践；路径：/笔记/AI 索引实践；正文要点：第一段内容。 第二段内容。')
   })
 })

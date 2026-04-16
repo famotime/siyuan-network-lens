@@ -1,8 +1,12 @@
-import { describe, expect, it } from 'vitest'
+import { afterEach, describe, expect, it } from 'vitest'
 
 import { createAiLinkSuggestionService } from './ai-link-suggestions'
 
 describe('ai link suggestions', () => {
+  afterEach(() => {
+    delete (globalThis as any).siyuan
+  })
+
   it('uses embeddings to rank orphan link candidates and reports friendly progress updates', async () => {
     const requests: Array<{ url: string, body: any }> = []
     const progress: string[] = []
@@ -125,9 +129,9 @@ describe('ai link suggestions', () => {
     })
 
     expect(progress).toEqual([
-      '正在分析文档语义并生成 embedding…',
-      '正在基于 embedding 与结构信号召回候选…',
-      'AI 正在分析……',
+      'Analyzing document semantics and generating embeddings...',
+      'Retrieving candidates from embeddings and structure signals...',
+      'AI is analyzing...',
     ])
     expect(requests[0]?.url).toBe('https://api.example.com/v1/embeddings')
     expect(requests[0]?.body.model).toBe('text-embedding-3-small')
@@ -253,8 +257,8 @@ describe('ai link suggestions', () => {
 
     expect(requests).toEqual(['https://api.example.com/v1/chat/completions'])
     expect(progress).toEqual([
-      '未配置 Embedding Model，改为基于主题命中与结构信号召回候选…',
-      'AI 正在分析……',
+      'Embedding Model is not configured. Falling back to topic matches and structure signals...',
+      'AI is analyzing...',
     ])
     expect(result.suggestions).toEqual([
       expect.objectContaining({
@@ -322,7 +326,7 @@ describe('ai link suggestions', () => {
       report: {
         ranking: [],
       } as any,
-    })).rejects.toThrow('SiliconFlow 的 Embedding Model 不能填写 text-embedding-3-small 这类 OpenAI 模型名，请改用如 BAAI/bge-m3、BAAI/bge-large-zh-v1.5 或 Qwen/Qwen3-Embedding 系列模型')
+    })).rejects.toThrow('For SiliconFlow, Embedding Model cannot be an OpenAI model name like text-embedding-3-small. Use models such as BAAI/bge-m3, BAAI/bge-large-zh-v1.5, or Qwen/Qwen3-Embedding instead.')
   })
 
   it('auto-appends /v1 for SiliconFlow requests when base url omits it', async () => {
@@ -421,6 +425,113 @@ describe('ai link suggestions', () => {
     expect(requests).toEqual([
       'https://api.siliconflow.cn/v1/embeddings',
       'https://api.siliconflow.cn/v1/chat/completions',
+    ])
+  })
+
+  it('switches progress copy and validation errors to Chinese when the workspace locale is zh_CN', async () => {
+    ;(globalThis as any).siyuan = {
+      config: {
+        lang: 'zh_CN',
+      },
+    }
+
+    const progress: string[] = []
+    const service = createAiLinkSuggestionService({
+      forwardProxy: async (url) => {
+        if (url.endsWith('/embeddings')) {
+          return {
+            status: 200,
+            body: JSON.stringify({
+              data: [
+                { embedding: [1, 0] },
+                { embedding: [0.95, 0.05] },
+              ],
+            }),
+          } as any
+        }
+
+        return {
+          status: 200,
+          body: JSON.stringify({
+            choices: [
+              {
+                message: {
+                  content: JSON.stringify({
+                    summary: '可先补到主题-AI-索引。',
+                    suggestions: [
+                      {
+                        targetDocumentId: 'doc-theme-ai',
+                        targetTitle: '主题-AI-索引',
+                        targetType: 'theme-document',
+                        confidence: 'medium',
+                        reason: '主题命中明确。',
+                      },
+                    ],
+                  }),
+                },
+              },
+            ],
+          }),
+        } as any
+      },
+    })
+
+    await service.suggestForOrphan({
+      config: {
+        aiEnabled: true,
+        aiBaseUrl: 'https://api.example.com/v1',
+        aiApiKey: 'sk-test',
+        aiModel: 'gpt-4.1-mini',
+        aiEmbeddingModel: 'text-embedding-3-small',
+      } as any,
+      sourceDocument: {
+        id: 'doc-orphan',
+        box: 'box-1',
+        path: '/notes/orphan.sy',
+        hpath: '/笔记/AI 与 机器学习',
+        title: 'AI 与 机器学习 AI',
+        tags: ['AI'],
+        content: '人工智能 模型 机器学习',
+        updated: '20260311120000',
+      },
+      orphan: {
+        documentId: 'doc-orphan',
+        title: 'AI 与 机器学习 AI',
+        degree: 0,
+        createdAt: '20260310120000',
+        updatedAt: '20260311120000',
+        historicalReferenceCount: 2,
+        lastHistoricalAt: '20260310120000',
+        hasSparseEvidence: true,
+      },
+      documents: [
+        { id: 'doc-orphan', box: 'box-1', path: '/notes/orphan.sy', hpath: '/笔记/AI 与 机器学习', title: 'AI 与 机器学习 AI', tags: ['AI'], content: '人工智能 模型 机器学习', updated: '20260311120000' },
+        { id: 'doc-theme-ai', box: 'box-1', path: '/topics/theme-ai.sy', hpath: '/专题/主题-AI-索引', title: '主题-AI-索引', tags: [], content: 'AI 人工智能 索引', updated: '20260311120000' },
+      ],
+      themeDocuments: [
+        {
+          documentId: 'doc-theme-ai',
+          title: '主题-AI-索引',
+          themeName: 'AI',
+          matchTerms: ['AI', '人工智能'],
+          box: 'box-1',
+          path: '/topics/theme-ai.sy',
+          hpath: '/专题/主题-AI-索引',
+        },
+      ],
+      availableTags: ['AI'],
+      report: {
+        ranking: [],
+      } as any,
+      onProgress: (message) => {
+        progress.push(message)
+      },
+    })
+
+    expect(progress).toEqual([
+      '正在分析文档语义并生成 embedding…',
+      '正在基于 embedding 与结构信号召回候选…',
+      'AI 正在分析……',
     ])
   })
 })

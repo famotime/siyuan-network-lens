@@ -1,10 +1,12 @@
 import { buildDocLinkMarkdown } from './link-sync'
+import { pickUiText } from '@/i18n/ui'
 
 type BlockDeleteFn = (id: string) => Promise<any>
 type BlockWriteFn = (dataType: 'markdown' | 'dom', data: string, parentID: string) => Promise<any>
 type BlockUpdateFn = (dataType: 'markdown' | 'dom', data: string, id: string) => Promise<any>
 type GetChildBlocksFn = (id: string) => Promise<Array<{ id: string, type?: string }>>
 type GetBlockKramdownFn = (id: string) => Promise<{ id: string, kramdown: string }>
+const uiText = (en_US: string, zh_CN: string) => pickUiText({ en_US, zh_CN })
 
 export type AppliedThemeLinkChange =
   {
@@ -52,7 +54,7 @@ export async function applyThemeLinkToOrphanDocument(params: {
   const response = await params.prependBlock('markdown', linkMarkdown, params.orphanDocumentId)
   const insertedBlockId = extractInsertedBlockId(response)
   if (!insertedBlockId) {
-    throw new Error('未能识别新建的主题链接块')
+    throw new Error(uiText('Failed to detect the new topic link block', '未能识别新建的主题链接块'))
   }
 
   return {

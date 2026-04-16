@@ -37,7 +37,7 @@ export function createAppWikiPanelController(params: {
 
     activeWikiPreviewRequest.value = {
       sourceDocumentIds: params.filteredDocuments.value.map(document => document.id),
-      scopeDescriptionLine: '- 范围来源：当前文档样本',
+      scopeDescriptionLine: '- Scope source: current doc sample',
     }
     wikiPanelPlacement.value = 'documents'
     wikiPanelCoreDocumentId.value = ''
@@ -61,7 +61,7 @@ export function createAppWikiPanelController(params: {
 
     activeWikiPreviewRequest.value = {
       sourceDocumentIds: [...new Set(sourceDocumentIds)],
-      scopeDescriptionLine: `- 范围来源：核心文档《${params.resolveTitle(documentId)}》关联范围（正链 / 反链 / 子文档）`,
+      scopeDescriptionLine: `- Scope source: related range for core doc "${params.resolveTitle(documentId)}" (outbound / inbound / child docs)`,
     }
     wikiPanelPlacement.value = 'ranking'
     wikiPanelCoreDocumentId.value = documentId

@@ -62,6 +62,7 @@ import { ref } from 'vue'
 import type { LargeDocumentCardMode } from '@/analytics/large-documents'
 import type { ReadCardMode } from '@/analytics/read-status'
 import type { SummaryCardItem, SummaryCardKey } from '@/analytics/summary-details'
+import { pickUiText } from '@/i18n/ui'
 
 const props = defineProps<{
   cards: SummaryCardItem[]
@@ -76,6 +77,7 @@ const props = defineProps<{
 
 const draggedSummaryCardKey = ref<SummaryCardKey | ''>('')
 const dropTargetSummaryCardKey = ref<SummaryCardKey | ''>('')
+const uiText = (en_US: string, zh_CN: string) => pickUiText({ en_US, zh_CN })
 
 function handleSummaryCardDragStart(cardKey: SummaryCardKey, event: DragEvent) {
   draggedSummaryCardKey.value = cardKey
@@ -116,10 +118,14 @@ function shouldShowCardToggle(cardKey: SummaryCardKey): boolean {
 
 function resolveToggleLabel(cardKey: SummaryCardKey): string {
   if (cardKey === 'read') {
-    return props.readCardMode === 'read' ? '切换为未读文档' : '切换为已读文档'
+    return props.readCardMode === 'read'
+      ? uiText('Switch to unread docs', '切换为未读文档')
+      : uiText('Switch to read docs', '切换为已读文档')
   }
 
-  return props.largeDocumentCardMode === 'storage' ? '切换为按文字统计' : '切换为按资源统计'
+  return props.largeDocumentCardMode === 'storage'
+    ? uiText('Switch to text size mode', '切换为按文字统计')
+    : uiText('Switch to asset size mode', '切换为按资源统计')
 }
 
 function handleCardToggle(cardKey: SummaryCardKey) {

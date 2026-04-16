@@ -1,8 +1,19 @@
-export const DOCUMENT_DETAIL_DESCRIPTION = '跟随主浏览区当前打开文档，汇总其社区位置、桥接角色与沉没风险。'
+import { pickUiText } from '@/i18n/ui'
 
-export const SUGGESTION_TYPE_LABELS = {
-  'promote-hub': '升级为主题页',
-  'repair-orphan': '补齐链接',
-  'maintain-bridge': '重点维护',
-  'archive-dormant': '归档沉没',
-} as const
+const uiText = (en_US: string, zh_CN: string) => pickUiText({ en_US, zh_CN })
+
+export function getDocumentDetailDescription() {
+  return uiText(
+    'Follow the active document and summarize its community role, bridge position, and dormant risk.',
+    '跟随当前文档，概览其社区角色、桥接位置与沉没风险。',
+  )
+}
+
+export function getSuggestionTypeLabels() {
+  return {
+    'promote-hub': uiText('Promote to topic page', '提升为主题页'),
+    'repair-orphan': uiText('Repair links', '补齐链接'),
+    'maintain-bridge': uiText('Maintain bridge', '维护桥接'),
+    'archive-dormant': uiText('Archive dormant', '归档沉没'),
+  } as const
+}

@@ -28,9 +28,7 @@
           class="theme-multi-select__action"
           type="button"
           @click="clearSelection"
-        >
-          清空
-        </button>
+        >{{ uiText('Clear', '清空') }}</button>
       </div>
 
       <div
@@ -56,7 +54,7 @@
         v-else
         class="theme-multi-select__empty"
       >
-        {{ emptyLabel }}
+        {{ resolvedEmptyLabel }}
       </div>
     </div>
   </div>
@@ -66,6 +64,7 @@
 import { computed, onBeforeUnmount, onMounted, ref } from 'vue'
 
 import type { ThemeOption } from '@/analytics/theme-documents'
+import { pickUiText } from '@/i18n/ui'
 
 type MultiSelectOption = Pick<ThemeOption, 'value' | 'label'> & {
   documentId?: string
@@ -79,9 +78,9 @@ const props = withDefaults(defineProps<{
   emptyLabel?: string
   selectionUnit?: string
 }>(), {
-  allLabel: '全部主题',
-  emptyLabel: '未配置主题文档',
-  selectionUnit: '个主题',
+  allLabel: undefined,
+  emptyLabel: undefined,
+  selectionUnit: undefined,
 })
 
 const emit = defineEmits<{
@@ -90,15 +89,22 @@ const emit = defineEmits<{
 
 const open = ref(false)
 const rootRef = ref<HTMLElement | null>(null)
+const uiText = (en_US: string, zh_CN: string) => pickUiText({ en_US, zh_CN })
+const resolvedAllLabel = computed(() => props.allLabel ?? uiText('All topics', '全部主题'))
+const resolvedEmptyLabel = computed(() => props.emptyLabel ?? uiText('No topic docs configured', '暂无主题文档配置'))
+const resolvedSelectionUnit = computed(() => props.selectionUnit ?? uiText('themes', '个主题'))
 
 const summaryLabel = computed(() => {
   if (props.options.length === 0) {
-    return props.emptyLabel
+    return resolvedEmptyLabel.value
   }
   if (props.modelValue.length === 0) {
-    return props.allLabel
+    return resolvedAllLabel.value
   }
-  return `已选 ${props.modelValue.length} ${props.selectionUnit}`
+  return uiText(
+    `${props.modelValue.length} ${resolvedSelectionUnit.value} selected`,
+    `已选 ${props.modelValue.length} ${resolvedSelectionUnit.value}`,
+  )
 })
 
 function toggleOpen() {

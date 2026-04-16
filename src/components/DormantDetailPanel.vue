@@ -1,15 +1,15 @@
 <template>
   <div class="dormant-detail">
     <div class="dormant-detail__controls">
-      <span>沉没阈值</span>
+      <span>{{ uiText('Dormant threshold', '沉没阈值') }}</span>
       <select
         class="dormant-detail__select"
         :value="dormantDays"
         @change="onDaysChange"
       >
-        <option :value="30">30 天</option>
-        <option :value="90">90 天</option>
-        <option :value="180">180 天</option>
+        <option :value="30">{{ uiText('30 days', '30 天') }}</option>
+        <option :value="90">{{ uiText('90 days', '90 天') }}</option>
+        <option :value="180">{{ uiText('180 days', '180 天') }}</option>
       </select>
     </div>
 
@@ -46,12 +46,13 @@
       v-else
       class="empty-state"
     >
-      当前卡片下没有可展示的文档。
+      {{ uiText('No docs to show under this card.', '当前卡片下暂无文档。') }}
     </div>
   </div>
 </template>
 
 <script setup lang="ts">
+import { pickUiText } from '@/i18n/ui'
 import type { SummaryDetailItem } from '@/analytics/summary-details'
 import DocumentTitle from './DocumentTitle.vue'
 import SuggestionCallout from './SuggestionCallout.vue'
@@ -62,6 +63,8 @@ const props = defineProps<{
   onUpdateDormantDays: (value: number) => void
   openDocument: (documentId: string) => void
 }>()
+
+const uiText = (en_US: string, zh_CN: string) => pickUiText({ en_US, zh_CN })
 
 function onDaysChange(event: Event) {
   const value = Number.parseInt((event.target as HTMLSelectElement).value, 10)

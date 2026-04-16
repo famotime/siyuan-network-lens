@@ -1,13 +1,18 @@
-import { describe, expect, it } from 'vitest'
+import { afterEach, describe, expect, it } from 'vitest'
 
 import {
   AI_PROVIDER_PRESET_OPTIONS,
   applyAiProviderPreset,
+  buildAiProviderPresetOptions,
   buildAiModelOptionItems,
   detectAiProviderPreset,
 } from './ai-provider-presets'
 
 describe('ai provider presets', () => {
+  afterEach(() => {
+    delete (globalThis as any).siyuan
+  })
+
   it('detects known provider presets from base urls', () => {
     expect(detectAiProviderPreset('https://api.siliconflow.cn')).toBe('siliconflow')
     expect(detectAiProviderPreset('https://api.openai.com/v1')).toBe('openai')
@@ -144,6 +149,22 @@ describe('ai provider presets', () => {
 
   it('exposes preset options for siliconflow, openai, gemini and custom mode', () => {
     expect(AI_PROVIDER_PRESET_OPTIONS).toEqual([
+      { value: 'siliconflow', label: 'SiliconFlow' },
+      { value: 'openai', label: 'OpenAI' },
+      { value: 'gemini', label: 'Gemini' },
+      { value: 'custom', label: 'Custom' },
+    ])
+  })
+
+  it('switches preset option labels to Chinese when the workspace locale is zh_CN', async () => {
+    ;(globalThis as any).siyuan = {
+      config: {
+        lang: 'zh_CN',
+      },
+    }
+
+    const presets = await import('./ai-provider-presets')
+    expect(presets.buildAiProviderPresetOptions()).toEqual([
       { value: 'siliconflow', label: '硅基流动' },
       { value: 'openai', label: 'OpenAI' },
       { value: 'gemini', label: 'Gemini' },

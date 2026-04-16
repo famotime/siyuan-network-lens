@@ -902,7 +902,7 @@ function buildSuggestions(
       type: 'promote-hub',
       documentId: item.documentId,
       title: item.title,
-      reason: `被 ${item.distinctSourceDocuments} 个文档引用，共 ${item.inboundReferences} 次`,
+      reason: `Referenced by ${item.distinctSourceDocuments} docs, ${item.inboundReferences} refs in total`,
     })
   }
 
@@ -912,8 +912,8 @@ function buildSuggestions(
       documentId: item.documentId,
       title: item.title,
       reason: item.hasSparseEvidence
-        ? `当前窗口内没有文档级连接，但历史上还有 ${item.historicalReferenceCount} 条零散引用证据`
-        : '当前没有文档级连接',
+        ? `No doc-level links in the current window, but ${item.historicalReferenceCount} historical reference traces still exist`
+        : 'No doc-level links in the current window',
     })
   }
 
@@ -922,7 +922,7 @@ function buildSuggestions(
       type: 'archive-dormant',
       documentId: item.documentId,
       title: item.title,
-      reason: `${item.inactivityDays} 天未产生有效连接，适合归档或补齐索引`,
+      reason: `No valid links for ${item.inactivityDays} days. Good candidate for archiving or index repair`,
     })
   }
 
@@ -931,7 +931,7 @@ function buildSuggestions(
       type: 'maintain-bridge',
       documentId: item.documentId,
       title: item.title,
-      reason: `连接 ${item.degree} 条关系，移除后会打断社区连通性`,
+      reason: `Connects ${item.degree} relationships. Removing it would break cluster connectivity`,
     })
   }
 

@@ -1,3 +1,7 @@
+import { pickUiText } from '@/i18n/ui'
+
+const uiText = (en_US: string, zh_CN: string) => pickUiText({ en_US, zh_CN })
+
 export function normalizeTags(tags?: readonly string[] | string | null): string[] {
   if (!tags) {
     return []
@@ -64,7 +68,7 @@ export function isTimestampInPreviousWindow(timestamp: string, now: Date, days: 
 
 export function formatCompactDate(timestamp?: string): string {
   if (!timestamp || timestamp.length < 8) {
-    return '未知时间'
+    return uiText('Unknown time', '未知时间')
   }
   return `${timestamp.slice(0, 4)}-${timestamp.slice(4, 6)}-${timestamp.slice(6, 8)}`
 }

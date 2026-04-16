@@ -16,8 +16,8 @@ export {
   DEFAULT_AI_TEMPERATURE,
 } from '@/types/ai-defaults'
 export const DEFAULT_WIKI_PAGE_SUFFIX = '-llm-wiki'
-export const DEFAULT_WIKI_INDEX_TITLE = 'LLM-Wiki-索引'
-export const DEFAULT_WIKI_LOG_TITLE = 'LLM-Wiki-维护日志'
+export const DEFAULT_WIKI_INDEX_TITLE = 'LLM-Wiki-Index'
+export const DEFAULT_WIKI_LOG_TITLE = 'LLM-Wiki-Maintenance-Log'
 
 export interface PluginConfig {
   showSummaryCards: boolean

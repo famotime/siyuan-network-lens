@@ -81,6 +81,6 @@ describe('orphan document tags', () => {
       tag: 'AI工具',
       getBlockAttrs,
       setBlockAttrs,
-    })).rejects.toThrow('写入文档标签失败')
+    })).rejects.toThrow('Failed to write doc tags')
   })
 })

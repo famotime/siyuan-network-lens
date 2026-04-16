@@ -1,4 +1,4 @@
-import { describe, expect, it, vi } from 'vitest'
+import { afterEach, describe, expect, it, vi } from 'vitest'
 
 import { buildWikiPreview, fingerprintWikiContent } from './wiki-diff'
 import { buildDocLinkMarkdown } from './link-sync'
@@ -6,6 +6,11 @@ import { WIKI_BLOCK_ATTR_KEYS } from './wiki-page-model'
 import { renderThemeWikiDraft } from './wiki-renderer'
 import { applyWikiDocuments } from './wiki-documents'
 import { buildWikiPageStorageKey, createAiWikiStore } from './wiki-store'
+
+afterEach(() => {
+  delete (globalThis as typeof globalThis & { siyuan?: unknown }).siyuan
+  vi.resetModules()
+})
 
 describe('wiki documents', () => {
   it('derives wiki target notebook and directory from the first configured theme full path', async () => {
@@ -182,7 +187,7 @@ describe('wiki documents', () => {
     expect(kernel.getDocumentMarkdownByPath('/主题/LLM-Wiki-索引')).toContain(buildDocLinkMarkdown('doc-1', '主题-AI-索引-llm-wiki'))
     expect(kernel.getDocumentMarkdownByPath('/主题/LLM-Wiki-索引')).toContain(buildDocLinkMarkdown('doc-theme-ai', '主题-AI-索引'))
     expect(kernel.getDocumentMarkdownByPath('/主题/LLM-Wiki-索引')).toContain('零散记录')
-    expect(kernel.getDocumentMarkdownByPath('/主题/LLM-Wiki-维护日志')).toContain('新建页面数：1')
+    expect(kernel.getDocumentMarkdownByPath('/主题/LLM-Wiki-维护日志')).toContain('- Created pages: 1')
     expect(kernel.getDocumentMarkdownByPath('/主题/LLM-Wiki-维护日志')).toContain('主题-AI-索引-llm-wiki')
 
     const snapshot = await store.loadSnapshot()
@@ -558,8 +563,8 @@ describe('wiki documents', () => {
     })
     expect(kernel.api.updateBlock).not.toHaveBeenCalledWith('markdown', conflictDraft.managedMarkdown, 'wiki-conflict::managed')
     expect(kernel.getDocumentMarkdownByPath('/主题/主题-冲突-llm-wiki')).toContain('外部修改后的内容')
-    expect(kernel.getDocumentMarkdownByPath('/主题/LLM-Wiki-维护日志')).toContain('无变化页面数：1')
-    expect(kernel.getDocumentMarkdownByPath('/主题/LLM-Wiki-维护日志')).toContain('冲突页面数：1')
+    expect(kernel.getDocumentMarkdownByPath('/主题/LLM-Wiki-维护日志')).toContain('- Unchanged pages: 1')
+    expect(kernel.getDocumentMarkdownByPath('/主题/LLM-Wiki-维护日志')).toContain('- Conflict pages: 1')
 
     const snapshot = await store.loadSnapshot()
     expect(snapshot.pages[buildWikiPageStorageKey({
@@ -686,6 +691,89 @@ describe('wiki documents', () => {
     expect(kernel.getDocumentMarkdownByPath('/主题/主题-冲突-llm-wiki')).toContain('插件新生成内容')
     expect(kernel.getDocumentMarkdownByPath('/主题/主题-冲突-llm-wiki')).toContain('- 冲突备注')
   })
+
+  it('writes Chinese index and log content when the workspace locale is zh_CN', async () => {
+    ;(globalThis as typeof globalThis & {
+      siyuan?: {
+        config?: {
+          lang?: string
+        }
+      }
+    }).siyuan = {
+      config: {
+        lang: 'zh_CN',
+      },
+    }
+
+    vi.resetModules()
+
+    const { renderThemeWikiDraft: renderZhThemeWikiDraft } = await import('./wiki-renderer')
+    const { applyWikiDocuments: applyZhWikiDocuments } = await import('./wiki-documents')
+
+    const kernel = createFakeWikiKernel()
+    const store = createMemoryWikiStore()
+    const themeDraft = renderZhThemeWikiDraft({
+      pageTitle: '主题-AI-索引-llm-wiki',
+      pairedThemeTitle: '主题-AI-索引',
+      generatedAt: '2026-04-09T12:00:00.000Z',
+      model: 'gpt-4.1-mini',
+      sourceDocumentCount: 1,
+      llmOutput: {
+        overview: '主题概览',
+        keyDocuments: ['AI 核心'],
+        structureObservations: ['结构观察'],
+        evidence: ['引用证据'],
+        actions: ['整理动作'],
+      },
+    })
+    const preview = buildWikiPreview({
+      pageType: 'theme',
+      pageTitle: '主题-AI-索引-llm-wiki',
+      sourceDocumentIds: ['doc-ai-core'],
+      generatedAt: '2026-04-09T12:00:00.000Z',
+      nextDraft: themeDraft,
+    })
+
+    await applyZhWikiDocuments({
+      config: {
+        themeNotebookId: 'notebook-theme',
+        themeDocumentPath: '/主题',
+        wikiIndexTitle: 'LLM-Wiki-索引',
+        wikiLogTitle: 'LLM-Wiki-维护日志',
+        wikiPageSuffix: '-llm-wiki',
+      },
+      generatedAt: '2026-04-09T12:05:00.000Z',
+      scopeSummary: {
+        sourceDocumentCount: 1,
+        themeGroupCount: 1,
+        unclassifiedDocumentCount: 0,
+        excludedWikiDocumentCount: 0,
+      },
+      scopeDescriptionLines: ['- 时间窗口：7d'],
+      themePages: [
+        {
+          pageTitle: '主题-AI-索引-llm-wiki',
+          themeName: 'AI',
+          themeDocumentId: 'doc-theme-ai',
+          themeDocumentTitle: '主题-AI-索引',
+          themeDocumentBox: 'notebook-theme',
+          themeDocumentHPath: '/主题/主题-AI-索引',
+          sourceDocumentIds: ['doc-ai-core'],
+          preview,
+          draft: themeDraft,
+        },
+      ],
+      unclassifiedDocuments: [],
+      overwriteConflicts: false,
+      store,
+      api: kernel.api,
+    })
+
+    expect(kernel.getDocumentMarkdownByPath('/主题/LLM-Wiki-索引')).toContain('### 页面概览')
+    expect(kernel.getDocumentMarkdownByPath('/主题/LLM-Wiki-索引')).toContain('- 最近维护时间：2026-04-09T12:05:00.000Z')
+    expect(kernel.getDocumentMarkdownByPath('/主题/LLM-Wiki-维护日志')).toContain('- 新建页面数：1')
+    expect(kernel.getDocumentMarkdownByPath('/主题/LLM-Wiki-维护日志')).toContain('### 本次触达页面')
+  })
 })
 
 function buildStaticThemeDraft(pageTitle: string, pairedThemeTitle: string, overview: string) {
@@ -762,10 +850,12 @@ function createFakeWikiKernel(initialDocuments?: Array<{
   const documentIdsByPath = new Map<string, string>()
   const attrsByBlockId = new Map<string, Record<string, string>>()
   let nextDocumentId = 1
+  const managedHeadingPattern = '(?:AI managed area|AI 管理区)'
+  const manualHeadingPattern = '(?:Manual notes|人工备注)'
 
   const refreshDocumentBlocks = (document: DocumentDescriptor) => {
     const childBlocks: BlockDescriptor[] = []
-    const managedMatch = document.markdown.match(/(^## AI 管理区[\s\S]*?)(?=^## 人工备注$|$)/m)
+    const managedMatch = document.markdown.match(new RegExp(`(^## ${managedHeadingPattern}[\\s\\S]*?)(?=^## ${manualHeadingPattern}$|$)`, 'm'))
     if (managedMatch) {
       childBlocks.push({
         id: `${document.id}::managed`,
@@ -774,7 +864,7 @@ function createFakeWikiKernel(initialDocuments?: Array<{
         role: 'managed',
       })
     }
-    const manualMatch = document.markdown.match(/(^## 人工备注[\s\S]*)$/m)
+    const manualMatch = document.markdown.match(new RegExp(`(^## ${manualHeadingPattern}[\\s\\S]*)$`, 'm'))
     if (manualMatch) {
       childBlocks.push({
         id: `${document.id}::manual`,
@@ -933,9 +1023,9 @@ function extractTitleBlock(markdown: string): string {
 }
 
 function extractManagedBlock(markdown: string): string {
-  return markdown.match(/(^# [\s\S]*?^## AI 管理区[\s\S]*?)(?=^## 人工备注$|$)/m)?.[1]?.trim() ?? ''
+  return markdown.match(/(^# [\s\S]*?^## (?:AI managed area|AI 管理区)[\s\S]*?)(?=^## (?:Manual notes|人工备注)$|$)/m)?.[1]?.trim() ?? ''
 }
 
 function extractManualBlock(markdown: string): string {
-  return markdown.match(/(^## 人工备注[\s\S]*)$/m)?.[1]?.trim() ?? ''
+  return markdown.match(/(^## (?:Manual notes|人工备注)[\s\S]*)$/m)?.[1]?.trim() ?? ''
 }

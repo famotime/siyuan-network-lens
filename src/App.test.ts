@@ -17,7 +17,10 @@ describe('App trend detail layout', () => {
     const normalizedSource = source.replace(/\r\n/g, '\n')
 
     expect(source).toContain('class="hero__icon"')
-    expect(source).toContain('alt="脉络镜插件图标"')
+    expect(source).toContain(':alt="pluginIconAlt"')
+    expect(source).toContain("const pluginTitle = computed(() => props.plugin.i18n?.pluginTitle ?? props.plugin.displayName ?? uiText('Network Lens', '脉络镜'))")
+    expect(source).toContain("const pluginTagline = computed(() => props.plugin.i18n?.pluginTagline ?? uiText('Reveal structure in hidden knowledge.', '让隐没的知识，重现脉络'))")
+    expect(source).toContain("const pluginIconAlt = computed(() => props.plugin.i18n?.pluginIconAlt ?? uiText('Network Lens plugin icon', '脉络镜插件图标'))")
     expect(source).toContain('white-space: nowrap;')
     expect(normalizedSource).toContain(`.hero__intro {
   flex: 1;

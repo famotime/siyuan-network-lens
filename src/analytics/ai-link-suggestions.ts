@@ -2,6 +2,7 @@ import type { DocumentRecord, OrphanItem, ReferenceGraphReport } from './analysi
 import { resolveDocumentTitle } from './document-utils'
 import { countThemeMatchesForDocument, type ThemeDocument } from './theme-documents'
 import { isAiConfigComplete, resolveAiEndpoint, resolveAiRequestOptions } from './ai-inbox'
+import { pickUiText } from '@/i18n/ui'
 import type { PluginConfig } from '@/types/config'
 
 type ForwardProxyFn = (
@@ -29,6 +30,7 @@ type AiConfig = Pick<
 type CandidateTargetType = 'theme-document' | 'core-document' | 'related-document'
 type SuggestionConfidence = 'high' | 'medium' | 'low'
 type TagSuggestionSource = 'existing' | 'new'
+const uiText = (en_US: string, zh_CN: string) => pickUiText({ en_US, zh_CN })
 
 interface CandidateTarget {
   documentId: string
@@ -82,13 +84,14 @@ export interface AiLinkSuggestionService {
 }
 
 const SUGGESTION_SYSTEM_PROMPT = [
-  '你是思源笔记的补链建议助手。',
-  '你只可以在给定候选目标中选择，不要发明不存在的文档。',
-  '必须返回 JSON，格式为 {"summary": string, "suggestions": Suggestion[] }。',
-  '每条 Suggestion 必须包含 targetDocumentId、targetTitle、targetType、confidence、reason，可选 draftText、tagSuggestions。',
-  'reason 必须把推荐依据和处理后的主要改善合并成一段简洁说明。',
-  'tagSuggestions 是标签建议数组，每项包含 tag、source、reason；source 只能是 existing 或 new。',
-  '如果主题页明显合适，优先推荐主题页。',
+  'You are a link-repair assistant for SiYuan notes.',
+  'Only choose from the provided candidate targets. Do not invent documents that do not exist.',
+  'You must return JSON in the format {"summary": string, "suggestions": Suggestion[] }.',
+  'Each Suggestion must include targetDocumentId, targetTitle, targetType, confidence, and reason, with optional draftText and tagSuggestions.',
+  'reason must merge the recommendation basis and the main expected improvement into one concise explanation.',
+  'tagSuggestions is an array of tag suggestions. Each item includes tag, source, and reason; source can only be existing or new.',
+  'If a topic page is clearly suitable, prefer recommending the topic page.',
+  'All user-visible text must follow the current workspace UI language.',
 ].join(' ')
 
 export function isAiLinkSuggestionConfigComplete(config: AiConfig): boolean {
@@ -101,10 +104,10 @@ export function createAiLinkSuggestionService(deps: {
   return {
     async suggestForOrphan(params) {
       if (!params.config.aiEnabled) {
-        throw new Error('请先在设置中启用 AI 功能')
+        throw new Error(uiText('Enable AI in Settings first', '请先在设置中启用 AI'))
       }
       if (!isAiLinkSuggestionConfigComplete(params.config)) {
-        throw new Error('AI 补链建议配置不完整，请补充 Base URL、API Key 和 Model')
+        throw new Error(uiText('AI link suggestion settings are incomplete. Add Base URL, API Key, and Model.', 'AI 补链配置不完整，请补充 Base URL、API Key 和 Model。'))
       }
 
       const candidates = buildCandidates({
@@ -115,7 +118,7 @@ export function createAiLinkSuggestionService(deps: {
       })
 
       if (!candidates.length) {
-        throw new Error('当前没有足够的候选目标可供 AI 补链')
+        throw new Error(uiText('There are not enough candidate targets for AI link suggestions right now', '当前缺少足够清晰的 AI 补链候选目标'))
       }
 
       const embeddingModel = params.config.aiEmbeddingModel?.trim()
@@ -137,7 +140,7 @@ export function createAiLinkSuggestionService(deps: {
         .sort((left, right) => right.finalScore - left.finalScore || left.title.localeCompare(right.title, 'zh-CN'))
         .slice(0, 6)
 
-      params.onProgress?.('AI 正在分析……')
+      params.onProgress?.(uiText('AI is analyzing...', 'AI 正在分析……'))
 
       const payload = await requestChatCompletion({
         config: params.config,
@@ -190,7 +193,10 @@ function validateEmbeddingModelConfig(config: AiConfig) {
   }
 
   if (isSiliconFlowBaseUrl(config.aiBaseUrl) && isOpenAiStyleEmbeddingModel(embeddingModel)) {
-    throw new Error('SiliconFlow 的 Embedding Model 不能填写 text-embedding-3-small 这类 OpenAI 模型名，请改用如 BAAI/bge-m3、BAAI/bge-large-zh-v1.5 或 Qwen/Qwen3-Embedding 系列模型')
+    throw new Error(uiText(
+      'For SiliconFlow, Embedding Model cannot be an OpenAI model name like text-embedding-3-small. Use models such as BAAI/bge-m3, BAAI/bge-large-zh-v1.5, or Qwen/Qwen3-Embedding instead.',
+      'SiliconFlow 的 Embedding Model 不能填写 text-embedding-3-small 这类 OpenAI 模型名，请改用如 BAAI/bge-m3、BAAI/bge-large-zh-v1.5 或 Qwen/Qwen3-Embedding 系列模型',
+    ))
   }
 }
 
@@ -217,7 +223,7 @@ async function rankCandidatesWithEmbeddings(params: {
   candidates: CandidateTarget[]
   onProgress?: (message: string) => void
 }) {
-  params.onProgress?.('正在分析文档语义并生成 embedding…')
+  params.onProgress?.(uiText('Analyzing document semantics and generating embeddings...', '正在分析文档语义并生成 embedding…'))
   const embeddingRequestInputs = [
     buildEmbeddingInput(params.sourceDocument),
     ...params.candidates.map(candidate => candidate.embeddingInput),
@@ -229,7 +235,7 @@ async function rankCandidatesWithEmbeddings(params: {
   })
   const sourceEmbedding = embeddings[0]
 
-  params.onProgress?.('正在基于 embedding 与结构信号召回候选…')
+  params.onProgress?.(uiText('Retrieving candidates from embeddings and structure signals...', '正在基于 embedding 与结构信号召回候选…'))
   return params.candidates
     .map((candidate, index) => ({
       ...candidate,
@@ -245,7 +251,7 @@ function rankCandidatesWithoutEmbeddings(params: {
   candidates: CandidateTarget[]
   onProgress?: (message: string) => void
 }) {
-  params.onProgress?.('未配置 Embedding Model，改为基于主题命中与结构信号召回候选…')
+  params.onProgress?.(uiText('Embedding Model is not configured. Falling back to topic matches and structure signals...', '未配置 Embedding Model，改为基于主题命中与结构信号召回候选…'))
   return params.candidates.map(candidate => ({
     ...candidate,
     embeddingScore: 0,
@@ -278,8 +284,8 @@ function buildCandidates(params: {
         targetType: 'theme-document' as const,
         embeddingInput: buildEmbeddingInput(themeDocument),
         reasons: [
-          `主题匹配命中 ${match.matchCount} 次`,
-          '该目标承担主题入口角色',
+          `Topic match hit ${match.matchCount} times`,
+          'Acts as a topic entry point',
         ],
         baseScore: Math.min(1, 0.55 + match.matchCount * 0.08),
       }
@@ -302,8 +308,8 @@ function buildCandidates(params: {
         targetType: 'core-document' as const,
         embeddingInput: buildEmbeddingInput(document),
         reasons: [
-          `被 ${item.distinctSourceDocuments} 个文档引用`,
-          `当前窗口内共有 ${item.inboundReferences} 次入链`,
+          `Referenced by ${item.distinctSourceDocuments} docs`,
+          `${item.inboundReferences} inbound refs in the current window`,
         ],
         baseScore: Math.min(1, 0.3 + item.distinctSourceDocuments * 0.12),
       }
@@ -315,9 +321,9 @@ function buildCandidates(params: {
 
 function buildEmbeddingInput(document: Pick<DocumentRecord, 'title' | 'name' | 'hpath' | 'path' | 'tags' | 'content'>): string {
   return [
-    `标题：${resolveDocumentTitle(document as DocumentRecord)}`,
-    document.hpath ? `路径：${document.hpath}` : '',
-    normalizeTags(document.tags).length ? `标签：${normalizeTags(document.tags).join(', ')}` : '',
+    `Title: ${resolveDocumentTitle(document as DocumentRecord)}`,
+    document.hpath ? `Path: ${document.hpath}` : '',
+    normalizeTags(document.tags).length ? `Tags: ${normalizeTags(document.tags).join(', ')}` : '',
     extractContentPreview(document.content),
   ].filter(Boolean).join('\n')
 }
@@ -326,7 +332,7 @@ function extractContentPreview(content?: string) {
   if (!content) {
     return ''
   }
-  return `正文片段：${content.replace(/\s+/g, ' ').trim().slice(0, 240)}`
+  return `Content preview: ${content.replace(/\s+/g, ' ').trim().slice(0, 240)}`
 }
 
 function normalizeTags(tags?: readonly string[] | string): string[] {
@@ -362,7 +368,7 @@ async function requestEmbeddings(params: {
   )
 
   if (!response || response.status < 200 || response.status >= 300) {
-    throw new Error(`Embedding 请求失败（${response?.status ?? '未知状态'}）`)
+    throw new Error(uiText(`Embedding request failed (${response?.status ?? 'unknown status'})`, `Embedding 请求失败（${response?.status ?? '未知状态'}）`))
   }
 
   const payload = JSON.parse(response.body)
@@ -371,7 +377,7 @@ async function requestEmbeddings(params: {
     : []
 
   if (embeddings.length !== params.inputs.length) {
-    throw new Error('Embedding 返回数量与输入数量不一致')
+    throw new Error(uiText('Embedding count does not match input count', 'Embedding 返回数量与输入数量不一致'))
   }
 
   return embeddings
@@ -402,7 +408,7 @@ async function requestChatCompletion(params: {
   )
 
   if (!response || response.status < 200 || response.status >= 300) {
-    throw new Error(`AI 补链建议请求失败（${response?.status ?? '未知状态'}）`)
+    throw new Error(uiText(`AI link suggestion request failed (${response?.status ?? 'unknown status'})`, `AI 补链请求失败（${response?.status ?? '未知状态'}）`))
   }
 
   return JSON.parse(response.body)
@@ -434,7 +440,7 @@ function roundScore(value: number) {
 function parseJsonFromResponse(payload: any) {
   const content = payload?.choices?.[0]?.message?.content
   if (typeof content !== 'string' || !content.trim()) {
-    throw new Error('AI 未返回可读的补链建议内容')
+    throw new Error(uiText('AI did not return readable link suggestion content', 'AI 未返回可读的补链内容'))
   }
 
   try {
@@ -445,7 +451,7 @@ function parseJsonFromResponse(payload: any) {
     if (startIndex >= 0 && endIndex > startIndex) {
       return JSON.parse(content.slice(startIndex, endIndex + 1))
     }
-    throw new Error('AI 补链建议返回的不是合法 JSON')
+    throw new Error(uiText('AI link suggestions did not return valid JSON', 'AI 补链结果未返回合法 JSON'))
   }
 }
 
@@ -457,14 +463,14 @@ function normalizeSuggestionResult(payload: any): AiLinkSuggestionResult {
     : []
 
   if (!suggestions.length) {
-    throw new Error('AI 没有返回有效的补链建议')
+    throw new Error(uiText('AI did not return valid link suggestions', 'AI 未返回有效的补链建议'))
   }
 
   return {
     generatedAt: new Date().toISOString(),
     summary: typeof payload?.summary === 'string' && payload.summary.trim()
       ? payload.summary.trim()
-      : '已生成当前孤立文档的 AI 补链建议。',
+      : uiText('AI link suggestions generated for the current orphan doc.', '已为当前孤立文档生成 AI 补链建议。'),
     suggestions,
   }
 }
@@ -520,7 +526,7 @@ function mergeSuggestionReason(reason: string, expectedBenefit: string): string 
   if (reason.includes(expectedBenefit) || expectedBenefit.includes(reason)) {
     return reason.length >= expectedBenefit.length ? reason : expectedBenefit
   }
-  const normalizedReason = /[。！？.!?]$/.test(reason) ? reason : `${reason}。`
+  const normalizedReason = /[。！？.!?]$/.test(reason) ? reason : `${reason}.`
   return `${normalizedReason}${expectedBenefit}`
 }
 

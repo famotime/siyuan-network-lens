@@ -2,31 +2,31 @@
   <div class="setting-panel">
     <div class="setting-group">
       <div class="setting-header">
-        <h3>分析范围</h3>
-        <p>指定不参与分析的路径范围；命中路径且符合名称规则的文档会被排除。</p>
+        <h3>{{ uiText('Analysis scope', '分析范围') }}</h3>
+        <p>{{ uiText('Exclude paths from analysis. Matching docs are skipped when their paths and naming rules match.', '排除不参与分析的路径。文档路径与命名规则同时命中时会被跳过。') }}</p>
       </div>
       <div class="setting-form">
         <label class="setting-field setting-field--full">
-          <span>排除路径</span>
+          <span>{{ uiText('Excluded paths', '排除路径') }}</span>
           <input
             v-model.trim="config.analysisExcludedPaths"
-            placeholder="多个路径用 | 分隔，支持包含笔记本的全路径，例如 /知识库/排除区|/归档/临时"
+            :placeholder="uiText('Separate multiple paths with |. Full notebook paths are supported, for example /Knowledge/Exclude|/Archive/Temp', '多个路径用 | 分隔，支持完整笔记本路径，例如 /知识库/排除|/归档/临时')"
             type="text"
           >
         </label>
         <label class="setting-field">
-          <span>名称前缀</span>
+          <span>{{ uiText('Name prefixes', '名称前缀') }}</span>
           <input
             v-model.trim="config.analysisExcludedNamePrefixes"
-            placeholder="多个前缀用 | 分隔；留空则路径下全部排除"
+            :placeholder="uiText('Separate multiple prefixes with |. Leave blank to exclude everything under the matched paths', '多个前缀用 | 分隔。留空则排除命中路径下的全部文档')"
             type="text"
           >
         </label>
         <label class="setting-field">
-          <span>名称后缀</span>
+          <span>{{ uiText('Name suffixes', '名称后缀') }}</span>
           <input
             v-model.trim="config.analysisExcludedNameSuffixes"
-            placeholder="多个后缀用 | 分隔；留空则路径下全部排除"
+            :placeholder="uiText('Separate multiple suffixes with |. Leave blank to exclude everything under the matched paths', '多个后缀用 | 分隔。留空则排除命中路径下的全部文档')"
             type="text"
           >
         </label>
@@ -35,31 +35,31 @@
 
     <div class="setting-group">
       <div class="setting-header">
-        <h3>主题文档</h3>
-        <p>指定主题页所在目录，生成主题筛选选项并为孤立文档提供链接建议。</p>
+        <h3>{{ uiText('Topic docs', '主题文档') }}</h3>
+        <p>{{ uiText('Point to topic page directories to build topic filters and link suggestions for orphan docs.', '指定主题页目录，用于构建主题筛选与孤立文档补链建议。') }}</p>
       </div>
       <div class="setting-form">
         <label class="setting-field setting-field--full">
-          <span>主题文档路径</span>
+          <span>{{ uiText('Topic doc paths', '主题文档路径') }}</span>
           <input
             v-model.trim="config.themeDocumentPath"
-            placeholder="多个路径用 | 分隔，支持包含笔记本的全路径，例如 /知识库/专题|/归档/主题"
+            :placeholder="uiText('Separate multiple paths with |. Full notebook paths are supported, for example /Knowledge/Topics|/Archive/Topics', '多个路径用 | 分隔，支持完整笔记本路径，例如 /知识库/主题|/归档/主题')"
             type="text"
           >
         </label>
         <label class="setting-field">
-          <span>名称前缀</span>
+          <span>{{ uiText('Name prefixes', '名称前缀') }}</span>
           <input
             v-model.trim="config.themeNamePrefix"
-            placeholder="可选，例如 主题-"
+            :placeholder="uiText('Optional, for example Topic-', '可选，例如 主题-')"
             type="text"
           >
         </label>
         <label class="setting-field">
-          <span>名称后缀</span>
+          <span>{{ uiText('Name suffixes', '名称后缀') }}</span>
           <input
             v-model.trim="config.themeNameSuffix"
-            placeholder="可选，例如 -索引"
+            :placeholder="uiText('Optional, for example -Index', '可选，例如 -索引')"
             type="text"
           >
         </label>
@@ -68,43 +68,43 @@
 
     <div class="setting-group">
       <div class="setting-header">
-        <h3>已读标记</h3>
-        <p>定义已读文档判定规则，命中任一目录、标签、标题前缀或标题后缀即计为已读。</p>
+        <h3>{{ uiText('Read rules', '已读规则') }}</h3>
+        <p>{{ uiText('Mark docs as read when any path, tag, title prefix, or title suffix rule matches.', '命中任一路径、标签、标题前缀或标题后缀规则时，将文档视为已读。') }}</p>
       </div>
       <div class="setting-form">
         <label class="setting-field setting-field--full">
-          <span>已读目录</span>
+          <span>{{ uiText('Read paths', '已读路径') }}</span>
           <input
             v-model.trim="config.readPaths"
-            placeholder="多个目录用 | 分隔，支持包含笔记本的全路径，例如 /知识库/已读|/归档/专题"
+            :placeholder="uiText('Separate multiple paths with |. Full notebook paths are supported, for example /Knowledge/Read|/Archive/Topics', '多个路径用 | 分隔，支持完整笔记本路径，例如 /知识库/已读|/归档/主题')"
             type="text"
           >
         </label>
         <label class="setting-field setting-field--full">
-          <span>已读标签</span>
+          <span>{{ uiText('Read tags', '已读标签') }}</span>
           <div class="setting-select-shell">
             <ThemeMultiSelect
               v-model="config.readTagNames"
               :options="readTagOptions"
-              all-label="全部未选"
-              empty-label="暂无可选标签"
-              selection-unit="个标签"
+              :all-label="uiText('None selected', '未选择')"
+              :empty-label="uiText('No tags available', '暂无标签')"
+              :selection-unit="uiText('tags', '个标签')"
             />
           </div>
         </label>
         <label class="setting-field">
-          <span>标题前缀</span>
+          <span>{{ uiText('Title prefixes', '标题前缀') }}</span>
           <input
             v-model.trim="config.readTitlePrefixes"
-            placeholder="多个前缀用 | 分隔，例如 已读-|三星-"
+            :placeholder="uiText('Separate multiple prefixes with |, for example Read-|Star-', '多个前缀用 | 分隔，例如 已读-|星标-')"
             type="text"
           >
         </label>
         <label class="setting-field">
-          <span>标题后缀</span>
+          <span>{{ uiText('Title suffixes', '标题后缀') }}</span>
           <input
             v-model.trim="config.readTitleSuffixes"
-            placeholder="多个后缀用 | 分隔，例如 -已读|-五星"
+            :placeholder="uiText('Separate multiple suffixes with |, for example -Read|-FiveStar', '多个后缀用 | 分隔，例如 -已读|-五星')"
             type="text"
           >
         </label>
@@ -113,13 +113,13 @@
 
     <div class="setting-group">
       <div class="setting-header">
-        <h3>统计卡片</h3>
-        <p>控制顶部卡片以及点击后的详情展示。</p>
+        <h3>{{ uiText('Summary cards', '统计卡片') }}</h3>
+        <p>{{ uiText('Control the top summary cards and the linked detail views.', '控制顶部统计卡片及其联动详情视图。') }}</p>
       </div>
       <label class="setting-item">
         <span class="setting-item__text">
-          <strong>顶部统计卡片</strong>
-          <span>显示所有指标卡片并支持点击联动详情</span>
+          <strong>{{ uiText('Top summary cards', '顶部统计卡片') }}</strong>
+          <span>{{ uiText('Show all metric cards and allow click-through detail views', '显示全部指标卡片，并支持点击联动详情') }}</span>
         </span>
         <input type="checkbox" v-model="config.showSummaryCards" class="b3-switch">
       </label>
@@ -150,20 +150,20 @@
       <div class="setting-form">
         <label v-if="showAiServiceSettings" class="setting-item setting-item--full">
           <span class="setting-item__text">
-            <strong>启用 AI 今日建议</strong>
-            <span>开启后可在统计卡片中生成统一优先级的整理建议</span>
+            <strong>{{ uiText('Enable today suggestions', '启用今日建议') }}</strong>
+            <span>{{ uiText('Generate one prioritized cleanup list from the current analysis', '基于当前分析生成一份优先级整理清单') }}</span>
           </span>
           <input type="checkbox" v-model="config.aiEnabled" class="b3-switch">
         </label>
         <label v-if="showWikiSettings" class="setting-item setting-item--full">
           <span class="setting-item__text">
-            <strong>启用 LLM Wiki</strong>
-            <span>开启后可基于当前筛选结果生成主题 wiki 预览并安全写回。</span>
+            <strong>{{ uiText('Enable LLM Wiki', '启用 LLM Wiki') }}</strong>
+            <span>{{ uiText('Generate topic wiki previews from current filters and write them back safely.', '基于当前筛选生成主题 Wiki 预览，并安全写回。') }}</span>
           </span>
           <input type="checkbox" v-model="config.wikiEnabled" class="b3-switch">
         </label>
         <label v-if="showWikiSettings" class="setting-field">
-          <span>页面后缀</span>
+          <span>{{ uiText('Page suffix', '页面后缀') }}</span>
           <input
             v-model.trim="config.wikiPageSuffix"
             placeholder="-llm-wiki"
@@ -171,23 +171,23 @@
           >
         </label>
         <label v-if="showWikiSettings" class="setting-field">
-          <span>索引页标题</span>
+          <span>{{ uiText('Index page title', '索引页标题') }}</span>
           <input
             v-model.trim="config.wikiIndexTitle"
-            placeholder="LLM-Wiki-索引"
+            placeholder="LLM-Wiki-Index"
             type="text"
           >
         </label>
         <label v-if="showWikiSettings" class="setting-field">
-          <span>日志页标题</span>
+          <span>{{ uiText('Log page title', '日志页标题') }}</span>
           <input
             v-model.trim="config.wikiLogTitle"
-            placeholder="LLM-Wiki-维护日志"
+            placeholder="LLM-Wiki-Maintenance-Log"
             type="text"
           >
         </label>
         <div v-if="showAiServiceSettings" class="setting-field setting-field--full">
-          <span>AI 服务商</span>
+          <span>{{ uiText('AI provider', 'AI 提供方') }}</span>
           <div class="setting-field__inline">
             <select :value="selectedAiProviderPreset" @change="handleAiProviderPresetChange">
               <option
@@ -204,14 +204,14 @@
                 type="button"
                 @click="handleImportAiSettingsClick"
               >
-                导入设置
+                {{ uiText('Import settings', '导入设置') }}
               </button>
               <button
                 class="setting-button setting-button--ghost setting-button--compact"
                 type="button"
                 @click="handleExportAiSettings"
               >
-                导出设置
+                {{ uiText('Export settings', '导出设置') }}
               </button>
               <input
                 ref="aiSettingsFileInput"
@@ -226,7 +226,7 @@
           <span v-if="aiTransferError" class="setting-feedback setting-feedback--error">{{ aiTransferError }}</span>
         </div>
         <label v-if="showAiServiceSettings" class="setting-field setting-field--full">
-          <span class="setting-field__label setting-field__label--hint" :title="AI_FIELD_TOOLTIPS.baseUrl">Base URL</span>
+          <span class="setting-field__label setting-field__label--hint" :title="AI_FIELD_TOOLTIPS.baseUrl">{{ uiText('Base URL', 'Base URL') }}</span>
           <input
             v-model.trim="config.aiBaseUrl"
             :placeholder="aiProviderPresetMeta.baseUrl ?? 'https://api.openai.com/v1'"
@@ -235,7 +235,7 @@
           >
         </label>
         <label v-if="showAiServiceSettings" class="setting-field setting-field--full">
-          <span>API Key</span>
+          <span>{{ uiText('API Key', 'API Key') }}</span>
           <div class="setting-input-with-action setting-input-with-action--overlay">
             <input
               v-model.trim="config.aiApiKey"
@@ -298,7 +298,7 @@
           </div>
         </label>
         <label v-if="showAiServiceSettings" class="setting-field setting-field--full">
-          <span>Model</span>
+          <span>{{ uiText('Model', '模型') }}</span>
           <select
             v-if="showSiliconFlowChatModelSelect"
             v-model="config.aiModel"
@@ -323,7 +323,7 @@
           >
         </label>
         <label v-if="showAiServiceSettings" class="setting-field setting-field--full">
-          <span class="setting-field__label setting-field__label--hint" :title="AI_FIELD_TOOLTIPS.embeddingModel">Embedding Model（可选）</span>
+          <span class="setting-field__label setting-field__label--hint" :title="AI_FIELD_TOOLTIPS.embeddingModel">{{ uiText('Embedding Model (optional)', 'Embedding Model（可选）') }}</span>
           <select
             v-if="showSiliconFlowEmbeddingModelSelect"
             v-model="config.aiEmbeddingModel"
@@ -349,7 +349,7 @@
           >
         </label>
         <label v-if="showAiServiceSettings" class="setting-field">
-          <span class="setting-field__label setting-field__label--hint" :title="AI_FIELD_TOOLTIPS.timeout">超时时间</span>
+          <span class="setting-field__label setting-field__label--hint" :title="AI_FIELD_TOOLTIPS.timeout">{{ uiText('Timeout', '超时') }}</span>
           <div class="setting-input-with-suffix">
             <input
               v-model.number="config.aiRequestTimeoutSeconds"
@@ -362,7 +362,7 @@
           </div>
         </label>
         <label v-if="showAiServiceSettings" class="setting-field">
-          <span class="setting-field__label setting-field__label--hint" :title="AI_FIELD_TOOLTIPS.maxTokens">最大 Token 数</span>
+          <span class="setting-field__label setting-field__label--hint" :title="AI_FIELD_TOOLTIPS.maxTokens">{{ uiText('Max tokens', '最大 Token') }}</span>
           <input
             v-model.number="config.aiMaxTokens"
             min="1"
@@ -372,7 +372,7 @@
           >
         </label>
         <label v-if="showAiServiceSettings" class="setting-field">
-          <span class="setting-field__label setting-field__label--hint" :title="AI_FIELD_TOOLTIPS.temperature">温度</span>
+          <span class="setting-field__label setting-field__label--hint" :title="AI_FIELD_TOOLTIPS.temperature">{{ uiText('Temperature', 'Temperature') }}</span>
           <input
             v-model.number="config.aiTemperature"
             max="2"
@@ -383,7 +383,7 @@
           >
         </label>
         <label v-if="showAiServiceSettings" class="setting-field">
-          <span class="setting-field__label setting-field__label--hint" :title="AI_FIELD_TOOLTIPS.maxContextMessages">最大上下文数</span>
+          <span class="setting-field__label setting-field__label--hint" :title="AI_FIELD_TOOLTIPS.maxContextMessages">{{ uiText('Max context messages', '最大上下文消息数') }}</span>
           <input
             v-model.number="config.aiMaxContextMessages"
             min="1"
@@ -393,11 +393,11 @@
           >
         </label>
         <label v-if="showAiServiceSettings" class="setting-field setting-field--full">
-          <span>上下文容量</span>
+          <span>{{ uiText('Context capacity', '上下文容量') }}</span>
           <select v-model="config.aiContextCapacity">
-            <option value="compact">紧凑</option>
-            <option value="balanced">标准</option>
-            <option value="full">扩展</option>
+            <option value="compact">{{ uiText('Compact', '紧凑') }}</option>
+            <option value="balanced">{{ uiText('Balanced', '平衡') }}</option>
+            <option value="full">{{ uiText('Full', '完整') }}</option>
           </select>
         </label>
       </div>
@@ -408,10 +408,10 @@
           :disabled="aiTestingConnection || !config.aiEnabled || !aiConfigComplete"
           @click="handleTestConnection"
         >
-          {{ aiTestingConnection ? '测试中...' : '测试连接' }}
+          {{ aiTestingConnection ? uiText('Testing...', '测试中...') : uiText('Test connection', '测试连接') }}
         </button>
         <span class="setting-feedback">
-          如果出现超时或 `context deadline exceeded`，优先切换到“紧凑”。
+          {{ uiText('If you hit a timeout or `context deadline exceeded`, switch to `Compact` first.', '如果遇到超时或 `context deadline exceeded`，优先切到“紧凑”。') }}
         </span>
         <span v-if="aiConnectionMessage" class="setting-feedback setting-feedback--success">{{ aiConnectionMessage }}</span>
         <span v-if="aiConnectionError" class="setting-feedback setting-feedback--error">{{ aiConnectionError }}</span>
@@ -420,13 +420,13 @@
 
     <div class="setting-group">
       <div class="setting-header">
-        <h3>调试</h3>
-        <p>控制插件在开发排查时输出到控制台的普通日志。</p>
+        <h3>{{ uiText('Debug', '调试') }}</h3>
+        <p>{{ uiText('Control standard console logs used during development and troubleshooting.', '控制开发和排障时使用的标准控制台日志。') }}</p>
       </div>
       <label class="setting-item">
         <span class="setting-item__text">
-          <strong>在控制台打印日志</strong>
-          <span>error 日志始终保留，其他级别受此开关控制</span>
+          <strong>{{ uiText('Print logs in console', '在控制台打印日志') }}</strong>
+          <span>{{ uiText('Error logs are always kept; other levels follow this toggle', '错误日志始终保留，其他级别受此开关控制') }}</span>
         </span>
         <input type="checkbox" v-model="config.enableConsoleLogging" class="b3-switch">
       </label>
@@ -434,8 +434,8 @@
 
     <div class="setting-group">
       <div class="setting-header">
-        <h3>传播与链路</h3>
-        <p>传播节点详情中将包含关系传播路径视图。</p>
+        <h3>{{ uiText('Propagation and paths', '传播与路径') }}</h3>
+        <p>{{ uiText('Propagation node details include a path view for relationship spread.', '传播节点详情包含关系传播路径视图。') }}</p>
       </div>
     </div>
   </div>
@@ -448,6 +448,7 @@ import { lsNotebooks, sql } from '@/api'
 import { SUMMARY_CARD_DEFINITIONS } from '@/analytics/summary-card-config'
 import { loadSettingPanelData, migrateLegacyThemeDocumentPath, type NotebookOption } from '@/components/setting-panel-data'
 import { useSettingPanelAi } from '@/components/use-setting-panel-ai'
+import { pickUiText } from '@/i18n/ui'
 import ThemeMultiSelect from '@/components/ThemeMultiSelect.vue'
 import { isAlphaSettingVisible, isAlphaSummaryCardVisible } from '@/plugin/alpha-feature-config'
 import { ensureConfigDefaults, type PluginConfig } from '@/types/config'
@@ -458,6 +459,7 @@ const props = defineProps<{
 
 ensureConfigDefaults(props.config)
 
+const uiText = (en_US: string, zh_CN: string) => pickUiText({ en_US, zh_CN })
 const notebooks = ref<NotebookOption[]>([])
 const readTagOptions = ref<Array<{ value: string, label: string, key: string }>>([])
 const summaryCardSettings = SUMMARY_CARD_DEFINITIONS
@@ -466,10 +468,10 @@ const summaryCardSettings = SUMMARY_CARD_DEFINITIONS
 const showAiServiceSettings = isAlphaSettingVisible('ai-service')
 const showWikiSettings = isAlphaSettingVisible('llm-wiki')
 const showAiSettingsGroup = showAiServiceSettings || showWikiSettings
-const aiSettingsTitle = showAiServiceSettings ? 'AI 接入' : 'LLM Wiki'
+const aiSettingsTitle = showAiServiceSettings ? uiText('AI settings', 'AI 设置') : 'LLM Wiki'
 const aiSettingsDescription = showAiServiceSettings
-  ? '配置兼容 OpenAI API 的服务，用于生成“今日建议”和孤立文档的 AI 补链建议。'
-  : '配置 LLM Wiki 的开关和页面命名规则。'
+  ? uiText('Configure an OpenAI-compatible service for today suggestions and AI link suggestions for orphan docs.', '配置兼容 OpenAI 的服务，用于今日建议和孤立文档 AI 补链建议。')
+  : uiText('Configure LLM Wiki switches and page naming rules.', '配置 LLM Wiki 开关与页面命名规则。')
 
 const {
   AI_FIELD_TOOLTIPS,

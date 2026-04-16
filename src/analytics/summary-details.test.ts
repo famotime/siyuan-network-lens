@@ -45,10 +45,10 @@ const report = {
     { documentId: 'doc-a', title: 'Alpha', degree: 1, score: 2, pathPairCount: 2, focusDocumentCount: 2, communitySpan: 1, bridgeRole: true },
   ],
   suggestions: [
-    { type: 'promote-hub', documentId: 'doc-b', title: 'Beta', reason: '被 2 个文档引用，共 2 次' },
-    { type: 'repair-orphan', documentId: 'doc-c', title: 'Gamma', reason: '当前没有文档级连接' },
-    { type: 'archive-dormant', documentId: 'doc-c', title: 'Gamma', reason: '11 天未产生有效连接，适合归档或补齐索引' },
-    { type: 'maintain-bridge', documentId: 'doc-a', title: 'Alpha', reason: '连接 1 条关系，移除后会打断社区连通性' },
+    { type: 'promote-hub', documentId: 'doc-b', title: 'Beta', reason: 'Referenced by 2 docs, 2 times total' },
+    { type: 'repair-orphan', documentId: 'doc-c', title: 'Gamma', reason: 'No doc-level links in the current window' },
+    { type: 'archive-dormant', documentId: 'doc-c', title: 'Gamma', reason: 'No valid links for 11 days. Consider archiving or adding an index.' },
+    { type: 'maintain-bridge', documentId: 'doc-a', title: 'Alpha', reason: 'Connected to 1 relationship; removing it would break community connectivity' },
   ],
   evidenceByDocument: {},
 } as const
@@ -86,8 +86,8 @@ describe('buildSummaryDetailSections', () => {
     })
 
     expect(sections.references.items).toEqual([
-      expect.objectContaining({ documentId: 'doc-a', badge: '1 次参与' }),
-      expect.objectContaining({ documentId: 'doc-b', badge: '1 次参与', isThemeDocument: true }),
+      expect.objectContaining({ documentId: 'doc-a', badge: '1 refs' }),
+      expect.objectContaining({ documentId: 'doc-b', badge: '1 refs', isThemeDocument: true }),
     ])
   })
 
@@ -130,7 +130,7 @@ describe('buildSummaryDetailSections', () => {
         documentId: 'doc-c',
         title: 'Gamma',
         suggestions: [
-          expect.objectContaining({ label: '补齐链接', text: '当前没有文档级连接' }),
+          expect.objectContaining({ label: 'Repair links', text: 'No doc-level links in the current window' }),
         ],
       }),
     ])
@@ -139,7 +139,7 @@ describe('buildSummaryDetailSections', () => {
         documentId: 'doc-c',
         title: 'Gamma',
         suggestions: [
-          expect.objectContaining({ label: '归档沉没', text: '11 天未产生有效连接，适合归档或补齐索引' }),
+          expect.objectContaining({ label: 'Archive dormant', text: 'No valid links for 11 days. Consider archiving or adding an index.' }),
         ],
       }),
     ])
@@ -148,7 +148,7 @@ describe('buildSummaryDetailSections', () => {
         documentId: 'doc-a',
         title: 'Alpha',
         suggestions: [
-          expect.objectContaining({ label: '重点维护', text: '连接 1 条关系，移除后会打断社区连通性' }),
+          expect.objectContaining({ label: 'Maintain bridge', text: 'Connected to 1 relationship; removing it would break community connectivity' }),
         ],
       }),
     ])
@@ -156,9 +156,9 @@ describe('buildSummaryDetailSections', () => {
     expect(sections.propagation.items).toEqual([
       expect.objectContaining({
         documentId: 'doc-a',
-        badge: '2 分',
+        badge: '2 pts',
         suggestions: [
-          expect.objectContaining({ label: '传播优化' }),
+          expect.objectContaining({ label: 'Propagation optimization' }),
         ],
       }),
     ])
@@ -178,8 +178,8 @@ describe('buildSummaryDetailSections', () => {
     expect(sections.todaySuggestions).toEqual(expect.objectContaining({
       key: 'todaySuggestions',
       kind: 'aiInbox',
-      title: '今日建议详情',
-      description: '按优先级提供建议',
+      title: 'Today suggestions',
+      description: 'Suggestions ranked by priority.',
       result: expect.objectContaining({
         summary: '今天先处理孤立补链。',
       }),
@@ -191,8 +191,8 @@ describe('buildSummaryDetailSections', () => {
         expect.objectContaining({
           documentId: 'doc-b',
           title: 'Beta',
-          badge: '标签命中',
-          meta: '命中标签：topic',
+          badge: 'Tag match',
+          meta: 'Tags: topic',
           isThemeDocument: true,
         }),
       ],
@@ -220,21 +220,21 @@ describe('buildSummaryDetailSections', () => {
 
     expect((sections as Record<string, any>).read).toEqual(expect.objectContaining({
       key: 'read',
-      title: '未读文档详情',
+      title: 'Unread docs',
       items: [
         expect.objectContaining({
           documentId: 'doc-a',
-          badge: '待标记',
-          meta: '创建于 2026-03-01',
+          badge: 'Needs review',
+          meta: 'Created 2026-03-01',
           suggestions: [],
         }),
         expect.objectContaining({
           documentId: 'doc-c',
-          badge: '待标记',
-          meta: '创建于 2026-03-03',
+          badge: 'Needs review',
+          meta: 'Created 2026-03-03',
           suggestions: [
-            expect.objectContaining({ label: '补齐链接', text: '当前没有文档级连接' }),
-            expect.objectContaining({ label: '清理内嵌资源' }),
+            expect.objectContaining({ label: 'Repair links', text: 'No doc-level links in the current window' }),
+            expect.objectContaining({ label: 'Clean embedded assets' }),
           ],
         }),
       ],
@@ -285,11 +285,11 @@ describe('buildSummaryDetailSections', () => {
     expect((sections as Record<string, any>).largeDocuments).toEqual(expect.objectContaining({
       key: 'largeDocuments',
       kind: 'list',
-      title: '大文档详情（按文字）',
+      title: 'Large docs (text)',
       items: [
-        expect.objectContaining({ documentId: 'doc-big-c', badge: '15000 字' }),
-        expect.objectContaining({ documentId: 'doc-big-d', badge: '12000 字' }),
-        expect.objectContaining({ documentId: 'doc-big-a', badge: '10001 字' }),
+        expect.objectContaining({ documentId: 'doc-big-c', badge: '15000 words' }),
+        expect.objectContaining({ documentId: 'doc-big-d', badge: '12000 words' }),
+        expect.objectContaining({ documentId: 'doc-big-a', badge: '10001 words' }),
       ],
     }))
   })
@@ -338,7 +338,7 @@ describe('buildSummaryDetailSections', () => {
     expect((sections as Record<string, any>).largeDocuments).toEqual(expect.objectContaining({
       key: 'largeDocuments',
       kind: 'list',
-      title: '大文档详情（按资源）',
+      title: 'Large docs (assets)',
       items: [
         expect.objectContaining({ documentId: 'doc-big-a', badge: '4.0 MB' }),
         expect.objectContaining({ documentId: 'doc-big-d', badge: '3.0 MB' }),
@@ -398,8 +398,8 @@ describe('buildSummaryDetailSections', () => {
       items: [
         expect.objectContaining({
           documentId: 'doc-notebook-read',
-          badge: '目录命中',
-          meta: '命中目录：/知识库/已读',
+          badge: 'Path match',
+          meta: 'Paths: /知识库/已读',
         }),
       ],
     }))
@@ -429,9 +429,9 @@ describe('buildSummaryDetailSections', () => {
     const docB = sections.references.items.find(item => item.documentId === 'doc-b')
     const docC = sections.references.items.find(item => item.documentId === 'doc-c')
 
-    expect(docA?.meta).toBe('入链 0 / 出链 2')
-    expect(docB?.meta).toBe('入链 2 / 出链 0')
-    expect(docC?.meta).toBe('入链 1 / 出链 1')
+    expect(docA?.meta).toBe('Inbound 0 / Outbound 2')
+    expect(docB?.meta).toBe('Inbound 2 / Outbound 0')
+    expect(docC?.meta).toBe('Inbound 1 / Outbound 1')
   })
 
   it('keeps active relationship details aligned with local time window semantics', () => {
@@ -472,8 +472,8 @@ describe('buildSummaryDetailSections', () => {
     })
 
     expect(sections.references.items).toEqual([
-      expect.objectContaining({ documentId: 'doc-local-source', badge: '1 次参与' }),
-      expect.objectContaining({ documentId: 'doc-local-target', badge: '1 次参与' }),
+      expect.objectContaining({ documentId: 'doc-local-source', badge: '1 refs' }),
+      expect.objectContaining({ documentId: 'doc-local-target', badge: '1 refs' }),
     ])
   })
 
@@ -586,24 +586,24 @@ describe('buildSummaryCards', () => {
     const largeDocuments = cards.find(card => card.key === 'largeDocuments')
 
     expect(dormant).toEqual(expect.objectContaining({
-      label: '沉没文档',
+      label: 'Dormant docs',
       value: report.summary.dormantCount.toString(),
-      hint: '超过 45 天未产生有效连接',
+      hint: 'No valid links for more than 45 days',
     }))
     expect(read).toEqual(expect.objectContaining({
-      label: '未读文档',
+      label: 'Unread docs',
       value: '3',
-      hint: '未命中已读标记规则的文档数',
+      hint: 'Docs not matched by read rules',
     }))
     expect(todaySuggestions).toEqual(expect.objectContaining({
-      label: '今日建议',
+      label: 'Today suggestions',
       value: '4',
-      hint: 'AI 汇总出的今日整理建议数',
+      hint: 'AI-ranked suggestions for today',
     }))
     expect(largeDocuments).toEqual(expect.objectContaining({
-      label: '大文档·文字',
+      label: 'Large docs · text',
       value: '3',
-      hint: '按字数超过 10000 的文档数量统计',
+      hint: 'Docs with more than 10,000 words',
     }))
   })
 
@@ -618,9 +618,9 @@ describe('buildSummaryCards', () => {
     })
 
     expect(cards.find(card => card.key === 'read')).toEqual(expect.objectContaining({
-      label: '已读文档',
+      label: 'Read docs',
       value: '2',
-      hint: '命中已读标记规则的文档数',
+      hint: 'Docs matched by read rules',
     }))
   })
 
@@ -655,9 +655,9 @@ describe('buildSummaryCards', () => {
     })
 
     expect(cards.find(card => card.key === 'largeDocuments')).toEqual(expect.objectContaining({
-      label: '大文档·资源',
+      label: 'Large docs · assets',
       value: '2',
-      hint: '按总大小超过 3 MB 的文档数量统计',
+      hint: 'Docs larger than 3 MB in total size',
     }))
   })
 })

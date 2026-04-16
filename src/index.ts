@@ -8,7 +8,6 @@ import { PLUGIN_ICON, PLUGIN_ICON_SYMBOL } from './plugin-icon'
 import { DEFAULT_CONFIG, ensureConfigDefaults, type PluginConfig } from './types/config'
 
 const DOCK_TYPE = 'reference-analytics-dock'
-const PLUGIN_TITLE = '脉络镜'
 const STORAGE_NAME = 'settings.json'
 
 export default class ReferenceAnalyticsPlugin extends Plugin {
@@ -35,7 +34,6 @@ export default class ReferenceAnalyticsPlugin extends Plugin {
 
     this.addCommand({
       langKey: 'openReferenceAnalytics',
-      langText: PLUGIN_TITLE,
       hotkey: '',
       callback: () => {
         this.openDock()
@@ -52,7 +50,7 @@ export default class ReferenceAnalyticsPlugin extends Plugin {
           height: null,
         },
         icon: PLUGIN_ICON,
-        title: PLUGIN_TITLE,
+        title: this.displayName,
         show: false,
       },
       init: (dock) => {
@@ -81,7 +79,7 @@ export default class ReferenceAnalyticsPlugin extends Plugin {
 
   openSetting() {
     const dialog = new Dialog({
-      title: '脉络镜 设置',
+      title: this.i18n?.settingsTitle ?? `${this.displayName} Settings`,
       width: '680px',
       height: '720px',
       content: '<div id="reference-analytics-setting-root" style="height: 100%;"></div>',

@@ -1,10 +1,14 @@
-import { describe, expect, it, vi } from 'vitest'
+import { afterEach, describe, expect, it, vi } from 'vitest'
 import { createSSRApp, h } from 'vue'
 import { renderToString } from '@vue/server-renderer'
 
 import OrphanDetailPanel from './OrphanDetailPanel.vue'
 
 describe('OrphanDetailPanel', () => {
+  afterEach(() => {
+    delete (globalThis as any).siyuan
+  })
+
   it('renders orphan sort control and items', async () => {
     const app = createSSRApp({
       render: () => h(OrphanDetailPanel, {
@@ -47,17 +51,17 @@ describe('OrphanDetailPanel', () => {
 
     const html = await renderToString(app)
 
-    expect(html).toContain('孤立排序')
-    expect(html).toContain('按更新时间')
+    expect(html).toContain('Orphan sort')
+    expect(html).toContain('By updated time')
     expect(html).toContain('Alpha')
-    expect(html).toContain('主题文档')
+    expect(html).toContain('Topic doc')
     expect(html).toContain('补齐链接')
-    expect(html).toContain('建议补充至少一条出链或入链，建议链接以下主题文档（点击添加）：')
+    expect(html).toContain('建议补充至少一条出链或入链, suggested topic docs below (click to add):')
     expect(html).toContain('AI')
-    expect(html).toContain('AI 建议')
+    expect(html).toContain('AI suggestions')
     expect(html).toContain('正在分析文档语义并生成 embedding')
     expect(html).not.toContain('主题-AI-索引</span>')
-    expect(html).not.toContain('建议与主题文档建立链接：')
+    expect(html).not.toContain('Suggest linking to these topic docs:')
   })
 
   it('renders concise AI suggestions with merged reason and tag suggestions', async () => {
@@ -113,16 +117,50 @@ describe('OrphanDetailPanel', () => {
 
     const html = await renderToString(app)
 
-    expect(html).toContain('链接建议')
-    expect(html).toContain('标签建议')
+    expect(html).toContain('Link suggestions')
+    expect(html).toContain('Tag suggestions')
     expect(html).toContain('主题-AI-索引')
     expect(html).toContain('补链后更容易回到 AI 主题网络')
     expect(html).not.toContain('预估收益')
     expect(html).toContain('当前标签集合里已有该标签')
     expect(html).toContain('AI 工具')
-    expect(html).toContain('新标签')
-    expect(html).toContain('当前标签')
+    expect(html).toContain('New tag')
+    expect(html).toContain('Existing tag')
     expect(html).not.toContain('orphan-detail__ai-card')
     expect(html).toContain('orphan-detail__ai-item--elevated')
+  })
+
+  it('switches panel controls to Chinese when the workspace locale is zh_CN', async () => {
+    ;(globalThis as any).siyuan = {
+      config: {
+        lang: 'zh_CN',
+      },
+    }
+
+    const app = createSSRApp({
+      render: () => h(OrphanDetailPanel, {
+        items: [],
+        orphanSort: 'updated-desc',
+        onUpdateOrphanSort: vi.fn(),
+        openDocument: vi.fn(),
+        onToggleThemeSuggestion: vi.fn(),
+        isThemeSuggestionActive: vi.fn().mockReturnValue(false),
+        onToggleAiLinkSuggestion: vi.fn(),
+        isAiLinkSuggestionActive: vi.fn().mockReturnValue(false),
+        onToggleAiTagSuggestion: vi.fn(),
+        isAiTagSuggestionActive: vi.fn().mockReturnValue(false),
+        aiEnabled: false,
+        aiConfigReady: false,
+        aiSuggestionStates: new Map(),
+        onGenerateAiSuggestion: vi.fn(),
+      }),
+    })
+
+    const html = await renderToString(app)
+
+    expect(html).toContain('孤立排序')
+    expect(html).toContain('按更新时间')
+    expect(html).toContain('当前卡片下暂无文档。')
+    expect(html).not.toContain('No docs to show under this card.')
   })
 })

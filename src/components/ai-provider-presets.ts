@@ -9,6 +9,7 @@ import {
   DEFAULT_AI_REQUEST_TIMEOUT_SECONDS,
   DEFAULT_AI_TEMPERATURE,
 } from '@/types/ai-defaults'
+import { pickUiText } from '@/i18n/ui'
 
 interface AiProviderPresetDefinition {
   label: string
@@ -19,47 +20,58 @@ interface AiProviderPresetDefinition {
   embeddingPlaceholder: string
 }
 
-export const AI_PROVIDER_PRESETS: Record<AiProviderPresetKey, AiProviderPresetDefinition> = {
-  siliconflow: {
-    label: '硅基流动',
-    baseUrl: 'https://api.siliconflow.cn/v1',
-    defaultModel: '',
-    defaultEmbeddingModel: '',
-    modelPlaceholder: '从模型列表选择，例如 deepseek-ai/DeepSeek-V3',
-    embeddingPlaceholder: '从模型列表选择，例如 BAAI/bge-m3',
-  },
-  openai: {
-    label: 'OpenAI',
-    baseUrl: 'https://api.openai.com/v1',
-    defaultModel: 'gpt-5',
-    defaultEmbeddingModel: 'text-embedding-3-small',
-    modelPlaceholder: 'gpt-5',
-    embeddingPlaceholder: 'text-embedding-3-small',
-  },
-  gemini: {
-    label: 'Gemini',
-    baseUrl: 'https://generativelanguage.googleapis.com/v1beta/openai',
-    defaultModel: 'gemini-2.5-flash',
-    defaultEmbeddingModel: 'gemini-embedding-001',
-    modelPlaceholder: 'gemini-2.5-flash',
-    embeddingPlaceholder: 'gemini-embedding-001',
-  },
-  custom: {
-    label: '自定义',
-    modelPlaceholder: '手动填写模型名',
-    embeddingPlaceholder: '手动填写 embedding 模型名',
-  },
+const uiText = (en_US: string, zh_CN: string) => pickUiText({ en_US, zh_CN })
+
+export function getAiProviderPresets(): Record<AiProviderPresetKey, AiProviderPresetDefinition> {
+  return {
+    siliconflow: {
+      label: uiText('SiliconFlow', '硅基流动'),
+      baseUrl: 'https://api.siliconflow.cn/v1',
+      defaultModel: '',
+      defaultEmbeddingModel: '',
+      modelPlaceholder: uiText('Select from the model list, for example deepseek-ai/DeepSeek-V3', '从模型列表中选择，例如 deepseek-ai/DeepSeek-V3'),
+      embeddingPlaceholder: uiText('Select from the model list, for example BAAI/bge-m3', '从模型列表中选择，例如 BAAI/bge-m3'),
+    },
+    openai: {
+      label: 'OpenAI',
+      baseUrl: 'https://api.openai.com/v1',
+      defaultModel: 'gpt-5',
+      defaultEmbeddingModel: 'text-embedding-3-small',
+      modelPlaceholder: 'gpt-5',
+      embeddingPlaceholder: 'text-embedding-3-small',
+    },
+    gemini: {
+      label: 'Gemini',
+      baseUrl: 'https://generativelanguage.googleapis.com/v1beta/openai',
+      defaultModel: 'gemini-2.5-flash',
+      defaultEmbeddingModel: 'gemini-embedding-001',
+      modelPlaceholder: 'gemini-2.5-flash',
+      embeddingPlaceholder: 'gemini-embedding-001',
+    },
+    custom: {
+      label: uiText('Custom', '自定义'),
+      modelPlaceholder: uiText('Enter model name manually', '手动输入模型名'),
+      embeddingPlaceholder: uiText('Enter embedding model name manually', '手动输入 embedding 模型名'),
+    },
+  }
 }
 
-export const AI_PROVIDER_PRESET_OPTIONS = ([
-  'siliconflow',
-  'openai',
-  'gemini',
-  'custom',
-] as const).map(value => ({
-  value,
-  label: AI_PROVIDER_PRESETS[value].label,
-}))
+export const AI_PROVIDER_PRESETS: Record<AiProviderPresetKey, AiProviderPresetDefinition> = getAiProviderPresets()
+
+export function buildAiProviderPresetOptions() {
+  const presets = getAiProviderPresets()
+  return ([
+    'siliconflow',
+    'openai',
+    'gemini',
+    'custom',
+  ] as const).map(value => ({
+    value,
+    label: presets[value].label,
+  }))
+}
+
+export const AI_PROVIDER_PRESET_OPTIONS = buildAiProviderPresetOptions()
 
 export function detectAiProviderPreset(baseUrl?: string): AiProviderPresetKey {
   const normalized = normalizeUrl(baseUrl)
@@ -176,7 +188,7 @@ function normalizeUrl(value?: string) {
 }
 
 function getAiProviderDefaultConfig(provider: AiProviderPresetKey): AiProviderConfigSnapshot {
-  const preset = AI_PROVIDER_PRESETS[provider]
+  const preset = getAiProviderPresets()[provider]
   return {
     aiBaseUrl: preset.baseUrl ?? '',
     aiApiKey: '',
