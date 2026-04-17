@@ -1,6 +1,6 @@
 import type { AiProviderPresetKey } from '@/types/ai-provider'
 import type { PluginConfig } from '@/types/config'
-import { pickUiText } from '@/i18n/ui'
+import { t } from '@/i18n/ui'
 
 export function syncAiProviderConfigSnapshot(config: PluginConfig, provider: AiProviderPresetKey) {
   config.aiProviderPreset = provider
@@ -46,10 +46,7 @@ export function buildSiliconFlowModelSelectTitle(params: {
   return [
     params.baseTitle,
     params.placeholder,
-    params.error ? pickUiText({
-      en_US: `Last load failed: ${params.error}`,
-      zh_CN: `最近一次加载失败：${params.error}`,
-    }) : '',
+    params.error ? t('settings.ai.lastLoadFailed', { error: params.error }) : '',
   ]
     .filter(Boolean)
     .join(' ')

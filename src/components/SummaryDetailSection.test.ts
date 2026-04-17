@@ -144,7 +144,7 @@ describe('SummaryDetailSection', () => {
   it('starts moving summary detail chrome and ai empty states to keyed i18n entries', async () => {
     const source = await import('node:fs/promises').then(fs => fs.readFile(new URL('./SummaryDetailSection.vue', import.meta.url), 'utf8'))
 
-    expect(source).toContain("import { pickUiText, t } from '@/i18n/ui'")
+    expect(source).toContain("import { t } from '@/i18n/ui'")
     expect(source).toContain(":aria-label=\"isExpanded ? t('summaryDetail.collapseDetails') : t('summaryDetail.expandDetails')\"")
     expect(source).toContain("{{ t('summaryDetail.historyLabel') }}")
     expect(source).toContain("{{ aiSuggestionLoading ? t('summaryDetail.analyzing') : detail.result ? t('summaryDetail.reanalyze') : t('summaryDetail.todaySuggestions') }}")
@@ -202,6 +202,7 @@ describe('SummaryDetailSection', () => {
     expect(source).toContain("t('summaryDetail.historyTooltip.window', { value: entry.timeRange })")
     expect(source).toContain("t('summaryDetail.historyTooltip.count', { value: entry.summaryCount })")
     expect(source).toContain("t('summaryDetail.historyTooltip.notebook', { value: entry.filters.notebook || t('summaryDetail.historyTooltip.all') })")
+    expect(source).not.toContain('pickUiText')
     expect(source).not.toContain(":aria-label=\"isExpanded ? uiText('Collapse details', '收起详情') : uiText('Expand details', '展开详情')\"")
   })
 

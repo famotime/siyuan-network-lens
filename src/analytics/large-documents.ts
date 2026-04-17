@@ -4,7 +4,7 @@ import {
   formatCompactDate,
   resolveDocumentTitle,
 } from './document-utils'
-import { pickUiText } from '@/i18n/ui'
+import { t } from '@/i18n/ui'
 
 export type LargeDocumentCardMode = 'words' | 'storage'
 
@@ -32,7 +32,6 @@ export const LARGE_DOCUMENT_WORD_THRESHOLD = 10000
 export const LARGE_DOCUMENT_STORAGE_THRESHOLD_BYTES = 3 * 1024 * 1024
 
 const apiModulePath = '@/api'
-const uiText = (en_US: string, zh_CN: string) => pickUiText({ en_US, zh_CN })
 
 export async function loadLargeDocumentMetrics(params: {
   documents: DocumentRecord[]
@@ -140,7 +139,7 @@ export function buildLargeDocumentRankings(params: {
 
 export function formatLargeDocumentBadge(mode: LargeDocumentCardMode, metric: Pick<LargeDocumentMetric, 'wordCount' | 'totalBytes'>): string {
   return mode === 'words'
-    ? uiText(`${metric.wordCount} words`, `${metric.wordCount} 字`)
+    ? t('analytics.largeDocuments.badgeWords', { count: metric.wordCount })
     : formatBytes(metric.totalBytes)
 }
 
@@ -150,16 +149,18 @@ export function buildLargeDocumentMeta(
   updatedAt?: string,
 ): string {
   if (mode === 'words') {
-    return uiText(
-      `About ${metric.wordCount} words · Threshold ${LARGE_DOCUMENT_WORD_THRESHOLD} words · Updated ${formatCompactDate(updatedAt)}`,
-      `约 ${metric.wordCount} 字 · 阈值 ${LARGE_DOCUMENT_WORD_THRESHOLD} 字 · 更新于 ${formatCompactDate(updatedAt)}`,
-    )
+    return t('analytics.largeDocuments.metaWords', {
+      count: metric.wordCount,
+      threshold: LARGE_DOCUMENT_WORD_THRESHOLD,
+      date: formatCompactDate(updatedAt),
+    })
   }
 
-  return uiText(
-    `Total size ${formatBytes(metric.documentBytes + metric.assetBytes)} · Threshold ${formatBytes(LARGE_DOCUMENT_STORAGE_THRESHOLD_BYTES)} · ${metric.assetCount} assets`,
-    `总大小 ${formatBytes(metric.documentBytes + metric.assetBytes)} · 阈值 ${formatBytes(LARGE_DOCUMENT_STORAGE_THRESHOLD_BYTES)} · ${metric.assetCount} 个资源`,
-  )
+  return t('analytics.largeDocuments.metaStorage', {
+    totalSize: formatBytes(metric.documentBytes + metric.assetBytes),
+    threshold: formatBytes(LARGE_DOCUMENT_STORAGE_THRESHOLD_BYTES),
+    assetCount: metric.assetCount,
+  })
 }
 
 export function formatBytes(bytes: number): string {

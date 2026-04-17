@@ -1,10 +1,7 @@
-import { pickUiText } from '@/i18n/ui'
+import { t } from '@/i18n/ui'
 
 export function resolveSecretFieldMeta(isVisible: boolean, fieldLabel: string) {
-  const actionLabelPrefix = pickUiText({
-    en_US: isVisible ? 'Hide' : 'Show',
-    zh_CN: isVisible ? '隐藏' : '显示',
-  })
+  const actionLabelPrefix = isVisible ? t('shared.hide') : t('shared.show')
 
   return {
     inputType: isVisible ? 'text' : 'password',

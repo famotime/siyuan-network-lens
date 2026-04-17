@@ -27,6 +27,55 @@ vi.mock('@/analytics/siyuan-data', () => ({
 import { useAnalyticsState } from './use-analytics'
 
 describe('useAnalyticsState', () => {
+  it('formats the snapshot label with the active workspace locale', async () => {
+    ;(globalThis as typeof globalThis & {
+      siyuan?: {
+        config?: {
+          lang?: string
+        }
+      }
+    }).siyuan = {
+      config: {
+        lang: 'en_US',
+      },
+    }
+
+    const state = useAnalyticsState({
+      plugin: { eventBus: { on: () => {}, off: () => {} }, app: {} } as any,
+      config: {
+        showSummaryCards: true,
+        showRanking: true,
+        showLargeDocuments: true,
+        showCommunities: true,
+        showOrphanBridge: true,
+        showTrends: true,
+        showPropagation: true,
+        themeNotebookId: 'box-1',
+        themeDocumentPath: '/专题',
+        themeNamePrefix: '主题-',
+        themeNameSuffix: '-索引',
+      },
+      loadSnapshot: async () => snapshot as any,
+      nowProvider: () => now,
+      createActiveDocumentSync: () => () => {},
+      showMessage: () => {},
+      openTab: () => {},
+      appendBlock: async () => [],
+      prependBlock: async () => [],
+      deleteBlock: async () => [],
+      updateBlock: async () => [],
+      getChildBlocks: async () => [],
+      getBlockKramdown: async () => ({ id: '', kramdown: '' }),
+    })
+
+    await state.refresh()
+    await nextTick()
+
+    expect(state.snapshotLabel.value).toBe('03/12, 12:00 AM')
+
+    delete (globalThis as typeof globalThis & { siyuan?: unknown }).siyuan
+  })
+
   it('reorders summary cards and persists the manual order into config', async () => {
     const config = {
       showSummaryCards: true,
@@ -386,7 +435,7 @@ describe('useAnalyticsState', () => {
       value: '2',
     }))
     expect(state.selectedSummaryDetail.value).toEqual(expect.objectContaining({
-      title: 'Large docs (text)',
+      title: 'Large docs · text',
       items: [
         expect.objectContaining({ documentId: 'doc-b', badge: '12000 words' }),
         expect.objectContaining({ documentId: 'doc-a', badge: '10001 words' }),
@@ -401,7 +450,7 @@ describe('useAnalyticsState', () => {
       value: '1',
     }))
     expect(state.selectedSummaryDetail.value).toEqual(expect.objectContaining({
-      title: 'Large docs (assets)',
+      title: 'Large docs · assets',
       items: [
         expect.objectContaining({ documentId: 'doc-a', badge: '4.0 MB' }),
       ],

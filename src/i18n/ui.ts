@@ -92,6 +92,84 @@ const UI_TEXT = {
       },
     },
   },
+  shared: {
+    clear: {
+      en_US: 'Clear',
+      zh_CN: '清空',
+    },
+    show: {
+      en_US: 'Show',
+      zh_CN: '显示',
+    },
+    hide: {
+      en_US: 'Hide',
+      zh_CN: '隐藏',
+    },
+    allTopics: {
+      en_US: 'All topics',
+      zh_CN: '全部主题',
+    },
+    noTopicDocsConfigured: {
+      en_US: 'No topic docs configured',
+      zh_CN: '暂无主题文档配置',
+    },
+    themesUnit: {
+      en_US: 'themes',
+      zh_CN: '个主题',
+    },
+    selectedThemesCount: {
+      en_US: '{count} {unit} selected',
+      zh_CN: '已选 {count} {unit}',
+    },
+    noOptionsAvailable: {
+      en_US: 'No options available',
+      zh_CN: '暂无可选项',
+    },
+    topicDoc: {
+      en_US: 'Topic doc',
+      zh_CN: '主题文档',
+    },
+    dormantThreshold: {
+      en_US: 'Dormant threshold',
+      zh_CN: '沉没阈值',
+    },
+    days30: {
+      en_US: '30 days',
+      zh_CN: '30 天',
+    },
+    days90: {
+      en_US: '90 days',
+      zh_CN: '90 天',
+    },
+    days180: {
+      en_US: '180 days',
+      zh_CN: '180 天',
+    },
+    noDocsUnderCard: {
+      en_US: 'No docs to show under this card.',
+      zh_CN: '当前卡片下暂无文档。',
+    },
+    suggestions: {
+      en_US: 'Suggestions',
+      zh_CN: '建议',
+    },
+    switchToUnreadDocs: {
+      en_US: 'Switch to unread docs',
+      zh_CN: '切换为未读文档',
+    },
+    switchToReadDocs: {
+      en_US: 'Switch to read docs',
+      zh_CN: '切换为已读文档',
+    },
+    switchToTextSizeMode: {
+      en_US: 'Switch to text size mode',
+      zh_CN: '切换为按文字统计',
+    },
+    switchToAssetSizeMode: {
+      en_US: 'Switch to asset size mode',
+      zh_CN: '切换为按资源统计',
+    },
+  },
   settings: {
     analysisScope: {
       title: {
@@ -337,6 +415,10 @@ const UI_TEXT = {
       testConnection: {
         en_US: 'Test connection',
         zh_CN: '测试连接',
+      },
+      lastLoadFailed: {
+        en_US: 'Last load failed: {error}',
+        zh_CN: '最近一次加载失败：{error}',
       },
       timeoutHint: {
         en_US: 'If you hit a timeout or `context deadline exceeded`, switch to `Compact` first.',
@@ -2224,6 +2306,250 @@ const UI_TEXT = {
         en_US: 'AI request failed ({status}){details}{hintText}',
         zh_CN: 'AI 请求失败（{status}）{details}{hintText}',
       },
+      repairTargetThemeReason: {
+        en_US: 'Topic match hit {count} times and works as a stable entry point',
+        zh_CN: '主题匹配命中 {count} 次，适合作为稳定入口',
+      },
+      repairTargetCoreReason: {
+        en_US: 'High-reference core doc, referenced by {count} docs',
+        zh_CN: '当前是高引用核心文档，被 {count} 个文档引用',
+      },
+      repairBenefitExitOrphanList: {
+        en_US: 'Expected to leave the orphan doc list',
+        zh_CN: '预计移出孤立文档列表',
+      },
+      repairBenefitAddInboundLink: {
+        en_US: 'Add 1 inbound link to {title}',
+        zh_CN: '为 {title} 增加 1 条入链',
+      },
+      repairBenefitRestoreEntryLink: {
+        en_US: 'Restore one entry link to the current network',
+        zh_CN: '为当前网络补回 1 个入口连接',
+      },
+      repairBenefitImproveTopicCoverage: {
+        en_US: 'Improve topic coverage for {topics}',
+        zh_CN: '补全 {topics} 主题的网络覆盖',
+      },
+      repairBenefitReduceSinkingRisk: {
+        en_US: 'Reduce the risk of sinking further later',
+        zh_CN: '降低后续继续沉没的风险',
+      },
+      repairTitle: {
+        en_US: 'Repair orphan doc: {title}',
+        zh_CN: '修复孤立文档：{title}',
+      },
+      repairEvidenceHistoricalLinks: {
+        en_US: '{count} historical link traces exist',
+        zh_CN: '历史上出现过 {count} 条连接证据',
+      },
+      repairEvidenceThemeMatch: {
+        en_US: '{theme} topic match hit {count} times',
+        zh_CN: '{theme} 主题匹配命中 {count} 次',
+      },
+      repairActionLinkTargets: {
+        en_US: 'First link it to {targets}, then add one short note about which topic this note belongs to.',
+        zh_CN: '先补到 {targets}，并补一句说明这篇笔记属于哪个主题。',
+      },
+      repairActionRestoreCoreNetwork: {
+        en_US: 'First add one link back to the core network, then add one short note about the current doc topic.',
+        zh_CN: '先补 1 条回到核心网络的连接，并补一句说明当前文档的归属主题。',
+      },
+      repairDraftFitUnder: {
+        en_US: 'Can fit under {title}: (({documentId} "{title}"))',
+        zh_CN: '可归入 {title}：(({documentId} "{title}"))',
+      },
+      topicPageTargetHubReason: {
+        en_US: 'This is a hub doc in the current cluster and works well as an initial topic page entry.',
+        zh_CN: '这是当前社区的 hub 文档，适合作为主题页的首批入口',
+      },
+      topicPageTitle: {
+        en_US: 'Create topic page: {title}',
+        zh_CN: '创建主题页：{title}',
+      },
+      topicPageEvidenceClusterSize: {
+        en_US: 'Cluster size: {count} docs',
+        zh_CN: '社区规模 {count} 篇文档',
+      },
+      topicPageEvidenceMissingTopicPage: {
+        en_US: 'Missing topic page, recent link change {delta}',
+        zh_CN: '当前缺少主题页，最近关系变化 {delta}',
+      },
+      topicPageEvidenceTopTags: {
+        en_US: 'Top tags: {tags}',
+        zh_CN: '高频标签：{tags}',
+      },
+      topicPageEvidenceWeakTopTags: {
+        en_US: 'Top tag evidence is weak',
+        zh_CN: '高频标签证据较弱',
+      },
+      topicPageActionCreateAndAttach: {
+        en_US: 'Create {title}, then attach it first to {targets}.',
+        zh_CN: '新建 {title}，并先挂入 {targets}。',
+      },
+      topicPageFallbackClusterHubDocs: {
+        en_US: 'cluster hub docs',
+        zh_CN: '社区 hub 文档',
+      },
+      topicPageBenefitUnifiedEntry: {
+        en_US: 'Build one unified entry page for this cluster',
+        zh_CN: '为该社区建立统一入口页',
+      },
+      topicPageBenefitBringDocsTogether: {
+        en_US: 'Bring {count} docs into one navigable topic structure',
+        zh_CN: '把 {count} 篇文档收束到可导航的主题结构中',
+      },
+      topicPageBenefitFollowUpFocused: {
+        en_US: 'Follow-up link repair and archive work becomes more focused',
+        zh_CN: '后续补链和归档动作会更集中',
+      },
+      topicPageDraftTitle: {
+        en_US: 'Suggested topic page title: {title}',
+        zh_CN: '建议主题页标题：{title}',
+      },
+      bridgeTargetHubReason: {
+        en_US: 'Linking to neighboring cluster hubs can reduce this bridge becoming the only path.',
+        zh_CN: '补到相邻社区 hub，可以减少该桥接点成为唯一路径',
+      },
+      bridgeTargetRelatedDocReason: {
+        en_US: 'A highly connected doc in the current network that can act as an alternative entry point.',
+        zh_CN: '当前网络中的高连接文档，可作为替代入口',
+      },
+      bridgeTitle: {
+        en_US: 'Reduce bridge risk: {title}',
+        zh_CN: '降低桥接风险：{title}',
+      },
+      bridgeEvidenceRelationshipCount: {
+        en_US: 'Currently connects {count} relationships',
+        zh_CN: '当前连接 {count} 条关系',
+      },
+      bridgeEvidenceAppearsInClusters: {
+        en_US: 'Appears in {count} clusters',
+        zh_CN: '同时出现在 {count} 个社区中',
+      },
+      bridgeEvidenceNoAlternativeClusterEntry: {
+        en_US: 'No clear alternative cluster entry is available yet',
+        zh_CN: '当前缺少明确的社区替代入口',
+      },
+      bridgeEvidenceCanLinkToTargets: {
+        en_US: 'Can first link to {targets}',
+        zh_CN: '可优先补到 {targets}',
+      },
+      bridgeEvidenceNoAlternativeTarget: {
+        en_US: 'No sufficiently clear alternative target was found',
+        zh_CN: '当前未找到足够清晰的替代目标',
+      },
+      bridgeActionAddNavigationToTargets: {
+        en_US: 'Add an upstream/downstream navigation block in {title} and link explicitly to {targets}.',
+        zh_CN: '在 {title} 中补一段上下游导航，显式链接到 {targets}。',
+      },
+      bridgeActionAvoidSingleBridgePoint: {
+        en_US: 'Add an upstream/downstream navigation block for {title} so it does not become a single bridge point.',
+        zh_CN: '为 {title} 补一段上下游导航，避免它成为单点桥接。',
+      },
+      bridgeBenefitReduceFragmentationRisk: {
+        en_US: 'Reduce the risk of cluster fragmentation from a single bridge point',
+        zh_CN: '降低单点桥接导致社区断裂的风险',
+      },
+      bridgeBenefitAddNavigationForAlternativeEntries: {
+        en_US: 'Add navigation for {count} alternative entry points',
+        zh_CN: '为 {count} 个替代入口补齐导航',
+      },
+      bridgeBenefitAddAlternativeEntries: {
+        en_US: 'Add alternative entries for neighboring topics',
+        zh_CN: '为相邻主题补出替代入口',
+      },
+      bridgeDraftEntries: {
+        en_US: 'Upstream/downstream entries: {entries}',
+        zh_CN: '上游/下游入口：{entries}',
+      },
+      archiveTargetThemeReason: {
+        en_US: 'If this still has value, linking it to a topic page before archiving makes it easier to revisit later.',
+        zh_CN: '如果仍有保留价值，先补到主题页再归档更容易回查',
+      },
+      archiveTargetCoreReason: {
+        en_US: 'You can first link it to an active index entry, then decide whether to archive it.',
+        zh_CN: '可先补到一个仍活跃的索引入口，再决定是否归档',
+      },
+      archiveTitle: {
+        en_US: 'Handle dormant doc: {title}',
+        zh_CN: '处理沉没文档：{title}',
+      },
+      archiveEvidenceDaysWithoutLinks: {
+        en_US: '{count} days without valid links',
+        zh_CN: '{count} 天未产生有效连接',
+      },
+      archiveEvidenceHistoricalLinks: {
+        en_US: '{count} historical link traces exist',
+        zh_CN: '历史上出现过 {count} 条连接证据',
+      },
+      archiveActionKeepLookupEntry: {
+        en_US: 'First link it to {title} to keep a lookup entry; archive it later if you stop maintaining it.',
+        zh_CN: '先补到 {title} 留下回查入口；如果后续不再维护，再归档。',
+      },
+      archiveActionConfirmThenArchive: {
+        en_US: 'First confirm whether it still needs to be kept. If not, archive it and add one index note.',
+        zh_CN: '先确认是否仍需保留；如无持续维护计划，归档并补一条索引说明。',
+      },
+      archiveBenefitReduceBuildup: {
+        en_US: 'Reduce buildup of dormant docs',
+        zh_CN: '减少沉没文档堆积',
+      },
+      archiveBenefitKeepLookupEntry: {
+        en_US: 'Keep a necessary lookup entry and avoid losing it completely later',
+        zh_CN: '保留必要回查入口，避免后续完全失联',
+      },
+      untitledTopic: {
+        en_US: 'Untitled topic',
+        zh_CN: '未命名主题',
+      },
+      suggestedTopicPageTitle: {
+        en_US: 'Topic-{topic}-Index',
+        zh_CN: '主题-{topic}-索引',
+      },
+    },
+    largeDocuments: {
+      badgeWords: {
+        en_US: '{count} words',
+        zh_CN: '{count} 字',
+      },
+      metaWords: {
+        en_US: 'About {count} words · Threshold {threshold} words · Updated {date}',
+        zh_CN: '约 {count} 字 · 阈值 {threshold} 字 · 更新于 {date}',
+      },
+      metaStorage: {
+        en_US: 'Total size {totalSize} · Threshold {threshold} · {assetCount} assets',
+        zh_CN: '总大小 {totalSize} · 阈值 {threshold} · {assetCount} 个资源',
+      },
+    },
+    wikiPage: {
+      managedRootHeading: {
+        en_US: 'AI managed area',
+        zh_CN: 'AI 管理区',
+      },
+      metaHeading: {
+        en_US: 'Page meta',
+        zh_CN: '页面头信息',
+      },
+      overviewHeading: {
+        en_US: 'Topic overview',
+        zh_CN: '主题概览',
+      },
+      keyDocumentsHeading: {
+        en_US: 'Key documents',
+        zh_CN: '关键文档',
+      },
+      structureObservationsHeading: {
+        en_US: 'Structure observations',
+        zh_CN: '结构观察',
+      },
+      evidenceHeading: {
+        en_US: 'Relationship evidence',
+        zh_CN: '关系证据',
+      },
+      actionsHeading: {
+        en_US: 'Cleanup actions',
+        zh_CN: '整理动作',
+      },
     },
     documentDetailDescription: {
       en_US: 'Follow the active document and summarize its community role, bridge position, and dormant risk.',
@@ -2281,6 +2607,10 @@ export function resolveUiLocale(): UiLocale {
   }
 
   return normalizeUiLocale(globalValue.siyuan?.config?.lang ?? 'en_US')
+}
+
+export function resolveUiLanguageTag(locale = resolveUiLocale()): 'en-US' | 'zh-CN' {
+  return locale === 'zh_CN' ? 'zh-CN' : 'en-US'
 }
 
 export function pickUiText(text: UiTextMap, locale = resolveUiLocale()): string {

@@ -18,9 +18,7 @@ export type WikiPreviewStatus = typeof WIKI_PREVIEW_STATUSES[number]
 export const WIKI_APPLY_RESULTS = ['created', 'updated', 'skipped', 'conflict'] as const
 export type WikiApplyResult = typeof WIKI_APPLY_RESULTS[number]
 
-import { pickUiText } from '@/i18n/ui'
-
-const uiText = (en_US: string, zh_CN: string) => pickUiText({ en_US, zh_CN })
+import { t } from '@/i18n/ui'
 
 export const WIKI_PAGE_HEADING_VARIANTS = {
   managedRoot: ['AI managed area', 'AI 管理区'],
@@ -34,10 +32,16 @@ export const WIKI_PAGE_HEADING_VARIANTS = {
 } as const satisfies Record<WikiSectionKey | 'managedRoot', readonly [string, string]>
 
 export const WIKI_PAGE_HEADINGS: Record<WikiSectionKey | 'managedRoot', string> = Object.fromEntries(
-  Object.entries(WIKI_PAGE_HEADING_VARIANTS).map(([key, [en_US, zh_CN]]) => [
-    key,
-    uiText(en_US, zh_CN),
-  ]),
+  Object.entries({
+    managedRoot: t('analytics.wikiPage.managedRootHeading'),
+    manualNotes: t('wikiMaintain.manualNotes'),
+    meta: t('analytics.wikiPage.metaHeading'),
+    overview: t('analytics.wikiPage.overviewHeading'),
+    keyDocuments: t('analytics.wikiPage.keyDocumentsHeading'),
+    structureObservations: t('analytics.wikiPage.structureObservationsHeading'),
+    evidence: t('analytics.wikiPage.evidenceHeading'),
+    actions: t('analytics.wikiPage.actionsHeading'),
+  }),
 ) as Record<WikiSectionKey | 'managedRoot', string>
 
 export const WIKI_BLOCK_ATTR_KEYS = {

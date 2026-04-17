@@ -32,13 +32,13 @@ npm run dev                       # Watch mode with hot reload to local SiYuan w
 
 **UI components:** `src/components/SiyuanTheme/` — SiYuan-styled Vue components (SyButton, SyCheckbox, SyIcon, SyInput, SySelect, SyTextarea).
 
-**i18n:** `src/i18n/en_US.json`, `src/i18n/zh_CN.json`.
+**i18n:** `src/i18n/ui.ts` (shared UI copy) and `src/i18n/plugin.ts` (plugin metadata fallback copy).
 
 ## Critical Domain Semantics
 
 These definitions are stable and must not be changed without explicit confirmation:
 
-- **Orphan documents** = historically never had any document-level in/out links (not just "currently unlinked")
+- **Orphan documents** = no valid document-level in/out links within the current window
 - **Dormant documents** = currently inactive for N days but may have historical connections
 - **Bridge documents** = connect otherwise separate communities
 - **Propagation nodes** = appear frequently in shortest paths between focal documents (heuristic, not strict betweenness centrality)

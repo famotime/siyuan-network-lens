@@ -652,7 +652,7 @@ import type { ReadCardMode } from '@/analytics/read-status'
 import type { TodaySuggestionHistoryEntry } from '@/analytics/today-suggestion-history-store'
 import type { ThemeDocument, ThemeDocumentMatch } from '@/analytics/theme-documents'
 import type { PathScope } from '@/composables/use-analytics-derived'
-import { pickUiText, t } from '@/i18n/ui'
+import { t } from '@/i18n/ui'
 import {
   resolveAiInboxActionTargets as resolveAiInboxActionTargetsFromData,
   resolveAiInboxActionLines,
@@ -749,8 +749,6 @@ const props = withDefaults(defineProps<{
 }>(), {
   showWikiPanelActions: true,
 })
-
-const uiText = (en_US: string, zh_CN: string) => pickUiText({ en_US, zh_CN })
 
 const summaryCountLabel = computed(() => props.detail.kind === 'aiInbox'
   ? t('summaryDetail.counts.suggestions', { count: props.selectedSummaryCount })

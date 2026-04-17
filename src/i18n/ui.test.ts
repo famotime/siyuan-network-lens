@@ -33,4 +33,15 @@ describe('ui i18n helper', () => {
     expect(t('summaryDetail.trends.currentPrevious', { current: 5, previous: 3 }, 'en_US')).toBe('Current 5 · Previous 3')
     expect(t('summaryDetail.trends.currentPrevious', { current: 5, previous: 3 }, 'zh_CN')).toBe('当前 5 · 上一窗口 3')
   })
+
+  it('includes shared component copy used by migrated controls', () => {
+    expect(t('shared.clear', 'en_US')).toBe('Clear')
+    expect(t('shared.clear', 'zh_CN')).toBe('清空')
+    expect(t('shared.topicDoc', 'en_US')).toBe('Topic doc')
+    expect(t('shared.topicDoc', 'zh_CN')).toBe('主题文档')
+    expect(t('shared.selectedThemesCount', { count: 2, unit: 'themes' }, 'en_US')).toBe('2 themes selected')
+    expect(t('shared.selectedThemesCount', { count: 2, unit: '个主题' }, 'zh_CN')).toBe('已选 2 个主题')
+    expect(t('shared.switchToUnreadDocs', 'en_US')).toBe('Switch to unread docs')
+    expect(t('shared.switchToUnreadDocs', 'zh_CN')).toBe('切换为未读文档')
+  })
 })

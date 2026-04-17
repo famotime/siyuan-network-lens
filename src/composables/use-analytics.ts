@@ -83,8 +83,8 @@ import {
   type TodaySuggestionHistoryEntry,
   type TodaySuggestionHistoryStore,
 } from '@/analytics/today-suggestion-history-store'
-import { normalizeTags, resolveDocumentTitle } from '@/analytics/document-utils'
-import { t } from '@/i18n/ui'
+import { normalizeTags, parseSiyuanTimestamp, resolveDocumentTitle } from '@/analytics/document-utils'
+import { resolveUiLanguageTag, t } from '@/i18n/ui'
 import type { PluginConfig } from '@/types/config'
 import { createPluginLogger } from '@/utils/plugin-logger'
 
@@ -529,12 +529,16 @@ export function useAnalyticsState(params: UseAnalyticsParams) {
     if (!snapshot.value) {
       return '--'
     }
-    return new Intl.DateTimeFormat('zh-CN', {
+    const fetchedAt = parseSiyuanTimestamp(snapshot.value.fetchedAt)
+    if (fetchedAt == null) {
+      return '--'
+    }
+    return new Intl.DateTimeFormat(resolveUiLanguageTag(), {
       hour: '2-digit',
       minute: '2-digit',
       month: '2-digit',
       day: '2-digit',
-    }).format(new Date(snapshot.value.fetchedAt))
+    }).format(new Date(fetchedAt))
   })
 
   const aiController = createAnalyticsAiController({

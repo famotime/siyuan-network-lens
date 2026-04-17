@@ -9,11 +9,14 @@ describe('component helper i18n cleanup', () => {
       './ai-provider-presets.ts',
       './setting-panel-ai-transfer.ts',
       './ai-inbox-detail.ts',
+      './setting-panel-ai-state.ts',
+      './setting-panel-secret-field.ts',
     ] as const
 
     for (const target of targets) {
       const source = await readFile(new URL(target, import.meta.url), 'utf8')
       expect(source, target).not.toContain('uiText(')
+      expect(source, target).not.toContain('pickUiText(')
       expect(source, target).toContain("from '@/i18n/ui'")
     }
   })

@@ -10,7 +10,7 @@ import type { SummaryCardItem } from './summary-details'
 import { parseSiyuanTimestamp } from './document-utils'
 import { countThemeMatchesForDocument, type ThemeDocument } from './theme-documents'
 import { isWikiDocumentTitle } from './wiki-page-model'
-import { pickUiText, t } from '@/i18n/ui'
+import { resolveUiLocale, t } from '@/i18n/ui'
 import {
   DEFAULT_AI_MAX_CONTEXT_MESSAGES,
   DEFAULT_AI_MAX_TOKENS,
@@ -203,8 +203,6 @@ const SYSTEM_PROMPT = [
   'Prioritize orphan docs, dormant docs, bridge risks, communities missing topic pages, trend changes, and critical link repair.',
   'All user-visible text fields must follow the user interface language of the current workspace. Keep proper nouns such as document titles, tag names, and model names as needed.',
 ].join(' ')
-
-const uiText = (en_US: string, zh_CN: string) => pickUiText({ en_US, zh_CN })
 
 export function isAiConfigComplete(config: AiConfig): boolean {
   return Boolean(
@@ -471,10 +469,7 @@ function buildRepairLinkCandidate(params: {
       documentId: match.themeDocumentId,
       title: match.themeDocumentTitle,
       kind: 'theme-document' as const,
-      reason: uiText(
-        `Topic match hit ${match.matchCount} times and works as a stable entry point`,
-        `主题匹配命中 ${match.matchCount} 次，适合作为稳定入口`,
-      ),
+      reason: t('analytics.aiInbox.repairTargetThemeReason', { count: match.matchCount }),
     })),
     ...params.ranking
       .filter(item => item.documentId !== params.orphan.documentId && !themeMatches.some(match => match.themeDocumentId === item.documentId))
@@ -483,10 +478,7 @@ function buildRepairLinkCandidate(params: {
         documentId: item.documentId,
         title: item.title,
         kind: 'core-document' as const,
-        reason: uiText(
-          `High-reference core doc, referenced by ${item.distinctSourceDocuments} docs`,
-          `当前是高引用核心文档，被 ${item.distinctSourceDocuments} 个文档引用`,
-        ),
+        reason: t('analytics.aiInbox.repairTargetCoreReason', { count: item.distinctSourceDocuments }),
       })),
   ].slice(0, 3)
 
@@ -503,22 +495,19 @@ function buildRepairLinkCandidate(params: {
 
   const primaryTarget = recommendedTargets[0]
   const expectedBenefits = [
-    uiText('Expected to leave the orphan doc list', '预计移出孤立文档列表'),
+    t('analytics.aiInbox.repairBenefitExitOrphanList'),
     primaryTarget
-      ? uiText(`Add 1 inbound link to ${primaryTarget.title}`, `为 ${primaryTarget.title} 增加 1 条入链`)
-      : uiText('Restore one entry link to the current network', '为当前网络补回 1 个入口连接'),
+      ? t('analytics.aiInbox.repairBenefitAddInboundLink', { title: primaryTarget.title })
+      : t('analytics.aiInbox.repairBenefitRestoreEntryLink'),
     themeMatches.length
-      ? uiText(
-          `Improve topic coverage for ${themeMatches.map(item => item.themeName).join(', ')}`,
-          `补全 ${themeMatches.map(item => item.themeName).join('、')} 主题的网络覆盖`,
-        )
-      : uiText('Reduce the risk of sinking further later', '降低后续继续沉没的风险'),
+      ? t('analytics.aiInbox.repairBenefitImproveTopicCoverage', { topics: joinLocalizedList(themeMatches.map(item => item.themeName)) })
+      : t('analytics.aiInbox.repairBenefitReduceSinkingRisk'),
   ]
 
   return {
     id: `repair-link:${params.orphan.documentId}`,
     type: 'repair-link',
-    title: uiText(`Repair orphan doc: ${documentTitle}`, `修复孤立文档：${documentTitle}`),
+    title: t('analytics.aiInbox.repairTitle', { title: documentTitle }),
     focusDocumentIds: [params.orphan.documentId],
     confidence: confidenceScore >= 75 ? 'high' : confidenceScore >= 50 ? 'medium' : 'low',
     impactScore,
@@ -528,31 +517,22 @@ function buildRepairLinkCandidate(params: {
     priorityScore,
     recommendedTargets,
     evidence: [
-      uiText('No valid doc-level links in the current window', '当前窗口内没有有效文档级连接'),
-      uiText(
-        `${params.orphan.historicalReferenceCount} historical link traces exist`,
-        `历史上出现过 ${params.orphan.historicalReferenceCount} 条连接证据`,
-      ),
-      ...themeMatches.map(match => uiText(
-        `${match.themeName} topic match hit ${match.matchCount} times`,
-        `${match.themeName} 主题匹配命中 ${match.matchCount} 次`,
-      )),
+      t('analytics.summaryCards.noValidDocLevelLinksInCurrentWindow'),
+      t('analytics.aiInbox.repairEvidenceHistoricalLinks', { count: params.orphan.historicalReferenceCount }),
+      ...themeMatches.map(match => t('analytics.aiInbox.repairEvidenceThemeMatch', {
+        theme: match.themeName,
+        count: match.matchCount,
+      })),
     ].slice(0, 4),
     recommendedAction: recommendedTargets.length
-      ? uiText(
-          `First link it to ${recommendedTargets.map(target => target.title).join(', ')}, then add one short note about which topic this note belongs to.`,
-          `先补到 ${recommendedTargets.map(target => target.title).join('、')}，并补一句说明这篇笔记属于哪个主题。`,
-        )
-      : uiText(
-          'First add one link back to the core network, then add one short note about the current doc topic.',
-          '先补 1 条回到核心网络的连接，并补一句说明当前文档的归属主题。',
-        ),
+      ? t('analytics.aiInbox.repairActionLinkTargets', { targets: joinLocalizedList(recommendedTargets.map(target => target.title)) })
+      : t('analytics.aiInbox.repairActionRestoreCoreNetwork'),
     expectedBenefits,
     draftText: primaryTarget?.documentId
-      ? uiText(
-          `Can fit under ${primaryTarget.title}: ((` + `${primaryTarget.documentId} "${primaryTarget.title}"))`,
-          `可归入 ${primaryTarget.title}：((` + `${primaryTarget.documentId} "${primaryTarget.title}"))`,
-        )
+      ? t('analytics.aiInbox.repairDraftFitUnder', {
+          title: primaryTarget.title,
+          documentId: primaryTarget.documentId,
+        })
       : undefined,
   }
 }
@@ -569,10 +549,7 @@ function buildTopicPageCandidate(params: {
       documentId,
       title: resolveDocumentTitle(params.documentMap, documentId),
       kind: 'community-hub' as const,
-      reason: uiText(
-        'This is a hub doc in the current cluster and works well as an initial topic page entry.',
-        '这是当前社区的 hub 文档，适合作为主题页的首批入口',
-      ),
+      reason: t('analytics.aiInbox.topicPageTargetHubReason'),
     }))
 
   const impactScore = clampScore(40 + params.community.size * 10 + Math.max(params.trend.delta, 0) * 6)
@@ -583,7 +560,7 @@ function buildTopicPageCandidate(params: {
   return {
     id: `topic-page:${params.community.id}`,
     type: 'create-topic-page',
-    title: uiText(`Create topic page: ${suggestedTitle}`, `创建主题页：${suggestedTitle}`),
+    title: t('analytics.aiInbox.topicPageTitle', { title: suggestedTitle }),
     focusDocumentIds: [...params.community.documentIds],
     confidence: confidenceScore >= 75 ? 'high' : confidenceScore >= 50 ? 'medium' : 'low',
     impactScore,
@@ -598,28 +575,23 @@ function buildTopicPageCandidate(params: {
     }),
     recommendedTargets,
     evidence: [
-      uiText(`Cluster size: ${params.community.size} docs`, `社区规模 ${params.community.size} 篇文档`),
-      uiText(
-        `Missing topic page, recent link change ${formatSignedDelta(params.trend.delta)}`,
-        `当前缺少主题页，最近关系变化 ${formatSignedDelta(params.trend.delta)}`,
-      ),
+      t('analytics.aiInbox.topicPageEvidenceClusterSize', { count: params.community.size }),
+      t('analytics.aiInbox.topicPageEvidenceMissingTopicPage', { delta: formatSignedDelta(params.trend.delta) }),
       params.community.topTags.length
-        ? uiText(`Top tags: ${params.community.topTags.join(', ')}`, `高频标签：${params.community.topTags.join('、')}`)
-        : uiText('Top tag evidence is weak', '高频标签证据较弱'),
+        ? t('analytics.aiInbox.topicPageEvidenceTopTags', { tags: joinLocalizedList(params.community.topTags) })
+        : t('analytics.aiInbox.topicPageEvidenceWeakTopTags'),
     ],
-    recommendedAction: uiText(
-      `Create ${suggestedTitle}, then attach it first to ${recommendedTargets.map(target => target.title).join(', ') || 'cluster hub docs'}.`,
-      `新建 ${suggestedTitle}，并先挂入 ${recommendedTargets.map(target => target.title).join('、') || '社区 hub 文档'}。`,
-    ),
+    recommendedAction: t('analytics.aiInbox.topicPageActionCreateAndAttach', {
+      title: suggestedTitle,
+      targets: joinLocalizedList(recommendedTargets.map(target => target.title))
+        || t('analytics.aiInbox.topicPageFallbackClusterHubDocs'),
+    }),
     expectedBenefits: [
-      uiText('Build one unified entry page for this cluster', '为该社区建立统一入口页'),
-      uiText(
-        `Bring ${params.community.size} docs into one navigable topic structure`,
-        `把 ${params.community.size} 篇文档收束到可导航的主题结构中`,
-      ),
-      uiText('Follow-up link repair and archive work becomes more focused', '后续补链和归档动作会更集中'),
+      t('analytics.aiInbox.topicPageBenefitUnifiedEntry'),
+      t('analytics.aiInbox.topicPageBenefitBringDocsTogether', { count: params.community.size }),
+      t('analytics.aiInbox.topicPageBenefitFollowUpFocused'),
     ],
-    draftText: uiText(`Suggested topic page title: ${suggestedTitle}`, `建议主题页标题：${suggestedTitle}`),
+    draftText: t('analytics.aiInbox.topicPageDraftTitle', { title: suggestedTitle }),
   }
 }
 
@@ -639,10 +611,7 @@ function buildBridgeRiskCandidate(params: {
       documentId,
       title: resolveDocumentTitle(params.documentMap, documentId),
       kind: 'community-hub' as const,
-      reason: uiText(
-        'Linking to neighboring cluster hubs can reduce this bridge becoming the only path.',
-        '补到相邻社区 hub，可以减少该桥接点成为唯一路径',
-      ),
+      reason: t('analytics.aiInbox.bridgeTargetHubReason'),
     }))
 
   if (recommendedTargets.length === 0) {
@@ -654,10 +623,7 @@ function buildBridgeRiskCandidate(params: {
           documentId: item.documentId,
           title: item.title,
           kind: 'related-document' as const,
-          reason: uiText(
-            'A highly connected doc in the current network that can act as an alternative entry point.',
-            '当前网络中的高连接文档，可作为替代入口',
-          ),
+          reason: t('analytics.aiInbox.bridgeTargetRelatedDocReason'),
         })),
     )
   }
@@ -670,7 +636,7 @@ function buildBridgeRiskCandidate(params: {
   return {
     id: `bridge-risk:${params.bridge.documentId}`,
     type: 'maintain-bridge',
-    title: uiText(`Reduce bridge risk: ${params.bridge.title}`, `降低桥接风险：${params.bridge.title}`),
+    title: t('analytics.aiInbox.bridgeTitle', { title: params.bridge.title }),
     focusDocumentIds: [params.bridge.documentId],
     confidence: confidenceScore >= 75 ? 'high' : confidenceScore >= 50 ? 'medium' : 'low',
     impactScore,
@@ -685,34 +651,30 @@ function buildBridgeRiskCandidate(params: {
     }),
     recommendedTargets,
     evidence: [
-      uiText(`Currently connects ${params.bridge.degree} relationships`, `当前连接 ${params.bridge.degree} 条关系`),
+      t('analytics.aiInbox.bridgeEvidenceRelationshipCount', { count: params.bridge.degree }),
       relatedCommunities.length
-        ? uiText(`Appears in ${relatedCommunities.length} clusters`, `同时出现在 ${relatedCommunities.length} 个社区中`)
-        : uiText('No clear alternative cluster entry is available yet', '当前缺少明确的社区替代入口'),
+        ? t('analytics.aiInbox.bridgeEvidenceAppearsInClusters', { count: relatedCommunities.length })
+        : t('analytics.aiInbox.bridgeEvidenceNoAlternativeClusterEntry'),
       recommendedTargets.length
-        ? uiText(`Can first link to ${recommendedTargets.map(target => target.title).join(', ')}`, `可优先补到 ${recommendedTargets.map(target => target.title).join('、')}`)
-        : uiText('No sufficiently clear alternative target was found', '当前未找到足够清晰的替代目标'),
+        ? t('analytics.aiInbox.bridgeEvidenceCanLinkToTargets', { targets: joinLocalizedList(recommendedTargets.map(target => target.title)) })
+        : t('analytics.aiInbox.bridgeEvidenceNoAlternativeTarget'),
     ],
     recommendedAction: recommendedTargets.length
-      ? uiText(
-          `Add an upstream/downstream navigation block in ${params.bridge.title} and link explicitly to ${recommendedTargets.map(target => target.title).join(', ')}.`,
-          `在 ${params.bridge.title} 中补一段上下游导航，显式链接到 ${recommendedTargets.map(target => target.title).join('、')}。`,
-        )
-      : uiText(
-          `Add an upstream/downstream navigation block for ${params.bridge.title} so it does not become a single bridge point.`,
-          `为 ${params.bridge.title} 补一段上下游导航，避免它成为单点桥接。`,
-        ),
+      ? t('analytics.aiInbox.bridgeActionAddNavigationToTargets', {
+          title: params.bridge.title,
+          targets: joinLocalizedList(recommendedTargets.map(target => target.title)),
+        })
+      : t('analytics.aiInbox.bridgeActionAvoidSingleBridgePoint', { title: params.bridge.title }),
     expectedBenefits: [
-      uiText('Reduce the risk of cluster fragmentation from a single bridge point', '降低单点桥接导致社区断裂的风险'),
+      t('analytics.aiInbox.bridgeBenefitReduceFragmentationRisk'),
       recommendedTargets.length
-        ? uiText(`Add navigation for ${recommendedTargets.length} alternative entry points`, `为 ${recommendedTargets.length} 个替代入口补齐导航`)
-        : uiText('Add alternative entries for neighboring topics', '为相邻主题补出替代入口'),
+        ? t('analytics.aiInbox.bridgeBenefitAddNavigationForAlternativeEntries', { count: recommendedTargets.length })
+        : t('analytics.aiInbox.bridgeBenefitAddAlternativeEntries'),
     ],
     draftText: recommendedTargets.length
-      ? uiText(
-          `Upstream/downstream entries: ${recommendedTargets.map(target => `((` + `${target.documentId} "${target.title}"))`).join(' / ')}`,
-          `上游/下游入口：${recommendedTargets.map(target => `((` + `${target.documentId} "${target.title}"))`).join(' / ')}`,
-        )
+      ? t('analytics.aiInbox.bridgeDraftEntries', {
+          entries: buildAiInboxEntryLinks(recommendedTargets),
+        })
       : undefined,
   }
 }
@@ -735,10 +697,7 @@ function buildArchiveCandidate(params: {
     documentId: match.themeDocumentId,
     title: match.themeDocumentTitle,
     kind: 'theme-document',
-    reason: uiText(
-      'If this still has value, linking it to a topic page before archiving makes it easier to revisit later.',
-      '如果仍有保留价值，先补到主题页再归档更容易回查',
-    ),
+    reason: t('analytics.aiInbox.archiveTargetThemeReason'),
   }))
 
   if (recommendedTargets.length === 0) {
@@ -750,10 +709,7 @@ function buildArchiveCandidate(params: {
           documentId: item.documentId,
           title: item.title,
           kind: 'core-document' as const,
-          reason: uiText(
-            'You can first link it to an active index entry, then decide whether to archive it.',
-            '可先补到一个仍活跃的索引入口，再决定是否归档',
-          ),
+          reason: t('analytics.aiInbox.archiveTargetCoreReason'),
         })),
     )
   }
@@ -766,7 +722,7 @@ function buildArchiveCandidate(params: {
   return {
     id: `archive-dormant:${params.dormant.documentId}`,
     type: 'archive-dormant',
-    title: uiText(`Handle dormant doc: ${documentTitle}`, `处理沉没文档：${documentTitle}`),
+    title: t('analytics.aiInbox.archiveTitle', { title: documentTitle }),
     focusDocumentIds: [params.dormant.documentId],
     confidence: confidenceScore >= 75 ? 'high' : confidenceScore >= 50 ? 'medium' : 'low',
     impactScore,
@@ -781,24 +737,15 @@ function buildArchiveCandidate(params: {
     }),
     recommendedTargets,
     evidence: [
-      uiText(`${params.dormant.inactivityDays} days without valid links`, `${params.dormant.inactivityDays} 天未产生有效连接`),
-      uiText(
-        `${params.dormant.historicalReferenceCount} historical link traces exist`,
-        `历史上出现过 ${params.dormant.historicalReferenceCount} 条连接证据`,
-      ),
+      t('analytics.aiInbox.archiveEvidenceDaysWithoutLinks', { count: params.dormant.inactivityDays }),
+      t('analytics.aiInbox.archiveEvidenceHistoricalLinks', { count: params.dormant.historicalReferenceCount }),
     ],
     recommendedAction: recommendedTargets.length
-      ? uiText(
-          `First link it to ${recommendedTargets[0].title} to keep a lookup entry; archive it later if you stop maintaining it.`,
-          `先补到 ${recommendedTargets[0].title} 留下回查入口；如果后续不再维护，再归档。`,
-        )
-      : uiText(
-          'First confirm whether it still needs to be kept. If not, archive it and add one index note.',
-          '先确认是否仍需保留；如无持续维护计划，归档并补一条索引说明。',
-        ),
+      ? t('analytics.aiInbox.archiveActionKeepLookupEntry', { title: recommendedTargets[0].title })
+      : t('analytics.aiInbox.archiveActionConfirmThenArchive'),
     expectedBenefits: [
-      uiText('Reduce buildup of dormant docs', '减少沉没文档堆积'),
-      uiText('Keep a necessary lookup entry and avoid losing it completely later', '保留必要回查入口，避免后续完全失联'),
+      t('analytics.aiInbox.archiveBenefitReduceBuildup'),
+      t('analytics.aiInbox.archiveBenefitKeepLookupEntry'),
     ],
   }
 }
@@ -876,8 +823,19 @@ function buildConnectionTitle(documentMap: Map<string, DocumentRecord>, document
 }
 
 function buildSuggestedTopicPageTitle(community: ReferenceGraphReport['communities'][number]) {
-  const topic = community.topTags[0] || community.hubDocumentIds[0] || community.documentIds[0] || uiText('Untitled topic', '未命名主题')
-  return uiText(`Topic-${topic}-Index`, `主题-${topic}-索引`)
+  const topic = community.topTags[0] || community.hubDocumentIds[0] || community.documentIds[0] || t('analytics.aiInbox.untitledTopic')
+  return t('analytics.aiInbox.suggestedTopicPageTitle', { topic })
+}
+
+function joinLocalizedList(items: string[]) {
+  return items.join(resolveUiLocale() === 'zh_CN' ? '、' : ', ')
+}
+
+function buildAiInboxEntryLinks(targets: Array<Pick<AiInboxRecommendedTarget, 'documentId' | 'title'>>) {
+  return targets
+    .filter((target): target is Required<Pick<AiInboxRecommendedTarget, 'documentId' | 'title'>> => Boolean(target.documentId))
+    .map(target => `((` + `${target.documentId} "${target.title}"))`)
+    .join(' / ')
 }
 
 function buildUrgencyScore(updatedAt?: string) {

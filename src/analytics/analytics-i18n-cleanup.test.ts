@@ -8,6 +8,9 @@ describe('analytics i18n cleanup', () => {
       './summary-detail-sections.ts',
       './summary-cards.ts',
       './summary-card-config.ts',
+      './large-documents.ts',
+      './wiki-page-model.ts',
+      './ai-inbox.ts',
     ] as const
 
     for (const target of targets) {
