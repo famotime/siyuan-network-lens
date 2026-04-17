@@ -3,8 +3,8 @@
     <div class="wiki-panel__header">
       <div>
         <p class="wiki-panel__eyebrow">LLM Wiki</p>
-        <h2>{{ uiText('LLM Wiki maintenance', 'LLM Wiki 维护') }}</h2>
-        <p class="wiki-panel__description">{{ uiText('Generate topic wiki previews from the current scope, then write them back to topic pages, the index page, and the maintenance log after confirmation.', '基于当前分析范围生成主题 Wiki 预览，确认后再写回主题页、索引页和维护日志。') }}</p>
+        <h2>{{ t('wikiMaintain.title') }}</h2>
+        <p class="wiki-panel__description">{{ t('wikiMaintain.description') }}</p>
       </div>
       <div class="wiki-panel__actions">
         <button
@@ -13,7 +13,7 @@
           :disabled="previewLoading || !canPreparePreview"
           @click="prepareWikiPreview"
         >
-          {{ previewLoading ? uiText('Generating...', '生成中...') : uiText('Generate preview', '生成预览') }}
+          {{ previewLoading ? t('wikiMaintain.generating') : t('wikiMaintain.generatePreview') }}
         </button>
         <button
           class="ghost-button"
@@ -21,14 +21,14 @@
           :disabled="applyLoading || !canApply"
           @click="applyWikiChanges(allowOverwriteConflicts)"
         >
-          {{ applyLoading ? uiText('Applying...', '应用中...') : uiText('Apply changes', '应用变更') }}
+          {{ applyLoading ? t('wikiMaintain.applying') : t('wikiMaintain.applyChanges') }}
         </button>
       </div>
     </div>
 
     <label class="wiki-panel__toggle">
       <input v-model="allowOverwriteConflicts" type="checkbox" class="b3-switch">
-      <span>{{ uiText('Allow overwrite for conflict pages', '允许覆盖冲突页面') }}</span>
+      <span>{{ t('wikiMaintain.allowOverwriteConflictPages') }}</span>
     </label>
 
     <div v-if="error" class="state-banner state-banner--error">
@@ -36,30 +36,30 @@
     </div>
 
     <div v-if="!wikiEnabled" class="empty-state">
-      {{ uiText('Enable LLM Wiki first', '请先启用 LLM Wiki') }}
+      {{ t('wikiMaintain.enableWikiFirst') }}
     </div>
 
     <div v-else-if="!aiEnabled || !aiConfigReady" class="empty-state">
-      {{ uiText('Enable today suggestions and complete AI settings first', '请先启用今日建议并完成 AI 配置') }}
+      {{ t('wikiMaintain.enableSuggestionsAndAi') }}
     </div>
 
     <template v-else>
       <div v-if="preview" class="wiki-panel__scope">
         <div class="wiki-panel__scope-grid">
           <div class="wiki-panel__scope-card">
-            <span>{{ uiText('Matched source docs', '命中源文档') }}</span>
+            <span>{{ t('wikiMaintain.matchedSourceDocs') }}</span>
             <strong>{{ preview.scope.summary.sourceDocumentCount }}</strong>
           </div>
           <div class="wiki-panel__scope-card">
-            <span>{{ uiText('Matched topics', '命中主题') }}</span>
+            <span>{{ t('wikiMaintain.matchedTopics') }}</span>
             <strong>{{ preview.scope.summary.themeGroupCount }}</strong>
           </div>
           <div class="wiki-panel__scope-card">
-            <span>{{ uiText('Excluded wiki pages', '排除的 Wiki 页面') }}</span>
+            <span>{{ t('wikiMaintain.excludedWikiPages') }}</span>
             <strong>{{ preview.scope.summary.excludedWikiDocumentCount }}</strong>
           </div>
           <div class="wiki-panel__scope-card">
-            <span>{{ uiText('Unclassified sources', '未归类来源') }}</span>
+            <span>{{ t('wikiMaintain.unclassifiedSources') }}</span>
             <strong>{{ preview.scope.summary.unclassifiedDocumentCount }}</strong>
           </div>
         </div>
@@ -78,27 +78,27 @@
           <div class="wiki-panel__item-head">
             <div>
               <h3>{{ page.pageTitle }}</h3>
-              <p>{{ uiText('Paired topic page', '配对主题页') }}: {{ page.themeDocumentTitle }}</p>
+              <p>{{ t('wikiMaintain.pairedTopicPage') }}: {{ page.themeDocumentTitle }}</p>
             </div>
-            <span class="wiki-panel__status">{{ uiText('Status', '状态') }}: {{ statusLabelMap[page.preview.status] }}</span>
+            <span class="wiki-panel__status">{{ t('wikiMaintain.status') }}: {{ statusLabelMap[page.preview.status] }}</span>
           </div>
           <div class="wiki-panel__meta">
-            <span>{{ uiText('Source docs', '源文档数') }}: {{ page.preview.sourceDocumentCount }}</span>
-            <span>{{ uiText('Affected sections', '影响分区') }}: {{ page.preview.affectedSections.length ? page.preview.affectedSections.join(', ') : uiText('No changes', '无变化') }}</span>
-            <span>{{ uiText('Manual notes', '人工备注') }}: {{ page.hasManualNotes ? uiText('Existing', '已存在') : uiText('Created on first write', '首次写入时创建') }}</span>
+            <span>{{ t('wikiMaintain.sourceDocs') }}: {{ page.preview.sourceDocumentCount }}</span>
+            <span>{{ t('wikiMaintain.affectedSections') }}: {{ page.preview.affectedSections.length ? page.preview.affectedSections.join(', ') : t('wikiMaintain.noChanges') }}</span>
+            <span>{{ t('wikiMaintain.manualNotes') }}: {{ page.hasManualNotes ? t('wikiMaintain.existing') : t('wikiMaintain.createdOnFirstWrite') }}</span>
           </div>
-          <p class="wiki-panel__summary"><strong>{{ uiText('Old summary:', '旧摘要：') }}</strong>{{ page.preview.oldSummary || uiText('No previous content', '暂无旧内容') }}</p>
-          <p class="wiki-panel__summary"><strong>{{ uiText('New summary:', '新摘要：') }}</strong>{{ page.preview.newSummary || uiText('No new content', '暂无新内容') }}</p>
+          <p class="wiki-panel__summary"><strong>{{ t('wikiMaintain.oldSummary') }}</strong>{{ page.preview.oldSummary || t('wikiMaintain.noPreviousContent') }}</p>
+          <p class="wiki-panel__summary"><strong>{{ t('wikiMaintain.newSummary') }}</strong>{{ page.preview.newSummary || t('wikiMaintain.noNewContent') }}</p>
           <p v-if="page.preview.conflictReason" class="wiki-panel__conflict">{{ page.preview.conflictReason }}</p>
         </article>
       </div>
 
       <div v-else-if="preview" class="empty-state">
-        {{ uiText('No topic wiki pages can be maintained in the current scope', '当前范围内没有可维护的主题 Wiki 页面') }}
+        {{ t('wikiMaintain.noMaintainablePages') }}
       </div>
 
       <div v-if="preview?.unclassifiedDocuments.length" class="wiki-panel__extra">
-        <h3>{{ uiText('Unclassified sources', '未归类来源') }}</h3>
+        <h3>{{ t('wikiMaintain.unclassifiedSources') }}</h3>
         <p>{{ preview.unclassifiedDocuments.map(item => item.title).join('、') }}</p>
       </div>
 
@@ -111,7 +111,7 @@
             type="button"
             @click="openWikiDocument(preview.applyResult.indexPage.pageId)"
           >
-            {{ uiText('Open index page', '打开索引页') }}
+            {{ t('wikiMaintain.openIndexPage') }}
           </button>
           <button
             v-if="preview.applyResult.logPage.pageId"
@@ -119,7 +119,7 @@
             type="button"
             @click="openWikiDocument(preview.applyResult.logPage.pageId)"
           >
-            {{ uiText('Open log page', '打开日志页') }}
+            {{ t('wikiMaintain.openLogPage') }}
           </button>
           <button
             v-if="latestUpdatedThemePageId"
@@ -127,7 +127,7 @@
             type="button"
             @click="openWikiDocument(latestUpdatedThemePageId)"
           >
-            {{ uiText('Open latest updated page', '打开最近更新页') }}
+            {{ t('wikiMaintain.openLatestUpdatedPage') }}
           </button>
         </div>
       </div>
@@ -139,7 +139,7 @@
 import { computed, ref } from 'vue'
 
 import type { WikiPreviewState } from '@/composables/use-analytics'
-import { pickUiText } from '@/i18n/ui'
+import { t } from '@/i18n/ui'
 
 const props = defineProps<{
   wikiEnabled: boolean
@@ -154,14 +154,13 @@ const props = defineProps<{
   openWikiDocument: (documentId: string) => void
 }>()
 
-const uiText = (en_US: string, zh_CN: string) => pickUiText({ en_US, zh_CN })
 const allowOverwriteConflicts = ref(false)
 
 const statusLabelMap = {
-  create: uiText('Create', '新建'),
-  update: uiText('Update', '更新'),
-  unchanged: uiText('Unchanged', '无变化'),
-  conflict: uiText('Conflict', '冲突'),
+  create: t('wikiMaintain.statusCreate'),
+  update: t('wikiMaintain.statusUpdate'),
+  unchanged: t('wikiMaintain.statusUnchanged'),
+  conflict: t('wikiMaintain.statusConflict'),
 } as const
 
 const resultSummary = computed(() => {
@@ -170,10 +169,7 @@ const resultSummary = computed(() => {
   }
 
   const { counts } = props.preview.applyResult
-  return uiText(
-    `This apply run: created ${counts.created} / updated ${counts.updated} / unchanged ${counts.skipped} / conflict ${counts.conflict}`,
-    `本次写回：新建 ${counts.created} / 更新 ${counts.updated} / 无变化 ${counts.skipped} / 冲突 ${counts.conflict}`,
-  )
+  return t('wikiMaintain.applyRunSummary', counts)
 })
 
 const canPreparePreview = computed(() => props.wikiEnabled && props.aiEnabled && props.aiConfigReady)

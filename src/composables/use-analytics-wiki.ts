@@ -11,12 +11,11 @@ import { getWikiHeadingCandidates } from '@/analytics/wiki-page-model'
 import type { RenderedWikiDraft } from '@/analytics/wiki-renderer'
 import type { WikiScopeSummary } from '@/analytics/wiki-scope'
 import type { WikiPageSnapshotRecord } from '@/analytics/wiki-store'
-import { pickUiText } from '@/i18n/ui'
+import { t } from '@/i18n/ui'
 import type { PluginConfig } from '@/types/config'
 
 type GetIDsByHPathFn = (notebook: string, path: string) => Promise<string[]>
 type GetBlockKramdownFn = (id: string) => Promise<{ id: string, kramdown: string }>
-const uiText = (en_US: string, zh_CN: string) => pickUiText({ en_US, zh_CN })
 
 export interface WikiPreviewThemePageItem {
   pageTitle: string
@@ -118,12 +117,12 @@ export function buildWikiScopeDescriptionLines(params: {
   scopeDescriptionLine?: string
 }) {
   return [
-    params.scopeDescriptionLine ?? uiText('- Scope source: current doc sample', '- 范围来源：当前文档样本'),
-    uiText(`- Time window: ${params.timeRange}`, `- 时间窗口：${params.timeRange}`),
-    uiText(`- Notebook: ${params.filters.notebook ? params.resolveNotebookName(params.filters.notebook) : 'All notebooks'}`, `- 笔记本：${params.filters.notebook ? params.resolveNotebookName(params.filters.notebook) : '所有笔记本'}`),
-    uiText(`- Tags: ${params.filters.tags?.length ? params.filters.tags.join(', ') : 'All tags'}`, `- 标签：${params.filters.tags?.length ? params.filters.tags.join(', ') : '全部标签'}`),
-    uiText(`- Topics: ${params.filters.themeNames?.length ? params.filters.themeNames.join(', ') : 'All topics'}`, `- 主题：${params.filters.themeNames?.length ? params.filters.themeNames.join(', ') : '全部主题'}`),
-    uiText(`- Keyword: ${params.filters.keyword?.trim() || 'None'}`, `- 关键词：${params.filters.keyword?.trim() || '无'}`),
+    params.scopeDescriptionLine ?? t('analytics.wiki.scopeSourceCurrentDocSample'),
+    t('analytics.wiki.timeWindowLine', { value: params.timeRange }),
+    t('analytics.wiki.notebookLine', { value: params.filters.notebook ? params.resolveNotebookName(params.filters.notebook) : t('analytics.wiki.allNotebooks') }),
+    t('analytics.wiki.tagsLine', { value: params.filters.tags?.length ? params.filters.tags.join(', ') : t('analytics.wiki.allTags') }),
+    t('analytics.wiki.topicsLine', { value: params.filters.themeNames?.length ? params.filters.themeNames.join(', ') : t('analytics.wiki.allTopics') }),
+    t('analytics.wiki.keywordLine', { value: params.filters.keyword?.trim() || t('analytics.wiki.none') }),
   ]
 }
 

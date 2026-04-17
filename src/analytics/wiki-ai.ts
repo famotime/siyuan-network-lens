@@ -1,6 +1,6 @@
 import { isAiConfigComplete, limitChatCompletionMessages, resolveAiEndpoint, resolveAiRequestOptions } from './ai-inbox'
 import { WIKI_LLM_OUTPUT_KEYS, type WikiThemeGenerationPayload } from './wiki-generation'
-import { pickUiText } from '@/i18n/ui'
+import { t } from '@/i18n/ui'
 import type { PluginConfig } from '@/types/config'
 
 type ForwardProxyFn = (
@@ -25,7 +25,6 @@ type AiConfig = Pick<
 >
 
 type ChatCompletionMessage = { role: 'system' | 'user' | 'assistant', content: string }
-const uiText = (en_US: string, zh_CN: string) => pickUiText({ en_US, zh_CN })
 
 export type AiWikiThemeSections = Record<typeof WIKI_LLM_OUTPUT_KEYS[number], string | string[]>
 
@@ -53,10 +52,10 @@ export function createAiWikiService(deps: {
   return {
     async generateThemeSections(params) {
       if (!params.config.aiEnabled) {
-        throw new Error(uiText('Enable today suggestions in Settings first', '请先在设置中启用 AI 今日建议'))
+        throw new Error(t('analytics.wiki.enableTodaySuggestionsInSettings'))
       }
       if (!isAiConfigComplete(params.config)) {
-        throw new Error(uiText('AI settings are incomplete. Add Base URL, API Key, and Model.', 'AI 接入配置不完整，请补充 Base URL、API Key 和 Model'))
+        throw new Error(t('analytics.wiki.incompleteAiSettings'))
       }
 
       const response = await requestChatCompletion({
@@ -67,18 +66,9 @@ export function createAiWikiService(deps: {
           {
             role: 'user',
             content: [
-              uiText(
-                `Generate structured content for the topic wiki page. Topic: ${params.payload.themeName}.`,
-                `请为主题 wiki 页面生成结构化内容。主题：${params.payload.themeName}。`,
-              ),
-              uiText(
-                'Emphasize the topic overview, key documents, structure observations, relationship evidence, and cleanup actions.',
-                '请突出主题概览、关键文档、结构观察、关系证据和整理动作。',
-              ),
-              uiText(
-                'If evidence is weak in any section, respond conservatively with "No clear ..." instead of inventing content.',
-                '如果某部分证据不足，可以保守输出“暂无明显...”而不是编造。',
-              ),
+              t('analytics.wiki.generateStructuredContentPrompt', { theme: params.payload.themeName }),
+              t('analytics.wiki.emphasizeSectionsPrompt'),
+              t('analytics.wiki.conservativeFallbackPrompt'),
               JSON.stringify(params.payload),
             ].join('\n'),
           },
@@ -118,13 +108,13 @@ async function requestChatCompletion(params: {
   )
 
   if (!response || response.status < 200 || response.status >= 300) {
-    throw new Error(uiText(`AI request failed (${response?.status ?? 'unknown status'})`, `AI 请求失败（${response?.status ?? '未知状态'}）`))
+    throw new Error(t('analytics.wiki.aiRequestFailed', { status: response?.status ?? 'unknown status' }))
   }
 
   try {
     return JSON.parse(response.body)
   } catch {
-    throw new Error(uiText('AI returned JSON that could not be parsed', 'AI 接口返回了无法解析的 JSON'))
+    throw new Error(t('analytics.wiki.aiReturnedUnparseableJson'))
   }
 }
 
@@ -141,7 +131,7 @@ function parseJsonFromContent(payload: any) {
     if (startIndex >= 0 && endIndex > startIndex) {
       return JSON.parse(candidate.slice(startIndex, endIndex + 1))
     }
-    throw new Error(uiText('AI did not return valid JSON', 'AI 返回内容不是合法 JSON'))
+    throw new Error(t('analytics.wiki.aiReturnedInvalidJson'))
   }
 }
 
@@ -163,16 +153,16 @@ function extractChatCompletionContent(payload: any): string {
       })
       .join('')
   }
-  throw new Error(uiText('AI did not return readable content', 'AI 接口未返回可读内容'))
+  throw new Error(t('analytics.wiki.aiReturnedUnreadableContent'))
 }
 
 function normalizeThemeSections(value: any): AiWikiThemeSections {
   return {
-    overview: normalizeSectionValue(value?.overview, uiText('No clear topic overview yet', '暂无明显主题概览')),
-    keyDocuments: normalizeSectionList(value?.keyDocuments, uiText('No key document suggestions yet', '暂无关键文档建议')),
-    structureObservations: normalizeSectionList(value?.structureObservations, uiText('No clear structure observations yet', '暂无明显结构观察')),
-    evidence: normalizeSectionList(value?.evidence, uiText('No clear relationship evidence yet', '暂无明显关系证据')),
-    actions: normalizeSectionList(value?.actions, uiText('No clear cleanup actions yet', '暂无明确整理动作')),
+    overview: normalizeSectionValue(value?.overview, t('analytics.wiki.noClearTopicOverviewYet')),
+    keyDocuments: normalizeSectionList(value?.keyDocuments, t('analytics.wiki.noKeyDocumentSuggestionsYet')),
+    structureObservations: normalizeSectionList(value?.structureObservations, t('analytics.wiki.noClearStructureObservationsYet')),
+    evidence: normalizeSectionList(value?.evidence, t('analytics.wiki.noClearRelationshipEvidenceYet')),
+    actions: normalizeSectionList(value?.actions, t('analytics.wiki.noClearCleanupActionsYet')),
   }
 }
 

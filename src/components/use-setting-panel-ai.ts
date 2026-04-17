@@ -26,13 +26,12 @@ import {
   syncAiProviderConfigSnapshot,
 } from '@/components/setting-panel-ai-state'
 import { resolveSecretFieldMeta } from '@/components/setting-panel-secret-field'
-import { pickUiText } from '@/i18n/ui'
+import { t } from '@/i18n/ui'
 import type { AiProviderPresetKey } from '@/types/ai-provider'
 import type { PluginConfig } from '@/types/config'
 import { createPluginLogger } from '@/utils/plugin-logger'
 
 export function useSettingPanelAi(config: PluginConfig) {
-  const uiText = (en_US: string, zh_CN: string) => pickUiText({ en_US, zh_CN })
   const aiService = createAiInboxService({
     forwardProxy,
     logger: createPluginLogger(() => config.enableConsoleLogging === true),
@@ -175,9 +174,9 @@ export function useSettingPanelAi(config: PluginConfig) {
     try {
       const content = stringifyAiSettingsTransferPayload(config)
       downloadAiSettingsFile(content)
-      aiTransferMessage.value = uiText('AI settings exported', 'AI 设置已导出')
+      aiTransferMessage.value = t('aiConfig.settingsExported')
     } catch (error) {
-      aiTransferError.value = error instanceof Error ? error.message : uiText('Failed to export AI settings', '导出 AI 设置失败')
+      aiTransferError.value = error instanceof Error ? error.message : t('aiConfig.failedExport')
     }
   }
 
@@ -197,9 +196,9 @@ export function useSettingPanelAi(config: PluginConfig) {
       selectedAiProviderPreset.value = config.aiProviderPreset ?? imported.aiProviderPreset
       aiConnectionMessage.value = ''
       aiConnectionError.value = ''
-      aiTransferMessage.value = uiText('AI settings imported', 'AI 设置已导入')
+      aiTransferMessage.value = t('aiConfig.settingsImported')
     } catch (error) {
-      aiTransferError.value = error instanceof Error ? error.message : uiText('Failed to import AI settings', '导入 AI 设置失败')
+      aiTransferError.value = error instanceof Error ? error.message : t('aiConfig.failedImport')
     } finally {
       input.value = ''
     }

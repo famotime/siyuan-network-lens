@@ -12,7 +12,7 @@
             class="panel-toggle"
             type="button"
             :aria-expanded="isExpanded"
-            :aria-label="isExpanded ? uiText('Collapse details', '收起详情') : uiText('Expand details', '展开详情')"
+            :aria-label="isExpanded ? t('summaryDetail.collapseDetails') : t('summaryDetail.expandDetails')"
             @click="onTogglePanel()"
           >
             <span
@@ -31,7 +31,7 @@
             v-if="aiInboxHistory.length"
             class="panel-header__ai-history-group"
           >
-            <span class="panel-header__ai-history-label">{{ uiText('History:', '历史：') }}</span>
+            <span class="panel-header__ai-history-label">{{ t('summaryDetail.historyLabel') }}</span>
             <div class="panel-header__ai-history-buttons">
               <button
                 v-for="(entry, index) in aiInboxHistory"
@@ -55,7 +55,7 @@
           :disabled="aiSuggestionLoading || !aiSuggestionEnabled || !aiSuggestionConfigured"
           @click="generateAiInbox()"
         >
-          {{ aiSuggestionLoading ? uiText('Analyzing...', '分析中...') : detail.result ? uiText('Reanalyze', '重新分析') : uiText('Today suggestions', '今日建议') }}
+          {{ aiSuggestionLoading ? t('summaryDetail.analyzing') : detail.result ? t('summaryDetail.reanalyze') : t('summaryDetail.todaySuggestions') }}
         </button>
       </div>
     </div>
@@ -103,14 +103,14 @@
             v-if="!aiSuggestionEnabled"
             class="empty-state"
           >
-            {{ uiText('Enable AI in Settings to generate today suggestions from the current filters here.', '请先在设置中启用 AI，以基于当前筛选生成今日建议。') }}
+            {{ t('summaryDetail.aiEmpty.enableAi') }}
           </div>
 
           <div
             v-else-if="!aiSuggestionConfigured"
             class="empty-state"
           >
-            {{ uiText('OpenAI-compatible settings are incomplete. Add Base URL, API Key, and Model in Settings.', '兼容 OpenAI 的设置不完整，请在设置中补充 Base URL、API Key 和 Model。') }}
+            {{ t('summaryDetail.aiEmpty.incompleteConfig') }}
           </div>
 
           <div
@@ -130,7 +130,7 @@
           >
             <div class="ai-suggestion-panel__summary">
               <p>{{ detail.result.summary }}</p>
-              <span class="meta-text">{{ uiText(`${detail.result.items.length} suggestions`, `${detail.result.items.length} 条建议`) }}</span>
+              <span class="meta-text">{{ t('summaryDetail.counts.suggestions', { count: detail.result.items.length }) }}</span>
             </div>
 
             <div class="ai-suggestion-panel__list">
@@ -167,7 +167,7 @@
                   v-if="item.recommendedTargets?.length"
                   class="ai-suggestion-panel__detail-group"
                 >
-                  <p class="ai-suggestion-panel__detail-title">{{ uiText('Suggested targets', '建议目标') }}</p>
+                  <p class="ai-suggestion-panel__detail-title">{{ t('summaryDetail.aiSection.suggestedTargets') }}</p>
                   <div class="ai-suggestion-panel__targets">
                     <div
                       v-for="target in item.recommendedTargets"
@@ -188,7 +188,7 @@
                 </div>
 
                 <div class="ai-suggestion-panel__detail-group">
-                  <p class="ai-suggestion-panel__detail-title">{{ uiText('Recommended action', '建议动作') }}</p>
+                  <p class="ai-suggestion-panel__detail-title">{{ t('summaryDetail.aiSection.recommendedAction') }}</p>
                   <div
                     v-if="resolveAiInboxActionTargets(item).length"
                     class="ai-suggestion-panel__action-pills"
@@ -216,7 +216,7 @@
                 </div>
 
                 <div class="ai-suggestion-panel__detail-group">
-                  <p class="ai-suggestion-panel__detail-title">{{ uiText('Why this first', '优先原因') }}</p>
+                  <p class="ai-suggestion-panel__detail-title">{{ t('summaryDetail.aiSection.whyFirst') }}</p>
                   <p class="ai-suggestion-panel__merged-copy">{{ item.reason }}</p>
                   <ul v-if="item.evidence?.length || item.expectedChanges?.length" class="ai-suggestion-panel__detail-list">
                     <li v-for="evidence in item.evidence ?? []" :key="`${item.id}-${evidence}`">
@@ -236,7 +236,7 @@
             v-else
             class="empty-state"
           >
-            {{ uiText('Open Today suggestions to start analyzing the current filters.', '打开“今日建议”开始分析当前筛选。') }}
+            {{ t('summaryDetail.aiEmpty.openTodaySuggestions') }}
           </div>
         </div>
       </template>
@@ -279,7 +279,7 @@
                       :key="`${item.documentId}-${suggestion.themeDocumentId}`"
                       :class="['detail-theme-tag', { 'detail-theme-tag--active': isThemeSuggestionActive(item.documentId, suggestion.themeDocumentId) }]"
                       type="button"
-                      :title="uiText(`${suggestion.themeDocumentTitle} · Matched ${suggestion.matchCount} times`, `${suggestion.themeDocumentTitle} · 命中 ${suggestion.matchCount} 次`)"
+                      :title="t('summaryDetail.themeSuggestionTooltip', { title: suggestion.themeDocumentTitle, count: suggestion.matchCount })"
                       @click="toggleOrphanThemeSuggestion(item.documentId, suggestion.themeDocumentId)"
                     >
                       <span class="detail-theme-name">{{ suggestion.themeName }}</span>
@@ -294,7 +294,7 @@
           v-else
           class="empty-state"
         >
-          {{ uiText('No docs to show under this card.', '当前卡片下暂无文档可展示。') }}
+          {{ t('summaryDetail.empty.noDocs') }}
         </div>
       </template>
       <template v-else-if="detail.kind === 'propagation'">
@@ -331,28 +331,28 @@
           v-else
           class="empty-state"
         >
-          {{ uiText('No propagation nodes to show under this card.', '当前卡片下暂无传播节点可展示。') }}
+          {{ t('summaryDetail.empty.noPropagationNodes') }}
         </div>
 
         <div class="propagation-path">
           <div class="propagation-path__header">
-            <h3>{{ uiText('Propagation paths', '传播路径') }}</h3>
-            <p>{{ uiText('Limit path depth and scope to see how docs connect across topics.', '限制路径深度和范围，查看文档如何跨主题连接。') }}</p>
+            <h3>{{ t('summaryDetail.propagation.title') }}</h3>
+            <p>{{ t('summaryDetail.propagation.description') }}</p>
           </div>
           <div class="path-controls">
             <label>
-              <span>{{ uiText('Scope', '范围') }}</span>
+              <span>{{ t('summaryDetail.propagation.scopeLabel') }}</span>
               <select
                 :value="pathScope"
                 @change="onUpdatePathScope(($event.target as HTMLSelectElement).value as PathScope)"
               >
-                <option value="focused">{{ uiText('Core + bridge', '核心 + 桥接') }}</option>
-                <option value="all">{{ uiText('All filtered docs', '全部筛选文档') }}</option>
-                <option value="community">{{ uiText('Current cluster', '当前社区') }}</option>
+                <option value="focused">{{ t('summaryDetail.propagation.scopeFocused') }}</option>
+                <option value="all">{{ t('summaryDetail.propagation.scopeAll') }}</option>
+                <option value="community">{{ t('summaryDetail.propagation.scopeCommunity') }}</option>
               </select>
             </label>
             <label>
-              <span>{{ uiText('Max depth', '最大深度') }}</span>
+              <span>{{ t('summaryDetail.propagation.maxDepth') }}</span>
               <select
                 :value="maxPathDepth"
                 @change="onUpdateMaxPathDepth(Number.parseInt(($event.target as HTMLSelectElement).value, 10))"
@@ -364,7 +364,7 @@
               </select>
             </label>
             <label>
-              <span>{{ uiText('From', '起点') }}</span>
+              <span>{{ t('summaryDetail.propagation.fromLabel') }}</span>
               <select
                 :value="fromDocumentId"
                 @change="onUpdateFromDocumentId(($event.target as HTMLSelectElement).value)"
@@ -379,7 +379,7 @@
               </select>
             </label>
             <label>
-              <span>{{ uiText('To', '终点') }}</span>
+              <span>{{ t('summaryDetail.propagation.toLabel') }}</span>
               <select
                 :value="toDocumentId"
                 @change="onUpdateToDocumentId(($event.target as HTMLSelectElement).value)"
@@ -413,7 +413,7 @@
             v-else
             class="empty-state"
           >
-            {{ uiText('No explainable path found under the current filters.', '当前筛选下没有可解释的路径。') }}
+            {{ t('summaryDetail.empty.noExplainablePath') }}
           </div>
         </div>
       </template>
@@ -444,27 +444,27 @@
       <template v-else-if="detail.kind === 'trends'">
         <div class="trend-stats">
           <article class="trend-stats__card summary-card">
-            <span class="trend-stats__label summary-card__label">{{ uiText('Current window', '当前窗口') }}</span>
+            <span class="trend-stats__label summary-card__label">{{ t('summaryDetail.trends.currentWindow') }}</span>
             <strong class="trend-stats__value summary-card__value">{{ detail.trends.current.referenceCount }}</strong>
           </article>
           <article class="trend-stats__card summary-card">
-            <span class="trend-stats__label summary-card__label">{{ uiText('Previous window', '上一窗口') }}</span>
+            <span class="trend-stats__label summary-card__label">{{ t('summaryDetail.trends.previousWindow') }}</span>
             <strong class="trend-stats__value summary-card__value">{{ detail.trends.previous.referenceCount }}</strong>
           </article>
           <article class="trend-stats__card summary-card">
-            <span class="trend-stats__label summary-card__label">{{ uiText('New links', '新增连接') }}</span>
+            <span class="trend-stats__label summary-card__label">{{ t('summaryDetail.trends.newLinks') }}</span>
             <strong class="trend-stats__value summary-card__value">{{ detail.trends.connectionChanges.newCount }}</strong>
           </article>
           <article class="trend-stats__card summary-card">
-            <span class="trend-stats__label summary-card__label">{{ uiText('Broken links', '断开连接') }}</span>
+            <span class="trend-stats__label summary-card__label">{{ t('summaryDetail.trends.brokenLinks') }}</span>
             <strong class="trend-stats__value summary-card__value">{{ detail.trends.connectionChanges.brokenCount }}</strong>
           </article>
         </div>
 
         <div class="trend-grid">
           <section class="trend-section-card trend-section-card--warm">
-            <p class="trend-section-card__eyebrow">{{ uiText('Document Heat', '文档升温') }}</p>
-            <h3 class="trend-section-card__title">{{ uiText('Rising docs', '上升文档') }}</h3>
+            <p class="trend-section-card__eyebrow">{{ t('summaryDetail.trends.documentHeat') }}</p>
+            <h3 class="trend-section-card__title">{{ t('summaryDetail.trends.risingDocs') }}</h3>
             <div
               v-if="detail.trends.risingDocuments.length"
               class="trend-list"
@@ -484,7 +484,7 @@
                   <span class="trend-record__delta trend-record__delta--positive">{{ formatDelta(item.delta) }}</span>
                 </div>
                 <p class="trend-record__meta">
-                  {{ uiText(`Current ${item.currentReferences} · Previous ${item.previousReferences}`, `当前 ${item.currentReferences} · 上一窗口 ${item.previousReferences}`) }}
+                  {{ t('summaryDetail.trends.currentPrevious', { current: item.currentReferences, previous: item.previousReferences }) }}
                 </p>
               </article>
             </div>
@@ -492,13 +492,13 @@
               v-else
               class="trend-section-card__empty"
             >
-              {{ uiText('No clearly rising docs.', '暂无明显上升文档。') }}
+              {{ t('summaryDetail.trends.noClearlyRisingDocs') }}
             </p>
           </section>
 
           <section class="trend-section-card trend-section-card--cool">
-            <p class="trend-section-card__eyebrow">{{ uiText('Document Cooling', '文档降温') }}</p>
-            <h3 class="trend-section-card__title">{{ uiText('Cooling docs', '降温文档') }}</h3>
+            <p class="trend-section-card__eyebrow">{{ t('summaryDetail.trends.documentCooling') }}</p>
+            <h3 class="trend-section-card__title">{{ t('summaryDetail.trends.coolingDocs') }}</h3>
             <div
               v-if="detail.trends.fallingDocuments.length"
               class="trend-list"
@@ -518,7 +518,7 @@
                   <span class="trend-record__delta trend-record__delta--negative">{{ formatDelta(item.delta) }}</span>
                 </div>
                 <p class="trend-record__meta">
-                  {{ uiText(`Current ${item.currentReferences} · Previous ${item.previousReferences}`, `当前 ${item.currentReferences} · 上一窗口 ${item.previousReferences}`) }}
+                  {{ t('summaryDetail.trends.currentPrevious', { current: item.currentReferences, previous: item.previousReferences }) }}
                 </p>
               </article>
             </div>
@@ -526,13 +526,13 @@
               v-else
               class="trend-section-card__empty"
             >
-              {{ uiText('No clearly cooling docs.', '暂无明显降温文档。') }}
+              {{ t('summaryDetail.trends.noClearlyCoolingDocs') }}
             </p>
           </section>
 
           <section class="trend-section-card trend-section-card--accent">
-            <p class="trend-section-card__eyebrow">{{ uiText('Community Lift', '社区升温') }}</p>
-            <h3 class="trend-section-card__title">{{ uiText('Rising topics', '上升主题') }}</h3>
+            <p class="trend-section-card__eyebrow">{{ t('summaryDetail.trends.communityLift') }}</p>
+            <h3 class="trend-section-card__title">{{ t('summaryDetail.trends.risingTopics') }}</h3>
             <div
               v-if="detail.trends.risingCommunities.length"
               class="trend-list"
@@ -553,7 +553,7 @@
                   <span class="trend-record__delta trend-record__delta--positive">{{ formatDelta(community.delta) }}</span>
                 </div>
                 <p class="trend-record__meta">
-                  {{ uiText(`Current ${community.currentReferences} · Previous ${community.previousReferences}`, `当前 ${community.currentReferences} · 上一窗口 ${community.previousReferences}`) }}
+                  {{ t('summaryDetail.trends.currentPrevious', { current: community.currentReferences, previous: community.previousReferences }) }}
                 </p>
               </article>
             </div>
@@ -561,13 +561,13 @@
               v-else
               class="trend-section-card__empty"
             >
-              {{ uiText('No clearly rising topics.', '暂无明显上升主题。') }}
+              {{ t('summaryDetail.trends.noClearlyRisingTopics') }}
             </p>
           </section>
 
           <section class="trend-section-card trend-section-card--muted">
-            <p class="trend-section-card__eyebrow">{{ uiText('Community Idle', '社区沉寂') }}</p>
-            <h3 class="trend-section-card__title">{{ uiText('Low-activity topics', '低活跃主题') }}</h3>
+            <p class="trend-section-card__eyebrow">{{ t('summaryDetail.trends.communityIdle') }}</p>
+            <h3 class="trend-section-card__title">{{ t('summaryDetail.trends.lowActivityTopics') }}</h3>
             <div
               v-if="detail.trends.dormantCommunities.length"
               class="trend-list"
@@ -585,10 +585,10 @@
                   >
                     {{ community.topTags.join(' / ') || community.documentIds.map(resolveTitle).join(' / ') }}
                   </button>
-                  <span class="trend-record__badge">{{ uiText('Low activity', '低活跃') }}</span>
+                  <span class="trend-record__badge">{{ t('summaryDetail.trends.lowActivity') }}</span>
                 </div>
                 <p class="trend-record__meta">
-                  {{ uiText(`Current ${community.currentReferences} · Previous ${community.previousReferences}`, `当前 ${community.currentReferences} · 上一窗口 ${community.previousReferences}`) }}
+                  {{ t('summaryDetail.trends.currentPrevious', { current: community.currentReferences, previous: community.previousReferences }) }}
                 </p>
               </article>
             </div>
@@ -596,13 +596,13 @@
               v-else
               class="trend-section-card__empty"
             >
-              {{ uiText('No clearly low-activity topics.', '暂无明显低活跃主题。') }}
+              {{ t('summaryDetail.trends.noClearlyLowActivityTopics') }}
             </p>
           </section>
 
           <section class="trend-section-card trend-section-card--neutral">
-            <p class="trend-section-card__eyebrow">{{ uiText('Broken Paths', '断裂路径') }}</p>
-            <h3 class="trend-section-card__title">{{ uiText('Broken links', '断开连接') }}</h3>
+            <p class="trend-section-card__eyebrow">{{ t('summaryDetail.trends.brokenPaths') }}</p>
+            <h3 class="trend-section-card__title">{{ t('summaryDetail.trends.brokenLinks') }}</h3>
             <div
               v-if="detail.trends.connectionChanges.brokenEdges.length"
               class="trend-list"
@@ -620,10 +620,10 @@
                   >
                     {{ edge.documentIds.map(resolveTitle).join(' → ') }}
                   </button>
-                  <span class="trend-record__badge">{{ uiText(`${edge.referenceCount} refs`, `${edge.referenceCount} 条引用`) }}</span>
+                  <span class="trend-record__badge">{{ t('summaryDetail.trends.referenceCount', { count: edge.referenceCount }) }}</span>
                 </div>
                 <p class="trend-record__meta">
-                  {{ uiText('Open the path source doc to trace the relationship before and after the break.', '打开路径源文档，追踪断开前后的关系变化。') }}
+                  {{ t('summaryDetail.trends.brokenPathDescription') }}
                 </p>
               </article>
             </div>
@@ -631,7 +631,7 @@
               v-else
               class="trend-section-card__empty"
             >
-              {{ uiText('No clearly broken links.', '暂无明显断开连接。') }}
+              {{ t('summaryDetail.trends.noClearlyBrokenLinks') }}
             </p>
           </section>
         </div>
@@ -652,7 +652,7 @@ import type { ReadCardMode } from '@/analytics/read-status'
 import type { TodaySuggestionHistoryEntry } from '@/analytics/today-suggestion-history-store'
 import type { ThemeDocument, ThemeDocumentMatch } from '@/analytics/theme-documents'
 import type { PathScope } from '@/composables/use-analytics-derived'
-import { pickUiText } from '@/i18n/ui'
+import { pickUiText, t } from '@/i18n/ui'
 import {
   resolveAiInboxActionTargets as resolveAiInboxActionTargetsFromData,
   resolveAiInboxActionLines,
@@ -753,8 +753,8 @@ const props = withDefaults(defineProps<{
 const uiText = (en_US: string, zh_CN: string) => pickUiText({ en_US, zh_CN })
 
 const summaryCountLabel = computed(() => props.detail.kind === 'aiInbox'
-  ? uiText(`${props.selectedSummaryCount} suggestions`, `${props.selectedSummaryCount} 条建议`)
-  : uiText(`${props.selectedSummaryCount} docs`, `${props.selectedSummaryCount} 篇文档`))
+  ? t('summaryDetail.counts.suggestions', { count: props.selectedSummaryCount })
+  : t('summaryDetail.counts.docs', { count: props.selectedSummaryCount }))
 
 const listItems = computed<DetailItemWithThemeSuggestions[]>(() => {
   if (props.detail.kind !== 'list') {
@@ -785,29 +785,29 @@ function buildSuggestionCalloutItems(item: DetailItemWithThemeSuggestions): Deta
   }
 
   return suggestions.map((suggestion) => {
-    if (suggestion.label !== uiText('Repair links', '补链修复')) {
+    if (suggestion.label !== t('summaryDetail.labels.repairLinks')) {
       return suggestion
     }
 
     const text = suggestion.text.replace(/[.。；，,\s]*$/, '')
     return {
       ...suggestion,
-      text: uiText(`${text}, suggested topic docs below (click to add):`, `${text}，下方是建议主题文档（点击可添加）：`),
+      text: t('summaryDetail.labels.repairLinksWithTopics', { text }),
     }
   })
 }
 
 function resolveAiInboxTypeLabel(type: AiInboxItemType) {
   if (type === 'connection') {
-    return uiText('Repair links', '补链修复')
+    return t('summaryDetail.labels.repairLinks')
   }
   if (type === 'topic-page') {
-    return uiText('Build topic page', '创建主题页')
+    return t('summaryDetail.labels.buildTopicPage')
   }
   if (type === 'bridge-risk') {
-    return uiText('Bridge risk', '桥接风险')
+    return t('summaryDetail.labels.bridgeRisk')
   }
-  return uiText('Document cleanup', '文档整理')
+  return t('summaryDetail.labels.documentCleanup')
 }
 
 function resolveAiInboxItemTitleParts(title: string) {
@@ -823,13 +823,13 @@ function resolveAiInboxActionTargets(item: NonNullable<SummaryDetailSectionType 
 
 function buildAiInboxHistoryTooltip(entry: TodaySuggestionHistoryEntry) {
   return [
-    uiText(`Generated: ${entry.generatedAt || 'Unknown time'}`, `生成于：${entry.generatedAt || '未知时间'}`),
-    uiText(`Window: ${entry.timeRange}`, `窗口：${entry.timeRange}`),
-    uiText(`Count: ${entry.summaryCount}`, `数量：${entry.summaryCount}`),
-    uiText(`Notebook: ${entry.filters.notebook || 'All'}`, `笔记本：${entry.filters.notebook || '全部'}`),
-    uiText(`Tags: ${entry.filters.tags?.join(' / ') || 'All'}`, `标签：${entry.filters.tags?.join(' / ') || '全部'}`),
-    uiText(`Topics: ${entry.filters.themeNames?.join(' / ') || 'All'}`, `主题：${entry.filters.themeNames?.join(' / ') || '全部'}`),
-    uiText(`Keyword: ${entry.filters.keyword || 'None'}`, `关键词：${entry.filters.keyword || '无'}`),
+    t('summaryDetail.historyTooltip.generated', { value: entry.generatedAt || t('summaryDetail.historyTooltip.unknownTime') }),
+    t('summaryDetail.historyTooltip.window', { value: entry.timeRange }),
+    t('summaryDetail.historyTooltip.count', { value: entry.summaryCount }),
+    t('summaryDetail.historyTooltip.notebook', { value: entry.filters.notebook || t('summaryDetail.historyTooltip.all') }),
+    t('summaryDetail.historyTooltip.tags', { value: entry.filters.tags?.join(' / ') || t('summaryDetail.historyTooltip.all') }),
+    t('summaryDetail.historyTooltip.topics', { value: entry.filters.themeNames?.join(' / ') || t('summaryDetail.historyTooltip.all') }),
+    t('summaryDetail.historyTooltip.keyword', { value: entry.filters.keyword || t('summaryDetail.historyTooltip.none') }),
   ].join('\n')
 }
 

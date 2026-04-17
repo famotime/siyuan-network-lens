@@ -2,14 +2,13 @@ import type { DocumentRecord, OrphanItem, TimeRange } from './analysis'
 import type { AiLinkSuggestionResult } from './ai-link-suggestions'
 import { normalizeTags, resolveDocumentTitle } from './document-utils'
 import type { ThemeDocument } from './theme-documents'
-import { pickUiText } from '@/i18n/ui'
+import { t } from '@/i18n/ui'
 import type { PluginConfig } from '@/types/config'
 
 const AI_INDEX_STORAGE_NAME = 'ai-document-index.json'
 const AI_INDEX_SCHEMA_VERSION = 2
 const AI_PROFILE_VERSION = 1
 const EMPTY_JSON_ARRAY = JSON.stringify([])
-const uiText = (en_US: string, zh_CN: string) => pickUiText({ en_US, zh_CN })
 
 type AiConfig = Pick<
   PluginConfig,
@@ -291,7 +290,7 @@ function buildSemanticProfileRecord(params: {
   })
   const title = resolveDocumentTitle(params.sourceDocument)
   const tags = normalizeTags(params.sourceDocument.tags)
-  const summaryShort = params.result.summary.trim() || uiText(`Generated AI link suggestions for ${title}`, `已生成 ${title} 的 AI 补链建议`)
+  const summaryShort = params.result.summary.trim() || t('analytics.summaryDetailSource.generatedAiLinkSuggestionsForTitle', { title })
   const summaryMedium = [
     summaryShort,
     ...params.result.suggestions.map(item => item.reason.trim()),

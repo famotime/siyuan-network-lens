@@ -39,4 +39,11 @@ describe('ui copy', () => {
       'archive-dormant': '归档沉没',
     })
   })
+
+  it('keeps copy in the keyed i18n catalog instead of inline pairs', async () => {
+    const source = await import('node:fs/promises').then(fs => fs.readFile(new URL('./ui-copy.ts', import.meta.url), 'utf8'))
+
+    expect(source).toContain("import { t } from '@/i18n/ui'")
+    expect(source).not.toContain("const uiText = (en_US: string, zh_CN: string) => pickUiText({ en_US, zh_CN })")
+  })
 })

@@ -1,6 +1,7 @@
 import { renderToString } from '@vue/server-renderer'
 import { createSSRApp, h } from 'vue'
 import { describe, expect, it, vi } from 'vitest'
+import { readFile } from 'node:fs/promises'
 
 import RankingPanel from './RankingPanel.vue'
 
@@ -33,6 +34,16 @@ const wikiPanelProps = {
 }
 
 describe('RankingPanel', () => {
+  it('uses keyed i18n entries instead of inline uiText pairs', async () => {
+    const source = await readFile(new URL('./RankingPanel.vue', import.meta.url), 'utf8')
+
+    expect(source).toContain("import { t } from '@/i18n/ui'")
+    expect(source).toContain("{{ t('rankingPanel.title') }}")
+    expect(source).toContain("{{ t('rankingPanel.description') }}")
+    expect(source).toContain("{{ t('rankingPanel.empty') }}")
+    expect(source).not.toContain('uiText(')
+  })
+
   it('renders a wiki maintenance block after each core document card and keeps the filled button style', async () => {
     const app = createSSRApp({
       render: () => h(RankingPanel, {

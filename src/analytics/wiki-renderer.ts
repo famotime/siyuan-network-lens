@@ -1,10 +1,9 @@
 import type { WikiSectionKey } from './wiki-page-model'
 import { WIKI_PAGE_HEADINGS } from './wiki-page-model'
 import type { WIKI_LLM_OUTPUT_KEYS } from './wiki-generation'
-import { pickUiText } from '@/i18n/ui'
+import { t } from '@/i18n/ui'
 
 type ThemeWikiLlmOutput = Record<typeof WIKI_LLM_OUTPUT_KEYS[number], string | string[]>
-const uiText = (en_US: string, zh_CN: string) => pickUiText({ en_US, zh_CN })
 
 export interface WikiRenderedSectionMeta {
   key: Exclude<WikiSectionKey, 'manualNotes'>
@@ -31,10 +30,10 @@ export function renderThemeWikiDraft(params: {
       key: 'meta',
       heading: WIKI_PAGE_HEADINGS.meta,
       markdown: [
-        uiText(`- Paired topic page: ${params.pairedThemeTitle}`, `- 配对主题页：${params.pairedThemeTitle}`),
-        uiText(`- Generated at: ${params.generatedAt}`, `- 生成时间：${params.generatedAt}`),
-        uiText(`- Source docs: ${params.sourceDocumentCount}`, `- 源文档数：${params.sourceDocumentCount}`),
-        uiText(`- Model: ${params.model}`, `- 模型：${params.model}`),
+        t('wikiMaintain.pairedTopicPageLine', { value: params.pairedThemeTitle }),
+        t('wikiMaintain.generatedAtLine', { value: params.generatedAt }),
+        t('wikiMaintain.sourceDocsLine', { value: params.sourceDocumentCount }),
+        t('wikiMaintain.modelLine', { value: params.model }),
       ].join('\n'),
     },
     {
@@ -71,7 +70,7 @@ export function renderThemeWikiDraft(params: {
     '',
     ...sections.flatMap(section => [
       `### ${section.heading}`,
-      section.markdown || uiText('- No content yet', '- 暂无内容'),
+      section.markdown || t('wikiMaintain.noContentYet'),
       '',
     ]),
   ].join('\n').trim()
@@ -81,7 +80,7 @@ export function renderThemeWikiDraft(params: {
     '',
     `## ${WIKI_PAGE_HEADINGS.manualNotes}`,
     '',
-    uiText('> Reserved for manual notes. Later automated maintenance will not overwrite this section.', '> 这里保留给人工补充，后续自动维护不会覆盖本区内容。'),
+    t('wikiMaintain.manualNotesReserved'),
   ].join('\n')
 
   return {

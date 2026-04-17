@@ -84,7 +84,7 @@ import {
   type TodaySuggestionHistoryStore,
 } from '@/analytics/today-suggestion-history-store'
 import { normalizeTags, resolveDocumentTitle } from '@/analytics/document-utils'
-import { pickUiText } from '@/i18n/ui'
+import { t } from '@/i18n/ui'
 import type { PluginConfig } from '@/types/config'
 import { createPluginLogger } from '@/utils/plugin-logger'
 
@@ -159,8 +159,6 @@ type UseAnalyticsParams = {
   aiWikiStore?: AiWikiStore | null
   todaySuggestionHistoryStore?: TodaySuggestionHistoryStore | null
 }
-
-const uiText = (en_US: string, zh_CN: string) => pickUiText({ en_US, zh_CN })
 
 export function useAnalyticsState(params: UseAnalyticsParams) {
   const loadSnapshot = params.loadSnapshot ?? loadAnalyticsSnapshot
@@ -361,7 +359,7 @@ export function useAnalyticsState(params: UseAnalyticsParams) {
     return Number.parseInt(timeRange.value, 10)
   })
 
-  const trendLabel = computed(() => uiText(`Compare the last ${trendDays.value} days with the previous window`, `对比最近 ${trendDays.value} 天与上一窗口`))
+  const trendLabel = computed(() => t('analytics.controller.trendCompareLastDays', { days: trendDays.value }))
 
   const trends = computed(() => {
     if (!snapshot.value) {
@@ -708,7 +706,7 @@ export function useAnalyticsState(params: UseAnalyticsParams) {
         : new Map()
       resetTransientAsyncState()
     } catch (error) {
-      const message = error instanceof Error ? error.message : uiText('Failed to read SiYuan data', '读取思源数据失败')
+      const message = error instanceof Error ? error.message : t('analytics.controller.failedToReadSiYuanData')
       errorMessage.value = message
       notify(message, 5000, 'error')
     } finally {
@@ -800,7 +798,7 @@ export function useAnalyticsState(params: UseAnalyticsParams) {
 
   function formatTimestamp(timestamp?: string) {
     if (!timestamp || timestamp.length < 8) {
-      return uiText('Unknown time', '未知时间')
+      return t('analytics.controller.unknownTime')
     }
     return `${timestamp.slice(0, 4)}-${timestamp.slice(4, 6)}-${timestamp.slice(6, 8)}`
   }
@@ -847,19 +845,19 @@ export function useAnalyticsState(params: UseAnalyticsParams) {
 
     try {
       if (!params.config.wikiEnabled) {
-        throw new Error(uiText('Enable LLM Wiki in Settings first', '请先在设置中启用 LLM Wiki'))
+        throw new Error(t('analytics.controller.enableWikiFirst'))
       }
       if (!params.config.aiEnabled || !aiConfigReady.value) {
-        throw new Error(uiText('Enable today suggestions and complete AI settings first', '请先启用今日建议并完成 AI 配置'))
+        throw new Error(t('analytics.controller.enableSuggestionsAndAi'))
       }
       if (!snapshot.value || !report.value || !trends.value) {
-        throw new Error(uiText('Analysis results are not ready yet. Refresh analysis first.', '分析结果尚未就绪，请先刷新分析。'))
+        throw new Error(t('analytics.controller.analysisNotReady'))
       }
       if (!aiWikiService) {
-        throw new Error(uiText('AI proxy is not initialized', 'AI 代理未初始化'))
+        throw new Error(t('analytics.controller.aiProxyNotInitialized'))
       }
       if (!aiWikiStore) {
-        throw new Error(uiText('LLM Wiki storage is not initialized', 'LLM Wiki 存储未初始化'))
+        throw new Error(t('analytics.controller.wikiStorageNotInitialized'))
       }
 
       const generatedAt = new Date().toISOString()
@@ -996,7 +994,7 @@ export function useAnalyticsState(params: UseAnalyticsParams) {
         })),
       }
     } catch (error) {
-      const message = error instanceof Error ? error.message : uiText('Failed to generate LLM Wiki preview', '生成 LLM Wiki 预览失败')
+      const message = error instanceof Error ? error.message : t('analytics.controller.failedToGenerateWikiPreview')
       wikiError.value = message
       wikiPreview.value = null
       notify(message, 5000, 'error')
@@ -1011,13 +1009,13 @@ export function useAnalyticsState(params: UseAnalyticsParams) {
 
     try {
       if (!wikiPreview.value) {
-        throw new Error(uiText('No LLM Wiki preview is available yet', '当前还没有可用的 LLM Wiki 预览'))
+        throw new Error(t('analytics.controller.noWikiPreviewAvailable'))
       }
       if (!aiWikiStore) {
-        throw new Error(uiText('LLM Wiki storage is not initialized', 'LLM Wiki 存储未初始化'))
+        throw new Error(t('analytics.controller.wikiStorageNotInitialized'))
       }
       if (!createDocWithMd || !getIDsByHPath || !getBlockAttrs || !setBlockAttrs) {
-        throw new Error(uiText('LLM Wiki write capability is not initialized', 'LLM Wiki 写入能力未初始化'))
+        throw new Error(t('analytics.controller.wikiWriteCapabilityNotInitialized'))
       }
 
       const result = await applyWikiDocuments({
@@ -1069,7 +1067,7 @@ export function useAnalyticsState(params: UseAnalyticsParams) {
         applyResult: result,
       }
     } catch (error) {
-      const message = error instanceof Error ? error.message : uiText('Failed to write LLM Wiki', '写入 LLM Wiki 失败')
+      const message = error instanceof Error ? error.message : t('analytics.controller.failedToWriteWiki')
       wikiError.value = message
       notify(message, 5000, 'error')
     } finally {

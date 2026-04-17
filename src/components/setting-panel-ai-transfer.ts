@@ -1,12 +1,11 @@
 import type { AiContextCapacity } from '@/analytics/ai-inbox'
-import { pickUiText } from '@/i18n/ui'
+import { t } from '@/i18n/ui'
 import type { AiProviderConfigMap, AiProviderPresetKey } from '@/types/ai-provider'
 import { DEFAULT_CONFIG, ensureConfigDefaults, type PluginConfig } from '@/types/config'
 
 export const AI_SETTINGS_TRANSFER_KIND = 'network-lens-ai-settings'
 export const AI_SETTINGS_TRANSFER_SCHEMA_VERSION = 2
 export const AI_SETTINGS_TRANSFER_FILE_NAME = 'network-lens-ai-settings.json'
-const uiText = (en_US: string, zh_CN: string) => pickUiText({ en_US, zh_CN })
 
 export interface AiSettingsTransferSnapshot {
   aiEnabled: boolean
@@ -38,16 +37,16 @@ export function parseAiSettingsTransferPayload(raw: string): AiSettingsTransferS
   try {
     parsed = JSON.parse(raw)
   } catch {
-    throw new Error(uiText('AI settings file is not valid JSON', 'AI 设置文件不是合法 JSON'))
+    throw new Error(t('aiConfig.invalidJson'))
   }
 
   if (!isRecord(parsed)) {
-    throw new Error(uiText('Invalid AI settings file format', 'AI 设置文件格式无效'))
+    throw new Error(t('aiConfig.invalidFormat'))
   }
 
   const candidate = resolveImportCandidate(parsed)
   if (!candidate) {
-    throw new Error(uiText('Invalid AI settings file format', 'AI 设置文件格式无效'))
+    throw new Error(t('aiConfig.invalidFormat'))
   }
 
   const draft = buildAiSettingsDraft(candidate)

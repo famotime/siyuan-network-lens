@@ -10,7 +10,7 @@ import type { SummaryCardItem } from './summary-details'
 import { parseSiyuanTimestamp } from './document-utils'
 import { countThemeMatchesForDocument, type ThemeDocument } from './theme-documents'
 import { isWikiDocumentTitle } from './wiki-page-model'
-import { pickUiText } from '@/i18n/ui'
+import { pickUiText, t } from '@/i18n/ui'
 import {
   DEFAULT_AI_MAX_CONTEXT_MESSAGES,
   DEFAULT_AI_MAX_TOKENS,
@@ -234,26 +234,11 @@ export function createAiInboxService(deps: {
           {
             role: 'user',
             content: [
-              uiText(
-                'Based on the doc-link network analysis below, produce one unified task list for what should be handled first today.',
-                '请基于下面的文档级引用网络分析结果，给出“今天优先处理什么”的统一待办列表。',
-              ),
-              uiText(
-                'Return 5 to 8 items when possible, preferring high-scoring candidates from actionCandidates.',
-                '优先输出 5 到 8 项，优先从 actionCandidates 中挑选高分候选。',
-              ),
-              uiText(
-                'Keep the structure compact: merge recommended actions and suggestions into action, and merge why-this-first plus expected gains into reason.',
-                '输出结构要更紧凑：把推荐动作和建议合并到 action，把为什么先做和预估收益合并成推荐理由写到 reason。',
-              ),
-              uiText(
-                'Each item should make clear what to handle now, where to link it or what page to create, and why it should be done first.',
-                '每项建议尽量写清：现在处理哪个对象、补到哪里/建什么页、推荐理由是什么。',
-              ),
-              uiText(
-                'Do not fabricate weak evidence. If no clear target exists, leave it empty honestly.',
-                '如果证据不足，不要硬造；如果没有明确目标，就如实保留为空。',
-              ),
+              t('analytics.aiInbox.promptProduceUnifiedTaskList'),
+              t('analytics.aiInbox.promptPreferHighScoringCandidates'),
+              t('analytics.aiInbox.promptKeepStructureCompact'),
+              t('analytics.aiInbox.promptMakeActionSpecific'),
+              t('analytics.aiInbox.promptDoNotFabricateWeakEvidence'),
               JSON.stringify(params.payload),
             ].join('\n'),
           },
@@ -276,12 +261,12 @@ export function createAiInboxService(deps: {
 
       const message = extractChatCompletionContent(response).trim()
       if (!message) {
-        throw new Error(uiText('AI did not return readable content', 'AI 接口未返回可读内容'))
+        throw new Error(t('analytics.aiInbox.aiReturnedUnreadableContent'))
       }
 
       return {
         ok: true,
-        message: uiText('Connection successful', '连接成功'),
+        message: t('analytics.aiInbox.connectionSuccessful'),
       }
     },
   }
@@ -938,10 +923,10 @@ async function requestChatCompletion(params: {
   maxTokensOverride?: number
 }) {
   if (!params.config.aiEnabled) {
-    throw new Error(uiText('Enable today suggestions in Settings first', '请先在设置中启用 AI 今日建议'))
+    throw new Error(t('analytics.aiInbox.enableTodaySuggestionsInSettings'))
   }
   if (!isAiConfigComplete(params.config)) {
-    throw new Error(uiText('AI settings are incomplete. Add Base URL, API Key, and Model.', 'AI 接入配置不完整，请补充 Base URL、API Key 和 Model'))
+    throw new Error(t('analytics.aiInbox.incompleteAiSettings'))
   }
 
   const requestOptions = resolveAiRequestOptions(params.config)
@@ -1047,7 +1032,7 @@ async function requestChatCompletion(params: {
       status: response.status,
       responseBody: response.body?.slice(0, 500) ?? '',
     })
-    throw new Error(uiText('AI returned JSON that could not be parsed', 'AI 接口返回了无法解析的 JSON'))
+    throw new Error(t('analytics.aiInbox.aiReturnedUnparseableJson'))
   }
 
   return payload
@@ -1090,7 +1075,7 @@ export async function fetchSiliconFlowModelCatalog(params: {
   const aiBaseUrl = params.config.aiBaseUrl?.trim()
   const aiApiKey = params.config.aiApiKey?.trim()
   if (!aiBaseUrl || !aiApiKey) {
-    throw new Error(uiText('Before loading the model list, enter SiliconFlow Base URL and API Key first', '加载模型列表前，请先填写 SiliconFlow 的 Base URL 和 API Key'))
+    throw new Error(t('analytics.aiInbox.enterSiliconFlowBaseUrlAndApiKeyFirst'))
   }
 
   const requestOptions = resolveAiRequestOptions(params.config)
@@ -1134,7 +1119,7 @@ async function requestModelIds(params: {
   )
 
   if (!response || response.status < 200 || response.status >= 300) {
-    throw new Error(uiText(`Model list request failed (${response?.status ?? 'unknown status'})`, `模型列表请求失败（${response?.status ?? '未知状态'}）`))
+    throw new Error(t('analytics.aiInbox.modelListRequestFailed', { status: response?.status ?? 'unknown status' }))
   }
 
   const payload = JSON.parse(response.body)
@@ -1175,7 +1160,7 @@ function extractChatCompletionContent(payload: any): string {
       })
       .join('')
   }
-  throw new Error(uiText('AI did not return readable content', 'AI 接口未返回可读内容'))
+  throw new Error(t('analytics.aiInbox.aiReturnedUnreadableContent'))
 }
 
 function parseJsonFromContent(payload: any) {
@@ -1191,7 +1176,7 @@ function parseJsonFromContent(payload: any) {
     if (startIndex >= 0 && endIndex > startIndex) {
       return JSON.parse(candidate.slice(startIndex, endIndex + 1))
     }
-    throw new Error(uiText('AI did not return valid JSON', 'AI 返回内容不是合法 JSON'))
+    throw new Error(t('analytics.aiInbox.aiReturnedInvalidJson'))
   }
 }
 
@@ -1203,14 +1188,14 @@ function normalizeAiInboxResult(value: any): AiInboxResult {
     : []
 
   if (items.length === 0) {
-    throw new Error(uiText('AI did not return valid cleanup tasks', 'AI 未返回有效的整理待办'))
+    throw new Error(t('analytics.aiInbox.aiDidNotReturnValidCleanupTasks'))
   }
 
   return {
     generatedAt: new Date().toISOString(),
     summary: typeof value?.summary === 'string' && value.summary.trim()
       ? value.summary.trim()
-      : uiText('Cleanup priorities generated from the current reference network.', '已根据当前引用网络生成整理优先级。'),
+      : t('analytics.aiInbox.cleanupPrioritiesGenerated'),
     items,
   }
 }
@@ -1398,19 +1383,19 @@ function buildAiRequestError(params: {
   ]
 
   if (isLikelyMissingV1Path(params.endpoint)) {
-    hints.push(uiText(`Base URL likely needs /v1; current request resolved to ${params.endpoint}`, `Base URL 很可能应包含 /v1；当前请求落到了 ${params.endpoint}`))
+    hints.push(t('analytics.aiInbox.baseUrlLikelyNeedsV1', { endpoint: params.endpoint }))
   }
 
   if (params.endpoint.startsWith('https://api.siliconflow.cn/chat/completions')) {
-    hints.push(uiText('For SiliconFlow, first verify that Base URL is https://api.siliconflow.cn/v1', 'SiliconFlow 可优先检查 Base URL 是否填写为 https://api.siliconflow.cn/v1'))
+    hints.push(t('analytics.aiInbox.siliconFlowVerifyBaseUrl'))
   }
 
   if (rawMessage.includes('context deadline exceeded')) {
-    hints.push(uiText('This was a timeout. Check Base URL and network connectivity first, then try Compact mode, fewer max tokens, or a longer timeout.', '这是请求超时。优先检查 Base URL、网络连通性，并尝试切换为“紧凑”、降低最大 Token 数或继续增大超时时间'))
-    return new Error(uiText(`AI request timed out: ${rawMessage}\n${hints.join('\n')}`, `AI 请求超时：${rawMessage}\n${hints.join('\n')}`))
+    hints.push(t('analytics.aiInbox.timeoutHint'))
+    return new Error(t('analytics.aiInbox.aiRequestTimedOut', { message: rawMessage, hints: hints.join('\n') }))
   }
 
-  return new Error(uiText(`AI request failed: ${rawMessage}\n${hints.join('\n')}`, `AI 请求失败：${rawMessage}\n${hints.join('\n')}`))
+  return new Error(t('analytics.aiInbox.aiRequestFailed', { message: rawMessage, hints: hints.join('\n') }))
 }
 
 function buildAiNonOkResponseError(params: {
@@ -1421,18 +1406,18 @@ function buildAiNonOkResponseError(params: {
   const hints: string[] = []
 
   if (isLikelyMissingV1Path(params.endpoint)) {
-    hints.push(uiText(`Base URL likely needs /v1; current request resolved to ${params.endpoint}`, `Base URL 很可能应包含 /v1；当前请求落到了 ${params.endpoint}`))
+    hints.push(t('analytics.aiInbox.baseUrlLikelyNeedsV1', { endpoint: params.endpoint }))
   }
 
   if (params.endpoint.startsWith('https://api.siliconflow.cn/chat/completions')) {
-    hints.push(uiText('For SiliconFlow, first verify that Base URL is https://api.siliconflow.cn/v1', 'SiliconFlow 可优先检查 Base URL 是否填写为 https://api.siliconflow.cn/v1'))
+    hints.push(t('analytics.aiInbox.siliconFlowVerifyBaseUrl'))
   }
 
   const responseSummary = params.responseBody.trim().slice(0, 200)
-  const details = responseSummary ? uiText(`\nResponse snippet: ${responseSummary}`, `\n响应片段：${responseSummary}`) : ''
+  const details = responseSummary ? t('analytics.aiInbox.responseSnippet', { value: responseSummary }) : ''
   const hintText = hints.length ? `\n${hints.join('\n')}` : ''
 
-  return new Error(uiText(`AI request failed (${params.status})${details}${hintText}`, `AI 请求失败（${params.status}）${details}${hintText}`))
+  return new Error(t('analytics.aiInbox.aiRequestFailedWithStatus', { status: params.status, details, hintText }))
 }
 
 function isLikelyMissingV1Path(endpoint: string): boolean {

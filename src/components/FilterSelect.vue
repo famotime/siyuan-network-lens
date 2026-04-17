@@ -52,7 +52,7 @@
 
 <script setup lang="ts">
 import { computed, onBeforeUnmount, onMounted, ref } from 'vue'
-import { pickUiText } from '@/i18n/ui'
+import { t } from '@/i18n/ui'
 
 type FilterSelectOption = {
   value: string
@@ -73,8 +73,7 @@ const emit = defineEmits<{
 
 const open = ref(false)
 const rootRef = ref<HTMLElement | null>(null)
-const uiText = (en_US: string, zh_CN: string) => pickUiText({ en_US, zh_CN })
-const resolvedEmptyLabel = computed(() => props.emptyLabel ?? uiText('No options available', '暂无可选项'))
+const resolvedEmptyLabel = computed(() => props.emptyLabel ?? t('shared.noOptionsAvailable'))
 
 const summaryLabel = computed(() => {
   return props.options.find(option => option.value === props.modelValue)?.label

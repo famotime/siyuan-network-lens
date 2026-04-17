@@ -28,7 +28,7 @@
           class="theme-multi-select__action"
           type="button"
           @click="clearSelection"
-        >{{ uiText('Clear', '清空') }}</button>
+        >{{ t('shared.clear') }}</button>
       </div>
 
       <div
@@ -64,7 +64,7 @@
 import { computed, onBeforeUnmount, onMounted, ref } from 'vue'
 
 import type { ThemeOption } from '@/analytics/theme-documents'
-import { pickUiText } from '@/i18n/ui'
+import { t } from '@/i18n/ui'
 
 type MultiSelectOption = Pick<ThemeOption, 'value' | 'label'> & {
   documentId?: string
@@ -89,10 +89,9 @@ const emit = defineEmits<{
 
 const open = ref(false)
 const rootRef = ref<HTMLElement | null>(null)
-const uiText = (en_US: string, zh_CN: string) => pickUiText({ en_US, zh_CN })
-const resolvedAllLabel = computed(() => props.allLabel ?? uiText('All topics', '全部主题'))
-const resolvedEmptyLabel = computed(() => props.emptyLabel ?? uiText('No topic docs configured', '暂无主题文档配置'))
-const resolvedSelectionUnit = computed(() => props.selectionUnit ?? uiText('themes', '个主题'))
+const resolvedAllLabel = computed(() => props.allLabel ?? t('shared.allTopics'))
+const resolvedEmptyLabel = computed(() => props.emptyLabel ?? t('shared.noTopicDocsConfigured'))
+const resolvedSelectionUnit = computed(() => props.selectionUnit ?? t('shared.themesUnit'))
 
 const summaryLabel = computed(() => {
   if (props.options.length === 0) {
@@ -101,10 +100,10 @@ const summaryLabel = computed(() => {
   if (props.modelValue.length === 0) {
     return resolvedAllLabel.value
   }
-  return uiText(
-    `${props.modelValue.length} ${resolvedSelectionUnit.value} selected`,
-    `已选 ${props.modelValue.length} ${resolvedSelectionUnit.value}`,
-  )
+  return t('shared.selectedThemesCount', {
+    count: props.modelValue.length,
+    unit: resolvedSelectionUnit.value,
+  })
 })
 
 function toggleOpen() {

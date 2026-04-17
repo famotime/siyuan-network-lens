@@ -1,12 +1,23 @@
 import { afterEach, describe, expect, it } from 'vitest'
 import { createSSRApp, h } from 'vue'
 import { renderToString } from '@vue/server-renderer'
+import { readFile } from 'node:fs/promises'
 
 import AIInboxPanel from './AIInboxPanel.vue'
 
 describe('AIInboxPanel', () => {
   afterEach(() => {
     delete (globalThis as any).siyuan
+  })
+
+  it('uses keyed i18n entries instead of inline uiText pairs', async () => {
+    const source = await readFile(new URL('./AIInboxPanel.vue', import.meta.url), 'utf8')
+
+    expect(source).toContain("import { t } from '@/i18n/ui'")
+    expect(source).toContain("{{ t('aiInbox.title') }}")
+    expect(source).toContain("{{ t('aiInbox.description') }}")
+    expect(source).toContain("{{ loading ? t('aiInbox.generating') : t('aiInbox.todaySuggestions') }}")
+    expect(source).not.toContain('uiText(')
   })
 
   it('renders concrete targets, evidence, expected changes and draft text for inbox items', async () => {

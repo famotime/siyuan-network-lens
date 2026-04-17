@@ -2,6 +2,7 @@ import { Plugin, Dialog } from 'siyuan'
 import { reactive, watch } from 'vue'
 
 import pluginInfo from '@/../plugin.json'
+import { pickPluginText } from '@/i18n/plugin'
 import { destroyApp, destroySetting, mountApp, mountSetting } from '@/main'
 import { openPluginDock } from './plugin-dock'
 import { PLUGIN_ICON, PLUGIN_ICON_SYMBOL } from './plugin-icon'
@@ -79,7 +80,7 @@ export default class ReferenceAnalyticsPlugin extends Plugin {
 
   openSetting() {
     const dialog = new Dialog({
-      title: this.i18n?.settingsTitle ?? `${this.displayName} Settings`,
+      title: this.i18n?.settingsTitle ?? pickPluginText('settingsTitle'),
       width: '680px',
       height: '720px',
       content: '<div id="reference-analytics-setting-root" style="height: 100%;"></div>',

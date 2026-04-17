@@ -1,12 +1,23 @@
 import { afterEach, describe, expect, it, vi } from 'vitest'
 import { createSSRApp, h } from 'vue'
 import { renderToString } from '@vue/server-renderer'
+import { readFile } from 'node:fs/promises'
 
 import OrphanDetailPanel from './OrphanDetailPanel.vue'
 
 describe('OrphanDetailPanel', () => {
   afterEach(() => {
     delete (globalThis as any).siyuan
+  })
+
+  it('uses keyed i18n entries instead of inline uiText pairs', async () => {
+    const source = await readFile(new URL('./OrphanDetailPanel.vue', import.meta.url), 'utf8')
+
+    expect(source).toContain("import { t } from '@/i18n/ui'")
+    expect(source).toContain("{{ t('orphanDetail.sortLabel') }}")
+    expect(source).toContain("{{ t('orphanDetail.sortUpdated') }}")
+    expect(source).toContain("{{ t('orphanDetail.empty') }}")
+    expect(source).not.toContain('uiText(')
   })
 
   it('renders orphan sort control and items', async () => {

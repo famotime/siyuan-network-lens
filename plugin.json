@@ -20,8 +20,9 @@
     "en_US": "Doc-link analytics for SiYuan: hubs, themes, orphans, trends, paths, and actions."
   },
   "readme": {
-    "default": "README.md",
-    "en_US": "README_en_US.md"
+    "default": "README_zh_CN.md",
+    "en_US": "README.md",
+    "zh_CN": "README_zh_CN.md"
   },
   "keywords": [
     "analytics",

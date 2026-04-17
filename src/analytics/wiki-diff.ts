@@ -2,9 +2,7 @@ import type { WikiPreviewStatus } from './wiki-page-model'
 import type { WikiRenderedSectionMeta } from './wiki-renderer'
 import type { WikiPageSnapshotRecord } from './wiki-store'
 import { resolveWikiSectionKeyFromHeading } from './wiki-page-model'
-import { pickUiText } from '@/i18n/ui'
-
-const uiText = (en_US: string, zh_CN: string) => pickUiText({ en_US, zh_CN })
+import { t } from '@/i18n/ui'
 
 export interface WikiPagePreviewResult {
   pageType: WikiPageSnapshotRecord['pageType']
@@ -74,10 +72,7 @@ export function buildWikiPreview(params: {
     oldSummary: summarizeMarkdown(oldManagedMarkdown),
     newSummary: summarizeMarkdown(params.nextDraft.managedMarkdown),
     conflictReason: hasConflict
-      ? uiText(
-          'The current AI managed area does not match the fingerprint from the last plugin write. Manual edits or external updates may exist.',
-          '当前 AI 管理区内容与上次插件写入指纹不一致，可能存在人工修改或外部更新。',
-        )
+      ? t('analytics.wiki.conflictReasonManagedAreaMismatch')
       : undefined,
   }
 }

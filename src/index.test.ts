@@ -20,6 +20,7 @@ describe('plugin lifecycle release hygiene', () => {
 
     expect(source).toContain("width: '680px'")
     expect(source).toContain("height: '720px'")
-    expect(source).toContain("title: this.i18n?.settingsTitle ?? `${this.displayName} Settings`")
+    expect(source).toContain("import { pickPluginText } from '@/i18n/plugin'")
+    expect(source).toContain("title: this.i18n?.settingsTitle ?? pickPluginText('settingsTitle')")
   })
 })

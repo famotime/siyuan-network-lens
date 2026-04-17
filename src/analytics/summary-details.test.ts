@@ -285,7 +285,7 @@ describe('buildSummaryDetailSections', () => {
     expect((sections as Record<string, any>).largeDocuments).toEqual(expect.objectContaining({
       key: 'largeDocuments',
       kind: 'list',
-      title: 'Large docs (text)',
+      title: 'Large docs · text',
       items: [
         expect.objectContaining({ documentId: 'doc-big-c', badge: '15000 words' }),
         expect.objectContaining({ documentId: 'doc-big-d', badge: '12000 words' }),
@@ -338,7 +338,7 @@ describe('buildSummaryDetailSections', () => {
     expect((sections as Record<string, any>).largeDocuments).toEqual(expect.objectContaining({
       key: 'largeDocuments',
       kind: 'list',
-      title: 'Large docs (assets)',
+      title: 'Large docs · assets',
       items: [
         expect.objectContaining({ documentId: 'doc-big-a', badge: '4.0 MB' }),
         expect.objectContaining({ documentId: 'doc-big-d', badge: '3.0 MB' }),

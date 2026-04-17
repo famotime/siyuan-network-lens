@@ -2,7 +2,7 @@ import type { DocumentRecord, OrphanItem, ReferenceGraphReport } from './analysi
 import { resolveDocumentTitle } from './document-utils'
 import { countThemeMatchesForDocument, type ThemeDocument } from './theme-documents'
 import { isAiConfigComplete, resolveAiEndpoint, resolveAiRequestOptions } from './ai-inbox'
-import { pickUiText } from '@/i18n/ui'
+import { t } from '@/i18n/ui'
 import type { PluginConfig } from '@/types/config'
 
 type ForwardProxyFn = (
@@ -30,7 +30,6 @@ type AiConfig = Pick<
 type CandidateTargetType = 'theme-document' | 'core-document' | 'related-document'
 type SuggestionConfidence = 'high' | 'medium' | 'low'
 type TagSuggestionSource = 'existing' | 'new'
-const uiText = (en_US: string, zh_CN: string) => pickUiText({ en_US, zh_CN })
 
 interface CandidateTarget {
   documentId: string
@@ -104,10 +103,10 @@ export function createAiLinkSuggestionService(deps: {
   return {
     async suggestForOrphan(params) {
       if (!params.config.aiEnabled) {
-        throw new Error(uiText('Enable AI in Settings first', '请先在设置中启用 AI'))
+        throw new Error(t('analytics.aiLink.enableAiInSettingsFirst'))
       }
       if (!isAiLinkSuggestionConfigComplete(params.config)) {
-        throw new Error(uiText('AI link suggestion settings are incomplete. Add Base URL, API Key, and Model.', 'AI 补链配置不完整，请补充 Base URL、API Key 和 Model。'))
+        throw new Error(t('analytics.aiLink.incompleteSettings'))
       }
 
       const candidates = buildCandidates({
@@ -118,7 +117,7 @@ export function createAiLinkSuggestionService(deps: {
       })
 
       if (!candidates.length) {
-        throw new Error(uiText('There are not enough candidate targets for AI link suggestions right now', '当前缺少足够清晰的 AI 补链候选目标'))
+        throw new Error(t('analytics.aiLink.notEnoughCandidateTargets'))
       }
 
       const embeddingModel = params.config.aiEmbeddingModel?.trim()
@@ -140,7 +139,7 @@ export function createAiLinkSuggestionService(deps: {
         .sort((left, right) => right.finalScore - left.finalScore || left.title.localeCompare(right.title, 'zh-CN'))
         .slice(0, 6)
 
-      params.onProgress?.(uiText('AI is analyzing...', 'AI 正在分析……'))
+      params.onProgress?.(t('analytics.aiLink.aiIsAnalyzing'))
 
       const payload = await requestChatCompletion({
         config: params.config,
@@ -193,10 +192,7 @@ function validateEmbeddingModelConfig(config: AiConfig) {
   }
 
   if (isSiliconFlowBaseUrl(config.aiBaseUrl) && isOpenAiStyleEmbeddingModel(embeddingModel)) {
-    throw new Error(uiText(
-      'For SiliconFlow, Embedding Model cannot be an OpenAI model name like text-embedding-3-small. Use models such as BAAI/bge-m3, BAAI/bge-large-zh-v1.5, or Qwen/Qwen3-Embedding instead.',
-      'SiliconFlow 的 Embedding Model 不能填写 text-embedding-3-small 这类 OpenAI 模型名，请改用如 BAAI/bge-m3、BAAI/bge-large-zh-v1.5 或 Qwen/Qwen3-Embedding 系列模型',
-    ))
+    throw new Error(t('analytics.aiLink.invalidSiliconFlowEmbeddingModel'))
   }
 }
 
@@ -223,7 +219,7 @@ async function rankCandidatesWithEmbeddings(params: {
   candidates: CandidateTarget[]
   onProgress?: (message: string) => void
 }) {
-  params.onProgress?.(uiText('Analyzing document semantics and generating embeddings...', '正在分析文档语义并生成 embedding…'))
+  params.onProgress?.(t('analytics.aiLink.analyzingEmbeddings'))
   const embeddingRequestInputs = [
     buildEmbeddingInput(params.sourceDocument),
     ...params.candidates.map(candidate => candidate.embeddingInput),
@@ -235,7 +231,7 @@ async function rankCandidatesWithEmbeddings(params: {
   })
   const sourceEmbedding = embeddings[0]
 
-  params.onProgress?.(uiText('Retrieving candidates from embeddings and structure signals...', '正在基于 embedding 与结构信号召回候选…'))
+  params.onProgress?.(t('analytics.aiLink.retrievingCandidates'))
   return params.candidates
     .map((candidate, index) => ({
       ...candidate,
@@ -251,7 +247,7 @@ function rankCandidatesWithoutEmbeddings(params: {
   candidates: CandidateTarget[]
   onProgress?: (message: string) => void
 }) {
-  params.onProgress?.(uiText('Embedding Model is not configured. Falling back to topic matches and structure signals...', '未配置 Embedding Model，改为基于主题命中与结构信号召回候选…'))
+  params.onProgress?.(t('analytics.aiLink.embeddingModelNotConfiguredFallback'))
   return params.candidates.map(candidate => ({
     ...candidate,
     embeddingScore: 0,
@@ -368,7 +364,7 @@ async function requestEmbeddings(params: {
   )
 
   if (!response || response.status < 200 || response.status >= 300) {
-    throw new Error(uiText(`Embedding request failed (${response?.status ?? 'unknown status'})`, `Embedding 请求失败（${response?.status ?? '未知状态'}）`))
+    throw new Error(t('analytics.aiLink.embeddingRequestFailed', { status: response?.status ?? 'unknown status' }))
   }
 
   const payload = JSON.parse(response.body)
@@ -377,7 +373,7 @@ async function requestEmbeddings(params: {
     : []
 
   if (embeddings.length !== params.inputs.length) {
-    throw new Error(uiText('Embedding count does not match input count', 'Embedding 返回数量与输入数量不一致'))
+    throw new Error(t('analytics.aiLink.embeddingCountMismatch'))
   }
 
   return embeddings
@@ -408,7 +404,7 @@ async function requestChatCompletion(params: {
   )
 
   if (!response || response.status < 200 || response.status >= 300) {
-    throw new Error(uiText(`AI link suggestion request failed (${response?.status ?? 'unknown status'})`, `AI 补链请求失败（${response?.status ?? '未知状态'}）`))
+    throw new Error(t('analytics.aiLink.requestFailed', { status: response?.status ?? 'unknown status' }))
   }
 
   return JSON.parse(response.body)
@@ -440,7 +436,7 @@ function roundScore(value: number) {
 function parseJsonFromResponse(payload: any) {
   const content = payload?.choices?.[0]?.message?.content
   if (typeof content !== 'string' || !content.trim()) {
-    throw new Error(uiText('AI did not return readable link suggestion content', 'AI 未返回可读的补链内容'))
+    throw new Error(t('analytics.aiLink.unreadableContent'))
   }
 
   try {
@@ -451,7 +447,7 @@ function parseJsonFromResponse(payload: any) {
     if (startIndex >= 0 && endIndex > startIndex) {
       return JSON.parse(content.slice(startIndex, endIndex + 1))
     }
-    throw new Error(uiText('AI link suggestions did not return valid JSON', 'AI 补链结果未返回合法 JSON'))
+    throw new Error(t('analytics.aiLink.invalidJson'))
   }
 }
 
@@ -463,14 +459,14 @@ function normalizeSuggestionResult(payload: any): AiLinkSuggestionResult {
     : []
 
   if (!suggestions.length) {
-    throw new Error(uiText('AI did not return valid link suggestions', 'AI 未返回有效的补链建议'))
+    throw new Error(t('analytics.aiLink.invalidSuggestions'))
   }
 
   return {
     generatedAt: new Date().toISOString(),
     summary: typeof payload?.summary === 'string' && payload.summary.trim()
       ? payload.summary.trim()
-      : uiText('AI link suggestions generated for the current orphan doc.', '已为当前孤立文档生成 AI 补链建议。'),
+      : t('analytics.aiLink.generatedForCurrentOrphan'),
     suggestions,
   }
 }

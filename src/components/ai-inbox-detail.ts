@@ -1,8 +1,6 @@
 import type { AiInboxItem, AiInboxRecommendedTarget } from '@/analytics/ai-inbox'
 import type { ThemeDocument } from '@/analytics/theme-documents'
-import { pickUiText } from '@/i18n/ui'
-
-const uiText = (en_US: string, zh_CN: string) => pickUiText({ en_US, zh_CN })
+import { t } from '@/i18n/ui'
 
 export type AiInboxTargetIntent =
   | {
@@ -110,10 +108,7 @@ export function resolveAiInboxActionTargets(params: {
           documentId: themeDocument.documentId,
           title,
           kind: 'theme-document' as const,
-          reason: uiText(
-            `Action text mentions topic doc ${themeDocument.themeName || title}`,
-            `动作文案提及主题文档 ${themeDocument.themeName || title}`,
-          ),
+          reason: t('aiConfig.actionTextMentionsTopicDoc', { name: themeDocument.themeName || title }),
         },
       }
     })

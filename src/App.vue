@@ -3,7 +3,7 @@
     <div class="hero">
       <div class="hero__intro">
         <div class="hero__copy-block">
-          <p class="eyebrow">Network lens</p>
+          <p class="eyebrow">{{ pluginEyebrow }}</p>
           <h1>{{ pluginTitle }}</h1>
           <p class="hero-copy">
             {{ pluginTagline }}
@@ -24,7 +24,7 @@
           :disabled="loading"
           @click="refresh"
         >
-          {{ loading ? uiText('Analyzing...', '分析中...') : uiText('Refresh analysis', '刷新分析') }}
+          {{ loading ? t('app.analyzing') : t('app.refreshAnalysis') }}
         </button>
         <button
           class="ghost-button hero__reset-button"
@@ -32,7 +32,7 @@
           :disabled="loading || !visibleSummaryCards.length"
           @click="resetSummaryCardOrder"
         >
-          {{ uiText('Reset order', '重置顺序') }}
+          {{ t('app.resetOrder') }}
         </button>
       </div>
     </div>
@@ -40,45 +40,45 @@
     <div class="filter-panel">
       <div class="filter-panel__row filter-panel__row--meta">
         <label class="filter-item">
-          <span>{{ uiText('Time window', '时间窗口') }}</span>
+          <span>{{ t('app.filter.timeWindow') }}</span>
           <FilterSelect
             v-model="timeRange"
             :options="timeRangeFilterOptions"
           />
         </label>
         <label class="filter-item">
-          <span>{{ uiText('Notebook', '笔记本') }}</span>
+          <span>{{ t('app.filter.notebook') }}</span>
           <FilterSelect
             v-model="selectedNotebook"
             :options="notebookFilterOptions"
-            :empty-label="uiText('No notebooks', '无笔记本')"
+            :empty-label="t('app.filter.noNotebooks')"
           />
         </label>
         <label class="filter-item">
-          <span>{{ uiText('Tags', '标签') }}</span>
+          <span>{{ t('app.filter.tags') }}</span>
           <ThemeMultiSelect
             v-model="selectedTags"
             :options="tagFilterOptions"
-            :all-label="uiText('All tags', '全部标签')"
-            :empty-label="uiText('No tags', '无标签')"
-            :selection-unit="uiText('tags', '个标签')"
+            :all-label="t('app.filter.allTags')"
+            :empty-label="t('app.filter.noTags')"
+            :selection-unit="t('app.filter.tagUnit')"
           />
         </label>
       </div>
 
       <div class="filter-panel__row filter-panel__row--focus">
         <label class="filter-item filter-item--theme">
-          <span>{{ uiText('Topics', '主题') }}</span>
+          <span>{{ t('app.filter.topics') }}</span>
           <ThemeMultiSelect
             v-model="selectedThemes"
             :options="themeOptions"
           />
         </label>
         <label class="filter-item filter-item--keyword">
-          <span>{{ uiText('Keyword', '关键词') }}</span>
+          <span>{{ t('app.filter.keyword') }}</span>
           <input
             v-model.trim="keyword"
-            :placeholder="uiText('Filter by title, path, or tags', '按标题、路径或标签筛选')"
+            :placeholder="t('app.filter.keywordPlaceholder')"
             type="search"
           >
         </label>
@@ -101,13 +101,13 @@
       <div class="loading-panel__header">
         <div class="loading-panel__copy">
           <p class="loading-panel__eyebrow">
-            {{ uiText('Context loading', '上下文加载中') }}
+            {{ t('app.loading.contextEyebrow') }}
           </p>
           <h2 class="loading-panel__title">
-            {{ uiText('Preparing topic, tag, and reference overview', '正在准备主题、标签与引用概览') }}
+            {{ t('app.loading.contextTitle') }}
           </h2>
           <p class="loading-panel__description">
-            {{ uiText('On first open, the plugin reads blocks, refs, and available topics and tags.', '首次打开时，插件会读取 blocks、refs，以及可用主题和标签。') }}
+            {{ t('app.loading.contextDescription') }}
           </p>
         </div>
         <div
@@ -237,7 +237,7 @@
           type="button"
           @click="toggleDocumentWikiPanel"
         >
-          {{ wikiPanelPlacement === 'documents' ? uiText('Hide LLM Wiki', '收起 LLM Wiki') : uiText('Maintain LLM Wiki', '维护 LLM Wiki') }}
+          {{ wikiPanelPlacement === 'documents' ? t('app.wiki.hide') : t('app.wiki.maintain') }}
         </button>
         <WikiMaintainPanel
           v-if="wikiPanelPlacement === 'documents'"
@@ -258,11 +258,12 @@ import SummaryDetailSection from '@/components/SummaryDetailSection.vue'
 import ThemeMultiSelect from '@/components/ThemeMultiSelect.vue'
 import WikiMaintainPanel from '@/components/WikiMaintainPanel.vue'
 import { isSummaryCardVisible } from '@/analytics/summary-card-config'
+import { pickPluginText } from '@/i18n/plugin'
 import { useAnalyticsState } from '@/composables/use-analytics'
 import { createAppWikiPanelController } from '@/composables/use-app-wiki-panel'
 import { appendBlock, createDocWithMd, deleteBlock, forwardProxy, getBlockAttrs, getBlockKramdown, getChildBlocks, getIDsByHPath, prependBlock, setBlockAttrs, updateBlock } from '@/api'
 import { isAlphaSettingVisible, isAlphaSummaryCardVisible } from '@/plugin/alpha-feature-config'
-import { pickUiText } from '@/i18n/ui'
+import { t } from '@/i18n/ui'
 import { ensureConfigDefaults, type PluginConfig } from '@/types/config'
 import pluginIconUrl from '../icon.png'
 
@@ -273,10 +274,10 @@ const props = defineProps<{
 
 ensureConfigDefaults(props.config)
 
-const uiText = (en_US: string, zh_CN: string) => pickUiText({ en_US, zh_CN })
-const pluginTitle = computed(() => props.plugin.i18n?.pluginTitle ?? props.plugin.displayName ?? uiText('Network Lens', '脉络镜'))
-const pluginTagline = computed(() => props.plugin.i18n?.pluginTagline ?? uiText('Reveal structure in hidden knowledge.', '让隐没的知识，重现脉络'))
-const pluginIconAlt = computed(() => props.plugin.i18n?.pluginIconAlt ?? uiText('Network Lens plugin icon', '脉络镜插件图标'))
+const pluginTitle = computed(() => props.plugin.i18n?.pluginTitle ?? props.plugin.displayName ?? pickPluginText('pluginTitle'))
+const pluginEyebrow = computed(() => props.plugin.i18n?.pluginEyebrow ?? pickPluginText('pluginEyebrow'))
+const pluginTagline = computed(() => props.plugin.i18n?.pluginTagline ?? pickPluginText('pluginTagline'))
+const pluginIconAlt = computed(() => props.plugin.i18n?.pluginIconAlt ?? pickPluginText('pluginIconAlt'))
 
 const analytics = useAnalyticsState({
   plugin: props.plugin,
@@ -420,7 +421,7 @@ const timeRangeFilterOptions = computed(() => timeRangeOptions.value.map(option 
 })))
 
 const notebookFilterOptions = computed(() => [
-  { value: '', label: uiText('All notebooks', '所有笔记本') },
+  { value: '', label: t('app.filter.allNotebooks') },
   ...notebookOptions.value.map(notebook => ({
     value: notebook.id,
     label: notebook.name,

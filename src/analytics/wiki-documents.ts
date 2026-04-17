@@ -12,17 +12,12 @@ import {
 import type { RenderedWikiDraft } from './wiki-renderer'
 import { buildWikiPageStorageKey, type AiWikiStore, type WikiPageSnapshotRecord } from './wiki-store'
 import type { WikiPagePreviewResult } from './wiki-diff'
-import { pickUiText } from '@/i18n/ui'
-
-const uiText = (en_US: string, zh_CN: string) => pickUiText({ en_US, zh_CN })
+import { t } from '@/i18n/ui'
 
 const INDEX_MANUAL_NOTES_MARKDOWN = [
   `## ${WIKI_PAGE_HEADINGS.manualNotes}`,
   '',
-  uiText(
-    '> Reserved for manual notes. Later automated maintenance will not overwrite this section.',
-    '> 这里保留给人工补充，后续自动维护不会覆盖本区内容。',
-  ),
+  t('wikiMaintain.manualNotesReserved'),
 ].join('\n')
 
 type BlockOpFn = (dataType: 'markdown' | 'dom', data: string, id: string) => Promise<any>
@@ -109,10 +104,7 @@ export async function applyWikiDocuments(params: {
 }): Promise<WikiApplyBatchResult> {
   const wikiTarget = resolveWikiTarget(params.config, params.notebooks)
   if (!wikiTarget) {
-    throw new Error(uiText(
-      'No valid topic doc path is configured, so the LLM Wiki target cannot be resolved',
-      '未配置有效的主题文档路径，无法确定 LLM Wiki 写入位置',
-    ))
+    throw new Error(t('analytics.wiki.noValidTopicDocPathConfigured'))
   }
 
   const themeResults: WikiApplyBatchResult['themePages'] = []
@@ -444,32 +436,35 @@ async function buildIndexDraft(params: {
     '',
     `## ${WIKI_PAGE_HEADINGS.managedRoot}`,
     '',
-    uiText('### Overview', '### 页面概览'),
-    uiText(`- Updated at: ${params.generatedAt}`, `- 最近维护时间：${params.generatedAt}`),
-    uiText(`- Topic wiki pages: ${themeRows.length}`, `- 主题 wiki 页数：${themeRows.length}`),
-    uiText(`- Unclassified sources: ${params.unclassifiedDocuments.length}`, `- 未归类来源数：${params.unclassifiedDocuments.length}`),
-    uiText(`- Matched topics this run: ${params.scopeSummary.themeGroupCount}`, `- 本轮命中主题数：${params.scopeSummary.themeGroupCount}`),
+    t('analytics.wiki.markdownOverviewHeading'),
+    t('analytics.wiki.markdownUpdatedAt', { value: params.generatedAt }),
+    t('analytics.wiki.markdownTopicWikiPages', { count: themeRows.length }),
+    t('analytics.wiki.markdownUnclassifiedSources', { count: params.unclassifiedDocuments.length }),
+    t('analytics.wiki.markdownMatchedTopicsThisRun', { count: params.scopeSummary.themeGroupCount }),
     '',
-    uiText('### Wiki pages', '### Wiki 页面清单'),
+    t('analytics.wiki.markdownWikiPagesHeading'),
     themeRows.length
       ? themeRows.map(({ record, summary }) => {
           const pageLink = record.pageId ? buildDocLinkMarkdown(record.pageId, record.pageTitle) : record.pageTitle
           const themeLink = record.themeDocumentId && record.themeDocumentTitle
             ? buildDocLinkMarkdown(record.themeDocumentId, record.themeDocumentTitle)
             : (record.themeDocumentTitle || '-')
-          return uiText(
-            `- ${pageLink} | Paired topic page: ${themeLink} | Summary: ${summary || '-'} | Source docs: ${record.sourceDocumentIds.length} | Updated at: ${record.lastApply?.appliedAt || record.lastGeneratedAt || '-'}`,
-            `- ${pageLink} | 配对主题页：${themeLink} | 摘要：${summary || '-'} | 源文档数：${record.sourceDocumentIds.length} | 最近更新时间：${record.lastApply?.appliedAt || record.lastGeneratedAt || '-'}`,
-          )
+          return t('analytics.wiki.markdownWikiPageRow', {
+            pageLink,
+            themeLink,
+            summary: summary || '-',
+            count: record.sourceDocumentIds.length,
+            updatedAt: record.lastApply?.appliedAt || record.lastGeneratedAt || '-',
+          })
         }).join('\n')
-      : uiText('- No topic wiki pages yet', '- 暂无主题 wiki 页面'),
+      : t('analytics.wiki.markdownNoTopicWikiPagesYet'),
     '',
-    uiText('### Unclassified sources', '### 未归类来源'),
+    t('analytics.wiki.markdownUnclassifiedSourcesHeading'),
     params.unclassifiedDocuments.length
       ? params.unclassifiedDocuments
           .map(document => `- ${buildDocLinkMarkdown(document.documentId, document.title)}`)
           .join('\n')
-      : uiText('- None', '- 无'),
+      : t('analytics.wiki.markdownNone'),
   ].join('\n')
 
   return {
@@ -482,11 +477,11 @@ async function buildIndexDraft(params: {
     sectionMetadata: [
       {
         key: 'meta',
-        heading: uiText('Overview', '页面概览'),
+        heading: t('analytics.wiki.overviewHeading'),
         markdown: [
-          uiText(`- Updated at: ${params.generatedAt}`, `- 最近维护时间：${params.generatedAt}`),
-          uiText(`- Topic wiki pages: ${themeRows.length}`, `- 主题 wiki 页数：${themeRows.length}`),
-          uiText(`- Unclassified sources: ${params.unclassifiedDocuments.length}`, `- 未归类来源数：${params.unclassifiedDocuments.length}`),
+          t('analytics.wiki.markdownUpdatedAt', { value: params.generatedAt }),
+          t('analytics.wiki.markdownTopicWikiPages', { count: themeRows.length }),
+          t('analytics.wiki.markdownUnclassifiedSources', { count: params.unclassifiedDocuments.length }),
         ].join('\n'),
       },
     ],
@@ -501,25 +496,25 @@ function buildLogEntryMarkdown(params: {
 }): string {
   const counts = buildThemeResultCounts(params.themeResults)
   const touchedPages = params.themeResults
-    .map(item => uiText(
-      `- ${formatApplyResultLabel(item.result)}: ${item.pageId ? buildDocLinkMarkdown(item.pageId, item.pageTitle) : item.pageTitle}`,
-      `- ${formatApplyResultLabel(item.result)}：${item.pageId ? buildDocLinkMarkdown(item.pageId, item.pageTitle) : item.pageTitle}`,
-    ))
+    .map(item => t('analytics.wiki.logTouchedPageRow', {
+      result: formatApplyResultLabel(item.result),
+      page: item.pageId ? buildDocLinkMarkdown(item.pageId, item.pageTitle) : item.pageTitle,
+    }))
     .join('\n')
 
   return [
     `## ${params.generatedAt}`,
     '',
     ...params.scopeDescriptionLines,
-    uiText(`- Matched source docs: ${params.scopeSummary.sourceDocumentCount}`, `- 命中源文档数：${params.scopeSummary.sourceDocumentCount}`),
-    uiText(`- Matched topics: ${params.scopeSummary.themeGroupCount}`, `- 命中主题数：${params.scopeSummary.themeGroupCount}`),
-    uiText(`- Created pages: ${counts.created}`, `- 新建页面数：${counts.created}`),
-    uiText(`- Updated pages: ${counts.updated}`, `- 更新页面数：${counts.updated}`),
-    uiText(`- Unchanged pages: ${counts.skipped}`, `- 无变化页面数：${counts.skipped}`),
-    uiText(`- Conflict pages: ${counts.conflict}`, `- 冲突页面数：${counts.conflict}`),
+    t('analytics.wiki.logMatchedSourceDocs', { count: params.scopeSummary.sourceDocumentCount }),
+    t('analytics.wiki.logMatchedTopics', { count: params.scopeSummary.themeGroupCount }),
+    t('analytics.wiki.logCreatedPages', { count: counts.created }),
+    t('analytics.wiki.logUpdatedPages', { count: counts.updated }),
+    t('analytics.wiki.logUnchangedPages', { count: counts.skipped }),
+    t('analytics.wiki.logConflictPages', { count: counts.conflict }),
     '',
-    uiText('### Touched pages this run', '### 本次触达页面'),
-    touchedPages || uiText('- None', '- 无'),
+    t('analytics.wiki.logTouchedPagesHeading'),
+    touchedPages || t('analytics.wiki.markdownNone'),
   ].join('\n')
 }
 
@@ -801,13 +796,13 @@ async function safeReadBlockMarkdown(blockId: string, getBlockKramdown: GetBlock
 function formatApplyResultLabel(result: WikiApplyResult): string {
   switch (result) {
     case 'created':
-      return uiText('created', '新建')
+      return t('analytics.wiki.resultCreated')
     case 'updated':
-      return uiText('updated', '更新')
+      return t('analytics.wiki.resultUpdated')
     case 'skipped':
-      return uiText('skipped', '无变化')
+      return t('analytics.wiki.resultSkipped')
     case 'conflict':
-      return uiText('conflict', '冲突')
+      return t('analytics.wiki.resultConflict')
     default:
       return result
   }

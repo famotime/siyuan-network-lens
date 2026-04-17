@@ -9,7 +9,7 @@ import {
   DEFAULT_AI_REQUEST_TIMEOUT_SECONDS,
   DEFAULT_AI_TEMPERATURE,
 } from '@/types/ai-defaults'
-import { pickUiText } from '@/i18n/ui'
+import { t } from '@/i18n/ui'
 
 interface AiProviderPresetDefinition {
   label: string
@@ -20,17 +20,15 @@ interface AiProviderPresetDefinition {
   embeddingPlaceholder: string
 }
 
-const uiText = (en_US: string, zh_CN: string) => pickUiText({ en_US, zh_CN })
-
 export function getAiProviderPresets(): Record<AiProviderPresetKey, AiProviderPresetDefinition> {
   return {
     siliconflow: {
-      label: uiText('SiliconFlow', '硅基流动'),
+      label: t('aiConfig.siliconFlow'),
       baseUrl: 'https://api.siliconflow.cn/v1',
       defaultModel: '',
       defaultEmbeddingModel: '',
-      modelPlaceholder: uiText('Select from the model list, for example deepseek-ai/DeepSeek-V3', '从模型列表中选择，例如 deepseek-ai/DeepSeek-V3'),
-      embeddingPlaceholder: uiText('Select from the model list, for example BAAI/bge-m3', '从模型列表中选择，例如 BAAI/bge-m3'),
+      modelPlaceholder: t('aiConfig.selectModelPlaceholder'),
+      embeddingPlaceholder: t('aiConfig.selectEmbeddingPlaceholder'),
     },
     openai: {
       label: 'OpenAI',
@@ -49,9 +47,9 @@ export function getAiProviderPresets(): Record<AiProviderPresetKey, AiProviderPr
       embeddingPlaceholder: 'gemini-embedding-001',
     },
     custom: {
-      label: uiText('Custom', '自定义'),
-      modelPlaceholder: uiText('Enter model name manually', '手动输入模型名'),
-      embeddingPlaceholder: uiText('Enter embedding model name manually', '手动输入 embedding 模型名'),
+      label: t('aiConfig.custom'),
+      modelPlaceholder: t('aiConfig.enterModelNameManually'),
+      embeddingPlaceholder: t('aiConfig.enterEmbeddingModelManually'),
     },
   }
 }

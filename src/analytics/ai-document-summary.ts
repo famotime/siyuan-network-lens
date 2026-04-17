@@ -1,7 +1,7 @@
 import type { DocumentRecord } from './analysis'
 import { normalizeTags, resolveDocumentTitle } from './document-utils'
 import type { AiDocumentIndexStore, DocumentSummarySnapshot } from './ai-index-store'
-import { pickUiText } from '@/i18n/ui'
+import { t } from '@/i18n/ui'
 import type { PluginConfig } from '@/types/config'
 
 type AiConfig = Pick<
@@ -9,8 +9,6 @@ type AiConfig = Pick<
   | 'aiModel'
   | 'aiEmbeddingModel'
 >
-
-const uiText = (en_US: string, zh_CN: string) => pickUiText({ en_US, zh_CN })
 
 export interface DocumentSummaryResult {
   summaryShort: string
@@ -32,16 +30,16 @@ export function buildDocumentSummary(sourceDocument: DocumentRecord): DocumentSu
     .filter(Boolean)
   const evidenceSnippets = deduplicateStrings(contentLines.slice(0, 2))
   const flattenedContent = contentLines.join(' ').trim()
-  const summaryShort = flattenedContent.slice(0, 120) || uiText(`Document "${title}"`, `文档《${title}》`)
+  const summaryShort = flattenedContent.slice(0, 120) || t('analytics.summaryDetailSource.documentTitleFallback', { title })
   const summaryMediumParts = [
-    uiText(`Title: ${title}`, `标题：${title}`),
-    sourceDocument.hpath ? uiText(`Path: ${sourceDocument.hpath}`, `路径：${sourceDocument.hpath}`) : '',
-    evidenceSnippets.length ? uiText(`Key points: ${evidenceSnippets.join(' ')}`, `正文要点：${evidenceSnippets.join(' ')}`) : '',
+    t('analytics.summaryDetailSource.titlePrefix', { title }),
+    sourceDocument.hpath ? t('analytics.summaryDetailSource.pathPrefix', { path: sourceDocument.hpath }) : '',
+    evidenceSnippets.length ? t('analytics.summaryDetailSource.keyPointsPrefix', { value: evidenceSnippets.join(' ') }) : '',
   ].filter(Boolean)
 
   return {
     summaryShort,
-    summaryMedium: summaryMediumParts.join(uiText('; ', '；')),
+    summaryMedium: summaryMediumParts.join(t('analytics.summaryDetailSource.summarySeparator')),
     keywords: deduplicateStrings([
       ...normalizeTags(sourceDocument.tags),
       ...splitTitleKeywords(title),

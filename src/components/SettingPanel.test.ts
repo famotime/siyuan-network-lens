@@ -149,6 +149,27 @@ describe('SettingPanel', () => {
     expect(html).not.toContain('主题笔记本')
   })
 
+  it('starts moving section copy to keyed i18n entries', async () => {
+    const source = await import('node:fs/promises').then(fs => fs.readFile(new URL('./SettingPanel.vue', import.meta.url), 'utf8'))
+
+    expect(source).toContain("import { t } from '@/i18n/ui'")
+    expect(source).toContain("{{ t('settings.analysisScope.title') }}")
+    expect(source).toContain("{{ t('settings.analysisScope.description') }}")
+    expect(source).toContain("{{ t('settings.topicDocs.title') }}")
+    expect(source).toContain("{{ t('settings.readRules.title') }}")
+    expect(source).toContain("{{ t('settings.summaryCards.title') }}")
+    expect(source).toContain("const aiSettingsTitle = showAiServiceSettings ? t('settings.ai.title') : 'LLM Wiki'")
+    expect(source).toContain("{{ t('settings.analysisScope.excludedPaths') }}")
+    expect(source).toContain("{{ t('settings.topicDocs.pathLabel') }}")
+    expect(source).toContain("{{ t('settings.readRules.readPaths') }}")
+    expect(source).toContain("{{ t('settings.summaryCards.topSummaryCards') }}")
+    expect(source).toContain("{{ t('settings.ai.enableTodaySuggestions') }}")
+    expect(source).toContain("{{ t('settings.debug.title') }}")
+    expect(source).toContain("{{ t('settings.propagation.title') }}")
+    expect(source).not.toContain('uiText(')
+    expect(source).not.toContain("<h3>{{ uiText('Analysis scope', '分析范围') }}</h3>")
+  })
+
   it('hides alpha summary card settings and independent AI or wiki settings when configured', async () => {
     const previousHiddenSummaryCardKeys = [...ALPHA_FEATURE_HIDE_CONFIG.hiddenSummaryCardKeys]
     const previousHiddenSettingKeys = [...ALPHA_FEATURE_HIDE_CONFIG.hiddenSettingKeys]

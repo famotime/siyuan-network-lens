@@ -1,15 +1,15 @@
 <template>
   <div class="orphan-detail">
     <div class="orphan-detail__controls">
-      <span>{{ uiText('Orphan sort', '孤立排序') }}</span>
+      <span>{{ t('orphanDetail.sortLabel') }}</span>
       <select
         class="orphan-detail__select"
         :value="orphanSort"
         @change="onSortChange"
       >
-        <option value="updated-desc">{{ uiText('By updated time', '按更新时间') }}</option>
-        <option value="created-desc">{{ uiText('By created time', '按创建时间') }}</option>
-        <option value="title-asc">{{ uiText('By title', '按标题') }}</option>
+        <option value="updated-desc">{{ t('orphanDetail.sortUpdated') }}</option>
+        <option value="created-desc">{{ t('orphanDetail.sortCreated') }}</option>
+        <option value="title-asc">{{ t('orphanDetail.sortTitle') }}</option>
       </select>
     </div>
 
@@ -50,7 +50,7 @@
                 :key="`${item.documentId}-${suggestion.themeDocumentId}`"
                 :class="['orphan-detail__theme-tag', { 'orphan-detail__theme-tag--active': isThemeSuggestionActive(item.documentId, suggestion.themeDocumentId) }]"
                 type="button"
-                :title="uiText(`${suggestion.themeDocumentTitle} · Matched ${suggestion.matchCount} times`, `${suggestion.themeDocumentTitle} · 命中 ${suggestion.matchCount} 次`)"
+                :title="t('orphanDetail.themeTooltip', { title: suggestion.themeDocumentTitle, count: suggestion.matchCount })"
                 @click="onToggleThemeSuggestion(item.documentId, suggestion.themeDocumentId)"
               >
                 <span class="orphan-detail__theme-name">{{ suggestion.themeName }}</span>
@@ -69,13 +69,13 @@
               :disabled="!aiConfigReady || resolveAiSuggestionState(item.documentId)?.loading"
               @click="onGenerateAiSuggestion(item.documentId)"
             >
-              {{ resolveAiSuggestionState(item.documentId)?.result ? uiText('Regenerate AI suggestions', '重新生成 AI 建议') : uiText('AI suggestions', 'AI 建议') }}
+              {{ resolveAiSuggestionState(item.documentId)?.result ? t('orphanDetail.regenerateAiSuggestions') : t('orphanDetail.aiSuggestions') }}
             </button>
             <span
               v-if="!aiConfigReady"
               class="orphan-detail__ai-hint"
             >
-              {{ uiText('Complete AI settings in Settings first.', '请先完成 AI 设置。') }}
+              {{ t('orphanDetail.aiConfigHint') }}
             </span>
           </div>
 
@@ -106,8 +106,8 @@
                   class="orphan-detail__ai-group"
                 >
                   <div class="orphan-detail__ai-group-header">
-                    <p class="orphan-detail__ai-group-title">{{ uiText('Link suggestions', '链接建议') }}</p>
-                    <span class="orphan-detail__ai-group-meta">{{ uiText(`${resolveAiLinkSuggestions(item.documentId).length} items`, `${resolveAiLinkSuggestions(item.documentId).length} 项`) }}</span>
+                    <p class="orphan-detail__ai-group-title">{{ t('orphanDetail.linkSuggestions') }}</p>
+                    <span class="orphan-detail__ai-group-meta">{{ t('orphanDetail.itemCount', { count: resolveAiLinkSuggestions(item.documentId).length }) }}</span>
                   </div>
                   <div class="orphan-detail__ai-group-list">
                     <div
@@ -136,8 +136,8 @@
                   class="orphan-detail__ai-group"
                 >
                   <div class="orphan-detail__ai-group-header">
-                    <p class="orphan-detail__ai-group-title">{{ uiText('Tag suggestions', '标签建议') }}</p>
-                    <span class="orphan-detail__ai-group-meta">{{ uiText(`${resolveAiTagSuggestions(item.documentId).length} items`, `${resolveAiTagSuggestions(item.documentId).length} 项`) }}</span>
+                    <p class="orphan-detail__ai-group-title">{{ t('orphanDetail.tagSuggestions') }}</p>
+                    <span class="orphan-detail__ai-group-meta">{{ t('orphanDetail.itemCount', { count: resolveAiTagSuggestions(item.documentId).length }) }}</span>
                   </div>
                   <div class="orphan-detail__ai-group-list">
                     <div
@@ -169,13 +169,13 @@
       v-else
       class="empty-state"
     >
-      {{ uiText('No docs to show under this card.', '当前卡片下暂无文档。') }}
+      {{ t('orphanDetail.empty') }}
     </div>
   </div>
 </template>
 
 <script setup lang="ts">
-import { pickUiText } from '@/i18n/ui'
+import { t } from '@/i18n/ui'
 import type { OrphanSort } from '@/analytics/analysis'
 import type { AiLinkSuggestionItem, AiLinkTagSuggestion, OrphanAiSuggestionState } from '@/analytics/ai-link-suggestions'
 import type { DetailSuggestion, SummaryDetailItem } from '@/analytics/summary-details'
@@ -200,8 +200,6 @@ const props = defineProps<{
   onGenerateAiSuggestion: (documentId: string) => void | Promise<void>
 }>()
 
-const uiText = (en_US: string, zh_CN: string) => pickUiText({ en_US, zh_CN })
-
 function onSortChange(event: Event) {
   const value = (event.target as HTMLSelectElement).value as OrphanSort
   props.onUpdateOrphanSort(value)
@@ -221,7 +219,7 @@ function buildSuggestionCalloutItems(item: SummaryDetailItem & { themeSuggestion
     const text = suggestion.text.replace(/[.。；，,\s]*$/, '')
     return {
       ...suggestion,
-      text: uiText(`${text}, suggested topic docs below (click to add):`, `${text}，建议链接以下主题文档（点击添加）：`),
+      text: t('orphanDetail.repairLinksWithTopics', { text }),
     }
   })
 }
@@ -232,8 +230,8 @@ function resolveAiSuggestionState(documentId: string): OrphanAiSuggestionState |
 
 function resolveTagSuggestionSourceLabel(source: AiLinkTagSuggestion['source']) {
   return source === 'existing'
-    ? uiText('Existing tag', '当前标签')
-    : uiText('New tag', '新标签')
+    ? t('orphanDetail.existingTag')
+    : t('orphanDetail.newTag')
 }
 
 function resolveAiLinkSuggestions(documentId: string): AiLinkSuggestionItem[] {

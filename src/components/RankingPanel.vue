@@ -2,20 +2,20 @@
   <component :is="variant === 'panel' ? 'section' : 'div'" :class="variant === 'panel' ? 'panel panel--primary' : 'ranking-detail'">
     <div v-if="variant === 'panel'" class="panel-header">
       <div>
-        <h2>{{ uiText('Core docs ranking', '核心文档排行') }}</h2>
-        <p>{{ uiText('Ranked by doc-level inbound refs, source doc count, and recent activity.', '按文档级入链、来源文档数和近期活跃度排序。') }}</p>
+        <h2>{{ t('rankingPanel.title') }}</h2>
+        <p>{{ t('rankingPanel.description') }}</p>
       </div>
       <div class="panel-header__actions">
-        <span class="meta-text">{{ uiText(`${panelCount} docs`, `${panelCount} 篇文档`) }}</span>
-        <span class="meta-text">{{ uiText(`Last refreshed ${snapshotLabel}`, `最近刷新 ${snapshotLabel}`) }}</span>
+        <span class="meta-text">{{ t('rankingPanel.docsCount', { count: panelCount }) }}</span>
+        <span class="meta-text">{{ t('rankingPanel.lastRefreshed', { value: snapshotLabel }) }}</span>
         <button
           class="panel-toggle"
           type="button"
           :aria-expanded="isExpanded"
-          :aria-label="isExpanded ? uiText('Collapse details', '收起详情') : uiText('Expand details', '展开详情')"
+          :aria-label="isExpanded ? t('rankingPanel.collapseDetails') : t('rankingPanel.expandDetails')"
           @click="onTogglePanel"
         >
-          {{ isExpanded ? uiText('Collapse', '收起') : uiText('Expand', '展开') }}
+          {{ isExpanded ? t('rankingPanel.collapse') : t('rankingPanel.expand') }}
           <span
             class="panel-toggle__caret"
             aria-hidden="true"
@@ -45,14 +45,14 @@
               :is-theme-document="item.isThemeDocument"
             />
             <div class="ranking-item__meta">
-              <span>{{ uiText(`${item.inboundReferences} inbound refs`, `${item.inboundReferences} 条入链`) }}</span>
-              <span>{{ uiText(`${item.distinctSourceDocuments} source docs`, `${item.distinctSourceDocuments} 个来源文档`) }}</span>
-              <span>{{ uiText(`${item.tagCount} tags`, `${item.tagCount} 个标签`) }}</span>
-              <span>{{ uiText(`${item.outboundReferences} outbound refs`, `${item.outboundReferences} 条出链`) }}</span>
+              <span>{{ t('rankingPanel.inboundRefs', { count: item.inboundReferences }) }}</span>
+              <span>{{ t('rankingPanel.sourceDocs', { count: item.distinctSourceDocuments }) }}</span>
+              <span>{{ t('rankingPanel.tags', { count: item.tagCount }) }}</span>
+              <span>{{ t('rankingPanel.outboundRefs', { count: item.outboundReferences }) }}</span>
             </div>
             <div class="ranking-item__timestamps">
-              <span>{{ uiText('Created', '创建') }}: {{ formatTimestamp(item.createdAt) }}</span>
-              <span>{{ uiText('Updated', '更新') }}: {{ formatTimestamp(item.updatedAt) }}</span>
+              <span>{{ t('rankingPanel.created') }}: {{ formatTimestamp(item.createdAt) }}</span>
+              <span>{{ t('rankingPanel.updated') }}: {{ formatTimestamp(item.updatedAt) }}</span>
             </div>
             <div class="ranking-item__actions">
               <button
@@ -60,7 +60,7 @@
               type="button"
               @click="toggleLinkPanel(item.documentId)"
             >
-                {{ isLinkPanelExpanded(item.documentId) ? uiText('Hide related refs/links', '收起关联引用/链接') : uiText('View related refs/links', '查看关联引用/链接') }}
+                {{ isLinkPanelExpanded(item.documentId) ? t('rankingPanel.hideRelated') : t('rankingPanel.viewRelated') }}
               </button>
             </div>
             <div
@@ -75,7 +75,7 @@
                   @click="toggleLinkGroup(item.documentId, 'outbound')"
                 >
                   <span class="link-association__caret" aria-hidden="true" />
-                  {{ uiText('Outbound', '出链') }} {{ resolveAssociations(item.documentId).outbound.length }}
+                  {{ t('rankingPanel.outbound') }} {{ resolveAssociations(item.documentId).outbound.length }}
                 </button>
                 <div
                   v-show="isLinkGroupExpanded(item.documentId, 'outbound')"
@@ -101,14 +101,14 @@
                       :disabled="isSyncing(item.documentId, link.documentId, 'outbound')"
                       @click="syncAssociation(item.documentId, link.documentId, 'outbound')"
                     >
-                      {{ isSyncing(item.documentId, link.documentId, 'outbound') ? uiText('Syncing...', '同步中...') : uiText('Sync', '同步') }}
+                      {{ isSyncing(item.documentId, link.documentId, 'outbound') ? t('rankingPanel.syncing') : t('rankingPanel.sync') }}
                     </button>
                   </div>
                   <p
                     v-if="resolveAssociations(item.documentId).outbound.length === 0"
                     class="empty-inline"
                   >
-                    {{ uiText('No outbound links.', '暂无出链。') }}
+                    {{ t('rankingPanel.noOutbound') }}
                   </p>
                 </div>
               </div>
@@ -120,7 +120,7 @@
                   @click="toggleLinkGroup(item.documentId, 'inbound')"
                 >
                   <span class="link-association__caret" aria-hidden="true" />
-                  {{ uiText('Inbound', '入链') }} {{ resolveAssociations(item.documentId).inbound.length }}
+                  {{ t('rankingPanel.inbound') }} {{ resolveAssociations(item.documentId).inbound.length }}
                 </button>
                 <div
                   v-show="isLinkGroupExpanded(item.documentId, 'inbound')"
@@ -146,14 +146,14 @@
                       :disabled="isSyncing(item.documentId, link.documentId, 'inbound')"
                       @click="syncAssociation(item.documentId, link.documentId, 'inbound')"
                     >
-                      {{ isSyncing(item.documentId, link.documentId, 'inbound') ? uiText('Syncing...', '同步中...') : uiText('Sync', '同步') }}
+                      {{ isSyncing(item.documentId, link.documentId, 'inbound') ? t('rankingPanel.syncing') : t('rankingPanel.sync') }}
                     </button>
                   </div>
                   <p
                     v-if="resolveAssociations(item.documentId).inbound.length === 0"
                     class="empty-inline"
                   >
-                    {{ uiText('No inbound links.', '暂无入链。') }}
+                    {{ t('rankingPanel.noInbound') }}
                   </p>
                 </div>
               </div>
@@ -165,7 +165,7 @@
                   @click="toggleLinkGroup(item.documentId, 'child')"
                 >
                   <span class="link-association__caret" aria-hidden="true" />
-                  {{ uiText('Child docs (deduped)', '子文档（去重）') }} {{ resolveAssociations(item.documentId).childDocuments.length }}
+                  {{ t('rankingPanel.childDocsDeduped') }} {{ resolveAssociations(item.documentId).childDocuments.length }}
                 </button>
                 <div
                   v-show="isLinkGroupExpanded(item.documentId, 'child')"
@@ -190,14 +190,14 @@
                       :disabled="isSyncing(item.documentId, link.documentId, 'child')"
                       @click="syncAssociation(item.documentId, link.documentId, 'child')"
                     >
-                      {{ isSyncing(item.documentId, link.documentId, 'child') ? uiText('Linking...', '链接中...') : uiText('Link', '补链') }}
+                      {{ isSyncing(item.documentId, link.documentId, 'child') ? t('rankingPanel.linking') : t('rankingPanel.link') }}
                     </button>
                   </div>
                   <p
                     v-if="resolveAssociations(item.documentId).childDocuments.length === 0"
                     class="empty-inline"
                   >
-                    {{ uiText('No child doc links available to add.', '没有可补充的子文档链接。') }}
+                    {{ t('rankingPanel.noChildLinks') }}
                   </p>
                 </div>
               </div>
@@ -213,7 +213,7 @@
               type="button"
               @click="toggleCoreDocumentWikiPanel(item.documentId)"
             >
-              {{ isWikiPanelVisibleForCoreDocument(item.documentId) ? uiText('Hide LLM Wiki', '收起 LLM Wiki') : uiText('Maintain LLM Wiki', '维护 LLM Wiki') }}
+              {{ isWikiPanelVisibleForCoreDocument(item.documentId) ? t('rankingPanel.hideWiki') : t('rankingPanel.maintainWiki') }}
             </button>
             <WikiMaintainPanel
               v-if="isWikiPanelVisibleForCoreDocument(item.documentId)"
@@ -226,7 +226,7 @@
         v-else
         class="empty-state"
       >
-        {{ uiText('No doc-level reference relationships matched the current filters.', '当前筛选下没有命中文档级引用关系。') }}
+        {{ t('rankingPanel.empty') }}
       </div>
     </div>
   </component>
@@ -237,7 +237,7 @@ import type { RankingDetailItem } from '@/analytics/summary-details'
 import type { LinkAssociations } from '@/analytics/link-associations'
 import type { LinkDirection } from '@/analytics/link-sync'
 import type { WikiPreviewState } from '@/composables/use-analytics'
-import { pickUiText } from '@/i18n/ui'
+import { t } from '@/i18n/ui'
 import DocumentTitle from './DocumentTitle.vue'
 import SuggestionCallout from './SuggestionCallout.vue'
 import WikiMaintainPanel from './WikiMaintainPanel.vue'
@@ -278,8 +278,6 @@ const props = withDefaults(defineProps<{
   showWikiPanelActions: true,
   variant: 'panel',
 })
-
-const uiText = (en_US: string, zh_CN: string) => pickUiText({ en_US, zh_CN })
 
 function resolveAssociations(documentId: string): LinkAssociations {
   const associations = props.resolveLinkAssociations(documentId)

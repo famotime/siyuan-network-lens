@@ -1,6 +1,7 @@
 import { afterEach, describe, expect, it, vi } from 'vitest'
 import { createSSRApp, h } from 'vue'
 import { renderToString } from '@vue/server-renderer'
+import { readFile } from 'node:fs/promises'
 
 import WikiMaintainPanel from './WikiMaintainPanel.vue'
 
@@ -10,6 +11,15 @@ afterEach(() => {
 })
 
 describe('WikiMaintainPanel', () => {
+  it('uses keyed i18n entries instead of inline uiText pairs', async () => {
+    const source = await readFile(new URL('./WikiMaintainPanel.vue', import.meta.url), 'utf8')
+
+    expect(source).toContain("import { t } from '@/i18n/ui'")
+    expect(source).toContain("{{ t('wikiMaintain.title') }}")
+    expect(source).toContain("{{ previewLoading ? t('wikiMaintain.generating') : t('wikiMaintain.generatePreview') }}")
+    expect(source).not.toContain('uiText(')
+  })
+
   it('renders scope summary, preview rows and apply shortcuts', async () => {
     const app = createSSRApp({
       render: () => h(WikiMaintainPanel, {

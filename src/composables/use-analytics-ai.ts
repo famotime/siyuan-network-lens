@@ -15,12 +15,11 @@ import type {
 } from '@/analytics/ai-link-suggestions'
 import type { AnalyticsSnapshot } from '@/analytics/siyuan-data'
 import type { SummaryCardItem } from '@/analytics/summary-details'
-import { pickUiText } from '@/i18n/ui'
+import { t } from '@/i18n/ui'
 import type { ThemeDocument } from '@/analytics/theme-documents'
 import type { PluginConfig } from '@/types/config'
 
 type ShowMessageFn = (text: string, timeout?: number, type?: 'info' | 'error') => void
-const uiText = (en_US: string, zh_CN: string) => pickUiText({ en_US, zh_CN })
 
 export function createAnalyticsAiController(params: {
   config: PluginConfig
@@ -57,7 +56,7 @@ export function createAnalyticsAiController(params: {
 
     try {
       if (!params.aiInboxService) {
-        throw new Error(uiText('AI proxy is not initialized', 'AI 代理未初始化'))
+        throw new Error(t('analytics.controller.aiProxyNotInitialized'))
       }
       const result = await params.aiInboxService.testConnection({
         config: params.config,
@@ -65,7 +64,7 @@ export function createAnalyticsAiController(params: {
       params.aiConnectionMessage.value = result.message
       return result
     } catch (error) {
-      const message = error instanceof Error ? error.message : uiText('AI connection test failed', 'AI 连接测试失败')
+      const message = error instanceof Error ? error.message : t('analytics.controller.aiConnectionTestFailed')
       params.aiInboxError.value = message
       params.notify(message, 5000, 'error')
       return {
@@ -79,7 +78,7 @@ export function createAnalyticsAiController(params: {
 
   async function generateAiInbox() {
     if (!params.report.value || !params.trends.value || !params.snapshot.value) {
-      params.aiInboxError.value = uiText('Analysis results are not ready yet. Refresh analysis first.', '分析结果尚未就绪，请先刷新分析。')
+      params.aiInboxError.value = t('analytics.controller.analysisNotReady')
       return null
     }
 
@@ -89,7 +88,7 @@ export function createAnalyticsAiController(params: {
 
     try {
       if (!params.aiInboxService) {
-        throw new Error(uiText('AI proxy is not initialized', 'AI 代理未初始化'))
+        throw new Error(t('analytics.controller.aiProxyNotInitialized'))
       }
       const payload = params.aiInboxService.buildPayload({
         documents: params.snapshot.value.documents,
@@ -109,7 +108,7 @@ export function createAnalyticsAiController(params: {
       })
       return params.aiInboxResult.value
     } catch (error) {
-      const message = error instanceof Error ? error.message : uiText('Failed to generate AI inbox', '生成 AI 收件箱失败')
+      const message = error instanceof Error ? error.message : t('analytics.controller.failedToGenerateAiInbox')
       params.aiInboxError.value = message
       params.notify(message, 5000, 'error')
       return null
@@ -123,7 +122,7 @@ export function createAnalyticsAiController(params: {
       updateOrphanAiSuggestionState(documentId, {
         loading: false,
         statusMessage: '',
-        error: uiText('Analysis results are not ready yet. Refresh analysis first.', '分析结果尚未就绪，请先刷新分析。'),
+        error: t('analytics.controller.analysisNotReady'),
         result: null,
       })
       return
@@ -135,7 +134,7 @@ export function createAnalyticsAiController(params: {
       updateOrphanAiSuggestionState(documentId, {
         loading: false,
         statusMessage: '',
-        error: uiText('The current doc is not in the orphan doc list', '当前文档不在孤立文档列表中'),
+        error: t('analytics.controller.currentDocNotInOrphanList'),
         result: null,
       })
       return
@@ -143,14 +142,14 @@ export function createAnalyticsAiController(params: {
 
     updateOrphanAiSuggestionState(documentId, {
       loading: true,
-      statusMessage: uiText('Analyzing document semantics and generating embeddings...', '正在分析文档语义并生成向量...'),
+      statusMessage: t('analytics.controller.analyzingDocumentSemantics'),
       error: '',
       result: null,
     })
 
     try {
       if (!params.aiLinkSuggestionService) {
-        throw new Error(uiText('AI proxy is not initialized', 'AI 代理未初始化'))
+        throw new Error(t('analytics.controller.aiProxyNotInitialized'))
       }
       const result = await params.aiLinkSuggestionService.suggestForOrphan({
         config: params.config,
@@ -185,7 +184,7 @@ export function createAnalyticsAiController(params: {
               updatedAt: result.generatedAt,
             })
           } catch (error) {
-            const message = error instanceof Error ? error.message : uiText('Failed to save document summary index', '保存文档摘要索引失败')
+            const message = error instanceof Error ? error.message : t('analytics.controller.failedToSaveDocumentSummaryIndex')
             params.notify(message, 5000, 'error')
           }
         }
@@ -201,7 +200,7 @@ export function createAnalyticsAiController(params: {
             result,
           })
         } catch (error) {
-          const message = error instanceof Error ? error.message : uiText('Failed to save AI index record', '保存 AI 索引记录失败')
+          const message = error instanceof Error ? error.message : t('analytics.controller.failedToSaveAiIndexRecord')
           params.notify(message, 5000, 'error')
         }
       }
@@ -213,7 +212,7 @@ export function createAnalyticsAiController(params: {
         result,
       })
     } catch (error) {
-      const message = error instanceof Error ? error.message : uiText('Failed to generate AI link suggestions', '生成 AI 补链建议失败')
+      const message = error instanceof Error ? error.message : t('analytics.controller.failedToGenerateAiLinkSuggestions')
       updateOrphanAiSuggestionState(documentId, {
         loading: false,
         statusMessage: '',
