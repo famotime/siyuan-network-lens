@@ -22,7 +22,7 @@ describe('ai wiki service', () => {
         { Authorization: 'Bearer sk-test' },
         { Accept: 'application/json' },
       ])
-      expect(timeout).toBe(30000)
+      expect(timeout).toBe(60000)
       expect(contentType).toBe('application/json')
 
       const body = JSON.parse(payload)

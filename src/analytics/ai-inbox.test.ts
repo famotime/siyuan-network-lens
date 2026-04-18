@@ -488,10 +488,10 @@ describe('ai inbox request options', () => {
       aiTemperature: 9,
       aiMaxContextMessages: 0,
     } as any)).toEqual({
-      timeoutMs: 30000,
-      maxTokens: 10240,
+      timeoutMs: 60000,
+      maxTokens: 4096,
       temperature: 0.7,
-      maxContextMessages: 7,
+      maxContextMessages: 1,
     })
   })
 

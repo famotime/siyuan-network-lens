@@ -40,10 +40,10 @@ describe('config defaults', () => {
     expect(config.aiApiKey).toBe('')
     expect(config.aiModel).toBe('')
     expect(config.aiEmbeddingModel).toBe('')
-    expect(config.aiRequestTimeoutSeconds).toBe(30)
-    expect(config.aiMaxTokens).toBe(10240)
+    expect(config.aiRequestTimeoutSeconds).toBe(60)
+    expect(config.aiMaxTokens).toBe(4096)
     expect(config.aiTemperature).toBe(0.7)
-    expect(config.aiMaxContextMessages).toBe(7)
+    expect(config.aiMaxContextMessages).toBe(1)
     expect(config.aiContextCapacity).toBe('balanced')
     expect(config.enableConsoleLogging).toBe(false)
     expect(config.wikiEnabled).toBe(false)
@@ -78,10 +78,10 @@ describe('config defaults', () => {
           aiMaxContextMessages: 1,
         },
       },
-      aiRequestTimeoutSeconds: 30,
-      aiMaxTokens: 10240,
+      aiRequestTimeoutSeconds: 60,
+      aiMaxTokens: 4096,
       aiTemperature: 0.7,
-      aiMaxContextMessages: 7,
+      aiMaxContextMessages: 1,
       aiContextCapacity: 'balanced',
     } as any
 

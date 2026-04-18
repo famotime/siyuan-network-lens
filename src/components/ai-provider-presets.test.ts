@@ -101,10 +101,10 @@ describe('ai provider presets', () => {
     expect(config.aiApiKey).toBe('')
     expect(config.aiModel).toBe('gemini-2.5-flash')
     expect(config.aiEmbeddingModel).toBe('gemini-embedding-001')
-    expect(config.aiRequestTimeoutSeconds).toBe(30)
-    expect(config.aiMaxTokens).toBe(10240)
+    expect(config.aiRequestTimeoutSeconds).toBe(60)
+    expect(config.aiMaxTokens).toBe(4096)
     expect(config.aiTemperature).toBe(0.7)
-    expect(config.aiMaxContextMessages).toBe(7)
+    expect(config.aiMaxContextMessages).toBe(1)
     expect(config.aiContextCapacity).toBe('full')
 
     config.aiApiKey = 'gemini-key'
