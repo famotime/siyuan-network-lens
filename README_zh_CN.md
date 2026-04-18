@@ -26,6 +26,9 @@
 
 ![image](https://raw.githubusercontent.com/famotime/siyuan-network-lens/main/assets/image-20260321143824-1lckav4.quickedit-convert-webp-1774075160589-20260321143920-v297w9q.webp)
 
+
+![image](https://raw.githubusercontent.com/famotime/siyuan-network-lens/main/assets/image-20260418145347-fnrg6hk.png)
+
 ‍
 ## 如何使用？
 

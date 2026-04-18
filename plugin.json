@@ -2,7 +2,7 @@
   "name": "siyuan-network-lens",
   "author": "Quincy Zou",
   "url": "https://github.com/famotime/siyuan-network-lens",
-  "version": "0.8.0",
+  "version": "0.8.5",
   "minAppVersion": "3.5.7",
   "disabledInPublish": true,
   "backends": [
