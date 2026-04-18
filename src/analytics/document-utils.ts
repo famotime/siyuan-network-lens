@@ -1,4 +1,10 @@
 import { t } from '@/i18n/ui'
+import type { PluginConfig } from '@/types/config'
+
+export type DocumentTitleCleanupConfig = Pick<
+  PluginConfig,
+  'themeNamePrefix' | 'themeNameSuffix' | 'readTitlePrefixes' | 'readTitleSuffixes'
+>
 
 export function normalizeTags(tags?: readonly string[] | string | null): string[] {
   if (!tags) {
@@ -17,14 +23,78 @@ export function normalizeTags(tags?: readonly string[] | string | null): string[
 }
 
 export function resolveDocumentTitle(document: {
-  id: string
+  id?: string
   title?: string
   name?: string | null
   content?: string | null
   hpath?: string
   path?: string
 }): string {
-  return document.title || document.name || document.content || document.hpath || document.path || document.id
+  return document.title || document.name || document.content || document.hpath || document.path || document.id || ''
+}
+
+export function normalizeTitleRules(value?: string): string[] {
+  if (!value) {
+    return []
+  }
+
+  return value
+    .split('|')
+    .map(item => item.trim())
+    .filter(Boolean)
+}
+
+export function stripConfiguredTitleAffixes(title: string, config?: DocumentTitleCleanupConfig | null): string {
+  const normalizedTitle = title.trim()
+  if (!normalizedTitle) {
+    return normalizedTitle
+  }
+
+  const prefixes = [...new Set([
+    config?.themeNamePrefix?.trim() ?? '',
+    ...normalizeTitleRules(config?.readTitlePrefixes),
+  ])]
+    .filter(Boolean)
+    .sort((left, right) => right.length - left.length)
+  const suffixes = [...new Set([
+    config?.themeNameSuffix?.trim() ?? '',
+    ...normalizeTitleRules(config?.readTitleSuffixes),
+  ])]
+    .filter(Boolean)
+    .sort((left, right) => right.length - left.length)
+
+  let value = normalizedTitle
+  let changed = true
+  while (changed && value) {
+    changed = false
+
+    for (const prefix of prefixes) {
+      if (!value.startsWith(prefix)) {
+        continue
+      }
+      value = value.slice(prefix.length).trim()
+      changed = true
+      break
+    }
+
+    for (const suffix of suffixes) {
+      if (!value.endsWith(suffix)) {
+        continue
+      }
+      value = value.slice(0, value.length - suffix.length).trim()
+      changed = true
+      break
+    }
+  }
+
+  return value || normalizedTitle
+}
+
+export function resolveNormalizedDocumentTitle(
+  document: Parameters<typeof resolveDocumentTitle>[0],
+  config?: DocumentTitleCleanupConfig | null,
+): string {
+  return stripConfiguredTitleAffixes(resolveDocumentTitle(document), config)
 }
 
 export function parseSiyuanTimestamp(timestamp: string): number | null {

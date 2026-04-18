@@ -268,6 +268,139 @@ describe('ai link suggestions', () => {
     ])
   })
 
+  it('cleans configured title affixes before ranking candidates and sending titles to AI', async () => {
+    const requests: Array<{ url: string, body: any }> = []
+    const service = createAiLinkSuggestionService({
+      forwardProxy: async (url, method, payload) => {
+        requests.push({
+          url,
+          body: JSON.parse(payload),
+        })
+
+        if (url.endsWith('/embeddings')) {
+          return {
+            status: 200,
+            body: JSON.stringify({
+              data: [
+                { embedding: [1, 0] },
+                { embedding: [0.9, 0.1] },
+              ],
+            }),
+          } as any
+        }
+
+        return {
+          status: 200,
+          body: JSON.stringify({
+            choices: [
+              {
+                message: {
+                  content: JSON.stringify({
+                    summary: '可先补到核心文档。',
+                    suggestions: [
+                      {
+                        targetDocumentId: 'doc-core',
+                        targetTitle: '核心文档',
+                        targetType: 'core-document',
+                        confidence: 'medium',
+                        reason: '标题装饰词已清理后，核心文档仍是最稳定的挂载入口。',
+                      },
+                    ],
+                  }),
+                },
+              },
+            ],
+          }),
+        } as any
+      },
+    })
+
+    await service.suggestForOrphan({
+      config: {
+        aiEnabled: true,
+        aiBaseUrl: 'https://api.example.com/v1',
+        aiApiKey: 'sk-test',
+        aiModel: 'gpt-4.1-mini',
+        aiEmbeddingModel: 'text-embedding-3-small',
+        aiRequestTimeoutSeconds: 30,
+        aiMaxTokens: 1024,
+        aiTemperature: 0.2,
+        aiMaxContextMessages: 7,
+        themeNamePrefix: '主题-',
+        themeNameSuffix: '-索引',
+        readTitlePrefixes: 'AI-|已读-',
+        readTitleSuffixes: '-归档',
+      } as any,
+      sourceDocument: {
+        id: 'doc-orphan',
+        box: 'box-1',
+        path: '/notes/orphan.sy',
+        hpath: '/笔记/AI-随手记-归档',
+        title: 'AI-随手记-归档',
+        tags: [],
+        content: '这是一篇还没挂到入口的笔记。',
+        updated: '20260311120000',
+      },
+      orphan: {
+        documentId: 'doc-orphan',
+        title: 'AI-随手记-归档',
+        degree: 0,
+        createdAt: '20260310120000',
+        updatedAt: '20260311120000',
+        historicalReferenceCount: 1,
+        lastHistoricalAt: '20260310120000',
+        hasSparseEvidence: false,
+      },
+      documents: [
+        { id: 'doc-orphan', box: 'box-1', path: '/notes/orphan.sy', hpath: '/笔记/AI-随手记-归档', title: 'AI-随手记-归档', tags: [], content: '这是一篇还没挂到入口的笔记。', updated: '20260311120000' },
+        { id: 'doc-core', box: 'box-1', path: '/core.sy', hpath: '/笔记/已读-核心文档-归档', title: '已读-核心文档-归档', tags: [], content: '稳定入口和导航。', updated: '20260311120000' },
+        { id: 'doc-theme-ai', box: 'box-1', path: '/topics/theme-ai.sy', hpath: '/专题/主题-AI-索引', title: '主题-AI-索引', tags: [], content: 'AI 主题页', updated: '20260311120000' },
+      ],
+      themeDocuments: [
+        {
+          documentId: 'doc-theme-ai',
+          title: '主题-AI-索引',
+          themeName: 'AI',
+          matchTerms: ['AI'],
+          box: 'box-1',
+          path: '/topics/theme-ai.sy',
+          hpath: '/专题/主题-AI-索引',
+        },
+      ],
+      availableTags: ['AI', '整理'],
+      report: {
+        ranking: [
+          { documentId: 'doc-core', title: '已读-核心文档-归档', inboundReferences: 4, distinctSourceDocuments: 3, outboundReferences: 2, lastActiveAt: '20260311120000' },
+        ],
+      } as any,
+    })
+
+    expect(requests[0]?.url).toBe('https://api.example.com/v1/embeddings')
+    expect(requests[0]?.body.input).toEqual([
+      expect.stringContaining('Title: 随手记'),
+      expect.stringContaining('Title: 核心文档'),
+    ])
+    expect(requests[0]?.body.input.join('\n')).not.toContain('AI-随手记-归档')
+    expect(requests[0]?.body.input.join('\n')).not.toContain('已读-核心文档-归档')
+    expect(requests[0]?.body.input.join('\n')).not.toContain('主题-AI-索引')
+
+    const prompt = JSON.parse(requests[1]?.body.messages[1].content)
+    expect(prompt.sourceDocument.title).toBe('随手记')
+    expect(prompt.availableThemes).toEqual([
+      expect.objectContaining({
+        documentId: 'doc-theme-ai',
+        title: 'AI',
+      }),
+    ])
+    expect(prompt.candidates).toEqual([
+      expect.objectContaining({
+        id: 'doc-core',
+        title: '核心文档',
+        targetType: 'core-document',
+      }),
+    ])
+  })
+
   it('rejects OpenAI-style embedding models on SiliconFlow with a clear error', async () => {
     const service = createAiLinkSuggestionService({
       forwardProxy: async () => {

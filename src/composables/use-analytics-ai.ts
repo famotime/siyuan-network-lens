@@ -101,6 +101,7 @@ export function createAnalyticsAiController(params: {
         contextCapacity: params.config.aiContextCapacity,
         themeDocuments: params.themeDocuments.value,
         wikiPageSuffix: params.config.wikiPageSuffix,
+        titleCleanupConfig: params.config,
       })
       params.aiInboxResult.value = await params.aiInboxService.generateInbox({
         config: params.config,

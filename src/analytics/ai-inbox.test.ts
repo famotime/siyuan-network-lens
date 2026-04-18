@@ -287,6 +287,139 @@ describe('ai inbox payload', () => {
     expect(payload.actionCandidates.length).toBeGreaterThan(6)
   })
 
+  it('cleans configured title affixes in payload titles and does not use them as repair-link evidence', () => {
+    const service = createAiInboxService({
+      forwardProxy: async () => {
+        throw new Error('not used')
+      },
+    })
+
+    const payload = service.buildPayload({
+      documents: [
+        {
+          id: 'doc-orphan',
+          box: 'box-1',
+          path: '/orphan.sy',
+          hpath: '/笔记/AI-孤立笔记-归档',
+          title: 'AI-孤立笔记-归档',
+          content: '',
+          updated: '20260311120000',
+        },
+        {
+          id: 'doc-core',
+          box: 'box-1',
+          path: '/core.sy',
+          hpath: '/笔记/已读-核心文档-归档',
+          title: '已读-核心文档-归档',
+          content: '',
+          updated: '20260311120000',
+        },
+        {
+          id: 'doc-theme-ai',
+          box: 'box-1',
+          path: '/topics/theme-ai.sy',
+          hpath: '/专题/主题-AI-索引',
+          title: '主题-AI-索引',
+          name: 'AI',
+          content: '',
+          updated: '20260311120000',
+        },
+      ] as any,
+      report: {
+        ...report,
+        ranking: [
+          { documentId: 'doc-core', title: '已读-核心文档-归档', inboundReferences: 5, distinctSourceDocuments: 3, outboundReferences: 2, lastActiveAt: '20260311120000' },
+          { documentId: 'doc-theme-ai', title: '主题-AI-索引', inboundReferences: 4, distinctSourceDocuments: 2, outboundReferences: 1, lastActiveAt: '20260311120000' },
+        ],
+        orphans: [
+          {
+            documentId: 'doc-orphan',
+            title: 'AI-孤立笔记-归档',
+            degree: 0,
+            createdAt: '20260301090000',
+            updatedAt: '20260311120000',
+            historicalReferenceCount: 1,
+            lastHistoricalAt: '20260310120000',
+            hasSparseEvidence: false,
+          },
+        ],
+        dormantDocuments: [],
+        bridgeDocuments: [],
+        propagationNodes: [],
+        communities: [],
+      } as any,
+      trends: {
+        ...trends,
+        risingDocuments: [],
+        fallingDocuments: [],
+        communityTrends: [],
+        connectionChanges: {
+          newCount: 0,
+          brokenCount: 0,
+          newEdges: [],
+          brokenEdges: [],
+        },
+      } as any,
+      summaryCards: [
+        { key: 'orphans', label: '孤立文档', value: '1', hint: '当前窗口内没有有效文档级连接' },
+      ] as any,
+      filters: {},
+      timeRange: '7d',
+      dormantDays: 30,
+      themeDocuments: [
+        {
+          documentId: 'doc-theme-ai',
+          title: '主题-AI-索引',
+          themeName: 'AI',
+          matchTerms: ['AI'],
+          box: 'box-1',
+          path: '/topics/theme-ai.sy',
+          hpath: '/专题/主题-AI-索引',
+        },
+      ],
+      titleCleanupConfig: {
+        themeNamePrefix: '主题-',
+        themeNameSuffix: '-索引',
+        readTitlePrefixes: 'AI-|已读-',
+        readTitleSuffixes: '-归档',
+      },
+    })
+
+    expect(payload.signals.ranking).toEqual([
+      expect.objectContaining({
+        documentId: 'doc-core',
+        title: '核心文档',
+      }),
+      expect.objectContaining({
+        documentId: 'doc-theme-ai',
+        title: 'AI',
+      }),
+    ])
+    expect(payload.signals.orphans).toEqual([
+      expect.objectContaining({
+        documentId: 'doc-orphan',
+        title: '孤立笔记',
+      }),
+    ])
+    expect(payload.actionCandidates).toEqual([
+      expect.objectContaining({
+        type: 'repair-link',
+        title: 'Repair orphan doc: 孤立笔记',
+        recommendedTargets: expect.arrayContaining([
+          expect.objectContaining({
+            documentId: 'doc-core',
+            title: '核心文档',
+            kind: 'core-document',
+          }),
+        ]),
+      }),
+    ])
+    expect(payload.actionCandidates[0]?.recommendedTargets.some(target => target.kind === 'theme-document')).toBe(false)
+    expect(JSON.stringify(payload.actionCandidates[0])).not.toContain('AI-孤立笔记-归档')
+    expect(JSON.stringify(payload.actionCandidates[0])).not.toContain('已读-核心文档-归档')
+    expect(JSON.stringify(payload.actionCandidates[0])).not.toContain('主题-AI-索引')
+  })
+
   it('excludes wiki pages from payload signals and action candidates when a wiki suffix is configured', () => {
     const service = createAiInboxService({
       forwardProxy: async () => {

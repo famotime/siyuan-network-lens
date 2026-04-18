@@ -1,5 +1,9 @@
 import type { DocumentRecord, OrphanItem, ReferenceGraphReport } from './analysis'
-import { resolveDocumentTitle } from './document-utils'
+import {
+  resolveNormalizedDocumentTitle,
+  stripConfiguredTitleAffixes,
+  type DocumentTitleCleanupConfig,
+} from './document-utils'
 import { countThemeMatchesForDocument, type ThemeDocument } from './theme-documents'
 import { isAiConfigComplete, resolveAiEndpoint, resolveAiRequestOptions } from './ai-inbox'
 import { t } from '@/i18n/ui'
@@ -25,6 +29,10 @@ type AiConfig = Pick<
   | 'aiMaxTokens'
   | 'aiTemperature'
   | 'aiMaxContextMessages'
+  | 'themeNamePrefix'
+  | 'themeNameSuffix'
+  | 'readTitlePrefixes'
+  | 'readTitleSuffixes'
 >
 
 type CandidateTargetType = 'theme-document' | 'core-document' | 'related-document'
@@ -114,6 +122,7 @@ export function createAiLinkSuggestionService(deps: {
         documents: params.documents,
         themeDocuments: params.themeDocuments,
         report: params.report,
+        titleCleanupConfig: params.config,
       })
 
       if (!candidates.length) {
@@ -128,6 +137,7 @@ export function createAiLinkSuggestionService(deps: {
             forwardProxy: deps.forwardProxy,
             candidates,
             sourceDocument: params.sourceDocument,
+            titleCleanupConfig: params.config,
             onProgress: params.onProgress,
           })
         : rankCandidatesWithoutEmbeddings({
@@ -138,6 +148,7 @@ export function createAiLinkSuggestionService(deps: {
       const topCandidates = rankedCandidates
         .sort((left, right) => right.finalScore - left.finalScore || left.title.localeCompare(right.title, 'zh-CN'))
         .slice(0, 6)
+      const normalizedSourceDocument = normalizeDocumentTitleFields(params.sourceDocument, params.config)
 
       params.onProgress?.(t('analytics.aiLink.aiIsAnalyzing'))
 
@@ -151,20 +162,23 @@ export function createAiLinkSuggestionService(deps: {
             content: JSON.stringify({
               sourceDocument: {
                 id: params.sourceDocument.id,
-                title: resolveDocumentTitle(params.sourceDocument),
-                hpath: params.sourceDocument.hpath,
+                title: resolveNormalizedDocumentTitle(normalizedSourceDocument, params.config),
+                hpath: normalizedSourceDocument.hpath,
                 tags: normalizeTags(params.sourceDocument.tags),
                 contentPreview: extractContentPreview(params.sourceDocument.content),
                 historicalReferenceCount: params.orphan.historicalReferenceCount,
                 hasSparseEvidence: params.orphan.hasSparseEvidence,
               },
-              availableThemes: params.themeDocuments.map(themeDocument => ({
-                documentId: themeDocument.documentId,
-                title: themeDocument.title,
-                themeName: themeDocument.themeName,
-                matchTerms: themeDocument.matchTerms,
-                hpath: themeDocument.hpath,
-              })),
+              availableThemes: params.themeDocuments.map((themeDocument) => {
+                const normalizedThemeDocument = normalizeThemeDocumentForAi(themeDocument, params.config)
+                return {
+                  documentId: themeDocument.documentId,
+                  title: resolveNormalizedDocumentTitle(normalizedThemeDocument, params.config),
+                  themeName: themeDocument.themeName,
+                  matchTerms: themeDocument.matchTerms,
+                  hpath: normalizedThemeDocument.hpath,
+                }
+              }),
               availableTags: deduplicateTags(params.availableTags),
               candidates: topCandidates.map(candidate => ({
                 id: candidate.documentId,
@@ -217,11 +231,12 @@ async function rankCandidatesWithEmbeddings(params: {
   forwardProxy: ForwardProxyFn
   sourceDocument: DocumentRecord
   candidates: CandidateTarget[]
+  titleCleanupConfig?: DocumentTitleCleanupConfig | null
   onProgress?: (message: string) => void
 }) {
   params.onProgress?.(t('analytics.aiLink.analyzingEmbeddings'))
   const embeddingRequestInputs = [
-    buildEmbeddingInput(params.sourceDocument),
+    buildEmbeddingInput(params.sourceDocument, params.titleCleanupConfig),
     ...params.candidates.map(candidate => candidate.embeddingInput),
   ]
   const embeddings = await requestEmbeddings({
@@ -260,10 +275,11 @@ function buildCandidates(params: {
   documents: DocumentRecord[]
   themeDocuments: ThemeDocument[]
   report: ReferenceGraphReport
+  titleCleanupConfig?: DocumentTitleCleanupConfig | null
 }): CandidateTarget[] {
   const documentMap = new Map(params.documents.map(document => [document.id, document]))
   const themeMatches = countThemeMatchesForDocument({
-    document: params.sourceDocument,
+    document: normalizeDocumentTitleFields(params.sourceDocument, params.titleCleanupConfig),
     themeDocuments: params.themeDocuments,
   })
 
@@ -276,9 +292,9 @@ function buildCandidates(params: {
       }
       return {
         documentId: match.themeDocumentId,
-        title: match.themeDocumentTitle,
+        title: resolveNormalizedDocumentTitle(themeDocument, params.titleCleanupConfig),
         targetType: 'theme-document' as const,
-        embeddingInput: buildEmbeddingInput(themeDocument),
+        embeddingInput: buildEmbeddingInput(themeDocument, params.titleCleanupConfig),
         reasons: [
           `Topic match hit ${match.matchCount} times`,
           'Acts as a topic entry point',
@@ -300,9 +316,9 @@ function buildCandidates(params: {
       }
       return {
         documentId: item.documentId,
-        title: item.title,
+        title: resolveNormalizedDocumentTitle(document, params.titleCleanupConfig),
         targetType: 'core-document' as const,
-        embeddingInput: buildEmbeddingInput(document),
+        embeddingInput: buildEmbeddingInput(document, params.titleCleanupConfig),
         reasons: [
           `Referenced by ${item.distinctSourceDocuments} docs`,
           `${item.inboundReferences} inbound refs in the current window`,
@@ -315,13 +331,85 @@ function buildCandidates(params: {
   return [...themeCandidates, ...rankingCandidates]
 }
 
-function buildEmbeddingInput(document: Pick<DocumentRecord, 'title' | 'name' | 'hpath' | 'path' | 'tags' | 'content'>): string {
+function buildEmbeddingInput(
+  document: Pick<DocumentRecord, 'title' | 'name' | 'hpath' | 'path' | 'tags' | 'content'>,
+  titleCleanupConfig?: DocumentTitleCleanupConfig | null,
+): string {
+  const normalizedDocument = normalizeDocumentTitleFields(document as DocumentRecord, titleCleanupConfig)
   return [
-    `Title: ${resolveDocumentTitle(document as DocumentRecord)}`,
-    document.hpath ? `Path: ${document.hpath}` : '',
-    normalizeTags(document.tags).length ? `Tags: ${normalizeTags(document.tags).join(', ')}` : '',
-    extractContentPreview(document.content),
+    `Title: ${resolveNormalizedDocumentTitle(normalizedDocument, titleCleanupConfig)}`,
+    normalizedDocument.hpath ? `Path: ${normalizedDocument.hpath}` : '',
+    normalizeTags(normalizedDocument.tags).length ? `Tags: ${normalizeTags(normalizedDocument.tags).join(', ')}` : '',
+    extractContentPreview(normalizedDocument.content),
   ].filter(Boolean).join('\n')
+}
+
+function normalizeDocumentTitleFields<T extends Pick<DocumentRecord, 'id' | 'title' | 'name' | 'hpath' | 'path'>>(document: T, config?: DocumentTitleCleanupConfig | null): T {
+  const normalizedTitle = typeof document.title === 'string'
+    ? stripConfiguredTitleAffixes(document.title, config)
+    : document.title
+  const normalizedName = typeof document.name === 'string'
+    ? stripConfiguredTitleAffixes(document.name, config)
+    : document.name
+  return {
+    ...document,
+    title: normalizedTitle,
+    name: normalizedName,
+    hpath: normalizeDocumentHPath(document.hpath, document.title, normalizedTitle, document.name, normalizedName),
+    path: normalizeDocumentPath(document.path, document.title, normalizedTitle, document.name, normalizedName),
+  }
+}
+
+function normalizeDocumentHPath(
+  hpath: string | undefined,
+  originalTitle: string | undefined,
+  normalizedTitle: string | undefined,
+  originalName: string | null | undefined,
+  normalizedName: string | null | undefined,
+) {
+  if (!hpath) {
+    return hpath
+  }
+
+  if (originalTitle && normalizedTitle && hpath.endsWith(originalTitle)) {
+    return `${hpath.slice(0, -originalTitle.length)}${normalizedTitle}`
+  }
+
+  if (originalName && normalizedName && hpath.endsWith(originalName)) {
+    return `${hpath.slice(0, -originalName.length)}${normalizedName}`
+  }
+
+  return hpath
+}
+
+function normalizeDocumentPath(
+  path: string | undefined,
+  originalTitle: string | undefined,
+  normalizedTitle: string | undefined,
+  originalName: string | null | undefined,
+  normalizedName: string | null | undefined,
+) {
+  if (!path) {
+    return path
+  }
+
+  if (originalTitle && normalizedTitle && path.endsWith(`${originalTitle}.sy`)) {
+    return `${path.slice(0, -(`${originalTitle}.sy`).length)}${normalizedTitle}.sy`
+  }
+
+  if (originalName && normalizedName && path.endsWith(`${originalName}.sy`)) {
+    return `${path.slice(0, -(`${originalName}.sy`).length)}${normalizedName}.sy`
+  }
+
+  return path
+}
+
+function normalizeThemeDocumentForAi(themeDocument: ThemeDocument, config?: DocumentTitleCleanupConfig | null) {
+  return {
+    ...themeDocument,
+    title: stripConfiguredTitleAffixes(themeDocument.title, config),
+    hpath: normalizeDocumentHPath(themeDocument.hpath, themeDocument.title, stripConfiguredTitleAffixes(themeDocument.title, config), undefined, undefined),
+  }
 }
 
 function extractContentPreview(content?: string) {

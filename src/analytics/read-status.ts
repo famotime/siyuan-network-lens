@@ -1,6 +1,6 @@
 import type { DocumentRecord } from './analysis'
 import { matchesScopedPath, normalizeScopedPaths } from './document-paths'
-import { normalizeTags, resolveDocumentTitle } from './document-utils'
+import { normalizeTags, normalizeTitleRules, resolveDocumentTitle } from './document-utils'
 import type { PluginConfig } from '@/types/config'
 
 export type ReadMarkerConfig = Pick<PluginConfig, 'readTagNames' | 'readTitlePrefixes' | 'readTitleSuffixes' | 'readPaths'>
@@ -60,17 +60,6 @@ export function collectReadMatches(params: {
     })
     .filter((item): item is ReadMatchItem => item !== null)
     .sort((left, right) => left.documentId.localeCompare(right.documentId))
-}
-
-export function normalizeTitleRules(value?: string): string[] {
-  if (!value) {
-    return []
-  }
-
-  return value
-    .split('|')
-    .map(item => item.trim())
-    .filter(Boolean)
 }
 
 function normalizeSelectedTags(tags?: readonly string[]): string[] {

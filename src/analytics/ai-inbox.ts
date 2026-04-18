@@ -18,6 +18,11 @@ import {
   DEFAULT_AI_TEMPERATURE,
   type PluginConfig,
 } from '@/types/config'
+import {
+  resolveNormalizedDocumentTitle,
+  stripConfiguredTitleAffixes,
+  type DocumentTitleCleanupConfig,
+} from './document-utils'
 
 type ForwardProxyFn = (
   url: string,
@@ -151,6 +156,7 @@ export interface AiInboxService {
     contextCapacity?: AiContextCapacity
     themeDocuments?: ThemeDocument[]
     wikiPageSuffix?: string
+    titleCleanupConfig?: DocumentTitleCleanupConfig
   }) => AiInboxPayload
   generateInbox: (params: {
     config: AiConfig
@@ -281,6 +287,7 @@ function buildAiInboxPayload(params: {
   contextCapacity?: AiContextCapacity
   themeDocuments?: ThemeDocument[]
   wikiPageSuffix?: string
+  titleCleanupConfig?: DocumentTitleCleanupConfig
 }): AiInboxPayload {
   const ordinaryDocuments = filterOutWikiDocuments(params.documents, params.wikiPageSuffix)
   const ordinaryDocumentIds = new Set(ordinaryDocuments.map(document => document.id))
@@ -316,36 +323,37 @@ function buildAiInboxPayload(params: {
       trends: filteredTrends,
       themeDocuments: params.themeDocuments ?? [],
       actionCandidateLimit: limits.actionCandidateLimit,
+      titleCleanupConfig: params.titleCleanupConfig,
     }),
     signals: {
       ranking: filteredReport.ranking.slice(0, limits.signalLimit).map(item => ({
         documentId: item.documentId,
-        title: item.title,
+        title: resolveSignalTitle(documentMap, item.documentId, item.title, params.titleCleanupConfig),
         inboundReferences: item.inboundReferences,
         distinctSourceDocuments: item.distinctSourceDocuments,
         outboundReferences: item.outboundReferences,
       })),
       orphans: filteredReport.orphans.slice(0, limits.signalLimit).map(item => ({
         documentId: item.documentId,
-        title: item.title,
+        title: resolveSignalTitle(documentMap, item.documentId, item.title, params.titleCleanupConfig),
         updatedAt: item.updatedAt,
         historicalReferenceCount: item.historicalReferenceCount,
         hasSparseEvidence: item.hasSparseEvidence,
       })),
       dormant: filteredReport.dormantDocuments.slice(0, limits.signalLimit).map(item => ({
         documentId: item.documentId,
-        title: item.title,
+        title: resolveSignalTitle(documentMap, item.documentId, item.title, params.titleCleanupConfig),
         inactivityDays: item.inactivityDays,
         historicalReferenceCount: item.historicalReferenceCount,
       })),
       bridges: filteredReport.bridgeDocuments.slice(0, limits.signalLimit).map(item => ({
         documentId: item.documentId,
-        title: item.title,
+        title: resolveSignalTitle(documentMap, item.documentId, item.title, params.titleCleanupConfig),
         degree: item.degree,
       })),
       propagation: filteredReport.propagationNodes.slice(0, limits.signalLimit).map(item => ({
         documentId: item.documentId,
-        title: item.title,
+        title: resolveSignalTitle(documentMap, item.documentId, item.title, params.titleCleanupConfig),
         score: item.score,
         focusDocumentCount: item.focusDocumentCount,
         communitySpan: item.communitySpan,
@@ -357,19 +365,19 @@ function buildAiInboxPayload(params: {
           communityId: item.communityId,
           size: community?.size ?? item.documentIds.length,
           topTags: item.topTags,
-          hubTitles: item.hubDocumentIds.map(documentId => resolveDocumentTitle(documentMap, documentId)),
+          hubTitles: item.hubDocumentIds.map(documentId => resolveDocumentTitle(documentMap, documentId, params.titleCleanupConfig)),
           missingTopicPage: community?.missingTopicPage ?? false,
         }
       }),
-      risingDocuments: filteredTrends.risingDocuments.slice(0, limits.signalLimit).map(item => mapTrendItem(item)),
-      fallingDocuments: filteredTrends.fallingDocuments.slice(0, limits.signalLimit).map(item => mapTrendItem(item)),
+      risingDocuments: filteredTrends.risingDocuments.slice(0, limits.signalLimit).map(item => mapTrendItem(item, documentMap, params.titleCleanupConfig)),
+      fallingDocuments: filteredTrends.fallingDocuments.slice(0, limits.signalLimit).map(item => mapTrendItem(item, documentMap, params.titleCleanupConfig)),
       newConnections: filteredTrends.connectionChanges.newEdges.slice(0, limits.connectionLimit).map(item => ({
-        title: buildConnectionTitle(documentMap, item.documentIds),
+        title: buildConnectionTitle(documentMap, item.documentIds, params.titleCleanupConfig),
         documentIds: [...item.documentIds],
         referenceCount: item.referenceCount,
       })),
       brokenConnections: filteredTrends.connectionChanges.brokenEdges.slice(0, limits.connectionLimit).map(item => ({
-        title: buildConnectionTitle(documentMap, item.documentIds),
+        title: buildConnectionTitle(documentMap, item.documentIds, params.titleCleanupConfig),
         documentIds: [...item.documentIds],
         referenceCount: item.referenceCount,
       })),
@@ -383,6 +391,7 @@ function buildActionCandidates(params: {
   trends: TrendReport
   themeDocuments: ThemeDocument[]
   actionCandidateLimit: number
+  titleCleanupConfig?: DocumentTitleCleanupConfig | null
 }): AiInboxActionCandidate[] {
   const candidates: AiInboxActionCandidate[] = []
   const usedIds = new Set<string>()
@@ -393,6 +402,7 @@ function buildActionCandidates(params: {
       documentMap: params.documentMap,
       ranking: params.report.ranking,
       themeDocuments: params.themeDocuments,
+      titleCleanupConfig: params.titleCleanupConfig,
     })
     if (candidate && !usedIds.has(candidate.id)) {
       usedIds.add(candidate.id)
@@ -409,6 +419,7 @@ function buildActionCandidates(params: {
       community,
       trend: item,
       documentMap: params.documentMap,
+      titleCleanupConfig: params.titleCleanupConfig,
     })
     if (candidate && !usedIds.has(candidate.id)) {
       usedIds.add(candidate.id)
@@ -422,6 +433,7 @@ function buildActionCandidates(params: {
       communities: params.report.communities,
       ranking: params.report.ranking,
       documentMap: params.documentMap,
+      titleCleanupConfig: params.titleCleanupConfig,
     })
     if (candidate && !usedIds.has(candidate.id)) {
       usedIds.add(candidate.id)
@@ -435,6 +447,7 @@ function buildActionCandidates(params: {
       documentMap: params.documentMap,
       ranking: params.report.ranking,
       themeDocuments: params.themeDocuments,
+      titleCleanupConfig: params.titleCleanupConfig,
     })
     if (candidate && !usedIds.has(candidate.id)) {
       usedIds.add(candidate.id)
@@ -452,22 +465,23 @@ function buildRepairLinkCandidate(params: {
   documentMap: Map<string, DocumentRecord>
   ranking: ReferenceGraphReport['ranking']
   themeDocuments: ThemeDocument[]
+  titleCleanupConfig?: DocumentTitleCleanupConfig | null
 }): AiInboxActionCandidate | null {
   const document = params.documentMap.get(params.orphan.documentId)
   if (!document) {
     return null
   }
-  const documentTitle = resolveDocumentTitle(params.documentMap, params.orphan.documentId)
+  const documentTitle = resolveDocumentTitle(params.documentMap, params.orphan.documentId, params.titleCleanupConfig)
 
   const themeMatches = countThemeMatchesForDocument({
-    document,
+    document: normalizeDocumentTitleFields(document, params.titleCleanupConfig),
     themeDocuments: params.themeDocuments,
   }).slice(0, 2)
 
   const recommendedTargets: AiInboxRecommendedTarget[] = [
     ...themeMatches.map(match => ({
       documentId: match.themeDocumentId,
-      title: match.themeDocumentTitle,
+      title: stripConfiguredTitleAffixes(match.themeDocumentTitle, params.titleCleanupConfig),
       kind: 'theme-document' as const,
       reason: t('analytics.aiInbox.repairTargetThemeReason', { count: match.matchCount }),
     })),
@@ -476,7 +490,7 @@ function buildRepairLinkCandidate(params: {
       .slice(0, themeMatches.length ? 1 : 2)
       .map(item => ({
         documentId: item.documentId,
-        title: item.title,
+        title: resolveSignalTitle(params.documentMap, item.documentId, item.title, params.titleCleanupConfig),
         kind: 'core-document' as const,
         reason: t('analytics.aiInbox.repairTargetCoreReason', { count: item.distinctSourceDocuments }),
       })),
@@ -541,13 +555,14 @@ function buildTopicPageCandidate(params: {
   community: ReferenceGraphReport['communities'][number]
   trend: TrendReport['communityTrends'][number]
   documentMap: Map<string, DocumentRecord>
+  titleCleanupConfig?: DocumentTitleCleanupConfig | null
 }): AiInboxActionCandidate | null {
-  const suggestedTitle = buildSuggestedTopicPageTitle(params.community)
+  const suggestedTitle = buildSuggestedTopicPageTitle(params.community, params.documentMap, params.titleCleanupConfig)
   const recommendedTargets = params.community.hubDocumentIds
     .slice(0, 3)
     .map(documentId => ({
       documentId,
-      title: resolveDocumentTitle(params.documentMap, documentId),
+      title: resolveDocumentTitle(params.documentMap, documentId, params.titleCleanupConfig),
       kind: 'community-hub' as const,
       reason: t('analytics.aiInbox.topicPageTargetHubReason'),
     }))
@@ -600,6 +615,7 @@ function buildBridgeRiskCandidate(params: {
   communities: ReferenceGraphReport['communities']
   ranking: ReferenceGraphReport['ranking']
   documentMap: Map<string, DocumentRecord>
+  titleCleanupConfig?: DocumentTitleCleanupConfig | null
 }): AiInboxActionCandidate | null {
   const relatedCommunities = params.communities.filter(community => community.documentIds.includes(params.bridge.documentId))
   const relatedTargets = relatedCommunities
@@ -609,7 +625,7 @@ function buildBridgeRiskCandidate(params: {
     .slice(0, 3)
     .map(documentId => ({
       documentId,
-      title: resolveDocumentTitle(params.documentMap, documentId),
+      title: resolveDocumentTitle(params.documentMap, documentId, params.titleCleanupConfig),
       kind: 'community-hub' as const,
       reason: t('analytics.aiInbox.bridgeTargetHubReason'),
     }))
@@ -621,7 +637,7 @@ function buildBridgeRiskCandidate(params: {
         .slice(0, 2)
         .map(item => ({
           documentId: item.documentId,
-          title: item.title,
+          title: resolveSignalTitle(params.documentMap, item.documentId, item.title, params.titleCleanupConfig),
           kind: 'related-document' as const,
           reason: t('analytics.aiInbox.bridgeTargetRelatedDocReason'),
         })),
@@ -636,7 +652,7 @@ function buildBridgeRiskCandidate(params: {
   return {
     id: `bridge-risk:${params.bridge.documentId}`,
     type: 'maintain-bridge',
-    title: t('analytics.aiInbox.bridgeTitle', { title: params.bridge.title }),
+    title: t('analytics.aiInbox.bridgeTitle', { title: resolveSignalTitle(params.documentMap, params.bridge.documentId, params.bridge.title, params.titleCleanupConfig) }),
     focusDocumentIds: [params.bridge.documentId],
     confidence: confidenceScore >= 75 ? 'high' : confidenceScore >= 50 ? 'medium' : 'low',
     impactScore,
@@ -661,10 +677,10 @@ function buildBridgeRiskCandidate(params: {
     ],
     recommendedAction: recommendedTargets.length
       ? t('analytics.aiInbox.bridgeActionAddNavigationToTargets', {
-          title: params.bridge.title,
+          title: resolveSignalTitle(params.documentMap, params.bridge.documentId, params.bridge.title, params.titleCleanupConfig),
           targets: joinLocalizedList(recommendedTargets.map(target => target.title)),
         })
-      : t('analytics.aiInbox.bridgeActionAvoidSingleBridgePoint', { title: params.bridge.title }),
+      : t('analytics.aiInbox.bridgeActionAvoidSingleBridgePoint', { title: resolveSignalTitle(params.documentMap, params.bridge.documentId, params.bridge.title, params.titleCleanupConfig) }),
     expectedBenefits: [
       t('analytics.aiInbox.bridgeBenefitReduceFragmentationRisk'),
       recommendedTargets.length
@@ -684,18 +700,19 @@ function buildArchiveCandidate(params: {
   documentMap: Map<string, DocumentRecord>
   ranking: ReferenceGraphReport['ranking']
   themeDocuments: ThemeDocument[]
+  titleCleanupConfig?: DocumentTitleCleanupConfig | null
 }): AiInboxActionCandidate | null {
   const document = params.documentMap.get(params.dormant.documentId)
-  const documentTitle = resolveDocumentTitle(params.documentMap, params.dormant.documentId)
+  const documentTitle = resolveDocumentTitle(params.documentMap, params.dormant.documentId, params.titleCleanupConfig)
   const themeMatches = document
     ? countThemeMatchesForDocument({
-        document,
+        document: normalizeDocumentTitleFields(document, params.titleCleanupConfig),
         themeDocuments: params.themeDocuments,
       }).slice(0, 1)
     : []
   const recommendedTargets: AiInboxRecommendedTarget[] = themeMatches.map(match => ({
     documentId: match.themeDocumentId,
-    title: match.themeDocumentTitle,
+    title: stripConfiguredTitleAffixes(match.themeDocumentTitle, params.titleCleanupConfig),
     kind: 'theme-document',
     reason: t('analytics.aiInbox.archiveTargetThemeReason'),
   }))
@@ -707,7 +724,7 @@ function buildArchiveCandidate(params: {
         .slice(0, 1)
         .map(item => ({
           documentId: item.documentId,
-          title: item.title,
+          title: resolveSignalTitle(params.documentMap, item.documentId, item.title, params.titleCleanupConfig),
           kind: 'core-document' as const,
           reason: t('analytics.aiInbox.archiveTargetCoreReason'),
         })),
@@ -750,10 +767,14 @@ function buildArchiveCandidate(params: {
   }
 }
 
-function mapTrendItem(item: TrendDocumentItem) {
+function mapTrendItem(
+  item: TrendDocumentItem,
+  documentMap: Map<string, DocumentRecord>,
+  titleCleanupConfig?: DocumentTitleCleanupConfig | null,
+) {
   return {
     documentId: item.documentId,
-    title: item.title,
+    title: resolveSignalTitle(documentMap, item.documentId, item.title, titleCleanupConfig),
     currentReferences: item.currentReferences,
     previousReferences: item.previousReferences,
     delta: item.delta,
@@ -813,17 +834,34 @@ function filterTrendReportForInbox(trends: TrendReport, ordinaryDocumentIds: Set
   }
 }
 
-function resolveDocumentTitle(documentMap: Map<string, DocumentRecord>, documentId: string): string {
+function resolveDocumentTitle(
+  documentMap: Map<string, DocumentRecord>,
+  documentId: string,
+  titleCleanupConfig?: DocumentTitleCleanupConfig | null,
+): string {
   const document = documentMap.get(documentId)
-  return document?.title || document?.hpath || document?.path || documentId
+  return document
+    ? resolveNormalizedDocumentTitle(document, titleCleanupConfig)
+    : documentId
 }
 
-function buildConnectionTitle(documentMap: Map<string, DocumentRecord>, documentIds: string[]): string {
-  return documentIds.map(documentId => resolveDocumentTitle(documentMap, documentId)).join(' <-> ')
+function buildConnectionTitle(
+  documentMap: Map<string, DocumentRecord>,
+  documentIds: string[],
+  titleCleanupConfig?: DocumentTitleCleanupConfig | null,
+): string {
+  return documentIds.map(documentId => resolveDocumentTitle(documentMap, documentId, titleCleanupConfig)).join(' <-> ')
 }
 
-function buildSuggestedTopicPageTitle(community: ReferenceGraphReport['communities'][number]) {
-  const topic = community.topTags[0] || community.hubDocumentIds[0] || community.documentIds[0] || t('analytics.aiInbox.untitledTopic')
+function buildSuggestedTopicPageTitle(
+  community: ReferenceGraphReport['communities'][number],
+  documentMap: Map<string, DocumentRecord>,
+  titleCleanupConfig?: DocumentTitleCleanupConfig | null,
+) {
+  const topic = community.topTags[0]
+    || (community.hubDocumentIds[0] ? resolveDocumentTitle(documentMap, community.hubDocumentIds[0], titleCleanupConfig) : '')
+    || (community.documentIds[0] ? resolveDocumentTitle(documentMap, community.documentIds[0], titleCleanupConfig) : '')
+    || t('analytics.aiInbox.untitledTopic')
   return t('analytics.aiInbox.suggestedTopicPageTitle', { topic })
 }
 
@@ -836,6 +874,78 @@ function buildAiInboxEntryLinks(targets: Array<Pick<AiInboxRecommendedTarget, 'd
     .filter((target): target is Required<Pick<AiInboxRecommendedTarget, 'documentId' | 'title'>> => Boolean(target.documentId))
     .map(target => `((` + `${target.documentId} "${target.title}"))`)
     .join(' / ')
+}
+
+function resolveSignalTitle(
+  documentMap: Map<string, DocumentRecord>,
+  documentId: string,
+  fallbackTitle: string,
+  titleCleanupConfig?: DocumentTitleCleanupConfig | null,
+): string {
+  const document = documentMap.get(documentId)
+  return document
+    ? resolveNormalizedDocumentTitle(document, titleCleanupConfig)
+    : stripConfiguredTitleAffixes(fallbackTitle, titleCleanupConfig)
+}
+
+function normalizeDocumentTitleFields<T extends Pick<DocumentRecord, 'id' | 'title' | 'name' | 'hpath' | 'path'>>(document: T, config?: DocumentTitleCleanupConfig | null): T {
+  const normalizedTitle = typeof document.title === 'string'
+    ? stripConfiguredTitleAffixes(document.title, config)
+    : document.title
+  const normalizedName = typeof document.name === 'string'
+    ? stripConfiguredTitleAffixes(document.name, config)
+    : document.name
+  return {
+    ...document,
+    title: normalizedTitle,
+    name: normalizedName,
+    hpath: normalizeDocumentHPath(document.hpath, document.title, normalizedTitle, document.name, normalizedName),
+    path: normalizeDocumentPath(document.path, document.title, normalizedTitle, document.name, normalizedName),
+  }
+}
+
+function normalizeDocumentHPath(
+  hpath: string | undefined,
+  originalTitle: string | undefined,
+  normalizedTitle: string | undefined,
+  originalName: string | null | undefined,
+  normalizedName: string | null | undefined,
+) {
+  if (!hpath) {
+    return hpath
+  }
+
+  if (originalTitle && normalizedTitle && hpath.endsWith(originalTitle)) {
+    return `${hpath.slice(0, -originalTitle.length)}${normalizedTitle}`
+  }
+
+  if (originalName && normalizedName && hpath.endsWith(originalName)) {
+    return `${hpath.slice(0, -originalName.length)}${normalizedName}`
+  }
+
+  return hpath
+}
+
+function normalizeDocumentPath(
+  path: string | undefined,
+  originalTitle: string | undefined,
+  normalizedTitle: string | undefined,
+  originalName: string | null | undefined,
+  normalizedName: string | null | undefined,
+) {
+  if (!path) {
+    return path
+  }
+
+  if (originalTitle && normalizedTitle && path.endsWith(`${originalTitle}.sy`)) {
+    return `${path.slice(0, -(`${originalTitle}.sy`).length)}${normalizedTitle}.sy`
+  }
+
+  if (originalName && normalizedName && path.endsWith(`${originalName}.sy`)) {
+    return `${path.slice(0, -(`${originalName}.sy`).length)}${normalizedName}.sy`
+  }
+
+  return path
 }
 
 function buildUrgencyScore(updatedAt?: string) {
