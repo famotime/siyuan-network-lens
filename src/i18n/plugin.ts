@@ -10,7 +10,7 @@ const PLUGIN_TEXT = {
     zh_CN: '脉络镜',
   },
   pluginTagline: {
-    en_US: 'Bring hidden knowledge back into view.',
+    en_US: 'Bring hidden knowledge back into sight.',
     zh_CN: '让隐没的知识，重现脉络',
   },
   pluginIconAlt: {

@@ -276,7 +276,7 @@ const props = defineProps<{
 
 ensureConfigDefaults(props.config)
 
-const pluginTitle = computed(() => pickOppositePluginText('pluginTitle'))
+const pluginTitle = computed(() => props.plugin.i18n?.pluginTitle ?? props.plugin.displayName ?? pickPluginText('pluginTitle'))
 const pluginEyebrow = computed(() => pickOppositePluginText('pluginEyebrow'))
 const pluginTagline = computed(() => props.plugin.i18n?.pluginTagline ?? pickPluginText('pluginTagline'))
 const pluginIconAlt = computed(() => props.plugin.i18n?.pluginIconAlt ?? pickPluginText('pluginIconAlt'))
@@ -540,7 +540,7 @@ function updateToDocumentId(value: string) {
   display: flex;
   flex-direction: column;
   align-items: flex-end;
-  gap: 8px;
+  gap: 4px;
 }
 
 .eyebrow {
@@ -1183,7 +1183,7 @@ input {
 
 .action-button {
   min-width: 108px;
-  padding: 10px 18px;
+  padding: 6px 12px;
   border-radius: 8px;
   background: var(--b3-theme-primary);
   color: var(--b3-theme-on-primary, #fff);
