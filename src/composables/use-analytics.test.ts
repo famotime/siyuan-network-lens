@@ -1483,7 +1483,7 @@ describe('useAnalyticsState', () => {
 
     expect(suggestForOrphan).toHaveBeenCalledTimes(1)
     expect(suggestForOrphan).toHaveBeenCalledWith(expect.objectContaining({
-      availableTags: ['AI', 'note'],
+      existingTags: ['AI', 'note'],
       themeDocuments: expect.arrayContaining([
         expect.objectContaining({
           documentId: 'doc-theme-ai',

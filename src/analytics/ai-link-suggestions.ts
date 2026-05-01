@@ -84,7 +84,7 @@ export interface AiLinkSuggestionService {
     orphan: OrphanItem
     documents: DocumentRecord[]
     themeDocuments: ThemeDocument[]
-    availableTags: string[]
+    existingTags: string[]
     report: ReferenceGraphReport
     onProgress?: (message: string) => void
   }) => Promise<AiLinkSuggestionResult>
@@ -97,6 +97,7 @@ const SUGGESTION_SYSTEM_PROMPT = [
   'Each Suggestion must include targetDocumentId, targetTitle, targetType, confidence, and reason, with optional draftText and tagSuggestions.',
   'reason must merge the recommendation basis and the main expected improvement into one concise explanation.',
   'tagSuggestions is an array of tag suggestions. Each item includes tag, source, and reason; source can only be existing or new.',
+  'For tag suggestions, actively propose both: (1) existing tags from the existingTags list that fit the document content, and (2) new tags that do not exist yet but would be reasonable and useful for organizing the document. New tags should follow the naming style and granularity of the existing tags.',
   'If a topic page is clearly suitable, prefer recommending the topic page.',
   'All user-visible text must follow the current workspace UI language.',
 ].join(' ')
@@ -190,7 +191,7 @@ export function createAiLinkSuggestionService(deps: {
                   hpath: normalizedThemeDocument.hpath,
                 }
               }),
-              availableTags: deduplicateTags(params.availableTags),
+              existingTags: deduplicateTags(params.existingTags),
               candidates: topCandidates.map(candidate => ({
                 id: candidate.documentId,
                 title: candidate.title,

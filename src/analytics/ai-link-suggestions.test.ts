@@ -117,7 +117,7 @@ describe('ai link suggestions', () => {
           hpath: '/专题/主题-AI-索引',
         },
       ],
-      availableTags: ['AI', '机器学习', '知识管理'],
+      existingTags: ['AI', '机器学习', '知识管理'],
       report: {
         ranking: [
           { documentId: 'doc-b', title: 'Beta', inboundReferences: 5, distinctSourceDocuments: 3, outboundReferences: 2, lastActiveAt: '20260311120000' },
@@ -144,7 +144,7 @@ describe('ai link suggestions', () => {
           title: '主题-AI-索引',
         }),
       ],
-      availableTags: ['AI', '机器学习', '知识管理'],
+      existingTags: ['AI', '机器学习', '知识管理'],
     }))
     expect(result.suggestions).toEqual([
       expect.objectContaining({
@@ -246,7 +246,7 @@ describe('ai link suggestions', () => {
           hpath: '/专题/主题-AI-索引',
         },
       ],
-      availableTags: ['AI', '机器学习'],
+      existingTags: ['AI', '机器学习'],
       report: {
         ranking: [],
       } as any,
@@ -367,7 +367,7 @@ describe('ai link suggestions', () => {
           hpath: '/专题/主题-AI-索引',
         },
       ],
-      availableTags: ['AI', '整理'],
+      existingTags: ['AI', '整理'],
       report: {
         ranking: [
           { documentId: 'doc-core', title: '已读-核心文档-归档', inboundReferences: 4, distinctSourceDocuments: 3, outboundReferences: 2, lastActiveAt: '20260311120000' },
@@ -455,7 +455,7 @@ describe('ai link suggestions', () => {
           hpath: '/专题/主题-AI-索引',
         },
       ],
-      availableTags: ['AI', '机器学习'],
+      existingTags: ['AI', '机器学习'],
       report: {
         ranking: [],
       } as any,
@@ -549,7 +549,7 @@ describe('ai link suggestions', () => {
           hpath: '/专题/主题-AI-索引',
         },
       ],
-      availableTags: ['AI', '机器学习', '知识管理'],
+      existingTags: ['AI', '机器学习', '知识管理'],
       report: {
         ranking: [],
       } as any,
@@ -652,7 +652,7 @@ describe('ai link suggestions', () => {
           hpath: '/专题/主题-AI-索引',
         },
       ],
-      availableTags: ['AI'],
+      existingTags: ['AI'],
       report: {
         ranking: [],
       } as any,
@@ -787,7 +787,7 @@ describe('ai link suggestions', () => {
           hpath: '/专题/ClaudeCode',
         },
       ],
-      availableTags: ['Agent', 'Codex', 'Prompt'],
+      existingTags: ['Agent', 'Codex', 'Prompt'],
       report: {
         ranking: [],
       } as any,

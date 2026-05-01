@@ -156,7 +156,7 @@ export function createAnalyticsAiController(params: {
         orphan,
         documents: params.snapshot.value.documents,
         themeDocuments: params.themeDocuments.value,
-        availableTags: params.tagOptions.value,
+        existingTags: params.tagOptions.value,
         report: params.report.value,
         onProgress: (message) => {
           updateOrphanAiSuggestionState(documentId, {
