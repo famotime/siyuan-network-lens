@@ -233,6 +233,8 @@
         :generate-doc-index="generateDocIndex"
         :has-doc-index="hasDocIndex"
         :open-doc-index="openDocIndex"
+        :batch-generate-doc-index="batchGenerateDocIndex"
+        :batch-delete-doc-index="batchDeleteDocIndex"
       />
       <div
         v-if="showWikiFeature && visibleSummaryCards.length && selectedSummaryDetail?.key === 'documents'"
@@ -380,6 +382,8 @@ const {
   generateDocIndex,
   hasDocIndex,
   openDocIndex,
+  batchGenerateDocIndex,
+  batchDeleteDocIndex,
   formatTimestamp,
   formatDelta,
   toggleOrphanThemeSuggestion,

@@ -99,6 +99,7 @@ export interface AiDocumentIndexStore {
   getSemanticProfile: (documentId: string) => Promise<DocumentSemanticProfileRecord | null>
   getFreshSemanticProfile: (documentId: string, sourceUpdatedAt: string) => Promise<DocumentSemanticProfileRecord | null>
   getFreshDocumentSummary: (documentId: string, sourceUpdatedAt: string) => Promise<DocumentSummarySnapshot | null>
+  deleteDocumentSummary: (documentIds: string[]) => Promise<void>
   invalidateSuggestionCache: (documentId: string) => Promise<void>
 }
 
@@ -176,6 +177,22 @@ export function createAiDocumentIndexStore(storage: PluginStorageLike): AiDocume
       }
 
       return buildFreshDocumentSummarySnapshot(profile)
+    },
+    async deleteDocumentSummary(documentIds) {
+      if (!documentIds.length) {
+        return
+      }
+      const snapshot = await loadSnapshot(storage)
+      let changed = false
+      for (const documentId of documentIds) {
+        if (snapshot.semanticProfiles[documentId]) {
+          delete snapshot.semanticProfiles[documentId]
+          changed = true
+        }
+      }
+      if (changed) {
+        await saveSnapshot(storage, snapshot)
+      }
     },
     async invalidateSuggestionCache(documentId) {
       const snapshot = await loadSnapshot(storage)

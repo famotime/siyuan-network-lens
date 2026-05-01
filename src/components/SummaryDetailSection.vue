@@ -315,6 +315,32 @@
               </div>
             </article>
           </div>
+          <div
+            v-if="showDocumentIndex && detail.key === 'documents' && listItems.length"
+            class="doc-index-batch-actions"
+          >
+            <button
+              class="doc-index-button"
+              type="button"
+              :disabled="batchGenerating"
+              @click="handleBatchGenerate"
+            >
+              <span
+                v-if="batchGenerating"
+                class="doc-index-spinner"
+                aria-hidden="true"
+              />
+              {{ batchGenerating ? t('summaryDetail.documentIndex.batchGenerating', { done: batchProgress.done, total: batchProgress.total }) : t('summaryDetail.documentIndex.batchGenerate') }}
+            </button>
+            <button
+              class="doc-index-button doc-index-button--view"
+              type="button"
+              :disabled="batchDeleting"
+              @click="handleBatchDelete"
+            >
+              {{ t('summaryDetail.documentIndex.batchDelete') }}
+            </button>
+          </div>
         </template>
         <div
           v-else
@@ -776,6 +802,8 @@ const props = withDefaults(defineProps<{
   generateDocIndex?: (documentId: string) => Promise<boolean>
   hasDocIndex?: (documentId: string) => Promise<boolean>
   openDocIndex?: (documentId: string) => Promise<void>
+  batchGenerateDocIndex?: (documentIds: string[], onProgress?: (done: number, total: number) => void) => Promise<{ success: number, failed: number }>
+  batchDeleteDocIndex?: (documentIds: string[]) => Promise<number>
 }>(), {
   showWikiPanelActions: true,
   showDocumentIndex: false,
@@ -852,6 +880,54 @@ async function handleOpenDocIndex(documentId: string) {
     return
   }
   await props.openDocIndex(documentId)
+}
+
+const batchGenerating = ref(false)
+const batchProgress = ref({ done: 0, total: 0 })
+const batchDeleting = ref(false)
+
+async function handleBatchGenerate() {
+  if (!props.batchGenerateDocIndex || batchGenerating.value) {
+    return
+  }
+  const ids = visibleDocumentIds.value
+  if (!ids.length) {
+    return
+  }
+  batchGenerating.value = true
+  batchProgress.value = { done: 0, total: ids.length }
+  try {
+    const result = await props.batchGenerateDocIndex(ids, (done, total) => {
+      batchProgress.value = { done, total }
+    })
+    if (props.hasDocIndex) {
+      const next: Record<string, boolean> = { ...docIndexExists.value }
+      for (const id of ids) {
+        next[id] = await props.hasDocIndex(id)
+      }
+      docIndexExists.value = next
+    }
+    return result
+  } finally {
+    batchGenerating.value = false
+  }
+}
+
+async function handleBatchDelete() {
+  if (!props.batchDeleteDocIndex || batchDeleting.value) {
+    return
+  }
+  const ids = visibleDocumentIds.value
+  if (!ids.length) {
+    return
+  }
+  batchDeleting.value = true
+  try {
+    await props.batchDeleteDocIndex(ids)
+    docIndexExists.value = {}
+  } finally {
+    batchDeleting.value = false
+  }
 }
 
 function hasSuggestionCallout(item: DetailItemWithThemeSuggestions): boolean {
@@ -1385,6 +1461,15 @@ async function handleAiInboxActionTargetClick(
   flex-wrap: wrap;
   gap: 8px;
   margin-top: 10px;
+}
+
+.doc-index-batch-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 16px;
+  padding-top: 16px;
+  border-top: 1px solid var(--panel-border);
 }
 
 .doc-index-button {

@@ -588,6 +588,22 @@ const UI_TEXT = {
         en_US: 'No embedding configured (set an embedding model in AI settings)',
         zh_CN: '未配置向量嵌入（请在 AI 设置中配置 Embedding 模型）',
       },
+      viewWarning: {
+        en_US: 'This is a temporary document generated for viewing the document index only. It is not part of your notes. Please delete it immediately after viewing to avoid confusion with your actual notes.',
+        zh_CN: '这是一篇用于查看文档索引的临时文档，不属于笔记内容。查看完毕后建议立即删除，以免与笔记文档混淆。',
+      },
+      batchGenerate: {
+        en_US: 'Batch generate indexes',
+        zh_CN: '批量生成索引',
+      },
+      batchGenerating: {
+        en_US: 'Generating {done}/{total}...',
+        zh_CN: '生成中 {done}/{total}...',
+      },
+      batchDelete: {
+        en_US: 'Batch delete indexes',
+        zh_CN: '批量删除索引',
+      },
     },
     propagation: {
       title: {

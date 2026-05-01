@@ -1160,12 +1160,16 @@ export function useAnalyticsState(params: UseAnalyticsParams) {
     }
 
     const documentTitle = profile.title || documentId
-    const title = t('summaryDetail.documentIndex.viewTitle', { title: documentTitle })
+    const title = `📑 ${t('summaryDetail.documentIndex.viewTitle', { title: documentTitle })}`
+    const safeName = title.replace(/[/:*?"<>|\\]/g, '_')
+    const docPath = `/索引/${safeName}`
     const tagsJson = parseJsonArray(profile.tagsJson)
     const keywordsJson = parseJsonArray(profile.documentKeywordsJson ?? profile.keywordsJson)
     const evidenceSnippetsJson = parseJsonArray(profile.documentEvidenceSnippetsJson ?? profile.evidenceSnippetsJson)
 
     const lines: string[] = []
+    lines.push(`> ⚠️ ${t('summaryDetail.documentIndex.viewWarning')}`)
+    lines.push('')
     lines.push(`## ${t('summaryDetail.documentIndex.viewSummaryShort')}`)
     lines.push('')
     lines.push(profile.documentSummaryShort || profile.summaryShort || '-')
@@ -1212,7 +1216,6 @@ export function useAnalyticsState(params: UseAnalyticsParams) {
     }
 
     const markdown = lines.join('\n')
-    const docPath = `/${title.replace(/[/:*?"<>|]/g, '_')}`
 
     try {
       const newDocId = await createDocWithMd(firstNotebook.id, docPath, markdown)
@@ -1221,6 +1224,33 @@ export function useAnalyticsState(params: UseAnalyticsParams) {
       const message = error instanceof Error ? error.message : t('analytics.controller.docIndexCreateFailed')
       notify(message, 3000, 'error')
     }
+  }
+
+  async function batchGenerateDocIndex(documentIds: string[], onProgress?: (done: number, total: number) => void): Promise<{ success: number, failed: number }> {
+    let success = 0
+    let failed = 0
+    for (let i = 0; i < documentIds.length; i++) {
+      try {
+        const result = await generateDocIndex(documentIds[i])
+        if (result) {
+          success++
+        } else {
+          failed++
+        }
+      } catch {
+        failed++
+      }
+      onProgress?.(i + 1, documentIds.length)
+    }
+    return { success, failed }
+  }
+
+  async function batchDeleteDocIndex(documentIds: string[]): Promise<number> {
+    if (!aiIndexStore) {
+      return 0
+    }
+    await aiIndexStore.deleteDocumentSummary(documentIds)
+    return documentIds.length
   }
 
   function parseJsonArray(value: string): string[] {
@@ -1342,6 +1372,8 @@ export function useAnalyticsState(params: UseAnalyticsParams) {
     generateDocIndex,
     hasDocIndex,
     openDocIndex,
+    batchGenerateDocIndex,
+    batchDeleteDocIndex,
     formatTimestamp,
     formatDelta,
     generateAiInbox,
