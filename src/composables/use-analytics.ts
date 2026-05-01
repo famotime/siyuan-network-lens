@@ -56,7 +56,7 @@ import {
   type WikiPreviewThemePageItem,
 } from './use-analytics-wiki'
 import { createAiInboxService, isAiConfigComplete, type AiInboxResult, type AiInboxService } from '@/analytics/ai-inbox'
-import { buildDocumentSummary, ensureDocumentSummary } from '@/analytics/ai-document-summary'
+import { ensureDocumentSummary } from '@/analytics/ai-document-summary'
 import {
   createAiDocumentIndexStoreFromPlugin,
   type AiDocumentIndexStore,
@@ -911,6 +911,7 @@ export function useAnalyticsState(params: UseAnalyticsParams) {
         sourceDocuments: scope.sourceDocuments,
         config: appliedConfig.value,
         aiIndexStore,
+        forwardProxy: params.forwardProxy,
         generatedAt,
       })
       const payloads = buildWikiGenerationPayloads({
@@ -920,7 +921,10 @@ export function useAnalyticsState(params: UseAnalyticsParams) {
         trends: trends.value,
         documentMap: new Map(scopedDocuments.map(document => [document.id, document])),
         getDocumentSummary: (document) => sourceSummaryMap.get(document.id) ?? {
-          ...buildDocumentSummary(document),
+          summaryShort: '',
+          summaryMedium: '',
+          keywords: [],
+          evidenceSnippets: [],
           updatedAt: generatedAt,
         },
       })

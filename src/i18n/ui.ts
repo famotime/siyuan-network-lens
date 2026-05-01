@@ -2078,26 +2078,6 @@ const UI_TEXT = {
         en_US: 'Last 90 days',
         zh_CN: '最近 90 天',
       },
-      documentTitleFallback: {
-        en_US: 'Document "{title}"',
-        zh_CN: '文档《{title}》',
-      },
-      titlePrefix: {
-        en_US: 'Title: {title}',
-        zh_CN: '标题：{title}',
-      },
-      pathPrefix: {
-        en_US: 'Path: {path}',
-        zh_CN: '路径：{path}',
-      },
-      keyPointsPrefix: {
-        en_US: 'Key points: {value}',
-        zh_CN: '正文要点：{value}',
-      },
-      summarySeparator: {
-        en_US: '; ',
-        zh_CN: '；',
-      },
       failedToDetectNewTopicLinkBlock: {
         en_US: 'Failed to detect the new topic link block',
         zh_CN: '未能识别新建的主题链接块',
@@ -2123,6 +2103,14 @@ const UI_TEXT = {
       embeddingRequestFailed: {
         en_US: 'Embedding request failed (HTTP {status})',
         zh_CN: '向量嵌入请求失败（HTTP {status}）',
+      },
+      aiRequired: {
+        en_US: 'AI is required for document indexing. Please configure Base URL, API Key, and Model in settings.',
+        zh_CN: '文档索引需要 AI 支持，请在设置中配置 Base URL、API Key 和 Model。',
+      },
+      invalidAiResponse: {
+        en_US: 'AI returned an invalid response. Please try again.',
+        zh_CN: 'AI 返回了无效响应，请重试。',
       },
     },
     controller: {
@@ -2189,10 +2177,6 @@ const UI_TEXT = {
       analyzingDocumentSemantics: {
         en_US: 'Analyzing document semantics and generating embeddings...',
         zh_CN: '正在分析文档语义并生成向量...',
-      },
-      failedToSaveDocumentSummaryIndex: {
-        en_US: 'Failed to save document summary index',
-        zh_CN: '保存文档摘要索引失败',
       },
       failedToSaveAiIndexRecord: {
         en_US: 'Failed to save AI index record',

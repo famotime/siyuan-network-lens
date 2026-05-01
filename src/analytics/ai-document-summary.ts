@@ -1,8 +1,8 @@
 import type { DocumentRecord } from './analysis'
 import { normalizeTags, resolveDocumentTitle } from './document-utils'
-import type { AiDocumentIndexStore, DocumentSummarySnapshot } from './ai-index-store'
+import type { AiDocumentIndexStore } from './ai-index-store'
 import { isAiConfigComplete, resolveAiEndpoint, resolveAiRequestOptions } from './ai-inbox'
-import { resolveUiLocale, t } from '@/i18n/ui'
+import { t } from '@/i18n/ui'
 import type { PluginConfig } from '@/types/config'
 
 type ForwardProxyFn = (
@@ -40,32 +40,6 @@ export interface EnsuredDocumentSummaryResult extends DocumentSummaryResult {
   embeddingJson?: string
 }
 
-export function buildDocumentSummary(sourceDocument: DocumentRecord): DocumentSummaryResult {
-  const title = resolveDocumentTitle(sourceDocument)
-  const contentLines = (sourceDocument.content ?? '')
-    .split(/\r?\n/)
-    .map(line => line.replace(/\s+/g, ' ').trim())
-    .filter(Boolean)
-  const evidenceSnippets = deduplicateStrings(contentLines.slice(0, 2))
-  const flattenedContent = contentLines.join(' ').trim()
-  const summaryShort = flattenedContent.slice(0, 120) || t('analytics.summaryDetailSource.documentTitleFallback', { title })
-  const summaryMediumParts = [
-    t('analytics.summaryDetailSource.titlePrefix', { title }),
-    sourceDocument.hpath ? t('analytics.summaryDetailSource.pathPrefix', { path: sourceDocument.hpath }) : '',
-    evidenceSnippets.length ? t('analytics.summaryDetailSource.keyPointsPrefix', { value: evidenceSnippets.join(' ') }) : '',
-  ].filter(Boolean)
-
-  return {
-    summaryShort,
-    summaryMedium: summaryMediumParts.join(t('analytics.summaryDetailSource.summarySeparator')),
-    keywords: deduplicateStrings([
-      ...normalizeTags(sourceDocument.tags),
-      ...splitTitleKeywords(title),
-    ]),
-    evidenceSnippets,
-  }
-}
-
 export async function ensureDocumentSummary(params: {
   config: AiConfig
   sourceDocument: DocumentRecord
@@ -87,24 +61,18 @@ export async function ensureDocumentSummary(params: {
   }
 
   const updatedAt = params.updatedAt || new Date().toISOString()
-  let summaryResult: DocumentSummaryResult
-  let embeddingJson: string | undefined
 
-  if (params.forwardProxy && isAiConfigComplete(params.config)) {
-    try {
-      const aiResult = await requestDocumentAiSummary({
-        config: params.config,
-        forwardProxy: params.forwardProxy,
-        sourceDocument: params.sourceDocument,
-      })
-      summaryResult = aiResult.summary
-      embeddingJson = aiResult.embeddingJson
-    } catch {
-      summaryResult = buildDocumentSummary(params.sourceDocument)
-    }
-  } else {
-    summaryResult = buildDocumentSummary(params.sourceDocument)
+  if (!params.forwardProxy || !isAiConfigComplete(params.config)) {
+    throw new Error(t('analytics.docSummary.aiRequired'))
   }
+
+  const aiResult = await requestDocumentAiSummary({
+    config: params.config,
+    forwardProxy: params.forwardProxy,
+    sourceDocument: params.sourceDocument,
+  })
+  const summaryResult = aiResult.summary
+  const embeddingJson = aiResult.embeddingJson
 
   await params.indexStore?.saveDocumentSummary?.({
     config: params.config,
@@ -157,7 +125,6 @@ async function requestDocumentAiSummary(params: {
   const title = resolveDocumentTitle(params.sourceDocument)
   const content = params.sourceDocument.content ?? ''
   const tags = normalizeTags(params.sourceDocument.tags)
-  const locale = resolveUiLocale()
 
   const userMessage = [
     `Please read the following document carefully and produce its index.`,
@@ -201,7 +168,7 @@ async function requestDocumentAiSummary(params: {
 
   const payload = JSON.parse(response.body)
   const aiContent: string = payload?.choices?.[0]?.message?.content ?? ''
-  const summary = parseAiSummaryResponse(aiContent, params.sourceDocument)
+  const summary = parseAiSummaryResponse(aiContent)
 
   let embeddingJson: string | undefined
   if (params.config.aiEmbeddingModel?.trim()) {
@@ -219,30 +186,28 @@ async function requestDocumentAiSummary(params: {
   return { summary, embeddingJson }
 }
 
-function parseAiSummaryResponse(raw: string, sourceDocument: DocumentRecord): DocumentSummaryResult {
-  const fallback = buildDocumentSummary(sourceDocument)
+function parseAiSummaryResponse(raw: string): DocumentSummaryResult {
+  const cleaned = raw.replace(/^```(?:json)?\s*/i, '').replace(/\s*```$/i, '').trim()
+  const parsed = JSON.parse(cleaned)
 
-  try {
-    const cleaned = raw.replace(/^```(?:json)?\s*/i, '').replace(/\s*```$/i, '').trim()
-    const parsed = JSON.parse(cleaned)
+  const summaryShort = typeof parsed.summaryShort === 'string' && parsed.summaryShort.trim()
+    ? parsed.summaryShort.trim().slice(0, 300)
+    : ''
+  const summaryMedium = typeof parsed.summaryMedium === 'string' && parsed.summaryMedium.trim()
+    ? parsed.summaryMedium.trim()
+    : ''
+  const keywords = Array.isArray(parsed.keywords)
+    ? deduplicateStrings(parsed.keywords.filter((k: unknown): k is string => typeof k === 'string'))
+    : []
+  const evidenceSnippets = Array.isArray(parsed.evidenceSnippets)
+    ? deduplicateStrings(parsed.evidenceSnippets.filter((s: unknown): s is string => typeof s === 'string'))
+    : []
 
-    return {
-      summaryShort: typeof parsed.summaryShort === 'string' && parsed.summaryShort.trim()
-        ? parsed.summaryShort.trim().slice(0, 300)
-        : fallback.summaryShort,
-      summaryMedium: typeof parsed.summaryMedium === 'string' && parsed.summaryMedium.trim()
-        ? parsed.summaryMedium.trim()
-        : fallback.summaryMedium,
-      keywords: Array.isArray(parsed.keywords)
-        ? deduplicateStrings(parsed.keywords.filter((k: unknown): k is string => typeof k === 'string'))
-        : fallback.keywords,
-      evidenceSnippets: Array.isArray(parsed.evidenceSnippets)
-        ? deduplicateStrings(parsed.evidenceSnippets.filter((s: unknown): s is string => typeof s === 'string'))
-        : fallback.evidenceSnippets,
-    }
-  } catch {
-    return fallback
+  if (!summaryShort && !summaryMedium) {
+    throw new Error(t('analytics.docSummary.invalidAiResponse'))
   }
+
+  return { summaryShort, summaryMedium, keywords, evidenceSnippets }
 }
 
 async function requestDocumentEmbedding(params: {
@@ -277,13 +242,6 @@ async function requestDocumentEmbedding(params: {
     : []
 
   return JSON.stringify(embedding)
-}
-
-function splitTitleKeywords(title: string): string[] {
-  return title
-    .split(/[\s,，、/]+/)
-    .map(part => part.trim())
-    .filter(part => part.length >= 2)
 }
 
 function deduplicateStrings(values: string[]): string[] {

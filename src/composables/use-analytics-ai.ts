@@ -1,6 +1,4 @@
 import type { ComputedRef, Ref } from 'vue'
-
-import { buildDocumentSummary } from '@/analytics/ai-document-summary'
 import type {
   AnalyticsFilters,
   ReferenceGraphReport,
@@ -171,25 +169,6 @@ export function createAnalyticsAiController(params: {
       })
 
       if (params.aiIndexStore) {
-        const documentSummary = buildDocumentSummary(sourceDocument)
-
-        if (params.aiIndexStore.saveDocumentSummary) {
-          try {
-            await params.aiIndexStore.saveDocumentSummary({
-              config: params.config,
-              sourceDocument,
-              summaryShort: documentSummary.summaryShort,
-              summaryMedium: documentSummary.summaryMedium,
-              keywords: documentSummary.keywords,
-              evidenceSnippets: documentSummary.evidenceSnippets,
-              updatedAt: result.generatedAt,
-            })
-          } catch (error) {
-            const message = error instanceof Error ? error.message : t('analytics.controller.failedToSaveDocumentSummaryIndex')
-            params.notify(message, 5000, 'error')
-          }
-        }
-
         try {
           await params.aiIndexStore.saveSuggestionIndex({
             config: params.config,

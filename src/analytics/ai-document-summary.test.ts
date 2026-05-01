@@ -1,6 +1,6 @@
 import { afterEach, describe, expect, it, vi } from 'vitest'
 
-import { buildDocumentSummary, ensureDocumentSummary } from './ai-document-summary'
+import { ensureDocumentSummary } from './ai-document-summary'
 import type { DocumentRecord } from './analysis'
 
 const sourceDocument: DocumentRecord = {
@@ -17,15 +17,6 @@ const sourceDocument: DocumentRecord = {
 describe('ai document summary', () => {
   afterEach(() => {
     delete (globalThis as any).siyuan
-  })
-
-  it('builds a deterministic local summary from title, content, path and tags', () => {
-    expect(buildDocumentSummary(sourceDocument)).toEqual({
-      summaryShort: '第一段内容。 第二段内容。 第三段内容。',
-      summaryMedium: 'Title: AI 索引实践; Path: /笔记/AI 索引实践; Key points: 第一段内容。 第二段内容。',
-      keywords: ['AI', '知识管理', '索引实践'],
-      evidenceSnippets: ['第一段内容。', '第二段内容。'],
-    })
   })
 
   it('reuses a fresh stored summary instead of rebuilding it', async () => {
@@ -60,13 +51,13 @@ describe('ai document summary', () => {
     expect(store.saveDocumentSummary).not.toHaveBeenCalled()
   })
 
-  it('rebuilds and saves the summary when the cache is missing or stale', async () => {
+  it('throws when AI is not configured and cache is stale', async () => {
     const store = {
       getFreshDocumentSummary: vi.fn(async () => null),
       saveDocumentSummary: vi.fn(async () => undefined),
     }
 
-    const result = await ensureDocumentSummary({
+    await expect(ensureDocumentSummary({
       config: {
         aiModel: 'gpt-test',
         aiEmbeddingModel: 'embed-test',
@@ -74,35 +65,31 @@ describe('ai document summary', () => {
       sourceDocument,
       indexStore: store as any,
       updatedAt: '2026-04-03T12:05:00.000Z',
-    })
-
-    expect(result).toEqual({
-      summaryShort: '第一段内容。 第二段内容。 第三段内容。',
-      summaryMedium: 'Title: AI 索引实践; Path: /笔记/AI 索引实践; Key points: 第一段内容。 第二段内容。',
-      keywords: ['AI', '知识管理', '索引实践'],
-      evidenceSnippets: ['第一段内容。', '第二段内容。'],
-      updatedAt: '2026-04-03T12:05:00.000Z',
-      fromCache: false,
-      embeddingJson: undefined,
-    })
-    expect(store.saveDocumentSummary).toHaveBeenCalledWith(expect.objectContaining({
-      sourceDocument: expect.objectContaining({ id: 'doc-1' }),
-      summaryShort: '第一段内容。 第二段内容。 第三段内容。',
-      summaryMedium: 'Title: AI 索引实践; Path: /笔记/AI 索引实践; Key points: 第一段内容。 第二段内容。',
-      keywords: ['AI', '知识管理', '索引实践'],
-      evidenceSnippets: ['第一段内容。', '第二段内容。'],
-      updatedAt: '2026-04-03T12:05:00.000Z',
-    }))
+    })).rejects.toThrow()
   })
 
-  it('switches rebuilt summaries to Chinese when the workspace locale is zh_CN', () => {
-    ;(globalThis as any).siyuan = {
+  it('throws when forwardProxy is missing', async () => {
+    await expect(ensureDocumentSummary({
       config: {
-        lang: 'zh_CN',
+        aiBaseUrl: 'https://api.example.com/v1',
+        aiApiKey: 'sk-test',
+        aiModel: 'gpt-test',
+        aiEmbeddingModel: 'embed-test',
       },
-    }
+      sourceDocument,
+    })).rejects.toThrow()
+  })
 
-    expect(buildDocumentSummary(sourceDocument).summaryMedium)
-      .toBe('标题：AI 索引实践；路径：/笔记/AI 索引实践；正文要点：第一段内容。 第二段内容。')
+  it('throws when AI config is incomplete', async () => {
+    const forwardProxy = vi.fn()
+
+    await expect(ensureDocumentSummary({
+      config: {
+        aiModel: 'gpt-test',
+        aiEmbeddingModel: 'embed-test',
+      },
+      sourceDocument,
+      forwardProxy,
+    })).rejects.toThrow()
   })
 })

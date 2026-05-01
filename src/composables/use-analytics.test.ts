@@ -1499,13 +1499,6 @@ describe('useAnalyticsState', () => {
       result: aiSuggestionResult,
     })
     expect(saveSuggestionIndex).toHaveBeenCalledTimes(1)
-    expect(saveDocumentSummary).toHaveBeenCalledTimes(1)
-    expect(saveDocumentSummary).toHaveBeenCalledWith(expect.objectContaining({
-      sourceDocument: expect.objectContaining({
-        id: 'doc-orphan',
-      }),
-      summaryShort: expect.any(String),
-    }))
     expect(saveSuggestionIndex).toHaveBeenCalledWith(expect.objectContaining({
       sourceDocument: expect.objectContaining({
         id: 'doc-orphan',
@@ -1667,13 +1660,15 @@ describe('useAnalyticsState', () => {
       getBlockKramdown: async (id: string) => ({ id, kramdown: '' }),
       getBlockAttrs: async () => ({}),
       setBlockAttrs: async () => null,
-      forwardProxy: async () => ({
-        body: '',
+      forwardProxy: async (url: string) => ({
+        body: url.includes('/embeddings')
+          ? JSON.stringify({ data: [{ embedding: [0.1, 0.2, 0.3] }] })
+          : JSON.stringify({ choices: [{ message: { content: JSON.stringify({ summaryShort: '测试摘要', summaryMedium: '详细摘要', keywords: ['测试'], evidenceSnippets: ['证据'] }) } }] }),
         contentType: 'application/json',
         elapsed: 1,
         headers: {},
         status: 200,
-        url: 'https://api.example.com/v1/chat/completions',
+        url,
       }),
       createAiWikiService: () => ({
         generateThemeSections,
@@ -1791,13 +1786,15 @@ describe('useAnalyticsState', () => {
       getBlockKramdown: async (id: string) => ({ id, kramdown: '' }),
       getBlockAttrs: async () => ({}),
       setBlockAttrs: async () => null,
-      forwardProxy: async () => ({
-        body: '',
+      forwardProxy: async (url: string) => ({
+        body: url.includes('/embeddings')
+          ? JSON.stringify({ data: [{ embedding: [0.1, 0.2, 0.3] }] })
+          : JSON.stringify({ choices: [{ message: { content: JSON.stringify({ summaryShort: '测试摘要', summaryMedium: '详细摘要', keywords: ['测试'], evidenceSnippets: ['证据'] }) } }] }),
         contentType: 'application/json',
         elapsed: 1,
         headers: {},
         status: 200,
-        url: 'https://api.example.com/v1/chat/completions',
+        url,
       }),
       createAiWikiService: () => ({
         generateThemeSections,

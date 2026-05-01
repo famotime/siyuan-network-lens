@@ -55,6 +55,7 @@ export async function buildWikiSourceSummaryMap(params: {
   sourceDocuments: DocumentRecord[]
   config: PluginConfig
   aiIndexStore: AiDocumentIndexStore | null
+  forwardProxy?: (url: string, method?: string, payload?: any, headers?: any[], timeout?: number, contentType?: string) => Promise<IResForwardProxy>
   generatedAt: string
 }) {
   const entries = await Promise.all(params.sourceDocuments.map(async (document) => {
@@ -62,6 +63,7 @@ export async function buildWikiSourceSummaryMap(params: {
       config: params.config,
       sourceDocument: document,
       indexStore: params.aiIndexStore,
+      forwardProxy: params.forwardProxy,
       updatedAt: params.generatedAt,
     })
 
