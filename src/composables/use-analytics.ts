@@ -56,10 +56,11 @@ import {
   type WikiPreviewThemePageItem,
 } from './use-analytics-wiki'
 import { createAiInboxService, isAiConfigComplete, type AiInboxResult, type AiInboxService } from '@/analytics/ai-inbox'
-import { buildDocumentSummary } from '@/analytics/ai-document-summary'
+import { buildDocumentSummary, ensureDocumentSummary } from '@/analytics/ai-document-summary'
 import {
   createAiDocumentIndexStoreFromPlugin,
   type AiDocumentIndexStore,
+  type DocumentSemanticProfileRecord,
 } from '@/analytics/ai-index-store'
 import { createAiWikiService, type AiWikiService } from '@/analytics/wiki-ai'
 import {
@@ -1106,6 +1107,134 @@ export function useAnalyticsState(params: UseAnalyticsParams) {
     openDocument(documentId)
   }
 
+  async function generateDocIndex(documentId: string): Promise<boolean> {
+    const document = documentMap.value.get(documentId)
+    if (!document) {
+      notify(t('analytics.controller.documentNotFound'), 3000, 'error')
+      return false
+    }
+
+    try {
+      const result = await ensureDocumentSummary({
+        config: appliedConfig.value,
+        sourceDocument: document,
+        indexStore: aiIndexStore,
+        forwardProxy: params.forwardProxy,
+        force: true,
+      })
+      notify(t('analytics.controller.docIndexGenerated'), 2000)
+      return !result.fromCache
+    } catch (error) {
+      const message = error instanceof Error ? error.message : t('analytics.controller.docIndexGenerateFailed')
+      notify(message, 3000, 'error')
+      return false
+    }
+  }
+
+  async function hasDocIndex(documentId: string): Promise<boolean> {
+    if (!aiIndexStore) {
+      return false
+    }
+    const profile = await aiIndexStore.getSemanticProfile(documentId)
+    return profile !== null && Boolean(profile.documentSummaryShort ?? profile.summaryShort)
+  }
+
+  async function getDocIndexProfile(documentId: string): Promise<DocumentSemanticProfileRecord | null> {
+    if (!aiIndexStore) {
+      return null
+    }
+    return aiIndexStore.getSemanticProfile(documentId)
+  }
+
+  async function openDocIndex(documentId: string): Promise<void> {
+    const profile = await getDocIndexProfile(documentId)
+    if (!profile) {
+      notify(t('analytics.controller.docIndexNotFound'), 3000, 'error')
+      return
+    }
+
+    const firstNotebook = notebookOptions.value[0]
+    if (!firstNotebook || !createDocWithMd) {
+      notify(t('analytics.controller.docIndexCreateFailed'), 3000, 'error')
+      return
+    }
+
+    const documentTitle = profile.title || documentId
+    const title = t('summaryDetail.documentIndex.viewTitle', { title: documentTitle })
+    const tagsJson = parseJsonArray(profile.tagsJson)
+    const keywordsJson = parseJsonArray(profile.documentKeywordsJson ?? profile.keywordsJson)
+    const evidenceSnippetsJson = parseJsonArray(profile.documentEvidenceSnippetsJson ?? profile.evidenceSnippetsJson)
+
+    const lines: string[] = []
+    lines.push(`## ${t('summaryDetail.documentIndex.viewSummaryShort')}`)
+    lines.push('')
+    lines.push(profile.documentSummaryShort || profile.summaryShort || '-')
+    lines.push('')
+    lines.push(`## ${t('summaryDetail.documentIndex.viewSummaryMedium')}`)
+    lines.push('')
+    lines.push(profile.documentSummaryMedium || profile.summaryMedium || '-')
+    lines.push('')
+
+    if (tagsJson.length) {
+      lines.push('## Tags')
+      lines.push('')
+      lines.push(tagsJson.map(tag => `\`${tag}\``).join(' '))
+      lines.push('')
+    }
+
+    if (keywordsJson.length) {
+      lines.push(`## ${t('summaryDetail.documentIndex.viewKeywords')}`)
+      lines.push('')
+      lines.push(keywordsJson.map(kw => `\`${kw}\``).join(' '))
+      lines.push('')
+    }
+
+    if (evidenceSnippetsJson.length) {
+      lines.push(`## ${t('summaryDetail.documentIndex.viewEvidence')}`)
+      lines.push('')
+      for (const snippet of evidenceSnippetsJson) {
+        lines.push(`> ${snippet}`)
+        lines.push('')
+      }
+    }
+
+    const hasEmbedding = Boolean(profile.embeddingJson && profile.embeddingJson !== '[]')
+    lines.push(`## ${t('summaryDetail.documentIndex.viewEmbedding')}`)
+    lines.push('')
+    lines.push(hasEmbedding ? t('summaryDetail.documentIndex.viewEmbeddingAvailable') : t('summaryDetail.documentIndex.viewEmbeddingEmpty'))
+    lines.push('')
+
+    const updatedAt = profile.documentSummaryUpdatedAt || profile.updatedAt
+    if (updatedAt) {
+      lines.push(`---`)
+      lines.push('')
+      lines.push(`*${t('summaryDetail.documentIndex.viewUpdatedAt')}: ${updatedAt}*`)
+    }
+
+    const markdown = lines.join('\n')
+    const docPath = `/${title.replace(/[/:*?"<>|]/g, '_')}`
+
+    try {
+      const newDocId = await createDocWithMd(firstNotebook.id, docPath, markdown)
+      openDocument(newDocId)
+    } catch (error) {
+      const message = error instanceof Error ? error.message : t('analytics.controller.docIndexCreateFailed')
+      notify(message, 3000, 'error')
+    }
+  }
+
+  function parseJsonArray(value: string): string[] {
+    if (!value) {
+      return []
+    }
+    try {
+      const parsed = JSON.parse(value)
+      return Array.isArray(parsed) ? parsed.filter((item: unknown): item is string => typeof item === 'string' && item.trim().length > 0) : []
+    } catch {
+      return []
+    }
+  }
+
   const linkInteractions = createLinkAssociationInteractions({
     resolveTitle,
     appendBlock,
@@ -1210,6 +1339,9 @@ export function useAnalyticsState(params: UseAnalyticsParams) {
     resolveNotebookName,
     openDocument,
     openWikiDocument,
+    generateDocIndex,
+    hasDocIndex,
+    openDocIndex,
     formatTimestamp,
     formatDelta,
     generateAiInbox,

@@ -229,6 +229,10 @@
         :wiki-panel-props="wikiPanelProps"
         :is-core-document-wiki-panel-visible="showWikiFeature ? isCoreDocumentWikiPanelVisible : () => false"
         :toggle-core-document-wiki-panel="showWikiFeature ? toggleCoreDocumentWikiPanel : () => {}"
+        :show-document-index="Boolean(props.config.showDocumentIndex)"
+        :generate-doc-index="generateDocIndex"
+        :has-doc-index="hasDocIndex"
+        :open-doc-index="openDocIndex"
       />
       <div
         v-if="showWikiFeature && visibleSummaryCards.length && selectedSummaryDetail?.key === 'documents'"
@@ -373,6 +377,9 @@ const {
   resolveNotebookName,
   openDocument,
   openWikiDocument,
+  generateDocIndex,
+  hasDocIndex,
+  openDocIndex,
   formatTimestamp,
   formatDelta,
   toggleOrphanThemeSuggestion,

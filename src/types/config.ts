@@ -58,6 +58,7 @@ export interface PluginConfig {
   aiMaxContextMessages?: number
   aiContextCapacity?: AiContextCapacity
   enableConsoleLogging?: boolean
+  showDocumentIndex?: boolean
   wikiEnabled?: boolean
   wikiPageSuffix?: string
   wikiIndexTitle?: string
@@ -92,6 +93,7 @@ export const DEFAULT_CONFIG: PluginConfig = {
   aiMaxContextMessages: DEFAULT_AI_MAX_CONTEXT_MESSAGES,
   aiContextCapacity: 'balanced',
   enableConsoleLogging: false,
+  showDocumentIndex: false,
   wikiEnabled: false,
   wikiPageSuffix: DEFAULT_WIKI_PAGE_SUFFIX,
   wikiIndexTitle: DEFAULT_WIKI_INDEX_TITLE,
@@ -197,6 +199,9 @@ export function ensureConfigDefaults(config: PluginConfig) {
   }
   if (typeof config.enableConsoleLogging !== 'boolean') {
     config.enableConsoleLogging = false
+  }
+  if (typeof config.showDocumentIndex !== 'boolean') {
+    config.showDocumentIndex = false
   }
   if (typeof config.wikiEnabled !== 'boolean') {
     config.wikiEnabled = false

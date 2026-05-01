@@ -93,6 +93,7 @@ export interface AiDocumentIndexStore {
     summaryMedium?: string
     keywords?: string[]
     evidenceSnippets?: string[]
+    embeddingJson?: string
     updatedAt?: string
   }) => Promise<void>
   getSemanticProfile: (documentId: string) => Promise<DocumentSemanticProfileRecord | null>
@@ -149,6 +150,7 @@ export function createAiDocumentIndexStore(storage: PluginStorageLike): AiDocume
         summaryMedium: params.summaryMedium,
         keywords: params.keywords,
         evidenceSnippets: params.evidenceSnippets,
+        embeddingJson: params.embeddingJson,
         updatedAt,
       })
 
@@ -371,6 +373,7 @@ function buildDocumentSummaryProfileRecord(params: {
   summaryMedium?: string
   keywords?: string[]
   evidenceSnippets?: string[]
+  embeddingJson?: string
   updatedAt: string
 }): DocumentSemanticProfileRecord {
   const baseRecord = buildBaseSemanticProfileRecord({
@@ -388,6 +391,7 @@ function buildDocumentSummaryProfileRecord(params: {
     documentSummaryMedium: summaryMedium || undefined,
     documentKeywordsJson: JSON.stringify(deduplicateStrings(params.keywords ?? [])),
     documentEvidenceSnippetsJson: JSON.stringify(deduplicateStrings(params.evidenceSnippets ?? [])),
+    embeddingJson: params.embeddingJson ?? baseRecord.embeddingJson,
     documentSummaryUpdatedAt: params.updatedAt,
   }
 }

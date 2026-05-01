@@ -442,6 +442,14 @@ const UI_TEXT = {
         en_US: 'Error logs are always kept; other levels follow this toggle',
         zh_CN: '错误日志始终保留，其他级别受此开关控制',
       },
+      showDocumentIndex: {
+        en_US: 'View document index',
+        zh_CN: '查看文档索引',
+      },
+      showDocumentIndexDescription: {
+        en_US: 'Show document index buttons in document sample details for generating and viewing per-document indexes.',
+        zh_CN: '在文档样本详情中显示文档索引按钮，用于生成和查看单个文档的索引。',
+      },
     },
     propagation: {
       title: {
@@ -529,6 +537,56 @@ const UI_TEXT = {
       noExplainablePath: {
         en_US: 'No explainable path found under the current filters.',
         zh_CN: '当前筛选下没有可解释的路径。',
+      },
+    },
+    documentIndex: {
+      generate: {
+        en_US: 'Generate index',
+        zh_CN: '生成文档索引',
+      },
+      generating: {
+        en_US: 'Generating...',
+        zh_CN: '生成中...',
+      },
+      view: {
+        en_US: 'View index',
+        zh_CN: '查看文档索引',
+      },
+      viewTitle: {
+        en_US: 'Document Index: {title}',
+        zh_CN: '文档索引：{title}',
+      },
+      viewSummaryShort: {
+        en_US: 'Summary',
+        zh_CN: '摘要',
+      },
+      viewSummaryMedium: {
+        en_US: 'Detailed Summary',
+        zh_CN: '详细摘要',
+      },
+      viewKeywords: {
+        en_US: 'Keywords',
+        zh_CN: '关键词',
+      },
+      viewEvidence: {
+        en_US: 'Evidence Snippets',
+        zh_CN: '关键片段',
+      },
+      viewUpdatedAt: {
+        en_US: 'Index updated at',
+        zh_CN: '索引更新时间',
+      },
+      viewEmbedding: {
+        en_US: 'Embedding',
+        zh_CN: '向量嵌入',
+      },
+      viewEmbeddingAvailable: {
+        en_US: 'Embedding vector available',
+        zh_CN: '向量嵌入已生成',
+      },
+      viewEmbeddingEmpty: {
+        en_US: 'No embedding configured (set an embedding model in AI settings)',
+        zh_CN: '未配置向量嵌入（请在 AI 设置中配置 Embedding 模型）',
       },
     },
     propagation: {
@@ -2041,6 +2099,16 @@ const UI_TEXT = {
         zh_CN: '已生成 {title} 的 AI 补链建议',
       },
     },
+    docSummary: {
+      aiRequestFailed: {
+        en_US: 'AI summary request failed (HTTP {status})',
+        zh_CN: 'AI 摘要请求失败（HTTP {status}）',
+      },
+      embeddingRequestFailed: {
+        en_US: 'Embedding request failed (HTTP {status})',
+        zh_CN: '向量嵌入请求失败（HTTP {status}）',
+      },
+    },
     controller: {
       trendCompareLastDays: {
         en_US: 'Compare the last {days} days with the previous window',
@@ -2185,6 +2253,26 @@ const UI_TEXT = {
       failedToWriteAiTag: {
         en_US: 'Failed to write AI tag',
         zh_CN: '写入 AI 标签失败',
+      },
+      documentNotFound: {
+        en_US: 'Document not found',
+        zh_CN: '文档未找到',
+      },
+      docIndexGenerated: {
+        en_US: 'Document index generated',
+        zh_CN: '文档索引已生成',
+      },
+      docIndexGenerateFailed: {
+        en_US: 'Failed to generate document index',
+        zh_CN: '生成文档索引失败',
+      },
+      docIndexNotFound: {
+        en_US: 'Document index not found',
+        zh_CN: '文档索引未找到',
+      },
+      docIndexCreateFailed: {
+        en_US: 'Failed to create document index view',
+        zh_CN: '创建文档索引查看文档失败',
       },
     },
     aiLink: {

@@ -83,6 +83,7 @@ describe('ai document summary', () => {
       evidenceSnippets: ['第一段内容。', '第二段内容。'],
       updatedAt: '2026-04-03T12:05:00.000Z',
       fromCache: false,
+      embeddingJson: undefined,
     })
     expect(store.saveDocumentSummary).toHaveBeenCalledWith(expect.objectContaining({
       sourceDocument: expect.objectContaining({ id: 'doc-1' }),

@@ -430,6 +430,13 @@
         </span>
         <input type="checkbox" v-model="config.enableConsoleLogging" class="b3-switch">
       </label>
+      <label class="setting-item">
+        <span class="setting-item__text">
+          <strong>{{ t('settings.debug.showDocumentIndex') }}</strong>
+          <span>{{ t('settings.debug.showDocumentIndexDescription') }}</span>
+        </span>
+        <input type="checkbox" v-model="config.showDocumentIndex" class="b3-switch">
+      </label>
     </div>
 
     <div class="setting-group">

@@ -287,6 +287,32 @@
                   </div>
                 </div>
               </SuggestionCallout>
+              <div
+                v-if="showDocumentIndex && detail.key === 'documents'"
+                class="doc-index-actions"
+              >
+                <button
+                  class="doc-index-button"
+                  type="button"
+                  :disabled="docIndexGenerating[item.documentId]"
+                  @click="handleGenerateDocIndex(item.documentId)"
+                >
+                  <span
+                    v-if="docIndexGenerating[item.documentId]"
+                    class="doc-index-spinner"
+                    aria-hidden="true"
+                  />
+                  {{ docIndexGenerating[item.documentId] ? t('summaryDetail.documentIndex.generating') : t('summaryDetail.documentIndex.generate') }}
+                </button>
+                <button
+                  class="doc-index-button doc-index-button--view"
+                  type="button"
+                  :disabled="!docIndexExists[item.documentId]"
+                  @click="handleOpenDocIndex(item.documentId)"
+                >
+                  {{ t('summaryDetail.documentIndex.view') }}
+                </button>
+              </div>
             </article>
           </div>
         </template>
@@ -641,7 +667,7 @@
 </template>
 
 <script setup lang="ts">
-import { computed } from 'vue'
+import { computed, ref, watch } from 'vue'
 
 import type { OrphanSort } from '@/analytics/analysis'
 import type { AiInboxItemType } from '@/analytics/ai-inbox'
@@ -746,8 +772,13 @@ const props = withDefaults(defineProps<{
     applyWikiChanges: (overwriteConflicts?: boolean) => void | Promise<void>
     openWikiDocument: (documentId: string) => void
   }
+  showDocumentIndex?: boolean
+  generateDocIndex?: (documentId: string) => Promise<boolean>
+  hasDocIndex?: (documentId: string) => Promise<boolean>
+  openDocIndex?: (documentId: string) => Promise<void>
 }>(), {
   showWikiPanelActions: true,
+  showDocumentIndex: false,
 })
 
 const summaryCountLabel = computed(() => props.detail.kind === 'aiInbox'
@@ -771,6 +802,57 @@ const listItems = computed<DetailItemWithThemeSuggestions[]>(() => {
     themeSuggestions: [],
   }))
 })
+
+const docIndexExists = ref<Record<string, boolean>>({})
+const docIndexGenerating = ref<Record<string, boolean>>({})
+
+const visibleDocumentIds = computed(() => {
+  if (props.detail.kind === 'list' && props.detail.key === 'documents') {
+    return listItems.value.map(item => item.documentId)
+  }
+  return []
+})
+
+watch(
+  () => [props.showDocumentIndex, visibleDocumentIds.value.join(',')],
+  async () => {
+    if (!props.showDocumentIndex || !props.hasDocIndex) {
+      docIndexExists.value = {}
+      return
+    }
+
+    const next: Record<string, boolean> = {}
+    for (const documentId of visibleDocumentIds.value) {
+      next[documentId] = await props.hasDocIndex(documentId)
+    }
+    docIndexExists.value = next
+  },
+  { immediate: true },
+)
+
+async function handleGenerateDocIndex(documentId: string) {
+  if (!props.generateDocIndex) {
+    return
+  }
+  docIndexGenerating.value = { ...docIndexGenerating.value, [documentId]: true }
+  try {
+    await props.generateDocIndex(documentId)
+    if (props.hasDocIndex) {
+      docIndexExists.value = { ...docIndexExists.value, [documentId]: await props.hasDocIndex(documentId) }
+    }
+  } finally {
+    const next = { ...docIndexGenerating.value }
+    delete next[documentId]
+    docIndexGenerating.value = next
+  }
+}
+
+async function handleOpenDocIndex(documentId: string) {
+  if (!props.openDocIndex) {
+    return
+  }
+  await props.openDocIndex(documentId)
+}
 
 function hasSuggestionCallout(item: DetailItemWithThemeSuggestions): boolean {
   return Boolean(item.suggestions?.length || item.themeSuggestions.length)
@@ -1296,6 +1378,63 @@ async function handleAiInboxActionTargetClick(
   margin: 0;
   font-size: 12px;
   color: var(--panel-muted);
+}
+
+.doc-index-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 10px;
+}
+
+.doc-index-button {
+  border: 0;
+  border-radius: 999px;
+  padding: 7px 12px;
+  cursor: pointer;
+  font: inherit;
+  font-size: 12px;
+  font-weight: 500;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  color: var(--b3-theme-primary);
+  background: color-mix(in srgb, var(--b3-theme-primary) 10%, transparent);
+  transition: background-color 0.2s, color 0.2s, opacity 0.2s;
+}
+
+.doc-index-button:hover:not(:disabled) {
+  background: color-mix(in srgb, var(--b3-theme-primary) 18%, transparent);
+}
+
+.doc-index-button:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+
+.doc-index-button--view {
+  color: color-mix(in srgb, var(--b3-theme-on-background) 58%, transparent);
+  background: color-mix(in srgb, var(--b3-theme-on-background) 8%, transparent);
+}
+
+.doc-index-button--view:hover:not(:disabled) {
+  color: var(--b3-theme-primary);
+  background: color-mix(in srgb, var(--b3-theme-primary) 14%, transparent);
+}
+
+.doc-index-spinner {
+  width: 12px;
+  height: 12px;
+  border: 2px solid color-mix(in srgb, currentColor 30%, transparent);
+  border-top-color: currentColor;
+  border-radius: 50%;
+  animation: doc-index-spin 0.6s linear infinite;
+}
+
+@keyframes doc-index-spin {
+  to {
+    transform: rotate(360deg);
+  }
 }
 
 .badge,
