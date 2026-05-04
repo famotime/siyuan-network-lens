@@ -924,6 +924,8 @@ export function useAnalyticsState(params: UseAnalyticsParams) {
       const payloads = buildWikiGenerationPayloads({
         config: appliedConfig.value,
         scope,
+        report: report.value,
+        trends: trends.value,
         documentMap: new Map(scopedDocuments.map(document => [document.id, document])),
         getDocumentProfile: document => sourceProfileMap.get(document.id) ?? null,
       })

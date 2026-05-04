@@ -16,6 +16,8 @@ export function resolveSectionOrder(params: {
   enabledModules: WikiSectionType[]
   confidence: WikiTemplateConfidence
 }): WikiSectionType[] {
+  // Task 2 only standardizes shared-section ordering and low-confidence suppression.
+  // templateType will start shaping per-template ordering in the later diagnosis/planning stage.
   void params.templateType
 
   const middleModules = params.enabledModules.filter((module) => {

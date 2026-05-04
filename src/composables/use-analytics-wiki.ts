@@ -61,11 +61,11 @@ export async function buildWikiSourceProfileMap(params: {
   getBlockKramdown?: GetBlockKramdownFn
   generatedAt: string
 }) {
-  const entries = await Promise.all(params.sourceDocuments.map(async (document) => {
-    if (!params.aiIndexStore || !params.forwardProxy || !params.getChildBlocks || !params.getBlockKramdown) {
-      return [document.id, null] as const
-    }
+  if (!params.aiIndexStore || !params.forwardProxy || !params.getChildBlocks || !params.getBlockKramdown) {
+    throw new Error('Wiki topic bundle requires AI document index dependencies')
+  }
 
+  const entries = await Promise.all(params.sourceDocuments.map(async (document) => {
     await ensureDocumentIndex({
       config: params.config,
       sourceDocument: document,
@@ -79,6 +79,10 @@ export async function buildWikiSourceProfileMap(params: {
     const profile = document.updated
       ? await params.aiIndexStore.getFreshDocumentProfile(document.id, document.updated)
       : await params.aiIndexStore.getDocumentProfile(document.id)
+
+    if (!profile) {
+      throw new Error(`Missing fresh document index profile after ensuring wiki source document: ${document.id}`)
+    }
 
     return [document.id, profile] as const
   }))

@@ -37,12 +37,12 @@ export interface AiWikiService {
 
 const SYSTEM_PROMPT = [
   'You are a topic wiki maintenance assistant for SiYuan notes.',
-  'Based on the topic page, source document bundles, and template signals, generate structured JSON for one topic wiki page.',
+  'Based on the topic page, source document bundles, template signals, and analysis signals, generate structured JSON for one topic wiki page.',
   'Return JSON only. Do not output Markdown, explanations, or code blocks.',
   'The JSON must include overview, keyDocuments, structureObservations, evidence, and actions.',
   'overview must be a string; the other fields may be strings or arrays of strings.',
   'Do not invent documents, topic pages, relationships, or evidence that do not exist.',
-  'Prefer using sourceDocuments and templateSignals already provided in the input.',
+  'Prefer using sourceDocuments, templateSignals, and analysisSignals already provided in the input.',
   'All user-visible text must follow the current workspace UI language.',
 ].join(' ')
 

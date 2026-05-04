@@ -72,22 +72,34 @@ describe('ai wiki service', () => {
           {
             documentId: 'doc-core',
             title: 'AI 核心',
-            summaryShort: 'AI 核心摘要',
-            summaryMedium: 'AI 核心中摘要',
+            positioning: 'AI 核心摘要',
+            propositions: [
+              { text: 'AI 是模式抽取系统。', sourceBlockIds: ['blk-2'] },
+            ],
             keywords: ['AI'],
-            evidenceSnippets: ['AI 核心内容'],
-            updatedAt: '20260311120000',
+            primarySourceBlocks: [
+              { blockId: 'blk-2', text: 'AI 核心内容' },
+            ],
+            secondarySourceBlocks: [],
+            sourceUpdatedAt: '20260311120000',
+            generatedAt: '2026-04-09T12:00:00.000Z',
           },
         ],
-        signals: {
-          coreDocuments: [],
-          bridgeDocuments: [],
-          propagationDocuments: [],
-          orphanDocuments: [],
-          risingDocuments: [],
-          fallingDocuments: [],
+        templateSignals: {
+          sourceDocumentCount: 1,
+          propositionCount: 1,
+          primarySourceBlockCount: 1,
+          secondarySourceBlockCount: 0,
         },
-        evidence: ['AI 导航 -> AI 核心'],
+        analysisSignals: {
+          coreDocumentIds: ['doc-core'],
+          bridgeDocumentIds: [],
+          propagationDocumentIds: [],
+          orphanDocumentIds: [],
+          risingDocumentIds: ['doc-core'],
+          fallingDocumentIds: [],
+          relationshipEvidence: ['AI 导航 -> AI 核心'],
+        },
       },
     })
 
@@ -139,15 +151,21 @@ describe('ai wiki service', () => {
         themeDocumentId: 'doc-theme-ai',
         themeDocumentTitle: '主题-AI-索引',
         sourceDocuments: [],
-        signals: {
-          coreDocuments: [],
-          bridgeDocuments: [],
-          propagationDocuments: [],
-          orphanDocuments: [],
-          risingDocuments: [],
-          fallingDocuments: [],
+        templateSignals: {
+          sourceDocumentCount: 0,
+          propositionCount: 0,
+          primarySourceBlockCount: 0,
+          secondarySourceBlockCount: 0,
         },
-        evidence: [],
+        analysisSignals: {
+          coreDocumentIds: [],
+          bridgeDocumentIds: [],
+          propagationDocumentIds: [],
+          orphanDocumentIds: [],
+          risingDocumentIds: [],
+          fallingDocumentIds: [],
+          relationshipEvidence: [],
+        },
       },
     })
 

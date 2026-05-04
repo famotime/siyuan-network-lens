@@ -1594,7 +1594,7 @@ describe('useAnalyticsState', () => {
         ? [`当前共有 ${payload.templateSignals.propositionCount} 条主题命题`]
         : ['结构稳定'],
       evidence: payload.sourceDocuments.flatMap((item: any) => item.primarySourceBlocks).length
-        ? [payload.sourceDocuments.flatMap((item: any) => item.primarySourceBlocks)[0]]
+        ? [payload.sourceDocuments.flatMap((item: any) => item.primarySourceBlocks)[0].text]
         : ['暂无证据'],
       actions: payload.sourceDocuments.length
         ? [`先补齐 ${payload.sourceDocuments[0].title} 的主题入口`]
@@ -1750,7 +1750,7 @@ describe('useAnalyticsState', () => {
         : ['暂无核心文档'],
       structureObservations: ['结构稳定'],
       evidence: payload.sourceDocuments.flatMap((item: any) => item.primarySourceBlocks).length
-        ? [payload.sourceDocuments.flatMap((item: any) => item.primarySourceBlocks)[0]]
+        ? [payload.sourceDocuments.flatMap((item: any) => item.primarySourceBlocks)[0].text]
         : ['暂无证据'],
       actions: payload.sourceDocuments.length
         ? [`先补齐 ${payload.sourceDocuments[0].title} 的主题入口`]
@@ -1853,9 +1853,17 @@ describe('useAnalyticsState', () => {
     expect(generateThemeSections).toHaveBeenCalledWith(expect.objectContaining({
       payload: expect.objectContaining({
         sourceDocuments: [
-          expect.objectContaining({ documentId: 'doc-a', title: 'Alpha AI', positioning: '测试定位', propositions: ['测试命题'] }),
+          expect.objectContaining({
+            documentId: 'doc-a',
+            title: 'Alpha AI',
+            positioning: '测试定位',
+            propositions: [expect.objectContaining({ text: '测试命题', sourceBlockIds: [] })],
+            sourceUpdatedAt: expect.any(String),
+            generatedAt: expect.any(String),
+          }),
         ],
         templateSignals: expect.objectContaining({ propositionCount: 1, sourceDocumentCount: 1 }),
+        analysisSignals: expect.objectContaining({ coreDocumentIds: expect.any(Array), relationshipEvidence: expect.any(Array) }),
       }),
     }))
     expect((state as any).wikiPreview.value).toEqual(expect.objectContaining({
