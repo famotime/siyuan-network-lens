@@ -503,7 +503,7 @@ describe('ai wiki service', () => {
     })
   })
 
-  it('keeps the legacy whole-page section API working via staged calls', async () => {
+  it('uses staged calls to generate each planned section in order', async () => {
     const forwardProxy = vi.fn(async (_url: string, _method?: string, payload?: any) => {
       const userPrompt = JSON.parse(payload).messages[1].content as string
 
@@ -679,18 +679,73 @@ describe('ai wiki service', () => {
     })
 
     const service = createAiWikiService({ forwardProxy })
-    const result = await service.generateThemeSections({
-      config: buildConfig(),
-      payload: buildPayload(),
+    const payload = buildPayload()
+    const config = buildConfig()
+    const diagnosis = await service.diagnoseThemeTemplate({
+      config,
+      payload,
     })
+    const pagePlan = await service.planThemePage({
+      config,
+      payload,
+      diagnosis,
+    })
+    const result = await Promise.all(pagePlan.sectionOrder.map(sectionType => service.generateThemeSection({
+      config,
+      payload,
+      diagnosis,
+      pagePlan,
+      sectionType,
+    })))
 
-    expect(result).toEqual({
-      overview: '当前主题聚焦 AI 与机器学习的知识编排。',
-      keyDocuments: ['优先阅读《AI 核心》'],
-      structureObservations: ['桥接点集中在《AI 导航》。'],
-      evidence: ['AI 导航 -> AI 核心'],
-      actions: ['补齐《AI 核心》的主题入口。'],
-    })
+    expect(pagePlan.sectionOrder).toEqual(['intro', 'highlights', 'comparison', 'misunderstandings', 'sources'])
+    expect(result).toEqual([
+      {
+        sectionType: 'intro',
+        title: '主题概览',
+        format: 'overview',
+        blocks: [
+          { text: '当前主题聚焦 AI 与机器学习的知识编排。', sourceRefs: ['blk-2'] },
+        ],
+        sourceRefs: ['blk-2'],
+      },
+      {
+        sectionType: 'highlights',
+        title: '关键文档',
+        format: 'structured',
+        blocks: [
+          { text: '优先阅读《AI 核心》', sourceRefs: ['doc-core'] },
+        ],
+        sourceRefs: ['doc-core'],
+      },
+      {
+        sectionType: 'comparison',
+        title: '结构观察',
+        format: 'structured',
+        blocks: [
+          { text: '桥接点集中在《AI 导航》。', sourceRefs: ['doc-core'] },
+        ],
+        sourceRefs: ['doc-core'],
+      },
+      {
+        sectionType: 'misunderstandings',
+        title: '整理动作',
+        format: 'qa',
+        blocks: [
+          { text: '补齐《AI 核心》的主题入口。', sourceRefs: ['doc-core'] },
+        ],
+        sourceRefs: ['doc-core'],
+      },
+      {
+        sectionType: 'sources',
+        title: '关系证据',
+        format: 'catalog',
+        blocks: [
+          { text: 'AI 导航 -> AI 核心', sourceRefs: ['blk-2'] },
+        ],
+        sourceRefs: ['blk-2'],
+      },
+    ])
   })
 
   it('switches prompt copy and fallbacks to Chinese when the workspace locale is zh_CN', async () => {

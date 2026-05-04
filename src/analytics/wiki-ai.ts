@@ -1,5 +1,5 @@
 import { isAiConfigComplete, limitChatCompletionMessages, resolveAiEndpoint, resolveAiRequestOptions } from './ai-inbox'
-import { WIKI_LLM_OUTPUT_KEYS, type WikiThemeBundle } from './wiki-generation'
+import type { WikiThemeBundle } from './wiki-generation'
 import {
   WIKI_OPTIONAL_SECTION_TYPES,
   WIKI_SECTION_TYPES,
@@ -40,8 +40,6 @@ type AiConfig = Pick<
 
 type ChatCompletionMessage = { role: 'system' | 'user' | 'assistant', content: string }
 
-export type AiWikiThemeSections = Record<typeof WIKI_LLM_OUTPUT_KEYS[number], string | string[]>
-
 export interface AiWikiService {
   diagnoseThemeTemplate: (params: {
     config: AiConfig
@@ -59,10 +57,6 @@ export interface AiWikiService {
     pagePlan: WikiPagePlan
     sectionType: WikiSectionType
   }) => Promise<WikiSectionDraft>
-  generateThemeSections: (params: {
-    config: AiConfig
-    payload: WikiThemeBundle
-  }) => Promise<AiWikiThemeSections>
 }
 
 const BASE_SYSTEM_PROMPT = [
@@ -172,23 +166,6 @@ export function createAiWikiService(deps: {
       })
 
       return normalizeSectionDraft(parseJsonFromContent(response), params.sectionType)
-    },
-
-    async generateThemeSections(params) {
-      const diagnosis = await this.diagnoseThemeTemplate(params)
-      const pagePlan = await this.planThemePage({
-        ...params,
-        diagnosis,
-      })
-
-      const drafts = await Promise.all(pagePlan.sectionOrder.map(sectionType => this.generateThemeSection({
-        ...params,
-        diagnosis,
-        pagePlan,
-        sectionType,
-      })))
-
-      return normalizeThemeSectionsFromDrafts(drafts)
     },
   }
 }
@@ -369,80 +346,6 @@ function normalizeSectionDraft(value: any, requestedSectionType: WikiSectionType
     blocks,
     sourceRefs,
   }
-}
-
-function normalizeThemeSectionsFromDrafts(drafts: WikiSectionDraft[]): AiWikiThemeSections {
-  const introDraft = drafts.find(item => item.sectionType === 'intro')
-  const highlightsDrafts = drafts.filter(item => item.sectionType === 'highlights')
-  const sourceDrafts = drafts.filter(item => item.sectionType === 'sources')
-  const actionSectionTypes = new Set<WikiSectionType>(['faq', 'troubleshooting', 'misunderstandings', 'open_questions'])
-  const middleDrafts = drafts.filter(item => !['intro', 'highlights', 'sources'].includes(item.sectionType) && !actionSectionTypes.has(item.sectionType))
-
-  return {
-    overview: introDraft
-      ? normalizeSectionValue(draftToLegacyText(introDraft), t('analytics.wiki.noClearTopicOverviewYet'))
-      : t('analytics.wiki.noClearTopicOverviewYet'),
-    keyDocuments: normalizeSectionList(
-      highlightsDrafts.flatMap(draftToLegacyList),
-      t('analytics.wiki.noKeyDocumentSuggestionsYet'),
-    ),
-    structureObservations: normalizeSectionList(
-      middleDrafts.flatMap(draftToLegacyList),
-      t('analytics.wiki.noClearStructureObservationsYet'),
-    ),
-    evidence: normalizeSectionList(
-      sourceDrafts.flatMap(draftToLegacyList),
-      t('analytics.wiki.noClearRelationshipEvidenceYet'),
-    ),
-    actions: normalizeSectionList(
-      drafts
-        .filter(item => actionSectionTypes.has(item.sectionType))
-        .flatMap(draftToLegacyList),
-      t('analytics.wiki.noClearCleanupActionsYet'),
-    ),
-  }
-}
-
-function draftToLegacyText(draft: WikiSectionDraft): string {
-  return draft.blocks
-    .map(block => block.text.trim())
-    .filter(Boolean)
-    .join('；')
-}
-
-function draftToLegacyList(draft: WikiSectionDraft): string[] {
-  return draft.blocks
-    .map(block => block.text.trim())
-    .filter(Boolean)
-}
-
-function normalizeSectionValue(value: unknown, fallback: string): string {
-  if (typeof value === 'string' && value.trim()) {
-    return value.trim()
-  }
-  if (Array.isArray(value)) {
-    const joined = value
-      .filter((item): item is string => typeof item === 'string')
-      .map(item => item.trim())
-      .filter(Boolean)
-      .join('；')
-    return joined || fallback
-  }
-  return fallback
-}
-
-function normalizeSectionList(value: unknown, fallback: string): string[] {
-  if (Array.isArray(value)) {
-    const items = value
-      .filter((item): item is string => typeof item === 'string')
-      .map(item => item.trim())
-      .filter(Boolean)
-    return items.length ? items : [fallback]
-  }
-  if (typeof value === 'string' && value.trim()) {
-    return [value.trim()]
-  }
-  return [fallback]
 }
 
 function normalizeDraftBlocks(value: unknown, sectionType: WikiSectionType, forceFallback = false): WikiSectionDraft['blocks'] {

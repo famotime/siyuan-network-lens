@@ -1984,7 +1984,9 @@ describe('useAnalyticsState', () => {
   })
 
   it('surfaces a friendly wiki error when LLM Wiki or AI config is unavailable', async () => {
-    const generateThemeSections = vi.fn()
+    const diagnoseThemeTemplate = vi.fn()
+    const planThemePage = vi.fn()
+    const generateThemeSection = vi.fn()
     const state = useAnalyticsState({
       plugin: {
         eventBus: { on: () => {}, off: () => {} },
@@ -2016,7 +2018,9 @@ describe('useAnalyticsState', () => {
       getChildBlocks: async () => [],
       getBlockKramdown: async () => ({ id: '', kramdown: '' }),
       createAiWikiService: () => ({
-        generateThemeSections,
+        diagnoseThemeTemplate,
+        planThemePage,
+        generateThemeSection,
       }),
     } as any)
 
@@ -2026,6 +2030,8 @@ describe('useAnalyticsState', () => {
 
     expect((state as any).wikiError.value).toContain('LLM Wiki')
     expect((state as any).wikiPreview.value).toBeNull()
-    expect(generateThemeSections).not.toHaveBeenCalled()
+    expect(diagnoseThemeTemplate).not.toHaveBeenCalled()
+    expect(planThemePage).not.toHaveBeenCalled()
+    expect(generateThemeSection).not.toHaveBeenCalled()
   })
 })

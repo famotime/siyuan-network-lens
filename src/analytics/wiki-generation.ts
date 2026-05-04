@@ -12,14 +12,6 @@ import { buildThemeWikiPageTitle } from './wiki-page-model'
 import type { WikiScopeResult } from './wiki-scope'
 import type { PluginConfig } from '@/types/config'
 
-export const WIKI_LLM_OUTPUT_KEYS = [
-  'overview',
-  'keyDocuments',
-  'structureObservations',
-  'evidence',
-  'actions',
-] as const
-
 export interface WikiBundleDocumentItem {
   documentId: string
   title: string

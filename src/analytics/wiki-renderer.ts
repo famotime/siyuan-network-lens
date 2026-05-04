@@ -1,4 +1,4 @@
-import { WIKI_PAGE_HEADINGS, getWikiSectionHeading } from './wiki-page-model'
+import { WIKI_PAGE_HEADINGS } from './wiki-page-model'
 import type { WikiPagePlan, WikiSectionDraft, WikiTemplateDiagnosis } from './wiki-template-model'
 import { t } from '@/i18n/ui'
 
@@ -29,7 +29,7 @@ export function renderThemeWikiDraft(params: {
   const sections = [
     {
       key: 'meta',
-      heading: getWikiSectionHeading('meta'),
+      heading: t('analytics.wikiPage.metaHeading'),
       body: [
         t('wikiMaintain.pairedTopicPageLine', { value: params.pairedThemeTitle }),
         t('wikiMaintain.generatedAtLine', { value: params.generatedAt }),
@@ -111,11 +111,11 @@ function resolveSectionHeading(sectionType: string, draft?: WikiSectionDraft): s
 
   switch (sectionType) {
     case 'intro':
-      return getWikiSectionHeading('overview')
+      return t('analytics.wikiPage.overviewHeading')
     case 'highlights':
-      return getWikiSectionHeading('keyDocuments')
+      return t('analytics.wikiPage.keyDocumentsHeading')
     case 'sources':
-      return getWikiSectionHeading('evidence')
+      return t('analytics.wikiPage.evidenceHeading')
     default:
       return sectionType
         .split('_')
