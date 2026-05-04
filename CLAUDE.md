@@ -56,17 +56,7 @@ These definitions are stable and must not be changed without explicit confirmati
 
 ## Testing
 
-Tests use Vitest and are colocated with source files throughout `src/` (not just analytics). Naming convention: `*.test.ts` (no `.spec.ts`). There are ~69 test files covering:
-
-- Graph analysis results, trend computation
-- Markdown fallback extraction
-- Summary card details and card ordering
-- Theme document identification and orphan repair suggestions
-- Read status rules
-- Panel collapse state
-- Composable derived selectors and interaction controllers
-- Component rendering
-- i18n key hygiene (dedicated cleanup tests verify no stale keys)
+Tests use Vitest and are colocated with source files throughout `src/` (not just analytics). Naming convention: `*.test.ts` (no `.spec.ts`). 
 
 When adding or fixing behavior, write tests first. Tests import from `vitest` directly (`describe`, `expect`, `it`). Some tests mock `globalThis.siyuan` and clean it up in `afterEach`.
 

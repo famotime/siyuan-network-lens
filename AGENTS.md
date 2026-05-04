@@ -1,23 +1,12 @@
 # AGENTS.md
 
-## 项目概览
+## 项目定位
 
 这是一个思源笔记插件项目，名称是“脉络镜（Network lens）”。
 
-它当前聚焦的是“文档级引用网络”的结构分析与整理辅助，不做大型图谱渲染。核心目标是把文档之间的引用关系转成可解释的分析结果、证据和整理动作，帮助用户更快发现结构问题与优化入口。
-
-当前主要输出包括：
-
-- 文档级引用热度排行
-- 主题社区发现
-- 孤立文档、沉没文档、桥接节点识别
-- 时间趋势分析
-- 关系传播路径
-- 高传播价值节点
-- 原始引用证据查看
-- 可操作建议
-- 顶部统计卡片点击后的详情联动
-- 已读/未读文档识别与详情查看
+- 核心目标是把“文档级引用网络”转成可解释的分析结果、证据和整理动作，帮助用户维护知识结构。
+- 不做大型关系图渲染，重点是诊断、证据、建议和可执行操作。
+- 当前主线已经覆盖结构分析、整理辅助，以及可选 AI 能力。
 
 ## 技术栈
 
@@ -37,285 +26,172 @@ npm run build
 
 `npm run build` 会更新根目录 `package.zip`，这是正常行为。
 
-## 当前关键行为
+## 当前能力
 
-### 1. 分析粒度
+### 结构分析
 
-- 节点是“文档”
-- 边是“文档到文档的聚合引用关系”
-- 图分析阶段按无向图处理连接关系
+- 文档热度排行
+- 主题社区发现
+- 孤立文档、沉没文档、桥接节点识别
+- 时间趋势分析
+- 传播路径与高传播价值节点
+- 原始引用证据查看
+- 顶部统计卡片点击后的详情联动
+- 已读 / 未读文档统计
+- 大文档统计，支持按字数或存储体积查看
 
-### 2. 引用采集来源
+### 结构整理
 
-当前引用数据来自两部分：
+- 主题筛选与关键词筛选分离
+- 孤立文档支持基于主题文档的修复建议
+- 主题建议可插入 / 撤销链接，多个建议会合并到同一块
+- 关联分析结果可同步为文档内部链接
 
-- `refs` 表中 `type = 'ref_id'` 的记录
-- markdown fallback 解析出的文档链接/引用
+### AI 能力
 
-markdown fallback 当前支持：
+以下能力是可选能力，部分入口还可能被 alpha 配置隐藏：
 
-- `siyuan://blocks/<id>`
-- `((block-id "title"))`
-- `((block-id 'title'))`
+- AI Inbox / 今日建议：基于当前分析范围输出当天优先整理任务，并保留最近 3 次历史
+- 孤立文档 AI 补链：给出推荐目标页、理由、草稿文案和标签建议，可直接写入链接与标签
+- 文档索引：为单篇文档生成 AI 摘要、关键词、证据片段，结果存到 `ai-document-index.json`
+- LLM Wiki：基于当前分析范围生成主题 wiki 预览，确认后写回主题 wiki 页、索引页和维护日志
 
-关键实现位于：
+## 稳定语义
 
-- `src/analytics/siyuan-data.ts`
-- `src/analytics/internal-links.ts`
+- 节点是“文档”，边是“文档到文档的聚合引用关系”。
+- 图分析阶段按无向图处理连接关系。
+- 引用采集必须同时覆盖两条路径：
+  - `refs` 表中 `type = 'ref_id'` 的记录
+  - markdown fallback
+- markdown fallback 当前支持：
+  - `siyuan://blocks/<id>`
+  - `((block-id "title"))`
+  - `((block-id 'title'))`
+- 同文档自引用不算文档级连接。
+- 孤立文档 = 当前窗口内没有有效文档级入链 / 出链。
+- 沉没文档 = 当前窗口没有有效连接，但历史上可能有连接，且达到沉没时长阈值。
+- 主题文档名称取“配置目录下文档标题去掉前后缀后的结果”。
+- 已读文档按“路径 / 标签 / 标题前缀 / 标题后缀”命中任一条件判定。
+- Wiki 页面和其他派生页不应被当作普通来源文档参与分析；相关过滤依赖 `wikiPageSuffix` 与分析范围配置。
+- AI 索引中的 `documentSummary*` 才是“真实文档摘要”；`summary*` 主要是补链画像，不要混用。
 
-如果后续出现“文档里明明有链接/引用但没识别”的问题，优先检查这两层。
-
-### 3. 孤立文档与沉没文档定义
-
-当前“孤立文档”的定义是：
-
-- 当前窗口内没有有效文档级入链/出链
-
-因此：
-
-- 只要当前窗口内存在文档级连接，它就不应被视为孤立文档
-- 即使它历史上曾经有连接，只要当前窗口内没有有效连接，仍会回到孤立文档
-
-“沉没文档”才是：
-
-- 当前窗口没有有效连接
-- 但历史上可能有连接
-- 且达到沉没时长阈值
-
-关键实现位于：
-
-- `src/analytics/analysis.ts`
-
-### 4. 主题文档与孤立修复建议
-
-当前支持在设置页配置“主题文档”：
-
-- 指定笔记本
-- 指定文档路径
-- 可选名称前缀/后缀约束
-
-符合配置的文档会被视为主题文档，主题名称取文档标题去除前后缀后的结果。
-
-当前行为：
-
-- 顶部筛选已拆分为“主题”和“关键词”
-- 主题筛选是多选勾选下拉
-- 孤立文档详情会基于主题名称匹配，给出建议链接标签
-- 点击标签会给文档插入对应主题文档链接
-- 如果首段仅包含思源内部链接/引用，则会在首段后用 tab 追加链接
-- 否则会新增建议段落
-- 同一孤立文档的多个主题建议会合并到同一个块中
-- 再次点击标签会撤销对应链接；全部撤销后，刷新分析可重新回到孤立文档
-
-关键实现位于：
-
-- `src/analytics/theme-documents.ts`
-- `src/analytics/orphan-theme-links.ts`
-- `src/composables/use-analytics.ts`
-- `src/composables/use-analytics-interactions.ts`
-
-### 5. 已读/未读文档规则
-
-当前支持在设置页配置“已读文档”规则，命中任一条件即视为已读：
-
-- 已读标签
-- 标题前缀
-- 标题后缀
-
-相关行为：
-
-- 顶部统计卡片包含“已读/未读文档”
-- 该卡片可在已读与未读视图间切换
-- 点击卡片后可联动查看命中详情
-
-关键实现位于：
-
-- `src/analytics/read-status.ts`
-- `src/analytics/summary-details.ts`
-- `src/components/SettingPanel.vue`
-- `src/components/SummaryCardsGrid.vue`
-
-### 6. 传播节点定义
-
-“高传播价值节点”当前采用可解释的启发式口径：
-
-- 先取核心文档、桥接节点、社区 hub 文档作为焦点集合
-- 再统计哪些中间文档高频出现在这些焦点之间的最短路径上
-
-这不是严格的图论 betweenness centrality，而是面向产品交互的轻量替代实现。
-
-### 7. 顶部统计卡片
-
-顶部统计卡片当前支持：
-
-- 点击后在下方展示对应详情列表
-- 拖拽重排卡片顺序
-- 重置为默认顺序
-- 已读卡片在“已读/未读”之间切换
-
-相关代码：
+## 关键入口
 
 - `src/App.vue`
-- `src/analytics/summary-card-order.ts`
-- `src/analytics/summary-details.ts`
-- `src/components/SummaryCardsGrid.vue`
-
-## 关键目录
-
-- `src/App.vue`
-  - 主界面，负责筛选器、顶部操作区和页面级布局组装
+  - 主界面装配：筛选器、顶部卡片、详情区、wiki 面板、文档索引按钮。
 - `src/composables/use-analytics.ts`
-  - 主状态容器，组合快照、筛选、分析结果与 UI 联动状态
+  - 主状态容器；串起快照、筛选、报告、卡片、AI、wiki、文档索引。
 - `src/composables/use-analytics-derived.ts`
-  - 纯派生选择器，负责标签选项、路径候选、孤立主题建议映射、详情计数与关联映射构建
+  - 纯派生选择器。
 - `src/composables/use-analytics-interactions.ts`
-  - 交互副作用控制器，负责关联同步和孤立主题建议写入/撤销
+  - 链接同步、主题建议写入 / 撤销、AI 建议应用。
+- `src/composables/use-analytics-ai.ts`
+  - AI Inbox、孤立文档 AI 补链、连接测试。
+- `src/composables/use-analytics-wiki.ts`
+  - Wiki preview request、scope 与共享状态边界。
 - `src/analytics/analysis.ts`
-  - 核心分析逻辑
-- `src/analytics/document-utils.ts`
-  - 共享 helper，统一标题回退、标签拆分、时间戳解析与时间窗口判断
+  - 核心分析入口。
+- `src/analytics/analysis-context.ts`
+  - 图分析与趋势分析阶段上下文。
 - `src/analytics/siyuan-data.ts`
-  - 从思源数据库读取文档与引用快照
+  - 数据采集主入口；先查这里。
 - `src/analytics/internal-links.ts`
-  - markdown fallback 内部链接解析
+  - markdown fallback 内部链接解析。
 - `src/analytics/theme-documents.ts`
-  - 主题文档识别与主题筛选项构建
+  - 主题文档识别与主题筛选项构建。
 - `src/analytics/orphan-theme-links.ts`
-  - 孤立文档主题修复建议的插入与撤销
+  - 孤立文档主题建议链接的写入与撤销。
+- `src/analytics/orphan-document-tags.ts`
+  - AI 标签建议的写入与撤销。
 - `src/analytics/read-status.ts`
-  - 已读规则匹配逻辑
+  - 已读规则匹配。
+- `src/analytics/summary-card-config.ts`
+  - 顶部统计卡片定义的单一来源。
 - `src/analytics/summary-details.ts`
-  - 顶部统计卡片与详情生成逻辑
-- `src/analytics/summary-card-order.ts`
-  - 顶部统计卡片排序、归一化与重排
+  - 顶部卡片与详情 section 的统一导出入口。
+- `src/analytics/large-documents.ts`
+  - 大文档字数 / 体积统计。
+- `src/analytics/ai-inbox.ts`
+  - AI Inbox payload 与结果规范。
+- `src/analytics/ai-link-suggestions.ts`
+  - 孤立文档 AI 补链与 embedding 排序。
+- `src/analytics/ai-document-summary.ts`
+  - 文档摘要生成与 freshness 复用。
+- `src/analytics/ai-index-store.ts`
+  - AI 私有索引读写。
+- `src/analytics/wiki-scope.ts` / `wiki-generation.ts` / `wiki-ai.ts` / `wiki-renderer.ts` / `wiki-diff.ts` / `wiki-store.ts` / `wiki-documents.ts`
+  - LLM Wiki 范围、生成、预览、diff、存储与写回。
 - `src/components/SettingPanel.vue`
-  - 设置页，包含主题文档、统计卡片、已读规则等配置
-- `src/components/setting-panel-data.ts`
-  - 设置页数据 helper，负责默认值修正以及笔记本/标签选项初始化
-- `src/components/SummaryCardsGrid.vue`
-  - 顶部统计卡片区，负责拖拽排序和已读卡片切换按钮
-- `src/components/SummaryDetailSection.vue`
-  - 详情区，负责列表、排行、趋势和传播路径视图
-- `docs/思源笔记插件_PRD_引用网络分析器_Reference_Analytics.md`
-  - 原始 PRD
-- `docs/统计卡片规则与定义说明.md`
-  - 当前顶部统计卡片的口径与边界说明
-- `docs/project-structure.md`
-  - 当前结构文档
-- `reference_docs/`
-  - 思源笔记插件开发者文档，包括相关 API 接口说明和示例
+  - 设置页，含分析范围、主题文档、已读规则、统计卡片、AI、Wiki、调试项。
+- `src/components/SummaryCardsGrid.vue` / `src/components/SummaryDetailSection.vue`
+  - 顶部卡片区与详情区。
+- `src/components/AIInboxPanel.vue` / `src/components/WikiMaintainPanel.vue`
+  - AI Inbox 与 LLM Wiki 面板。
+- `src/types/config.ts`
+  - 持久化配置模型、默认值、兼容迁移。
+- `src/plugin/alpha-feature-config.ts`
+  - 灰度 / 隐藏配置；界面入口缺失时先查这里。
+- `docs/其他插件读取 AI 索引指南.md`
+  - 对外复用 AI 索引时必须同步参考的兼容文档。
 
 ## 开发约定
 
-### 1. 修改前优先看测试
+- 修改前优先看测试。现有测试已覆盖分析、趋势、fallback 引用、主题文档、已读规则、卡片详情、AI Inbox、AI 补链、AI 索引、wiki 生成 / 写回、关键组件和主 composable。
+- 新增或修改设置项时，至少同步：
+  - `src/types/config.ts`
+  - `src/components/SettingPanel.vue`
+  - 相关测试
+- 新增或修改顶部统计卡片时，优先从 `src/analytics/summary-card-config.ts` 开始，再检查 `summary-cards`、`summary-detail-sections`、`SettingPanel`、`SummaryCardsGrid` 和相关测试。
+- 修改 AI 索引结构或语义时，同步检查：
+  - `src/analytics/ai-index-store.ts`
+  - `src/analytics/ai-document-summary.ts`
+  - `docs/其他插件读取 AI 索引指南.md`
+- 修改 alpha 隐藏行为时，同步检查 `src/plugin/alpha-feature-config.ts` 与 `docs/alpha-feature-hidden-config.md`。
+- 除非用户明确要求，否则不要修改 `plugin-sample-vite-vue/`。
 
-当前已有测试覆盖这些关键场景：
+## 常见排查
 
-- 图分析结果
-- 趋势分析
-- markdown fallback 引用采集
-- 顶部统计卡片与详情生成
-- 主题文档识别与孤立修复建议
-- 已读规则匹配
-- 卡片排序与面板折叠
-- 主 composable 的派生选择器与交互动作
-- 关键 UI 组件渲染
+### 文档链接未识别
 
-新增或修复行为时，优先补测试：
+1. 先看 `src/analytics/internal-links.ts` 是否支持该 markdown 格式。
+2. 再看 `src/analytics/siyuan-data.ts` 是否把对应块扫入快照。
+3. 检查目标 block id 是否能回溯到文档根块。
+4. 检查是否被时间窗口、分析范围、主题 / 关键词等筛掉。
 
-- `src/analytics/analysis.test.ts`
-- `src/analytics/siyuan-data.test.ts`
-- `src/analytics/summary-details.test.ts`
-- `src/analytics/read-status.test.ts`
-- `src/composables/use-analytics.test.ts`
-- `src/components/*.test.ts`
+### 文档被误判为孤立或沉没
 
-### 2. 不要轻易改动的语义
+1. 先确认当前窗口内是否真的没有有效文档级连接。
+2. 排查筛选条件、分析范围排除、wiki 后缀过滤。
+3. 检查是否只是同文档自引用。
+4. 如果刚撤销主题建议或 AI 建议，刷新后确认是否仍残留其他连接或标签变更。
 
-以下语义已经按当前产品要求稳定下来，修改前先确认：
+### 已读 / 未读统计不符合预期
 
-- 孤立文档 = 当前窗口内没有有效文档级连接
-- 沉没文档 = 当前窗口不活跃，但历史可能有连接
-- 文档链接/引用应包含 `refs` 与 markdown fallback 两条采集路径
-- 同文档自引用不算文档级连接
-- 主题文档名称取配置目录下文档标题去除前后缀后的结果
-- 孤立修复建议支持追加到首段或复用同一个建议段落
-- 顶部统计卡片点击后必须能联动下方详情列表
-- “已读文档”按标签/标题前缀/标题后缀命中任一条件判定
+1. 看 `src/analytics/read-status.ts`。
+2. 核对设置里的路径、标签、标题前后缀。
+3. 再看详情构造是否和当前 `readCardMode` 一致。
 
-### 3. 非任务范围文件
+### AI 建议或文档索引不符合预期
 
-除非用户明确要求，否则不要修改：
+1. 先看 AI 配置是否完整：`aiBaseUrl`、`aiApiKey`、`aiModel`；补链还可能依赖 `aiEmbeddingModel`。
+2. 再看 `src/analytics/ai-inbox.ts`、`src/analytics/ai-link-suggestions.ts`、`src/analytics/ai-document-summary.ts`。
+3. 如果是索引复用问题，确认读取方用的是 `documentSummary*`，不是 `summary*`。
+4. 文档索引按钮未出现时，检查 `config.showDocumentIndex`。
 
-- `plugin-sample-vite-vue/`
-  - 这是样板目录，不是当前主插件实现
+### LLM Wiki 预览或写回异常
 
-### 4. 构建与提交
+1. 先看 `config.wikiEnabled`、AI 配置与 `themeDocumentPath`。
+2. 再看 `wiki-scope.ts`、`wiki-generation.ts`、`wiki-diff.ts`、`wiki-documents.ts`。
+3. 如果界面入口缺失，先查 `src/plugin/alpha-feature-config.ts` 是否隐藏了 `llm-wiki`。
 
-提交前至少执行：
+## 提交前
+
+- 代码改动至少执行：
 
 ```bash
 npm test
 npm run build
 ```
 
-构建后 `package.zip` 会变化，通常需要一起提交。
-
-## 常见排查路径
-
-### 文档链接未识别
-
-优先检查：
-
-1. `src/analytics/internal-links.ts` 是否支持该 markdown 格式
-2. `src/analytics/siyuan-data.ts` 的 SQL 是否能把对应块扫出来
-3. 目标 `block id` 是否能反查到文档根块
-4. 是否被筛选条件或时间窗口排除
-
-### 某文档被错误判定为孤立
-
-优先检查：
-
-1. 当前窗口内是否确实没有有效入链/出链
-2. 是否被时间窗口、笔记本、标签、主题、关键词等筛选条件排除
-3. 是否是同文档内自引用，这种不会算文档级连接
-4. 如果刚刚撤销主题建议链接，刷新前后是否仍残留其他文档级链接
-
-### 已读/未读统计不符合预期
-
-优先检查：
-
-1. `src/analytics/read-status.ts` 的命中规则
-2. 设置页中的标签、标题前缀、标题后缀配置是否正确
-3. `src/analytics/summary-details.ts` 中 read card 详情构造是否与卡片模式一致
-
-### UI 统计和详情不一致
-
-优先检查：
-
-1. `src/App.vue` 中 `summaryCards`
-2. `src/analytics/summary-details.ts` 中详情生成规则
-3. `selectedSummaryCardKey` 与 `readCardMode` 的联动状态
-
-## 当前状态备注
-
-仓库近期已经完成：
-
-- 文档级引用网络分析主流程
-- `siyuan://blocks/...` 与 `((...))` fallback 引用识别
-- 孤立/沉没定义修正
-- 高传播价值节点面板
-- 顶部统计卡片点击联动详情
-- 顶部统计卡片拖拽排序与重置
-- 主题文档修复建议
-- 已读文档规则与统计卡片
-- 分析层共享 helper 收敛
-- `useAnalyticsState` 的纯派生逻辑与副作用控制器拆分
-- `App.vue` 详情区与统计卡片区拆分为独立组件
-- 设置页数据准备逻辑下沉到独立 helper
-
-如果后续要继续增强，优先考虑：
-
-- 传播节点的证据解释进一步细化
-- 更多 markdown 内部链接格式兼容
-- 更细的社区语义解释
+- `npm run build` 会更新根目录 `package.zip`，通常需要一起提交。
+- 仅文档改动可以不跑完整构建，但不要把“未验证”说成“已验证”。

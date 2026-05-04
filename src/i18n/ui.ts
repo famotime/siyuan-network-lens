@@ -1113,6 +1113,10 @@ const UI_TEXT = {
       en_US: '{count} outbound refs',
       zh_CN: '{count} 条出链',
     },
+    connectionSummary: {
+      en_US: '{inbound} inbound ({sources} sources)  {outbound} outbound  {children} child docs',
+      zh_CN: '{inbound}条入链（{sources}个来源） {outbound}条出链 {children}个子文档',
+    },
     created: {
       en_US: 'Created',
       zh_CN: '创建',
@@ -1923,8 +1927,8 @@ const UI_TEXT = {
         zh_CN: '{count} 条引用',
       },
       mostReferencedDocsSentence: {
-        en_US: 'Most referenced docs.',
-        zh_CN: '被引用最多的文档。',
+        en_US: 'Most connected docs.',
+        zh_CN: '被关联最多的文档。',
       },
       activityChangesBetweenWindows: {
         en_US: 'Activity changes between the current and previous windows.',

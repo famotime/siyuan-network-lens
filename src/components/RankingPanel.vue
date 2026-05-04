@@ -45,10 +45,7 @@
               :is-theme-document="item.isThemeDocument"
             />
             <div class="ranking-item__meta">
-              <span>{{ t('rankingPanel.inboundRefs', { count: item.inboundReferences }) }}</span>
-              <span>{{ t('rankingPanel.sourceDocs', { count: item.distinctSourceDocuments }) }}</span>
-              <span>{{ t('rankingPanel.tags', { count: item.tagCount }) }}</span>
-              <span>{{ t('rankingPanel.outboundRefs', { count: item.outboundReferences }) }}</span>
+              <span>{{ t('rankingPanel.connectionSummary', { inbound: item.inboundReferences, sources: item.distinctSourceDocuments, outbound: item.outboundReferences, children: item.childDocumentCount }) }}</span>
             </div>
             <div class="ranking-item__timestamps">
               <span>{{ t('rankingPanel.created') }}: {{ formatTimestamp(item.createdAt) }}</span>
