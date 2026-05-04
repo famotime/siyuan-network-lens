@@ -1436,6 +1436,30 @@ const UI_TEXT = {
         en_US: 'AI settings are incomplete. Add Base URL, API Key, and Model.',
         zh_CN: 'AI 接入配置不完整，请补充 Base URL、API Key 和 Model。',
       },
+      diagnoseThemeTemplatePrompt: {
+        en_US: 'Diagnose the best wiki template for the current theme wiki page. Theme: {theme}.',
+        zh_CN: '请诊断当前主题 wiki 最适合的模板类型。主题：{theme}。',
+      },
+      diagnoseThemeTemplateSchemaPrompt: {
+        en_US: 'Return JSON only with templateType, confidence, reason, enabledModules, suppressedModules, and evidenceSummary.',
+        zh_CN: '请只返回 JSON，并包含 templateType、confidence、reason、enabledModules、suppressedModules、evidenceSummary。',
+      },
+      planThemePagePrompt: {
+        en_US: 'Generate a wiki page plan from the diagnosis for the current theme. Theme: {theme}.',
+        zh_CN: '请基于模板诊断结果规划主题 wiki 页面结构。主题：{theme}。',
+      },
+      planThemePageSchemaPrompt: {
+        en_US: 'Return JSON only with templateType, confidence, coreSections, optionalSections, sectionOrder, sectionGoals, and sectionFormats.',
+        zh_CN: '请只返回 JSON，并包含 templateType、confidence、coreSections、optionalSections、sectionOrder、sectionGoals、sectionFormats。',
+      },
+      generateThemeSectionPrompt: {
+        en_US: 'Generate exactly one wiki section draft for the current theme. Theme: {theme}. Section type: {sectionType}.',
+        zh_CN: '请只生成一个 wiki 章节草稿。主题：{theme}。章节类型：{sectionType}。',
+      },
+      generateThemeSectionSchemaPrompt: {
+        en_US: 'Return JSON only with sectionType, title, format, blocks, and sourceRefs. Each block must include text and sourceRefs.',
+        zh_CN: '请只返回 JSON，并包含 sectionType、title、format、blocks、sourceRefs。每个 block 必须包含 text 和 sourceRefs。',
+      },
       generateStructuredContentPrompt: {
         en_US: 'Generate structured content for the topic wiki page. Topic: {theme}.',
         zh_CN: '请为主题 wiki 页面生成结构化内容。主题：{theme}。',
@@ -1463,6 +1487,14 @@ const UI_TEXT = {
       aiReturnedUnreadableContent: {
         en_US: 'AI did not return readable content',
         zh_CN: 'AI 接口未返回可读内容',
+      },
+      noClearTemplateReasonYet: {
+        en_US: 'No clear template reason yet',
+        zh_CN: '暂无足够证据支持明确模板判断',
+      },
+      noClearTemplateEvidenceYet: {
+        en_US: 'No clear template evidence yet',
+        zh_CN: '当前缺少足够的来源文档与分析信号',
       },
       noClearTopicOverviewYet: {
         en_US: 'No clear topic overview yet',
