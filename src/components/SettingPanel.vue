@@ -163,6 +163,14 @@
           <input type="checkbox" v-model="config.wikiEnabled" class="b3-switch">
         </label>
         <label v-if="showWikiSettings" class="setting-field">
+          <span>{{ t('settings.ai.containerName') }}</span>
+          <input
+            v-model.trim="config.wikiContainerName"
+            placeholder="LLM Wiki"
+            type="text"
+          >
+        </label>
+        <label v-if="showWikiSettings" class="setting-field">
           <span>{{ t('settings.ai.pageSuffix') }}</span>
           <input
             v-model.trim="config.wikiPageSuffix"

@@ -348,6 +348,10 @@ const UI_TEXT = {
         en_US: 'Log page title',
         zh_CN: '日志页标题',
       },
+      containerName: {
+        en_US: 'Wiki container name',
+        zh_CN: 'Wiki 容器名称',
+      },
       provider: {
         en_US: 'AI provider',
         zh_CN: 'AI 提供方',

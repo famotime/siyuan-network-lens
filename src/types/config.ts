@@ -18,6 +18,7 @@ export {
 export const DEFAULT_WIKI_PAGE_SUFFIX = '-llm-wiki'
 export const DEFAULT_WIKI_INDEX_TITLE = 'LLM-Wiki-Index'
 export const DEFAULT_WIKI_LOG_TITLE = 'LLM-Wiki-Maintenance-Log'
+export const DEFAULT_WIKI_CONTAINER_NAME = 'LLM Wiki'
 
 export interface PluginConfig {
   showSummaryCards: boolean
@@ -63,6 +64,7 @@ export interface PluginConfig {
   wikiPageSuffix?: string
   wikiIndexTitle?: string
   wikiLogTitle?: string
+  wikiContainerName?: string
   summaryCardOrder?: string[]
 }
 
@@ -98,6 +100,7 @@ export const DEFAULT_CONFIG: PluginConfig = {
   wikiPageSuffix: DEFAULT_WIKI_PAGE_SUFFIX,
   wikiIndexTitle: DEFAULT_WIKI_INDEX_TITLE,
   wikiLogTitle: DEFAULT_WIKI_LOG_TITLE,
+  wikiContainerName: DEFAULT_WIKI_CONTAINER_NAME,
   summaryCardOrder: undefined,
 }
 
@@ -214,6 +217,10 @@ export function ensureConfigDefaults(config: PluginConfig) {
   config.wikiLogTitle = normalizeNonEmptyString(
     config.wikiLogTitle,
     DEFAULT_WIKI_LOG_TITLE,
+  )
+  config.wikiContainerName = normalizeNonEmptyString(
+    config.wikiContainerName,
+    DEFAULT_WIKI_CONTAINER_NAME,
   )
   ensureAiProviderConfigState(config)
 }

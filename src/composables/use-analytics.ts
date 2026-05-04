@@ -971,7 +971,7 @@ export function useAnalyticsState(params: UseAnalyticsParams) {
         const storedRecord = await aiWikiStore.getPageRecord(pageKey)
         const existingPage = await resolveExistingWikiPage({
           notebook: themeDocument.box,
-          pageHPath: buildSiblingDocumentPath(themeDocument.hpath, payload.pageTitle),
+          pageHPath: buildSiblingDocumentPath(themeDocument.hpath, payload.pageTitle, appliedConfig.value.wikiContainerName),
           storedRecord,
           getIDsByHPath,
           getBlockKramdown,
@@ -1080,6 +1080,7 @@ export function useAnalyticsState(params: UseAnalyticsParams) {
           wikiIndexTitle: appliedConfig.value.wikiIndexTitle ?? 'LLM-Wiki-Index',
           wikiLogTitle: appliedConfig.value.wikiLogTitle ?? 'LLM-Wiki-Maintenance-Log',
           wikiPageSuffix: appliedConfig.value.wikiPageSuffix ?? '-llm-wiki',
+          wikiContainerName: appliedConfig.value.wikiContainerName ?? 'LLM Wiki',
         },
         notebooks: snapshot.value?.notebooks,
         generatedAt: new Date().toISOString(),

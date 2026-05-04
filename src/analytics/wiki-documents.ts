@@ -78,6 +78,7 @@ export async function applyWikiDocuments(params: {
     wikiIndexTitle: string
     wikiLogTitle: string
     wikiPageSuffix: string
+    wikiContainerName: string
   }
   notebooks?: NotebookPathOption[]
   generatedAt: string
@@ -117,7 +118,7 @@ export async function applyWikiDocuments(params: {
       themeDocumentId: page.themeDocumentId,
     })
     const storedRecord = await params.store.getPageRecord(pageKey)
-    const pageHPath = buildSiblingDocumentPath(page.themeDocumentHPath, page.pageTitle)
+    const pageHPath = buildSiblingDocumentPath(page.themeDocumentHPath, page.pageTitle, params.config.wikiContainerName)
     const existingPageId = await resolveExistingPageId({
       notebook: page.themeDocumentBox,
       hpath: pageHPath,
@@ -196,7 +197,7 @@ export async function applyWikiDocuments(params: {
     store: params.store,
     api: params.api,
   })
-  const indexPath = joinDocumentPath(wikiTarget.path, params.config.wikiIndexTitle)
+  const indexPath = joinDocumentPath(wikiTarget.containerPath, params.config.wikiIndexTitle)
   const existingIndexPageId = await resolveExistingPageId({
     notebook: wikiTarget.notebook,
     hpath: indexPath,
@@ -244,7 +245,7 @@ export async function applyWikiDocuments(params: {
     scopeDescriptionLines: params.scopeDescriptionLines,
     themeResults,
   })
-  const logPath = joinDocumentPath(wikiTarget.path, params.config.wikiLogTitle)
+  const logPath = joinDocumentPath(wikiTarget.containerPath, params.config.wikiLogTitle)
   const existingLogPageRecord = await params.store.getPageRecord(buildWikiPageStorageKey({
     pageType: 'log',
     pageTitle: params.config.wikiLogTitle,
@@ -307,12 +308,16 @@ function resolveWikiTarget(
   config: {
     themeNotebookId?: string
     themeDocumentPath: string
+    wikiContainerName: string
   },
   notebooks?: NotebookPathOption[],
 ) {
   const target = resolveScopedPathTarget(config.themeDocumentPath, notebooks)
   if (target) {
-    return target
+    return {
+      ...target,
+      containerPath: joinDocumentPath(target.path, config.wikiContainerName),
+    }
   }
 
   const legacyNotebookId = config.themeNotebookId?.trim() ?? ''
@@ -324,6 +329,7 @@ function resolveWikiTarget(
   return {
     notebook: legacyNotebookId,
     path: normalizedPath,
+    containerPath: joinDocumentPath(normalizedPath, config.wikiContainerName),
   }
 }
 
@@ -723,13 +729,12 @@ function collectUniqueSourceDocumentIds(
   ])]
 }
 
-export function buildSiblingDocumentPath(themeDocumentHPath: string, pageTitle: string): string {
+export function buildSiblingDocumentPath(themeDocumentHPath: string, pageTitle: string, containerName?: string): string {
   const normalizedPath = normalizeDocumentPath(themeDocumentHPath)
   const lastSlashIndex = normalizedPath.lastIndexOf('/')
-  if (lastSlashIndex <= 0) {
-    return `/${pageTitle}`
-  }
-  return `${normalizedPath.slice(0, lastSlashIndex)}/${pageTitle}`
+  const parentPath = lastSlashIndex <= 0 ? '' : normalizedPath.slice(0, lastSlashIndex)
+  const containerSegment = containerName ? `/${containerName}` : ''
+  return `${parentPath}${containerSegment}/${pageTitle}`
 }
 
 function joinDocumentPath(basePath: string, title: string): string {
