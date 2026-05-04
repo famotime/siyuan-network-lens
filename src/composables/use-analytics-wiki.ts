@@ -11,6 +11,7 @@ import { getWikiHeadingCandidates } from '@/analytics/wiki-page-model'
 import type { RenderedWikiDraft } from '@/analytics/wiki-renderer'
 import type { WikiScopeSummary } from '@/analytics/wiki-scope'
 import type { WikiPageSnapshotRecord } from '@/analytics/wiki-store'
+import type { WikiPagePlan, WikiTemplateDiagnosis } from '@/analytics/wiki-template-model'
 import { t } from '@/i18n/ui'
 import type { PluginConfig } from '@/types/config'
 
@@ -27,7 +28,10 @@ export interface WikiPreviewThemePageItem {
   themeDocumentHPath: string
   sourceDocumentIds: string[]
   preview: WikiPagePreviewResult
+  diagnosis: WikiTemplateDiagnosis
+  pagePlan: WikiPagePlan
   draft: RenderedWikiDraft
+  affectedSectionHeadings: string[]
   hasManualNotes: boolean
 }
 
@@ -170,6 +174,17 @@ export function resolveWikiScopeDocuments(params: {
   return documents
 }
 
+export function resolveAffectedSectionHeadings(params: {
+  preview: WikiPagePreviewResult
+  draft: RenderedWikiDraft
+}): string[] {
+  const sectionHeadingMap = new Map(
+    params.draft.sectionMetadata.map(section => [section.key, section.heading] as const),
+  )
+
+  return params.preview.affectedSections.map(sectionId => sectionHeadingMap.get(sectionId) ?? humanizeSectionId(sectionId))
+}
+
 function extractManagedMarkdown(fullMarkdown: string): string {
   const manualHeadingIndex = getWikiHeadingCandidates('manualNotes', '##')
     .map(heading => fullMarkdown.indexOf(`\n${heading}`))
@@ -179,4 +194,12 @@ function extractManagedMarkdown(fullMarkdown: string): string {
     return fullMarkdown.trim()
   }
   return fullMarkdown.slice(0, manualHeadingIndex).trim()
+}
+
+function humanizeSectionId(sectionId: string): string {
+  return sectionId
+    .split('_')
+    .filter(Boolean)
+    .map(part => part.charAt(0).toUpperCase() + part.slice(1))
+    .join(' ')
 }

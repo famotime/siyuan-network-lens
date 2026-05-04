@@ -1243,6 +1243,26 @@ const UI_TEXT = {
       en_US: 'Affected sections',
       zh_CN: '影响分区',
     },
+    template: {
+      en_US: 'Template',
+      zh_CN: '模板',
+    },
+    confidence: {
+      en_US: 'Confidence',
+      zh_CN: '置信度',
+    },
+    sectionOrder: {
+      en_US: 'Section order',
+      zh_CN: '分区顺序',
+    },
+    diagnosisReason: {
+      en_US: 'Diagnosis reason',
+      zh_CN: '诊断理由',
+    },
+    diagnosisEvidence: {
+      en_US: 'Diagnosis evidence',
+      zh_CN: '诊断证据',
+    },
     noChanges: {
       en_US: 'No changes',
       zh_CN: '无变化',
@@ -1330,6 +1350,34 @@ const UI_TEXT = {
     statusConflict: {
       en_US: 'Conflict',
       zh_CN: '冲突',
+    },
+    templateTechTopic: {
+      en_US: 'Tech topic',
+      zh_CN: '技术主题',
+    },
+    templateProductHowto: {
+      en_US: 'Product how-to',
+      zh_CN: '产品用法',
+    },
+    templateSocialTopic: {
+      en_US: 'Social topic',
+      zh_CN: '社会议题',
+    },
+    templateMediaList: {
+      en_US: 'Media list',
+      zh_CN: '媒体清单',
+    },
+    confidenceHigh: {
+      en_US: 'HIGH',
+      zh_CN: '高',
+    },
+    confidenceMedium: {
+      en_US: 'MEDIUM',
+      zh_CN: '中',
+    },
+    confidenceLow: {
+      en_US: 'LOW',
+      zh_CN: '低',
     },
     applyRunSummary: {
       en_US: 'This apply run: created {created} / updated {updated} / unchanged {skipped} / conflict {conflict}',

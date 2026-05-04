@@ -48,12 +48,16 @@ describe('WikiMaintainPanel', () => {
             {
               pageTitle: '主题-AI-索引-llm-wiki',
               themeName: 'AI',
+              themeDocumentId: 'theme-ai',
               themeDocumentTitle: '主题-AI-索引',
+              themeDocumentBox: 'box-1',
+              themeDocumentHPath: '/专题/主题-AI-索引',
+              sourceDocumentIds: ['doc-a', 'doc-b', 'doc-c'],
               preview: {
                 pageType: 'theme',
                 pageTitle: '主题-AI-索引-llm-wiki',
                 status: 'update',
-                affectedSections: ['overview', 'actions'],
+                affectedSections: ['intro', 'core_principles', 'sources'],
                 sourceDocumentCount: 3,
                 lastGeneratedAt: '2026-04-10T08:00:00.000Z',
                 pageFingerprint: 'w1',
@@ -61,17 +65,56 @@ describe('WikiMaintainPanel', () => {
                 oldSummary: '旧摘要',
                 newSummary: '新摘要',
               },
+              diagnosis: {
+                templateType: 'tech_topic',
+                confidence: 'high',
+                reason: '技术主题特征明确',
+                enabledModules: ['intro', 'highlights', 'core_principles', 'sources'],
+                suppressedModules: [],
+                evidenceSummary: '来源文档聚焦技术概念与原则。',
+              },
+              pagePlan: {
+                templateType: 'tech_topic',
+                confidence: 'high',
+                coreSections: ['intro', 'highlights', 'sources'],
+                optionalSections: ['core_principles'],
+                sectionOrder: ['intro', 'highlights', 'core_principles', 'sources'],
+                sectionGoals: {
+                  intro: '概览主题定位',
+                  core_principles: '提炼核心原则',
+                },
+                sectionFormats: {
+                  intro: 'overview',
+                  highlights: 'structured',
+                  core_principles: 'structured',
+                  sources: 'catalog',
+                },
+              },
+              affectedSectionHeadings: [
+                'Topic overview',
+                'Core principles',
+                'Relationship evidence',
+              ],
               hasManualNotes: true,
+              draft: {
+                managedMarkdown: '# draft',
+                fullMarkdown: '# draft',
+                sectionMetadata: [],
+              },
             },
             {
               pageTitle: '主题-ML-索引-llm-wiki',
               themeName: '机器学习',
+              themeDocumentId: 'theme-ml',
               themeDocumentTitle: '主题-机器学习-索引',
+              themeDocumentBox: 'box-1',
+              themeDocumentHPath: '/专题/主题-机器学习-索引',
+              sourceDocumentIds: ['doc-d'],
               preview: {
                 pageType: 'theme',
                 pageTitle: '主题-ML-索引-llm-wiki',
                 status: 'conflict',
-                affectedSections: ['overview'],
+                affectedSections: ['comparison'],
                 sourceDocumentCount: 1,
                 lastGeneratedAt: '2026-04-10T08:00:00.000Z',
                 pageFingerprint: 'w3',
@@ -80,7 +123,36 @@ describe('WikiMaintainPanel', () => {
                 newSummary: '冲突后摘要',
                 conflictReason: '当前 AI 管理区内容与上次插件写入指纹不一致。',
               },
+              diagnosis: {
+                templateType: 'social_topic',
+                confidence: 'medium',
+                reason: '需要保留不同观点的对比关系',
+                enabledModules: ['intro', 'highlights', 'comparison', 'sources'],
+                suppressedModules: [],
+                evidenceSummary: '文档内容包含多方观点。',
+              },
+              pagePlan: {
+                templateType: 'social_topic',
+                confidence: 'medium',
+                coreSections: ['intro', 'highlights', 'sources'],
+                optionalSections: ['comparison'],
+                sectionOrder: ['intro', 'comparison', 'sources'],
+                sectionGoals: {
+                  comparison: '比较不同观点',
+                },
+                sectionFormats: {
+                  intro: 'overview',
+                  comparison: 'debate',
+                  sources: 'catalog',
+                },
+              },
+              affectedSectionHeadings: ['Comparison'],
               hasManualNotes: false,
+              draft: {
+                managedMarkdown: '# draft',
+                fullMarkdown: '# draft',
+                sectionMetadata: [],
+              },
             },
           ],
           unclassifiedDocuments: [
@@ -130,8 +202,14 @@ describe('WikiMaintainPanel', () => {
     expect(html).toContain('主题-AI-索引-llm-wiki')
     expect(html).toContain('Status: Update')
     expect(html).toContain('Status: Conflict')
-    expect(html).toContain('overview')
-    expect(html).toContain('actions')
+    expect(html).toContain('Template: Tech topic')
+    expect(html).toContain('Template: Social topic')
+    expect(html).toContain('Confidence: HIGH')
+    expect(html).toContain('Confidence: MEDIUM')
+    expect(html).toContain('Affected sections: Topic overview, Core principles, Relationship evidence')
+    expect(html).toContain('Affected sections: Comparison')
+    expect(html).toContain('Section order: intro, highlights, core_principles, sources')
+    expect(html).toContain('Section order: intro, comparison, sources')
     expect(html).toContain('Manual notes: Existing')
     expect(html).toContain('Manual notes: Created on first write')
     expect(html).toContain('零散记录')
@@ -211,7 +289,58 @@ describe('WikiMaintainPanel', () => {
             },
             descriptionLines: ['- 时间窗口：7d'],
           },
-          themePages: [],
+          themePages: [
+            {
+              pageTitle: '主题-AI-索引-llm-wiki',
+              themeName: 'AI',
+              themeDocumentId: 'theme-ai',
+              themeDocumentTitle: '主题-AI-索引',
+              themeDocumentBox: 'box-1',
+              themeDocumentHPath: '/专题/主题-AI-索引',
+              sourceDocumentIds: ['doc-a'],
+              preview: {
+                pageType: 'theme',
+                pageTitle: '主题-AI-索引-llm-wiki',
+                status: 'update',
+                affectedSections: ['intro'],
+                sourceDocumentCount: 1,
+                lastGeneratedAt: '2026-04-10T08:00:00.000Z',
+                pageFingerprint: 'w1',
+                managedFingerprint: 'w2',
+                oldSummary: '旧摘要',
+                newSummary: '新摘要',
+              },
+              diagnosis: {
+                templateType: 'tech_topic',
+                confidence: 'high',
+                reason: '技术主题特征明确',
+                enabledModules: ['intro', 'sources'],
+                suppressedModules: [],
+                evidenceSummary: '来源文档聚焦技术概念。',
+              },
+              pagePlan: {
+                templateType: 'tech_topic',
+                confidence: 'high',
+                coreSections: ['intro', 'highlights', 'sources'],
+                optionalSections: [],
+                sectionOrder: ['intro', 'sources'],
+                sectionGoals: {
+                  intro: '概览主题定位',
+                },
+                sectionFormats: {
+                  intro: 'overview',
+                  sources: 'catalog',
+                },
+              },
+              affectedSectionHeadings: ['主题概览'],
+              hasManualNotes: false,
+              draft: {
+                managedMarkdown: '# draft',
+                fullMarkdown: '# draft',
+                sectionMetadata: [],
+              },
+            },
+          ],
           unclassifiedDocuments: [],
         },
         prepareWikiPreview: () => undefined,
@@ -227,5 +356,9 @@ describe('WikiMaintainPanel', () => {
     expect(html).toContain('应用变更')
     expect(html).toContain('允许覆盖冲突页面')
     expect(html).toContain('命中源文档')
+    expect(html).toContain('模板')
+    expect(html).toContain('置信度')
+    expect(html).toContain('技术主题')
+    expect(html).toContain('高')
   })
 })

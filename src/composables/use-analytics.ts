@@ -49,6 +49,7 @@ import { createAnalyticsAiController } from './use-analytics-ai'
 import {
   buildWikiScopeDescriptionLines,
   buildWikiSourceProfileMap,
+  resolveAffectedSectionHeadings,
   resolveExistingWikiPage,
   resolveWikiScopeDocuments,
   type WikiPreviewRequest,
@@ -1019,7 +1020,10 @@ export function useAnalyticsState(params: UseAnalyticsParams) {
           themeDocumentHPath: themeDocument.hpath,
           sourceDocumentIds: payload.sourceDocuments.map(document => document.documentId),
           preview,
+          diagnosis,
+          pagePlan,
           draft,
+          affectedSectionHeadings: resolveAffectedSectionHeadings({ preview, draft }),
           hasManualNotes: existingPage?.hasManualNotes ?? false,
         } satisfies WikiPreviewThemePageItem
       }))

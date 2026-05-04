@@ -84,9 +84,14 @@
           </div>
           <div class="wiki-panel__meta">
             <span>{{ t('wikiMaintain.sourceDocs') }}: {{ page.preview.sourceDocumentCount }}</span>
-            <span>{{ t('wikiMaintain.affectedSections') }}: {{ page.preview.affectedSections.length ? page.preview.affectedSections.join(', ') : t('wikiMaintain.noChanges') }}</span>
+            <span>{{ t('wikiMaintain.template') }}: {{ resolveTemplateLabel(page.diagnosis.templateType) }}</span>
+            <span>{{ t('wikiMaintain.confidence') }}: {{ resolveConfidenceLabel(page.diagnosis.confidence) }}</span>
+            <span>{{ t('wikiMaintain.affectedSections') }}: {{ page.affectedSectionHeadings.length ? page.affectedSectionHeadings.join(', ') : t('wikiMaintain.noChanges') }}</span>
+            <span>{{ t('wikiMaintain.sectionOrder') }}: {{ page.pagePlan.sectionOrder.length ? page.pagePlan.sectionOrder.join(', ') : t('wikiMaintain.noChanges') }}</span>
             <span>{{ t('wikiMaintain.manualNotes') }}: {{ page.hasManualNotes ? t('wikiMaintain.existing') : t('wikiMaintain.createdOnFirstWrite') }}</span>
           </div>
+          <p class="wiki-panel__summary"><strong>{{ t('wikiMaintain.diagnosisReason') }}</strong>{{ page.diagnosis.reason }}</p>
+          <p class="wiki-panel__summary"><strong>{{ t('wikiMaintain.diagnosisEvidence') }}</strong>{{ page.diagnosis.evidenceSummary }}</p>
           <p class="wiki-panel__summary"><strong>{{ t('wikiMaintain.oldSummary') }}</strong>{{ page.preview.oldSummary || t('wikiMaintain.noPreviousContent') }}</p>
           <p class="wiki-panel__summary"><strong>{{ t('wikiMaintain.newSummary') }}</strong>{{ page.preview.newSummary || t('wikiMaintain.noNewContent') }}</p>
           <p v-if="page.preview.conflictReason" class="wiki-panel__conflict">{{ page.preview.conflictReason }}</p>
@@ -193,6 +198,34 @@ const latestUpdatedThemePageId = computed(() => {
 
   return latestPage?.pageId ?? ''
 })
+
+function resolveTemplateLabel(templateType: string) {
+  switch (templateType) {
+    case 'tech_topic':
+      return t('wikiMaintain.templateTechTopic')
+    case 'product_howto':
+      return t('wikiMaintain.templateProductHowto')
+    case 'social_topic':
+      return t('wikiMaintain.templateSocialTopic')
+    case 'media_list':
+      return t('wikiMaintain.templateMediaList')
+    default:
+      return templateType
+    }
+}
+
+function resolveConfidenceLabel(confidence: string) {
+  switch (confidence) {
+    case 'high':
+      return t('wikiMaintain.confidenceHigh')
+    case 'medium':
+      return t('wikiMaintain.confidenceMedium')
+    case 'low':
+      return t('wikiMaintain.confidenceLow')
+    default:
+      return confidence
+  }
+}
 </script>
 
 <style scoped>
