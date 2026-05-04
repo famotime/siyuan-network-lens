@@ -1,6 +1,17 @@
 export const WIKI_PAGE_TYPES = ['theme', 'index', 'log'] as const
 export type WikiPageType = typeof WIKI_PAGE_TYPES[number]
 
+export const WIKI_SECTION_KEYS = [
+  'meta',
+  'overview',
+  'keyDocuments',
+  'structureObservations',
+  'evidence',
+  'actions',
+  'manualNotes',
+] as const
+export type WikiSectionKey = typeof WIKI_SECTION_KEYS[number]
+
 export const WIKI_PREVIEW_STATUSES = ['create', 'update', 'unchanged', 'conflict'] as const
 export type WikiPreviewStatus = typeof WIKI_PREVIEW_STATUSES[number]
 
@@ -12,17 +23,50 @@ import { t } from '@/i18n/ui'
 export const WIKI_PAGE_HEADING_KEYS = ['managedRoot', 'manualNotes'] as const
 export type WikiPageHeadingKey = typeof WIKI_PAGE_HEADING_KEYS[number]
 
+type WikiHeadingLookupKey = WikiPageHeadingKey | Exclude<WikiSectionKey, 'manualNotes'>
+
 const WIKI_PAGE_HEADING_VARIANTS = {
   managedRoot: ['AI managed area', 'AI 管理区'],
   manualNotes: ['Manual notes', '人工备注'],
-} as const satisfies Record<WikiPageHeadingKey, readonly [string, string]>
+  meta: ['Page meta', '页面头信息'],
+  overview: ['Topic overview', '主题概览'],
+  keyDocuments: ['Key documents', '关键文档'],
+  structureObservations: ['Structure observations', '结构观察'],
+  evidence: ['Relationship evidence', '关系证据'],
+  actions: ['Cleanup actions', '整理动作'],
+} as const satisfies Record<WikiHeadingLookupKey, readonly [string, string]>
 
-export const WIKI_PAGE_HEADINGS: Record<WikiPageHeadingKey, string> = Object.fromEntries(
-  Object.entries({
-    managedRoot: t('analytics.wikiPage.managedRootHeading'),
-    manualNotes: t('wikiMaintain.manualNotes'),
-  }),
-) as Record<WikiPageHeadingKey, string>
+type WikiPageHeadingMap = Record<WikiPageHeadingKey, string> & Record<Exclude<WikiSectionKey, 'manualNotes'>, string>
+
+const legacyHeadingEntries: Record<Exclude<WikiSectionKey, 'manualNotes'>, string> = {
+  meta: t('analytics.wikiPage.metaHeading'),
+  overview: t('analytics.wikiPage.overviewHeading'),
+  keyDocuments: t('analytics.wikiPage.keyDocumentsHeading'),
+  structureObservations: t('analytics.wikiPage.structureObservationsHeading'),
+  evidence: t('analytics.wikiPage.evidenceHeading'),
+  actions: t('analytics.wikiPage.actionsHeading'),
+}
+
+export const WIKI_PAGE_HEADINGS: WikiPageHeadingMap = Object.assign(
+  Object.fromEntries(
+    Object.entries({
+      managedRoot: t('analytics.wikiPage.managedRootHeading'),
+      manualNotes: t('wikiMaintain.manualNotes'),
+    }),
+  ) as Record<WikiPageHeadingKey, string>,
+  Object.create(null),
+) as WikiPageHeadingMap
+
+for (const [key, value] of Object.entries(legacyHeadingEntries) as Array<[Exclude<WikiSectionKey, 'manualNotes'>, string]>) {
+  Object.defineProperty(WIKI_PAGE_HEADINGS, key, {
+    value,
+    enumerable: false,
+    configurable: false,
+    writable: false,
+  })
+}
+
+Object.freeze(WIKI_PAGE_HEADINGS)
 
 export const WIKI_BLOCK_ATTR_KEYS = {
   pageType: 'custom-network-lens-wiki-page-type',
@@ -68,7 +112,7 @@ export function isWikiDocumentTitle(title: string, suffix: string): boolean {
 }
 
 export function getWikiHeadingCandidates(
-  key: WikiPageHeadingKey,
+  key: WikiHeadingLookupKey,
   level?: '##' | '###',
 ): string[] {
   const prefix = level ? `${level} ` : ''
@@ -77,14 +121,14 @@ export function getWikiHeadingCandidates(
 
 export function matchesWikiHeading(
   value: string,
-  key: WikiPageHeadingKey,
+  key: WikiHeadingLookupKey,
   level?: '##' | '###',
 ): boolean {
   return getWikiHeadingCandidates(key, level).some(heading => value.startsWith(heading))
 }
 
-export function resolveWikiSectionKeyFromHeading(heading: string): WikiPageHeadingKey | string {
-  for (const key of WIKI_PAGE_HEADING_KEYS) {
+export function resolveWikiSectionKeyFromHeading(heading: string): WikiSectionKey | 'managedRoot' | string {
+  for (const key of [...WIKI_PAGE_HEADING_KEYS, ...WIKI_SECTION_KEYS.filter(item => item !== 'manualNotes')] as WikiHeadingLookupKey[]) {
     if (WIKI_PAGE_HEADING_VARIANTS[key].includes(heading as any)) {
       return key
     }

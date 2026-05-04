@@ -6,6 +6,7 @@ import {
   WIKI_PAGE_HEADINGS,
   WIKI_PAGE_TYPES,
   WIKI_PREVIEW_STATUSES,
+  resolveWikiSectionKeyFromHeading,
   buildThemeWikiPageTitle,
   isWikiDocumentTitle,
 } from './wiki-page-model'
@@ -60,5 +61,41 @@ describe('wiki page model', () => {
       managedRoot: 'AI 管理区',
       manualNotes: '人工备注',
     })
+  })
+
+  it('keeps legacy managed section headings available for downstream compatibility', async () => {
+    expect(Object.keys(WIKI_PAGE_HEADINGS)).toEqual(['managedRoot', 'manualNotes'])
+    expect((WIKI_PAGE_HEADINGS as Record<string, string>).meta).toBe('Page meta')
+    expect((WIKI_PAGE_HEADINGS as Record<string, string>).overview).toBe('Topic overview')
+    expect((WIKI_PAGE_HEADINGS as Record<string, string>).keyDocuments).toBe('Key documents')
+    expect((WIKI_PAGE_HEADINGS as Record<string, string>).structureObservations).toBe('Structure observations')
+    expect((WIKI_PAGE_HEADINGS as Record<string, string>).evidence).toBe('Relationship evidence')
+    expect((WIKI_PAGE_HEADINGS as Record<string, string>).actions).toBe('Cleanup actions')
+    expect(resolveWikiSectionKeyFromHeading('Page meta')).toBe('meta')
+    expect(resolveWikiSectionKeyFromHeading('Topic overview')).toBe('overview')
+    expect(resolveWikiSectionKeyFromHeading('Cleanup actions')).toBe('actions')
+
+    ;(globalThis as typeof globalThis & {
+      siyuan?: {
+        config?: {
+          lang?: string
+        }
+      }
+    }).siyuan = {
+      config: {
+        lang: 'zh_CN',
+      },
+    }
+
+    vi.resetModules()
+
+    const zhModule = await import('./wiki-page-model')
+    const zhHeadings = zhModule.WIKI_PAGE_HEADINGS as Record<string, string>
+
+    expect(Object.keys(zhModule.WIKI_PAGE_HEADINGS)).toEqual(['managedRoot', 'manualNotes'])
+    expect(zhHeadings.meta).toBe('页面头信息')
+    expect(zhHeadings.overview).toBe('主题概览')
+    expect(zhModule.resolveWikiSectionKeyFromHeading('页面头信息')).toBe('meta')
+    expect(zhModule.resolveWikiSectionKeyFromHeading('主题概览')).toBe('overview')
   })
 })
