@@ -1,4 +1,4 @@
-import { ensureDocumentSummary } from '@/analytics/ai-document-summary'
+import { ensureDocumentIndex } from '@/analytics/ai-document-summary'
 import type {
   AnalyticsFilters,
   DocumentRecord,
@@ -52,7 +52,7 @@ export function deduplicateStrings(values: string[]): string[] {
   return [...new Set(values.map(value => value.trim()).filter(Boolean))]
 }
 
-export async function buildWikiSourceSummaryMap(params: {
+export async function buildWikiSourceProfileMap(params: {
   sourceDocuments: DocumentRecord[]
   config: PluginConfig
   aiIndexStore: AiDocumentIndexStore | null
@@ -62,7 +62,11 @@ export async function buildWikiSourceSummaryMap(params: {
   generatedAt: string
 }) {
   const entries = await Promise.all(params.sourceDocuments.map(async (document) => {
-    const summary = await ensureDocumentSummary({
+    if (!params.aiIndexStore || !params.forwardProxy || !params.getChildBlocks || !params.getBlockKramdown) {
+      return [document.id, null] as const
+    }
+
+    await ensureDocumentIndex({
       config: params.config,
       sourceDocument: document,
       indexStore: params.aiIndexStore,
@@ -72,7 +76,11 @@ export async function buildWikiSourceSummaryMap(params: {
       updatedAt: params.generatedAt,
     })
 
-    return [document.id, summary] as const
+    const profile = document.updated
+      ? await params.aiIndexStore.getFreshDocumentProfile(document.id, document.updated)
+      : await params.aiIndexStore.getDocumentProfile(document.id)
+
+    return [document.id, profile] as const
   }))
 
   return new Map(entries)

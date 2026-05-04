@@ -1587,13 +1587,15 @@ describe('useAnalyticsState', () => {
   it('builds wiki previews from the current filtered scope and applies generated pages', async () => {
     const generateThemeSections = vi.fn(async ({ payload }: any) => ({
       overview: `${payload.themeName} 的主题概览`,
-      keyDocuments: payload.signals.coreDocuments.length
-        ? payload.signals.coreDocuments.map((item: any) => `优先维护 ${item.title}`)
+      keyDocuments: payload.sourceDocuments.length
+        ? payload.sourceDocuments.map((item: any) => `优先维护 ${item.title}`)
         : ['暂无核心文档'],
-      structureObservations: payload.signals.bridgeDocuments.length
-        ? [`桥接点集中在 ${payload.signals.bridgeDocuments[0].title}`]
+      structureObservations: payload.templateSignals.propositionCount
+        ? [`当前共有 ${payload.templateSignals.propositionCount} 条主题命题`]
         : ['结构稳定'],
-      evidence: payload.evidence.length ? [payload.evidence[0]] : ['暂无证据'],
+      evidence: payload.sourceDocuments.flatMap((item: any) => item.primarySourceBlocks).length
+        ? [payload.sourceDocuments.flatMap((item: any) => item.primarySourceBlocks)[0]]
+        : ['暂无证据'],
       actions: payload.sourceDocuments.length
         ? [`先补齐 ${payload.sourceDocuments[0].title} 的主题入口`]
         : ['暂无动作'],
@@ -1603,6 +1605,7 @@ describe('useAnalyticsState', () => {
     const openTab = vi.fn()
     const createDocWithMd = vi.fn(async () => 'wiki-ai-page')
     const getIDsByHPath = vi.fn(async () => [])
+    const storedProfiles = new Map<string, any>()
 
     const state = useAnalyticsState({
       plugin: {
@@ -1657,8 +1660,29 @@ describe('useAnalyticsState', () => {
       }),
       aiIndexStore: {
         getFreshDocumentSummary: vi.fn(async () => null),
-        getFreshDocumentProfile: vi.fn(async () => null),
-        saveDocumentIndex: saveDocumentIndex,
+        getFreshDocumentProfile: vi.fn(async (documentId: string, sourceUpdatedAt: string) => {
+          const profile = storedProfiles.get(documentId) ?? null
+          return profile?.sourceUpdatedAt === sourceUpdatedAt ? profile : null
+        }),
+        getDocumentProfile: vi.fn(async (documentId: string) => storedProfiles.get(documentId) ?? null),
+        saveDocumentIndex: vi.fn(async (params: any) => {
+          await saveDocumentIndex(params)
+          storedProfiles.set(params.sourceDocument.id, {
+            documentId: params.sourceDocument.id,
+            sourceUpdatedAt: params.sourceDocument.updated ?? '',
+            sourceHash: `h-${params.sourceDocument.id}`,
+            title: params.sourceDocument.title,
+            path: params.sourceDocument.path ?? '',
+            hpath: params.sourceDocument.hpath ?? '',
+            tagsJson: JSON.stringify(params.sourceDocument.tags ?? []),
+            positioning: params.positioning,
+            propositionsJson: JSON.stringify(params.propositions),
+            keywordsJson: JSON.stringify(params.keywords),
+            primarySourceBlocksJson: JSON.stringify(params.primarySourceBlocks),
+            secondarySourceBlocksJson: JSON.stringify(params.secondarySourceBlocks),
+            generatedAt: params.generatedAt,
+          })
+        }),
       } as any,
       aiWikiStore: {
         loadSnapshot: vi.fn(async () => ({ schemaVersion: 1, pages: {} })),
@@ -1721,15 +1745,18 @@ describe('useAnalyticsState', () => {
   it('builds wiki previews from a requested scoped document set instead of the whole sample', async () => {
     const generateThemeSections = vi.fn(async ({ payload }: any) => ({
       overview: `${payload.themeName} 的主题概览`,
-      keyDocuments: payload.signals.coreDocuments.length
-        ? payload.signals.coreDocuments.map((item: any) => `优先维护 ${item.title}`)
+      keyDocuments: payload.sourceDocuments.length
+        ? payload.sourceDocuments.map((item: any) => `优先维护 ${item.title}`)
         : ['暂无核心文档'],
       structureObservations: ['结构稳定'],
-      evidence: payload.evidence.length ? [payload.evidence[0]] : ['暂无证据'],
+      evidence: payload.sourceDocuments.flatMap((item: any) => item.primarySourceBlocks).length
+        ? [payload.sourceDocuments.flatMap((item: any) => item.primarySourceBlocks)[0]]
+        : ['暂无证据'],
       actions: payload.sourceDocuments.length
         ? [`先补齐 ${payload.sourceDocuments[0].title} 的主题入口`]
         : ['暂无动作'],
     }))
+    const storedProfiles = new Map<string, any>()
 
     const state = useAnalyticsState({
       plugin: {
@@ -1782,8 +1809,28 @@ describe('useAnalyticsState', () => {
       }),
       aiIndexStore: {
         getFreshDocumentSummary: vi.fn(async () => null),
-        getFreshDocumentProfile: vi.fn(async () => null),
-        saveDocumentIndex: vi.fn(async () => undefined),
+        getFreshDocumentProfile: vi.fn(async (documentId: string, sourceUpdatedAt: string) => {
+          const profile = storedProfiles.get(documentId) ?? null
+          return profile?.sourceUpdatedAt === sourceUpdatedAt ? profile : null
+        }),
+        getDocumentProfile: vi.fn(async (documentId: string) => storedProfiles.get(documentId) ?? null),
+        saveDocumentIndex: vi.fn(async (params: any) => {
+          storedProfiles.set(params.sourceDocument.id, {
+            documentId: params.sourceDocument.id,
+            sourceUpdatedAt: params.sourceDocument.updated ?? '',
+            sourceHash: `h-${params.sourceDocument.id}`,
+            title: params.sourceDocument.title,
+            path: params.sourceDocument.path ?? '',
+            hpath: params.sourceDocument.hpath ?? '',
+            tagsJson: JSON.stringify(params.sourceDocument.tags ?? []),
+            positioning: params.positioning,
+            propositionsJson: JSON.stringify(params.propositions),
+            keywordsJson: JSON.stringify(params.keywords),
+            primarySourceBlocksJson: JSON.stringify(params.primarySourceBlocks),
+            secondarySourceBlocksJson: JSON.stringify(params.secondarySourceBlocks),
+            generatedAt: params.generatedAt,
+          })
+        }),
       } as any,
       aiWikiStore: {
         loadSnapshot: vi.fn(async () => ({ schemaVersion: 1, pages: {} })),
@@ -1806,8 +1853,9 @@ describe('useAnalyticsState', () => {
     expect(generateThemeSections).toHaveBeenCalledWith(expect.objectContaining({
       payload: expect.objectContaining({
         sourceDocuments: [
-          expect.objectContaining({ documentId: 'doc-a', title: 'Alpha AI' }),
+          expect.objectContaining({ documentId: 'doc-a', title: 'Alpha AI', positioning: '测试定位', propositions: ['测试命题'] }),
         ],
+        templateSignals: expect.objectContaining({ propositionCount: 1, sourceDocumentCount: 1 }),
       }),
     }))
     expect((state as any).wikiPreview.value).toEqual(expect.objectContaining({

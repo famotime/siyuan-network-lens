@@ -1,4 +1,5 @@
-import type { DocumentRecord, ReferenceGraphReport, TrendReport } from './analysis'
+import type { DocumentRecord } from './analysis'
+import type { DocumentIndexProfile, PropositionItem, SourceBlockItem } from './ai-index-store'
 import { buildThemeWikiPageTitle } from './wiki-page-model'
 import type { WikiScopeResult } from './wiki-scope'
 import type { PluginConfig } from '@/types/config'
@@ -11,64 +12,47 @@ export const WIKI_LLM_OUTPUT_KEYS = [
   'actions',
 ] as const
 
-export interface WikiDocumentSummaryItem {
+export interface WikiBundleDocumentItem {
   documentId: string
   title: string
-  summaryShort: string
-  summaryMedium: string
+  positioning: string
+  propositions: string[]
   keywords: string[]
-  evidenceSnippets: string[]
+  primarySourceBlocks: string[]
+  secondarySourceBlocks: string[]
   updatedAt: string
 }
 
-export interface WikiThemeGenerationPayload {
+export interface WikiThemeBundle {
   themeName: string
   pageTitle: string
   themeDocumentId: string
   themeDocumentTitle: string
-  sourceDocuments: WikiDocumentSummaryItem[]
-  signals: {
-    coreDocuments: WikiDocumentSummaryItem[]
-    bridgeDocuments: WikiDocumentSummaryItem[]
-    propagationDocuments: WikiDocumentSummaryItem[]
-    orphanDocuments: WikiDocumentSummaryItem[]
-    risingDocuments: WikiDocumentSummaryItem[]
-    fallingDocuments: WikiDocumentSummaryItem[]
+  sourceDocuments: WikiBundleDocumentItem[]
+  templateSignals: {
+    sourceDocumentCount: number
+    propositionCount: number
+    primarySourceBlockCount: number
+    secondarySourceBlockCount: number
   }
-  evidence: string[]
 }
 
 export interface WikiGenerationPayloadBundle {
-  themes: WikiThemeGenerationPayload[]
-  unclassifiedDocuments: WikiDocumentSummaryItem[]
+  themes: WikiThemeBundle[]
+  unclassifiedDocuments: WikiBundleDocumentItem[]
 }
 
 export function buildWikiGenerationPayloads(params: {
   config: Pick<PluginConfig, 'wikiPageSuffix'>
   scope: WikiScopeResult
-  report: ReferenceGraphReport
-  trends: TrendReport
   documentMap: ReadonlyMap<string, DocumentRecord>
-  getDocumentSummary: (document: DocumentRecord) => {
-    summaryShort: string
-    summaryMedium: string
-    keywords: string[]
-    evidenceSnippets: string[]
-    updatedAt: string
-  }
+  getDocumentProfile: (document: DocumentRecord) => DocumentIndexProfile | null
 }): WikiGenerationPayloadBundle {
-  const rankingIds = new Set(params.report.ranking.map(item => item.documentId))
-  const bridgeIds = new Set(params.report.bridgeDocuments.map(item => item.documentId))
-  const propagationIds = new Set(params.report.propagationNodes.map(item => item.documentId))
-  const orphanIds = new Set(params.report.orphans.map(item => item.documentId))
-  const risingIds = new Set(params.trends.risingDocuments.map(item => item.documentId))
-  const fallingIds = new Set(params.trends.fallingDocuments.map(item => item.documentId))
-
   return {
     themes: params.scope.themeGroups.map((group) => {
       const sourceDocuments = group.sourceDocumentIds
-        .map(documentId => buildSummaryItem(documentId, params.documentMap, params.getDocumentSummary))
-        .filter((item): item is WikiDocumentSummaryItem => item !== null)
+        .map(documentId => buildBundleItem(documentId, params.documentMap, params.getDocumentProfile))
+        .filter((item): item is WikiBundleDocumentItem => item !== null)
 
       return {
         themeName: group.themeName,
@@ -76,74 +60,73 @@ export function buildWikiGenerationPayloads(params: {
         themeDocumentId: group.themeDocumentId,
         themeDocumentTitle: group.themeDocumentTitle,
         sourceDocuments,
-        signals: {
-          coreDocuments: sourceDocuments.filter(item => rankingIds.has(item.documentId)),
-          bridgeDocuments: sourceDocuments.filter(item => bridgeIds.has(item.documentId)),
-          propagationDocuments: sourceDocuments.filter(item => propagationIds.has(item.documentId)),
-          orphanDocuments: sourceDocuments.filter(item => orphanIds.has(item.documentId)),
-          risingDocuments: sourceDocuments.filter(item => risingIds.has(item.documentId)),
-          fallingDocuments: sourceDocuments.filter(item => fallingIds.has(item.documentId)),
-        },
-        evidence: buildThemeEvidence(group.sourceDocumentIds, params.report, params.documentMap),
+        templateSignals: buildTemplateSignals(sourceDocuments),
       }
     }),
     unclassifiedDocuments: params.scope.unclassifiedDocuments
-      .map(document => buildSummaryItem(document.id, params.documentMap, params.getDocumentSummary))
-      .filter((item): item is WikiDocumentSummaryItem => item !== null),
+      .map(document => buildBundleItem(document.id, params.documentMap, params.getDocumentProfile))
+      .filter((item): item is WikiBundleDocumentItem => item !== null),
   }
 }
 
-function buildSummaryItem(
+function buildBundleItem(
   documentId: string,
   documentMap: ReadonlyMap<string, DocumentRecord>,
-  getDocumentSummary: (document: DocumentRecord) => {
-    summaryShort: string
-    summaryMedium: string
-    keywords: string[]
-    evidenceSnippets: string[]
-    updatedAt: string
-  },
-): WikiDocumentSummaryItem | null {
+  getDocumentProfile: (document: DocumentRecord) => DocumentIndexProfile | null,
+): WikiBundleDocumentItem | null {
   const document = documentMap.get(documentId)
   if (!document) {
     return null
   }
-  const summary = getDocumentSummary(document)
+
+  const profile = getDocumentProfile(document)
+  if (!profile) {
+    return null
+  }
 
   return {
     documentId,
-    title: document.title || document.hpath || document.path || document.id,
-    summaryShort: summary.summaryShort,
-    summaryMedium: summary.summaryMedium,
-    keywords: [...summary.keywords],
-    evidenceSnippets: [...summary.evidenceSnippets],
-    updatedAt: summary.updatedAt,
+    title: profile.title || document.title || document.hpath || document.path || document.id,
+    positioning: profile.positioning || '',
+    propositions: parseJsonArray<PropositionItem>(profile.propositionsJson)
+      .map(item => item?.text?.trim() || '')
+      .filter(Boolean),
+    keywords: parseStringArray(profile.keywordsJson),
+    primarySourceBlocks: parseJsonArray<SourceBlockItem>(profile.primarySourceBlocksJson)
+      .map(item => item?.text?.trim() || '')
+      .filter(Boolean),
+    secondarySourceBlocks: parseJsonArray<SourceBlockItem>(profile.secondarySourceBlocksJson)
+      .map(item => item?.text?.trim() || '')
+      .filter(Boolean),
+    updatedAt: profile.generatedAt,
   }
 }
 
-function buildThemeEvidence(
-  sourceDocumentIds: string[],
-  report: ReferenceGraphReport,
-  documentMap: ReadonlyMap<string, DocumentRecord>,
-): string[] {
-  const sourceDocumentIdSet = new Set(sourceDocumentIds)
-  const evidence: string[] = []
-
-  for (const targetDocumentId of sourceDocumentIds) {
-    const refs = report.evidenceByDocument[targetDocumentId] ?? []
-    for (const ref of refs) {
-      if (!sourceDocumentIdSet.has(ref.sourceDocumentId)) {
-        continue
-      }
-      const sourceTitle = resolveTitle(documentMap.get(ref.sourceDocumentId), ref.sourceDocumentId)
-      const targetTitle = resolveTitle(documentMap.get(targetDocumentId), targetDocumentId)
-      evidence.push(`${sourceTitle} -> ${targetTitle}：${ref.content}`)
-    }
+function buildTemplateSignals(sourceDocuments: WikiBundleDocumentItem[]): WikiThemeBundle['templateSignals'] {
+  return {
+    sourceDocumentCount: sourceDocuments.length,
+    propositionCount: sourceDocuments.reduce((sum, item) => sum + item.propositions.length, 0),
+    primarySourceBlockCount: sourceDocuments.reduce((sum, item) => sum + item.primarySourceBlocks.length, 0),
+    secondarySourceBlockCount: sourceDocuments.reduce((sum, item) => sum + item.secondarySourceBlocks.length, 0),
   }
-
-  return evidence
 }
 
-function resolveTitle(document: DocumentRecord | undefined, fallbackId: string): string {
-  return document?.title || document?.hpath || document?.path || fallbackId
+function parseStringArray(value?: string): string[] {
+  return parseJsonArray<unknown>(value)
+    .filter((item): item is string => typeof item === 'string')
+    .map(item => item.trim())
+    .filter(Boolean)
+}
+
+function parseJsonArray<T>(value?: string): T[] {
+  if (!value) {
+    return []
+  }
+
+  try {
+    const parsed = JSON.parse(value)
+    return Array.isArray(parsed) ? parsed : []
+  } catch {
+    return []
+  }
 }

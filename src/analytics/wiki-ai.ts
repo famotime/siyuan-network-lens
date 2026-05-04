@@ -1,5 +1,5 @@
 import { isAiConfigComplete, limitChatCompletionMessages, resolveAiEndpoint, resolveAiRequestOptions } from './ai-inbox'
-import { WIKI_LLM_OUTPUT_KEYS, type WikiThemeGenerationPayload } from './wiki-generation'
+import { WIKI_LLM_OUTPUT_KEYS, type WikiThemeBundle } from './wiki-generation'
 import { t } from '@/i18n/ui'
 import type { PluginConfig } from '@/types/config'
 
@@ -31,18 +31,18 @@ export type AiWikiThemeSections = Record<typeof WIKI_LLM_OUTPUT_KEYS[number], st
 export interface AiWikiService {
   generateThemeSections: (params: {
     config: AiConfig
-    payload: WikiThemeGenerationPayload
+    payload: WikiThemeBundle
   }) => Promise<AiWikiThemeSections>
 }
 
 const SYSTEM_PROMPT = [
   'You are a topic wiki maintenance assistant for SiYuan notes.',
-  'Based on the topic page, source document summaries, and structure signals, generate structured JSON for one topic wiki page.',
+  'Based on the topic page, source document bundles, and template signals, generate structured JSON for one topic wiki page.',
   'Return JSON only. Do not output Markdown, explanations, or code blocks.',
   'The JSON must include overview, keyDocuments, structureObservations, evidence, and actions.',
   'overview must be a string; the other fields may be strings or arrays of strings.',
   'Do not invent documents, topic pages, relationships, or evidence that do not exist.',
-  'Prefer using sourceDocuments, signals, and evidence already provided in the input.',
+  'Prefer using sourceDocuments and templateSignals already provided in the input.',
   'All user-visible text must follow the current workspace UI language.',
 ].join(' ')
 

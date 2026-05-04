@@ -1,7 +1,8 @@
 import { describe, expect, it } from 'vitest'
 
 import type { ReferenceGraphReport, TrendReport } from './analysis'
-import { WIKI_LLM_OUTPUT_KEYS, buildWikiGenerationPayloads } from './wiki-generation'
+import type { DocumentIndexProfile } from './ai-index-store'
+import { buildWikiGenerationPayloads } from './wiki-generation'
 import { buildWikiScope } from './wiki-scope'
 import type { PluginConfig } from '@/types/config'
 
@@ -20,11 +21,11 @@ const config: PluginConfig = {
 }
 
 describe('wiki generation', () => {
-  it('builds theme wiki payloads from scope, summaries and structural signals', () => {
+  it('builds topic bundles from document index profiles', () => {
     const documents = [
       { id: 'theme-ai', box: 'box-1', path: '/topics/ai.sy', hpath: '/专题/主题-AI-索引', title: '主题-AI-索引', name: 'AI', alias: '人工智能', tags: [], updated: '20260311120000' },
       { id: 'doc-core', box: 'box-1', path: '/notes/core.sy', hpath: '/笔记/AI 核心', title: 'AI 核心', content: 'AI 核心内容', tags: ['AI'], updated: '20260311120000' },
-      { id: 'doc-bridge', box: 'box-1', path: '/notes/bridge.sy', hpath: '/笔记/AI 桥接', title: 'AI 桥接', content: '人工智能 桥接 节点', tags: ['AI'], updated: '20260311120000' },
+      { id: 'doc-bridge', box: 'box-1', path: '/notes/bridge.sy', hpath: '/笔记/AI 桥接', title: 'AI 桥接', content: '人工智能 桥接 节点', tags: ['AI'], updated: '20260312120000' },
       { id: 'doc-free', box: 'box-1', path: '/notes/free.sy', hpath: '/笔记/杂项', title: '杂项', content: '无主题', tags: [], updated: '20260311120000' },
     ] as any
 
@@ -94,47 +95,163 @@ describe('wiki generation', () => {
       dormantCommunities: [],
     }
 
+    const profileMap = new Map<string, DocumentIndexProfile>([
+      ['doc-core', {
+        documentId: 'doc-core',
+        sourceUpdatedAt: '20260311120000',
+        sourceHash: 'h-core',
+        title: 'AI 核心',
+        path: '/notes/core.sy',
+        hpath: '/笔记/AI 核心',
+        tagsJson: '["AI"]',
+        positioning: '解释 AI 核心概念与关键边界。',
+        propositionsJson: JSON.stringify([
+          { text: 'AI 的核心价值来自模式抽取与任务迁移。', sourceBlockIds: ['blk-2'] },
+          { text: '核心概念页承担主题锚点角色。', sourceBlockIds: ['blk-3'] },
+        ]),
+        keywordsJson: JSON.stringify(['AI', '核心概念']),
+        primarySourceBlocksJson: JSON.stringify([
+          { blockId: 'blk-2', text: 'AI 核心定义段落' },
+        ]),
+        secondarySourceBlocksJson: JSON.stringify([
+          { blockId: 'blk-3', text: 'AI 核心延伸说明' },
+        ]),
+        generatedAt: '2026-04-09T12:00:00.000Z',
+      }],
+      ['doc-bridge', {
+        documentId: 'doc-bridge',
+        sourceUpdatedAt: '20260312120000',
+        sourceHash: 'h-bridge',
+        title: 'AI 桥接',
+        path: '/notes/bridge.sy',
+        hpath: '/笔记/AI 桥接',
+        tagsJson: '["AI"]',
+        positioning: '连接 AI 基础概念与外部应用场景。',
+        propositionsJson: JSON.stringify([
+          { text: '桥接页负责把基础概念引到具体场景。', sourceBlockIds: ['blk-1'] },
+        ]),
+        keywordsJson: JSON.stringify(['AI', '桥接']),
+        primarySourceBlocksJson: JSON.stringify([
+          { blockId: 'blk-1', text: '桥接页中的引用证据' },
+          { blockId: 'blk-4', text: '桥接页中的应用说明' },
+        ]),
+        secondarySourceBlocksJson: JSON.stringify([]),
+        generatedAt: '2026-04-09T13:00:00.000Z',
+      }],
+    ])
+
     const payloads = buildWikiGenerationPayloads({
       config,
       scope,
-      report,
-      trends,
       documentMap: new Map(documents.map(document => [document.id, document])),
-      getDocumentSummary: (document) => ({
-        summaryShort: `${document.title} 短摘要`,
-        summaryMedium: `${document.title} 中摘要`,
-        keywords: [document.title],
-        evidenceSnippets: [`${document.title} 证据`],
-        updatedAt: '2026-04-09T12:00:00.000Z',
-      }),
+      getDocumentProfile: document => profileMap.get(document.id) ?? null,
     })
 
-    expect(WIKI_LLM_OUTPUT_KEYS).toEqual([
-      'overview',
-      'keyDocuments',
-      'structureObservations',
-      'evidence',
-      'actions',
-    ])
-    expect(payloads.unclassifiedDocuments.map(item => item.documentId)).toEqual(['doc-free'])
+    expect(payloads.unclassifiedDocuments).toEqual([])
     expect(payloads.themes).toEqual([
       expect.objectContaining({
         themeName: 'AI',
         pageTitle: '主题-AI-索引-llm-wiki',
         sourceDocuments: [
-          expect.objectContaining({ documentId: 'doc-core', summaryShort: 'AI 核心 短摘要' }),
-          expect.objectContaining({ documentId: 'doc-bridge', summaryShort: 'AI 桥接 短摘要' }),
+          {
+            documentId: 'doc-core',
+            title: 'AI 核心',
+            positioning: '解释 AI 核心概念与关键边界。',
+            propositions: ['AI 的核心价值来自模式抽取与任务迁移。', '核心概念页承担主题锚点角色。'],
+            keywords: ['AI', '核心概念'],
+            primarySourceBlocks: ['AI 核心定义段落'],
+            secondarySourceBlocks: ['AI 核心延伸说明'],
+            updatedAt: '2026-04-09T12:00:00.000Z',
+          },
+          {
+            documentId: 'doc-bridge',
+            title: 'AI 桥接',
+            positioning: '连接 AI 基础概念与外部应用场景。',
+            propositions: ['桥接页负责把基础概念引到具体场景。'],
+            keywords: ['AI', '桥接'],
+            primarySourceBlocks: ['桥接页中的引用证据', '桥接页中的应用说明'],
+            secondarySourceBlocks: [],
+            updatedAt: '2026-04-09T13:00:00.000Z',
+          },
         ],
-        signals: expect.objectContaining({
-          coreDocuments: [expect.objectContaining({ documentId: 'doc-core' })],
-          bridgeDocuments: [expect.objectContaining({ documentId: 'doc-bridge' })],
-          propagationDocuments: [expect.objectContaining({ documentId: 'doc-bridge' })],
-          risingDocuments: [expect.objectContaining({ documentId: 'doc-core' })],
-        }),
-        evidence: expect.arrayContaining([
-          expect.stringContaining('AI 桥接 -> AI 核心'),
-        ]),
+        templateSignals: {
+          sourceDocumentCount: 2,
+          propositionCount: 3,
+          primarySourceBlockCount: 3,
+          secondarySourceBlockCount: 1,
+        },
       }),
     ])
+  })
+
+  it('skips documents without fresh document index profiles from bundles', () => {
+    const documents = [
+      { id: 'theme-ai', box: 'box-1', path: '/topics/ai.sy', hpath: '/专题/主题-AI-索引', title: '主题-AI-索引', name: 'AI', alias: '人工智能', tags: [], updated: '20260311120000' },
+      { id: 'doc-core', box: 'box-1', path: '/notes/core.sy', hpath: '/笔记/AI 核心', title: 'AI 核心', content: 'AI 核心内容', tags: ['AI'], updated: '20260311120000' },
+      { id: 'doc-free', box: 'box-1', path: '/notes/free.sy', hpath: '/笔记/杂项', title: '杂项', content: '无主题', tags: [], updated: '20260311120000' },
+    ] as any
+
+    const scope = buildWikiScope({
+      documents,
+      config,
+    })
+
+    const emptyReport: ReferenceGraphReport = {
+      summary: {
+        totalDocuments: 2,
+        analyzedDocuments: 2,
+        totalReferences: 0,
+        orphanCount: 0,
+        communityCount: 0,
+        dormantCount: 0,
+        sparseEvidenceCount: 0,
+        propagationCount: 0,
+      },
+      ranking: [],
+      communities: [],
+      bridgeDocuments: [],
+      orphans: [],
+      dormantDocuments: [],
+      propagationNodes: [],
+      suggestions: [],
+      evidenceByDocument: {},
+    }
+
+    const emptyTrends: TrendReport = {
+      current: { referenceCount: 0 },
+      previous: { referenceCount: 0 },
+      risingDocuments: [],
+      fallingDocuments: [],
+      connectionChanges: {
+        newCount: 0,
+        brokenCount: 0,
+        newEdges: [],
+        brokenEdges: [],
+      },
+      communityTrends: [],
+      risingCommunities: [],
+      dormantCommunities: [],
+    }
+
+    const payloads = buildWikiGenerationPayloads({
+      config,
+      scope,
+      documentMap: new Map(documents.map(document => [document.id, document])),
+      getDocumentProfile: () => null,
+    })
+
+    expect(payloads.themes).toEqual([
+      expect.objectContaining({
+        themeName: 'AI',
+        sourceDocuments: [],
+        templateSignals: {
+          sourceDocumentCount: 0,
+          propositionCount: 0,
+          primarySourceBlockCount: 0,
+          secondarySourceBlockCount: 0,
+        },
+      }),
+    ])
+    expect(payloads.unclassifiedDocuments).toEqual([])
   })
 })
