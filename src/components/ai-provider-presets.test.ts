@@ -24,37 +24,31 @@ describe('ai provider presets', () => {
     const openAiConfig = {
       aiBaseUrl: '',
       aiModel: '',
-      aiEmbeddingModel: '',
     } as any
     applyAiProviderPreset(openAiConfig, 'openai')
     expect(openAiConfig).toEqual(expect.objectContaining({
       aiBaseUrl: 'https://api.openai.com/v1',
       aiModel: 'gpt-5',
-      aiEmbeddingModel: 'text-embedding-3-small',
     }))
 
     const geminiConfig = {
       aiBaseUrl: '',
       aiModel: '',
-      aiEmbeddingModel: '',
     } as any
     applyAiProviderPreset(geminiConfig, 'gemini')
     expect(geminiConfig).toEqual(expect.objectContaining({
       aiBaseUrl: 'https://generativelanguage.googleapis.com/v1beta/openai',
       aiModel: 'gemini-2.5-flash',
-      aiEmbeddingModel: 'gemini-embedding-001',
     }))
 
     const siliconFlowConfig = {
       aiBaseUrl: '',
       aiModel: 'old-model',
-      aiEmbeddingModel: 'old-embedding',
     } as any
     applyAiProviderPreset(siliconFlowConfig, 'siliconflow')
     expect(siliconFlowConfig).toEqual(expect.objectContaining({
       aiBaseUrl: 'https://api.siliconflow.cn/v1',
       aiModel: '',
-      aiEmbeddingModel: '',
     }))
   })
 
@@ -66,7 +60,6 @@ describe('ai provider presets', () => {
           aiBaseUrl: 'https://api.openai.com/v1',
           aiApiKey: 'sk-openai',
           aiModel: 'gpt-5-custom',
-          aiEmbeddingModel: 'text-embedding-3-large',
           aiRequestTimeoutSeconds: 45,
           aiMaxTokens: 4096,
           aiTemperature: 0.4,
@@ -76,7 +69,6 @@ describe('ai provider presets', () => {
       aiBaseUrl: 'https://api.openai.com/v1',
       aiApiKey: 'sk-openai',
       aiModel: 'gpt-5-custom',
-      aiEmbeddingModel: 'text-embedding-3-large',
       aiRequestTimeoutSeconds: 45,
       aiMaxTokens: 4096,
       aiTemperature: 0.4,
@@ -91,7 +83,6 @@ describe('ai provider presets', () => {
       aiBaseUrl: 'https://api.openai.com/v1',
       aiApiKey: 'sk-openai',
       aiModel: 'gpt-5-custom',
-      aiEmbeddingModel: 'text-embedding-3-large',
       aiRequestTimeoutSeconds: 45,
       aiMaxTokens: 4096,
       aiTemperature: 0.4,
@@ -100,7 +91,6 @@ describe('ai provider presets', () => {
     expect(config.aiBaseUrl).toBe('https://generativelanguage.googleapis.com/v1beta/openai')
     expect(config.aiApiKey).toBe('')
     expect(config.aiModel).toBe('gemini-2.5-flash')
-    expect(config.aiEmbeddingModel).toBe('gemini-embedding-001')
     expect(config.aiRequestTimeoutSeconds).toBe(60)
     expect(config.aiMaxTokens).toBe(4096)
     expect(config.aiTemperature).toBe(0.7)
@@ -109,7 +99,6 @@ describe('ai provider presets', () => {
 
     config.aiApiKey = 'gemini-key'
     config.aiModel = 'gemini-2.5-pro-exp'
-    config.aiEmbeddingModel = 'gemini-embedding-custom'
     config.aiRequestTimeoutSeconds = 120
     config.aiMaxTokens = 102400
     config.aiTemperature = 0.2
@@ -122,7 +111,6 @@ describe('ai provider presets', () => {
       aiBaseUrl: 'https://generativelanguage.googleapis.com/v1beta/openai',
       aiApiKey: 'gemini-key',
       aiModel: 'gemini-2.5-pro-exp',
-      aiEmbeddingModel: 'gemini-embedding-custom',
       aiRequestTimeoutSeconds: 120,
       aiMaxTokens: 102400,
       aiTemperature: 0.2,
@@ -131,7 +119,6 @@ describe('ai provider presets', () => {
     expect(config.aiBaseUrl).toBe('https://api.openai.com/v1')
     expect(config.aiApiKey).toBe('sk-openai')
     expect(config.aiModel).toBe('gpt-5-custom')
-    expect(config.aiEmbeddingModel).toBe('text-embedding-3-large')
     expect(config.aiRequestTimeoutSeconds).toBe(45)
     expect(config.aiMaxTokens).toBe(4096)
     expect(config.aiTemperature).toBe(0.4)

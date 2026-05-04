@@ -1424,11 +1424,14 @@ describe('useAnalyticsState', () => {
       onProgress?.('AI 正在分析……')
       return aiSuggestionResult
     })
-    const saveSuggestionIndex = vi.fn(async () => undefined)
-    const saveDocumentSummary = vi.fn(async () => undefined)
 
     const state = useAnalyticsState({
-      plugin: { eventBus: { on: () => {}, off: () => {} }, app: {} } as any,
+      plugin: {
+        eventBus: { on: () => {}, off: () => {} },
+        app: {},
+        loadData: async () => undefined,
+        saveData: async () => undefined,
+      } as any,
       config: {
         showSummaryCards: true,
         showRanking: true,
@@ -1444,7 +1447,6 @@ describe('useAnalyticsState', () => {
         aiBaseUrl: 'https://api.example.com/v1',
         aiApiKey: 'sk-test',
         aiModel: 'gpt-4.1-mini',
-        aiEmbeddingModel: 'text-embedding-3-small',
       },
       loadSnapshot: async () => snapshot as any,
       nowProvider: () => now,
@@ -1469,9 +1471,11 @@ describe('useAnalyticsState', () => {
         suggestForOrphan,
       }),
       aiIndexStore: {
-        saveDocumentSummary,
-        saveSuggestionIndex,
-        invalidateSuggestionCache: vi.fn(async () => undefined),
+        saveDocumentIndex: vi.fn(async () => undefined),
+        getFreshDocumentProfile: vi.fn(async () => null),
+        getDocumentProfile: vi.fn(async () => null),
+        getFreshDocumentSummary: vi.fn(async () => null),
+        deleteDocumentIndex: vi.fn(async () => undefined),
       },
     } as any)
 
@@ -1498,23 +1502,6 @@ describe('useAnalyticsState', () => {
       error: '',
       result: aiSuggestionResult,
     })
-    expect(saveSuggestionIndex).toHaveBeenCalledTimes(1)
-    expect(saveSuggestionIndex).toHaveBeenCalledWith(expect.objectContaining({
-      sourceDocument: expect.objectContaining({
-        id: 'doc-orphan',
-        title: 'AI 与 机器学习 AI',
-      }),
-      result: aiSuggestionResult,
-      config: expect.objectContaining({
-        aiModel: 'gpt-4.1-mini',
-        aiEmbeddingModel: 'text-embedding-3-small',
-      }),
-      filters: expect.objectContaining({
-        tags: undefined,
-        themeNames: undefined,
-      }),
-      timeRange: '7d',
-    }))
   })
 
   it('toggles AI link suggestions with the same insertion rules as theme suggestions and applies document tags via block attrs', async () => {
@@ -1533,10 +1520,14 @@ describe('useAnalyticsState', () => {
       .mockResolvedValueOnce({ tags: 'AI,AI工具' })
       .mockResolvedValueOnce({ tags: 'AI' })
     const notify = vi.fn()
-    const invalidateSuggestionCache = vi.fn(async () => undefined)
 
     const state = useAnalyticsState({
-      plugin: { eventBus: { on: () => {}, off: () => {} }, app: {} } as any,
+      plugin: {
+        eventBus: { on: () => {}, off: () => {} },
+        app: {},
+        loadData: async () => undefined,
+        saveData: async () => undefined,
+      } as any,
       config: {
         showSummaryCards: true,
         showRanking: true,
@@ -1562,10 +1553,6 @@ describe('useAnalyticsState', () => {
       getBlockKramdown: async () => ({ id: 'blk-orphan-1', kramdown: '((doc-existing "Existing"))' }),
       setBlockAttrs,
       getBlockAttrs,
-      aiIndexStore: {
-        saveSuggestionIndex: vi.fn(async () => undefined),
-        invalidateSuggestionCache,
-      },
     } as any)
 
     await state.refresh()
@@ -1575,13 +1562,11 @@ describe('useAnalyticsState', () => {
 
     expect(updateBlock).toHaveBeenCalledWith('markdown', '((doc-existing "Existing"))\t((doc-b "Beta"))', 'blk-orphan-1')
     expect((state as any).isAiLinkSuggestionActive('doc-orphan', 'doc-b')).toBe(true)
-    expect(invalidateSuggestionCache).toHaveBeenCalledWith('doc-orphan')
 
     await (state as any).toggleOrphanAiLinkSuggestion('doc-orphan', 'doc-b', 'Beta')
 
     expect(updateBlock).toHaveBeenLastCalledWith('markdown', '((doc-existing "Existing"))', 'blk-orphan-1')
     expect((state as any).isAiLinkSuggestionActive('doc-orphan', 'doc-b')).toBe(false)
-    expect(invalidateSuggestionCache).toHaveBeenCalledTimes(2)
 
     await (state as any).toggleOrphanAiTagSuggestion('doc-orphan', 'AI工具')
 
@@ -1597,7 +1582,6 @@ describe('useAnalyticsState', () => {
     expect(state.snapshot.value?.documents.find(document => document.id === 'doc-orphan')?.tags).toEqual(['AI'])
     expect(state.tagOptions.value).not.toContain('AI工具')
     expect(notify).toHaveBeenCalled()
-    expect(invalidateSuggestionCache).toHaveBeenCalledTimes(4)
   })
 
   it('builds wiki previews from the current filtered scope and applies generated pages', async () => {
@@ -1614,7 +1598,7 @@ describe('useAnalyticsState', () => {
         ? [`先补齐 ${payload.sourceDocuments[0].title} 的主题入口`]
         : ['暂无动作'],
     }))
-    const saveDocumentSummary = vi.fn(async () => undefined)
+    const saveDocumentIndex = vi.fn(async () => undefined)
     const savePageRecord = vi.fn(async () => undefined)
     const openTab = vi.fn()
     const createDocWithMd = vi.fn(async () => 'wiki-ai-page')
@@ -1661,9 +1645,7 @@ describe('useAnalyticsState', () => {
       getBlockAttrs: async () => ({}),
       setBlockAttrs: async () => null,
       forwardProxy: async (url: string) => ({
-        body: url.includes('/embeddings')
-          ? JSON.stringify({ data: [{ embedding: [0.1, 0.2, 0.3] }] })
-          : JSON.stringify({ choices: [{ message: { content: JSON.stringify({ summaryShort: '测试摘要', summaryMedium: '详细摘要', keywords: ['测试'], evidenceSnippets: ['证据'] }) } }] }),
+        body: JSON.stringify({ choices: [{ message: { content: JSON.stringify({ positioning: '测试定位', propositions: [{ text: '测试命题', sourceBlockIds: [] }], keywords: ['测试'] }) } }] }),
         contentType: 'application/json',
         elapsed: 1,
         headers: {},
@@ -1675,7 +1657,8 @@ describe('useAnalyticsState', () => {
       }),
       aiIndexStore: {
         getFreshDocumentSummary: vi.fn(async () => null),
-        saveDocumentSummary,
+        getFreshDocumentProfile: vi.fn(async () => null),
+        saveDocumentIndex: saveDocumentIndex,
       } as any,
       aiWikiStore: {
         loadSnapshot: vi.fn(async () => ({ schemaVersion: 1, pages: {} })),
@@ -1710,7 +1693,7 @@ describe('useAnalyticsState', () => {
         }),
       }),
     }))
-    expect(saveDocumentSummary).toHaveBeenCalled()
+    expect(saveDocumentIndex).toHaveBeenCalled()
     expect(savePageRecord).toHaveBeenCalled()
 
     await (state as any).applyWikiChanges()
@@ -1787,9 +1770,7 @@ describe('useAnalyticsState', () => {
       getBlockAttrs: async () => ({}),
       setBlockAttrs: async () => null,
       forwardProxy: async (url: string) => ({
-        body: url.includes('/embeddings')
-          ? JSON.stringify({ data: [{ embedding: [0.1, 0.2, 0.3] }] })
-          : JSON.stringify({ choices: [{ message: { content: JSON.stringify({ summaryShort: '测试摘要', summaryMedium: '详细摘要', keywords: ['测试'], evidenceSnippets: ['证据'] }) } }] }),
+        body: JSON.stringify({ choices: [{ message: { content: JSON.stringify({ positioning: '测试定位', propositions: [{ text: '测试命题', sourceBlockIds: [] }], keywords: ['测试'] }) } }] }),
         contentType: 'application/json',
         elapsed: 1,
         headers: {},
@@ -1801,7 +1782,8 @@ describe('useAnalyticsState', () => {
       }),
       aiIndexStore: {
         getFreshDocumentSummary: vi.fn(async () => null),
-        saveDocumentSummary: vi.fn(async () => undefined),
+        getFreshDocumentProfile: vi.fn(async () => null),
+        saveDocumentIndex: vi.fn(async () => undefined),
       } as any,
       aiWikiStore: {
         loadSnapshot: vi.fn(async () => ({ schemaVersion: 1, pages: {} })),

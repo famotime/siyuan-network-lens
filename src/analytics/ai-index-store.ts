@@ -1,65 +1,42 @@
-import type { DocumentRecord, OrphanItem, TimeRange } from './analysis'
-import type { AiLinkSuggestionResult } from './ai-link-suggestions'
+import type { DocumentRecord } from './analysis'
 import { normalizeTags, resolveDocumentTitle } from './document-utils'
-import type { ThemeDocument } from './theme-documents'
-import { t } from '@/i18n/ui'
 import type { PluginConfig } from '@/types/config'
 
 const AI_INDEX_STORAGE_NAME = 'ai-document-index.json'
-const AI_INDEX_SCHEMA_VERSION = 2
-const AI_PROFILE_VERSION = 1
+const AI_INDEX_SCHEMA_VERSION = 3
 const EMPTY_JSON_ARRAY = JSON.stringify([])
 
-type AiConfig = Pick<
-  PluginConfig,
-  | 'aiModel'
-  | 'aiEmbeddingModel'
->
-
-type AnalyticsFiltersLike = {
-  notebook?: string
-  tags?: string[]
-  themeNames?: string[]
-  keyword?: string
-}
+type AiConfig = Pick<PluginConfig, 'aiModel'>
 
 type PluginStorageLike = {
   loadData?: (storageName: string) => Promise<any>
   saveData?: (storageName: string, value: any) => Promise<void> | void
 }
 
-export interface DocumentSemanticProfileRecord {
+export interface PropositionItem {
+  text: string
+  sourceBlockIds: string[]
+}
+
+export interface SourceBlockItem {
+  blockId: string
+  text: string
+}
+
+export interface DocumentIndexProfile {
   documentId: string
   sourceUpdatedAt: string
   sourceHash: string
-  profileVersion: number
-  modelVersion: string
   title: string
   path: string
   hpath: string
   tagsJson: string
-  summaryShort: string
-  summaryMedium: string
+  positioning: string
+  propositionsJson: string
   keywordsJson: string
-  topicCandidatesJson: string
-  entitiesJson: string
-  roleHintsJson: string
-  embeddingJson: string
-  evidenceSnippetsJson: string
-  documentSummaryShort?: string
-  documentSummaryMedium?: string
-  documentKeywordsJson?: string
-  documentEvidenceSnippetsJson?: string
-  documentSummaryUpdatedAt?: string
-  updatedAt: string
-}
-
-export interface DocumentLinkSuggestionCacheRecord {
-  sourceDocumentId: string
-  cacheKey: string
-  modelVersion: string
-  suggestionsJson: string
-  createdAt: string
+  primarySourceBlocksJson: string
+  secondarySourceBlocksJson: string
+  generatedAt: string
 }
 
 export interface DocumentSummarySnapshot {
@@ -72,98 +49,67 @@ export interface DocumentSummarySnapshot {
 
 export interface AiDocumentIndexSnapshot {
   schemaVersion: number
-  semanticProfiles: Record<string, DocumentSemanticProfileRecord>
-  suggestionCache: Record<string, DocumentLinkSuggestionCacheRecord>
+  documentProfiles: Record<string, DocumentIndexProfile>
 }
 
 export interface AiDocumentIndexStore {
-  saveSuggestionIndex: (params: {
+  saveDocumentIndex: (params: {
     config: AiConfig
     sourceDocument: DocumentRecord
-    orphan: OrphanItem
-    themeDocuments: ThemeDocument[]
-    filters: AnalyticsFiltersLike
-    timeRange: TimeRange
-    result: AiLinkSuggestionResult
+    positioning: string
+    propositions: PropositionItem[]
+    keywords: string[]
+    primarySourceBlocks: SourceBlockItem[]
+    secondarySourceBlocks: SourceBlockItem[]
+    generatedAt?: string
   }) => Promise<void>
-  saveDocumentSummary: (params: {
-    config: AiConfig
-    sourceDocument: DocumentRecord
-    summaryShort: string
-    summaryMedium?: string
-    keywords?: string[]
-    evidenceSnippets?: string[]
-    embeddingJson?: string
-    updatedAt?: string
-  }) => Promise<void>
-  getSemanticProfile: (documentId: string) => Promise<DocumentSemanticProfileRecord | null>
-  getFreshSemanticProfile: (documentId: string, sourceUpdatedAt: string) => Promise<DocumentSemanticProfileRecord | null>
+  getDocumentProfile: (documentId: string) => Promise<DocumentIndexProfile | null>
+  getFreshDocumentProfile: (documentId: string, sourceUpdatedAt: string) => Promise<DocumentIndexProfile | null>
   getFreshDocumentSummary: (documentId: string, sourceUpdatedAt: string) => Promise<DocumentSummarySnapshot | null>
-  deleteDocumentSummary: (documentIds: string[]) => Promise<void>
-  invalidateSuggestionCache: (documentId: string) => Promise<void>
+  deleteDocumentIndex: (documentIds: string[]) => Promise<void>
 }
 
 export function createAiDocumentIndexStore(storage: PluginStorageLike): AiDocumentIndexStore {
   return {
-    async saveSuggestionIndex(params) {
+    async saveDocumentIndex(params) {
       const snapshot = await loadSnapshot(storage)
-      const modelVersion = buildModelVersion(params.config)
-      const updatedAt = params.result.generatedAt || new Date().toISOString()
-      const cacheKey = buildSuggestionCacheKey({
-        config: params.config,
-        sourceDocument: params.sourceDocument,
-        themeDocuments: params.themeDocuments,
-        filters: params.filters,
-        timeRange: params.timeRange,
-      })
+      const generatedAt = params.generatedAt || new Date().toISOString()
+      const title = resolveDocumentTitle(params.sourceDocument)
+      const tags = normalizeTags(params.sourceDocument.tags)
 
-      snapshot.semanticProfiles[params.sourceDocument.id] = buildSemanticProfileRecord({
-        config: params.config,
-        sourceDocument: params.sourceDocument,
-        orphan: params.orphan,
-        result: params.result,
-        existing: snapshot.semanticProfiles[params.sourceDocument.id],
-        updatedAt,
-      })
-      snapshot.suggestionCache[buildSuggestionCacheStorageKey(params.sourceDocument.id, cacheKey)] = {
-        sourceDocumentId: params.sourceDocument.id,
-        cacheKey,
-        modelVersion,
-        suggestionsJson: JSON.stringify({
-          generatedAt: params.result.generatedAt,
-          summary: params.result.summary,
-          suggestions: params.result.suggestions,
-        }),
-        createdAt: updatedAt,
+      snapshot.documentProfiles[params.sourceDocument.id] = {
+        documentId: params.sourceDocument.id,
+        sourceUpdatedAt: params.sourceDocument.updated ?? '',
+        sourceHash: simpleHash([
+          params.sourceDocument.id,
+          params.sourceDocument.updated ?? '',
+          title,
+          params.sourceDocument.path ?? '',
+          params.sourceDocument.hpath ?? '',
+          tags.join(','),
+          params.sourceDocument.content ?? '',
+        ].join('\n')),
+        title,
+        path: params.sourceDocument.path ?? '',
+        hpath: params.sourceDocument.hpath ?? '',
+        tagsJson: JSON.stringify(tags),
+        positioning: params.positioning,
+        propositionsJson: JSON.stringify(params.propositions),
+        keywordsJson: JSON.stringify(deduplicateStrings(params.keywords)),
+        primarySourceBlocksJson: JSON.stringify(params.primarySourceBlocks),
+        secondarySourceBlocksJson: JSON.stringify(params.secondarySourceBlocks),
+        generatedAt,
       }
 
       await saveSnapshot(storage, snapshot)
     },
-    async saveDocumentSummary(params) {
+    async getDocumentProfile(documentId) {
       const snapshot = await loadSnapshot(storage)
-      const updatedAt = params.updatedAt || new Date().toISOString()
-
-      snapshot.semanticProfiles[params.sourceDocument.id] = buildDocumentSummaryProfileRecord({
-        config: params.config,
-        sourceDocument: params.sourceDocument,
-        existing: snapshot.semanticProfiles[params.sourceDocument.id],
-        summaryShort: params.summaryShort,
-        summaryMedium: params.summaryMedium,
-        keywords: params.keywords,
-        evidenceSnippets: params.evidenceSnippets,
-        embeddingJson: params.embeddingJson,
-        updatedAt,
-      })
-
-      await saveSnapshot(storage, snapshot)
+      return snapshot.documentProfiles[documentId] ?? null
     },
-    async getSemanticProfile(documentId) {
+    async getFreshDocumentProfile(documentId, sourceUpdatedAt) {
       const snapshot = await loadSnapshot(storage)
-      return snapshot.semanticProfiles[documentId] ?? null
-    },
-    async getFreshSemanticProfile(documentId, sourceUpdatedAt) {
-      const snapshot = await loadSnapshot(storage)
-      const profile = snapshot.semanticProfiles[documentId]
+      const profile = snapshot.documentProfiles[documentId]
       if (!profile) {
         return null
       }
@@ -171,22 +117,22 @@ export function createAiDocumentIndexStore(storage: PluginStorageLike): AiDocume
     },
     async getFreshDocumentSummary(documentId, sourceUpdatedAt) {
       const snapshot = await loadSnapshot(storage)
-      const profile = snapshot.semanticProfiles[documentId]
+      const profile = snapshot.documentProfiles[documentId]
       if (!profile || profile.sourceUpdatedAt !== sourceUpdatedAt) {
         return null
       }
 
-      return buildFreshDocumentSummarySnapshot(profile)
+      return buildDocumentSummarySnapshotFromProfile(profile)
     },
-    async deleteDocumentSummary(documentIds) {
+    async deleteDocumentIndex(documentIds) {
       if (!documentIds.length) {
         return
       }
       const snapshot = await loadSnapshot(storage)
       let changed = false
       for (const documentId of documentIds) {
-        if (snapshot.semanticProfiles[documentId]) {
-          delete snapshot.semanticProfiles[documentId]
+        if (snapshot.documentProfiles[documentId]) {
+          delete snapshot.documentProfiles[documentId]
           changed = true
         }
       }
@@ -194,35 +140,20 @@ export function createAiDocumentIndexStore(storage: PluginStorageLike): AiDocume
         await saveSnapshot(storage, snapshot)
       }
     },
-    async invalidateSuggestionCache(documentId) {
-      const snapshot = await loadSnapshot(storage)
-      const keys = Object.keys(snapshot.suggestionCache)
-        .filter(key => snapshot.suggestionCache[key]?.sourceDocumentId === documentId)
-
-      if (!keys.length) {
-        return
-      }
-
-      for (const key of keys) {
-        delete snapshot.suggestionCache[key]
-      }
-
-      await saveSnapshot(storage, snapshot)
-    },
   }
 }
 
-function buildFreshDocumentSummarySnapshot(profile: DocumentSemanticProfileRecord): DocumentSummarySnapshot | null {
-  if (!profile.documentSummaryShort || !profile.documentSummaryMedium) {
-    return null
-  }
+function buildDocumentSummarySnapshotFromProfile(profile: DocumentIndexProfile): DocumentSummarySnapshot {
+  const propositions: PropositionItem[] = parseJsonArray(profile.propositionsJson)
+  const primaryBlocks: SourceBlockItem[] = parseJsonArray(profile.primarySourceBlocksJson)
+  const secondaryBlocks: SourceBlockItem[] = parseJsonArray(profile.secondarySourceBlocksJson)
 
   return {
-    summaryShort: profile.documentSummaryShort,
-    summaryMedium: profile.documentSummaryMedium,
-    keywords: parseStringArray(profile.documentKeywordsJson),
-    evidenceSnippets: parseStringArray(profile.documentEvidenceSnippetsJson),
-    updatedAt: profile.documentSummaryUpdatedAt ?? profile.updatedAt,
+    summaryShort: profile.positioning || '',
+    summaryMedium: propositions.map(p => p.text).join(' '),
+    keywords: parseStringArray(profile.keywordsJson),
+    evidenceSnippets: [...primaryBlocks, ...secondaryBlocks].map(block => block.text).slice(0, 6),
+    updatedAt: profile.generatedAt,
   }
 }
 
@@ -234,50 +165,27 @@ export function createAiDocumentIndexStoreFromPlugin(plugin: PluginStorageLike |
   return createAiDocumentIndexStore(plugin)
 }
 
-export function buildSuggestionCacheKey(params: {
-  config: AiConfig
-  sourceDocument: Pick<DocumentRecord, 'id' | 'updated'>
-  themeDocuments: ThemeDocument[]
-  filters: AnalyticsFiltersLike
-  timeRange: TimeRange
-}): string {
-  const payload = {
-    documentId: params.sourceDocument.id,
-    sourceUpdatedAt: params.sourceDocument.updated ?? '',
-    filters: {
-      notebook: params.filters.notebook ?? '',
-      tags: [...(params.filters.tags ?? [])].sort(),
-      themeNames: [...(params.filters.themeNames ?? [])].sort(),
-      keyword: (params.filters.keyword ?? '').trim(),
-    },
-    timeRange: params.timeRange,
-    themeDocumentVersion: params.themeDocuments
-      .map(item => `${item.documentId}:${item.title}:${item.themeName}`)
-      .sort(),
-    modelVersion: buildModelVersion(params.config),
-    profileVersion: AI_PROFILE_VERSION,
-  }
-
-  return simpleHash(JSON.stringify(payload))
-}
-
 async function loadSnapshot(storage: PluginStorageLike): Promise<AiDocumentIndexSnapshot> {
   const data = await storage.loadData?.(AI_INDEX_STORAGE_NAME)
   if (!data || typeof data !== 'object') {
     return createEmptySnapshot()
   }
 
+  const schemaVersion = Number.isFinite(data.schemaVersion) ? data.schemaVersion : 0
+  if (schemaVersion < AI_INDEX_SCHEMA_VERSION) {
+    return createEmptySnapshot()
+  }
+
   return {
-    schemaVersion: Number.isFinite(data.schemaVersion) ? data.schemaVersion : AI_INDEX_SCHEMA_VERSION,
-    semanticProfiles: isRecord(data.semanticProfiles)
+    schemaVersion: AI_INDEX_SCHEMA_VERSION,
+    documentProfiles: isRecord(data.documentProfiles)
       ? Object.fromEntries(
-          Object.entries(data.semanticProfiles).map(([documentId, record]) => [
+          Object.entries(data.documentProfiles).map(([documentId, record]) => [
             documentId,
-            normalizeSemanticProfileRecord(record),
+            normalizeDocumentIndexProfile(record),
           ]),
         )
       : {},
-    suggestionCache: isRecord(data.suggestionCache) ? data.suggestionCache as Record<string, DocumentLinkSuggestionCacheRecord> : {},
   }
 }
 
@@ -288,181 +196,28 @@ async function saveSnapshot(storage: PluginStorageLike, snapshot: AiDocumentInde
 function createEmptySnapshot(): AiDocumentIndexSnapshot {
   return {
     schemaVersion: AI_INDEX_SCHEMA_VERSION,
-    semanticProfiles: {},
-    suggestionCache: {},
+    documentProfiles: {},
   }
 }
 
-function buildSemanticProfileRecord(params: {
-  config: AiConfig
-  sourceDocument: DocumentRecord
-  orphan: OrphanItem
-  result: AiLinkSuggestionResult
-  existing?: DocumentSemanticProfileRecord
-  updatedAt: string
-}): DocumentSemanticProfileRecord {
-  const baseRecord = buildBaseSemanticProfileRecord({
-    config: params.config,
-    sourceDocument: params.sourceDocument,
-    existing: params.existing,
-    updatedAt: params.updatedAt,
-  })
-  const title = resolveDocumentTitle(params.sourceDocument)
-  const tags = normalizeTags(params.sourceDocument.tags)
-  const summaryShort = params.result.summary.trim() || t('analytics.summaryDetailSource.generatedAiLinkSuggestionsForTitle', { title })
-  const summaryMedium = [
-    summaryShort,
-    ...params.result.suggestions.map(item => item.reason.trim()),
-  ]
-    .filter(Boolean)
-    .join(' ')
-    .trim()
-  const topicCandidates = params.result.suggestions.map(item => ({
-    documentId: item.targetDocumentId,
-    title: item.targetTitle,
-    targetType: item.targetType,
-    confidence: item.confidence,
-  }))
-  const evidenceSnippets = params.result.suggestions.map(item => ({
-    targetDocumentId: item.targetDocumentId,
-    reason: item.reason,
-    draftText: item.draftText ?? '',
-  }))
-  const keywords = deduplicateStrings([
-    ...tags,
-    ...params.result.suggestions.map(item => item.targetTitle),
-    ...params.result.suggestions.flatMap(item => (item.tagSuggestions ?? []).map(tag => tag.tag)),
-  ])
-  const roleHints = deduplicateStrings([
-    'orphan-document',
-    params.orphan.hasSparseEvidence ? 'sparse-evidence' : '',
-    params.result.suggestions.some(item => item.targetType === 'theme-document') ? 'theme-reconnect' : 'structure-reconnect',
-  ])
-
-  return {
-    ...baseRecord,
-    summaryShort,
-    summaryMedium,
-    keywordsJson: JSON.stringify(keywords),
-    topicCandidatesJson: JSON.stringify(topicCandidates),
-    entitiesJson: JSON.stringify([]),
-    roleHintsJson: JSON.stringify(roleHints),
-    embeddingJson: baseRecord.embeddingJson,
-    evidenceSnippetsJson: JSON.stringify(evidenceSnippets),
-  }
-}
-
-function normalizeSemanticProfileRecord(value: unknown): DocumentSemanticProfileRecord {
-  const record = (isRecord(value) ? value : {}) as Partial<DocumentSemanticProfileRecord>
+function normalizeDocumentIndexProfile(value: unknown): DocumentIndexProfile {
+  const record = (isRecord(value) ? value : {}) as Partial<DocumentIndexProfile>
 
   return {
     documentId: typeof record.documentId === 'string' ? record.documentId : '',
     sourceUpdatedAt: typeof record.sourceUpdatedAt === 'string' ? record.sourceUpdatedAt : '',
     sourceHash: typeof record.sourceHash === 'string' ? record.sourceHash : '',
-    profileVersion: Number.isFinite(record.profileVersion) ? Number(record.profileVersion) : AI_PROFILE_VERSION,
-    modelVersion: typeof record.modelVersion === 'string' ? record.modelVersion : 'unknown',
     title: typeof record.title === 'string' ? record.title : '',
     path: typeof record.path === 'string' ? record.path : '',
     hpath: typeof record.hpath === 'string' ? record.hpath : '',
     tagsJson: typeof record.tagsJson === 'string' ? record.tagsJson : EMPTY_JSON_ARRAY,
-    summaryShort: typeof record.summaryShort === 'string' ? record.summaryShort : '',
-    summaryMedium: typeof record.summaryMedium === 'string' ? record.summaryMedium : '',
+    positioning: typeof record.positioning === 'string' ? record.positioning : '',
+    propositionsJson: typeof record.propositionsJson === 'string' ? record.propositionsJson : EMPTY_JSON_ARRAY,
     keywordsJson: typeof record.keywordsJson === 'string' ? record.keywordsJson : EMPTY_JSON_ARRAY,
-    topicCandidatesJson: typeof record.topicCandidatesJson === 'string' ? record.topicCandidatesJson : EMPTY_JSON_ARRAY,
-    entitiesJson: typeof record.entitiesJson === 'string' ? record.entitiesJson : EMPTY_JSON_ARRAY,
-    roleHintsJson: typeof record.roleHintsJson === 'string' ? record.roleHintsJson : EMPTY_JSON_ARRAY,
-    embeddingJson: typeof record.embeddingJson === 'string' ? record.embeddingJson : EMPTY_JSON_ARRAY,
-    evidenceSnippetsJson: typeof record.evidenceSnippetsJson === 'string' ? record.evidenceSnippetsJson : EMPTY_JSON_ARRAY,
-    documentSummaryShort: typeof record.documentSummaryShort === 'string' ? record.documentSummaryShort : undefined,
-    documentSummaryMedium: typeof record.documentSummaryMedium === 'string' ? record.documentSummaryMedium : undefined,
-    documentKeywordsJson: typeof record.documentKeywordsJson === 'string' ? record.documentKeywordsJson : undefined,
-    documentEvidenceSnippetsJson: typeof record.documentEvidenceSnippetsJson === 'string' ? record.documentEvidenceSnippetsJson : undefined,
-    documentSummaryUpdatedAt: typeof record.documentSummaryUpdatedAt === 'string' ? record.documentSummaryUpdatedAt : undefined,
-    updatedAt: typeof record.updatedAt === 'string' ? record.updatedAt : '',
+    primarySourceBlocksJson: typeof record.primarySourceBlocksJson === 'string' ? record.primarySourceBlocksJson : EMPTY_JSON_ARRAY,
+    secondarySourceBlocksJson: typeof record.secondarySourceBlocksJson === 'string' ? record.secondarySourceBlocksJson : EMPTY_JSON_ARRAY,
+    generatedAt: typeof record.generatedAt === 'string' ? record.generatedAt : '',
   }
-}
-
-function buildDocumentSummaryProfileRecord(params: {
-  config: AiConfig
-  sourceDocument: DocumentRecord
-  existing?: DocumentSemanticProfileRecord
-  summaryShort: string
-  summaryMedium?: string
-  keywords?: string[]
-  evidenceSnippets?: string[]
-  embeddingJson?: string
-  updatedAt: string
-}): DocumentSemanticProfileRecord {
-  const baseRecord = buildBaseSemanticProfileRecord({
-    config: params.config,
-    sourceDocument: params.sourceDocument,
-    existing: params.existing,
-    updatedAt: params.updatedAt,
-  })
-  const summaryShort = params.summaryShort.trim()
-  const summaryMedium = (params.summaryMedium ?? summaryShort).trim() || summaryShort
-
-  return {
-    ...baseRecord,
-    documentSummaryShort: summaryShort || undefined,
-    documentSummaryMedium: summaryMedium || undefined,
-    documentKeywordsJson: JSON.stringify(deduplicateStrings(params.keywords ?? [])),
-    documentEvidenceSnippetsJson: JSON.stringify(deduplicateStrings(params.evidenceSnippets ?? [])),
-    embeddingJson: params.embeddingJson ?? baseRecord.embeddingJson,
-    documentSummaryUpdatedAt: params.updatedAt,
-  }
-}
-
-function buildBaseSemanticProfileRecord(params: {
-  config: AiConfig
-  sourceDocument: DocumentRecord
-  existing?: DocumentSemanticProfileRecord
-  updatedAt: string
-}): DocumentSemanticProfileRecord {
-  const title = resolveDocumentTitle(params.sourceDocument)
-  const tags = normalizeTags(params.sourceDocument.tags)
-
-  return {
-    documentId: params.sourceDocument.id,
-    sourceUpdatedAt: params.sourceDocument.updated ?? '',
-    sourceHash: simpleHash([
-      params.sourceDocument.id,
-      params.sourceDocument.updated ?? '',
-      title,
-      params.sourceDocument.path ?? '',
-      params.sourceDocument.hpath ?? '',
-      tags.join(','),
-      params.sourceDocument.content ?? '',
-    ].join('\n')),
-    profileVersion: AI_PROFILE_VERSION,
-    modelVersion: buildModelVersion(params.config),
-    title,
-    path: params.sourceDocument.path ?? '',
-    hpath: params.sourceDocument.hpath ?? '',
-    tagsJson: JSON.stringify(tags),
-    summaryShort: params.existing?.summaryShort ?? '',
-    summaryMedium: params.existing?.summaryMedium ?? '',
-    keywordsJson: params.existing?.keywordsJson ?? EMPTY_JSON_ARRAY,
-    topicCandidatesJson: params.existing?.topicCandidatesJson ?? EMPTY_JSON_ARRAY,
-    entitiesJson: params.existing?.entitiesJson ?? EMPTY_JSON_ARRAY,
-    roleHintsJson: params.existing?.roleHintsJson ?? EMPTY_JSON_ARRAY,
-    embeddingJson: params.existing?.embeddingJson ?? EMPTY_JSON_ARRAY,
-    evidenceSnippetsJson: params.existing?.evidenceSnippetsJson ?? EMPTY_JSON_ARRAY,
-    documentSummaryShort: params.existing?.documentSummaryShort,
-    documentSummaryMedium: params.existing?.documentSummaryMedium,
-    documentKeywordsJson: params.existing?.documentKeywordsJson,
-    documentEvidenceSnippetsJson: params.existing?.documentEvidenceSnippetsJson,
-    documentSummaryUpdatedAt: params.existing?.documentSummaryUpdatedAt,
-    updatedAt: params.updatedAt,
-  }
-}
-
-function buildModelVersion(config: AiConfig): string {
-  return [config.aiModel?.trim(), config.aiEmbeddingModel?.trim()].filter(Boolean).join(' | ') || 'unknown'
-}
-
-function buildSuggestionCacheStorageKey(documentId: string, cacheKey: string): string {
-  return `${documentId}:${cacheKey}`
 }
 
 function deduplicateStrings(values: string[]): string[] {
@@ -478,6 +233,19 @@ function parseStringArray(value?: string): string[] {
     return Array.isArray(JSON.parse(value))
       ? JSON.parse(value).filter((item: unknown): item is string => typeof item === 'string' && item.trim().length > 0)
       : []
+  } catch {
+    return []
+  }
+}
+
+function parseJsonArray<T>(value?: string): T[] {
+  if (!value) {
+    return []
+  }
+
+  try {
+    const parsed = JSON.parse(value)
+    return Array.isArray(parsed) ? parsed : []
   } catch {
     return []
   }

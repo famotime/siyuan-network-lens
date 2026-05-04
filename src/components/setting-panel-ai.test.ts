@@ -72,13 +72,13 @@ describe('setting panel ai helpers', () => {
     })).toBe('Click to load chat models')
 
     expect(buildSiliconFlowModelSelectPlaceholder({
-      kind: 'embedding',
+      kind: 'chat',
       apiKey: 'sk-test',
       loading: true,
       loaded: false,
       error: '',
       optionCount: 0,
-    })).toBe('Loading embedding models...')
+    })).toBe('Loading chat models...')
 
     expect(buildSiliconFlowModelSelectPlaceholder({
       kind: 'chat',
@@ -104,7 +104,6 @@ describe('setting panel ai helpers', () => {
       aiBaseUrl: 'https://api.example.com/v1',
       aiApiKey: 'sk-test',
       aiModel: 'gpt-4.1-mini',
-      aiEmbeddingModel: 'text-embedding-3-small',
       aiRequestTimeoutSeconds: 45,
       aiMaxTokens: 4096,
       aiTemperature: 0.2,
@@ -118,7 +117,6 @@ describe('setting panel ai helpers', () => {
       aiBaseUrl: 'https://api.example.com/v1',
       aiApiKey: 'sk-test',
       aiModel: 'gpt-4.1-mini',
-      aiEmbeddingModel: 'text-embedding-3-small',
       aiRequestTimeoutSeconds: 45,
       aiMaxTokens: 4096,
       aiTemperature: 0.2,

@@ -1,144 +1,101 @@
 # 其他插件读取 AI 索引指南
 
-本文说明其他思源插件如何读取 `network-lens` 生成的 AI 索引，并正确区分：
-
-- 补链画像索引
-- 真实文档摘要索引
-
-目标是避免把当前 `semanticProfiles` 中的补链结果误当成正文摘要使用。
+本文说明其他思源插件如何读取 `network-lens` 生成的 AI 文档索引（V3 Schema）。
 
 ## 1. 索引文件位置
-
-当前索引文件名固定为：
 
 ```ts
 ai-document-index.json
 ```
 
-在 `network-lens` 插件内部，这个文件通过插件私有存储读写。
+通过 `network-lens` 插件私有存储读写：
 
-如果你在另一个插件中要读取它，推荐做法是：
+1. 拿到 `network-lens` 插件实例
+2. 调用 `loadData('ai-document-index.json')`
+3. 从返回对象读取 `documentProfiles`
 
-1. 先拿到 `network-lens` 插件实例
-2. 调用它的 `loadData('ai-document-index.json')`
-3. 从返回对象里读取 `semanticProfiles`
-
-不建议假设底层真实磁盘路径，因为不同环境下插件数据目录可能不同。
-
-## 2. 当前快照结构
-
-当前快照结构为：
+## 2. 快照结构（schemaVersion: 3）
 
 ```ts
 interface AiDocumentIndexSnapshot {
-  schemaVersion: number
-  semanticProfiles: Record<string, DocumentSemanticProfileRecord>
-  suggestionCache: Record<string, DocumentLinkSuggestionCacheRecord>
+  schemaVersion: number          // 当前为 3
+  documentProfiles: Record<string, DocumentIndexProfile>
 }
 ```
 
-你真正需要关注的是：
+**注意：** 补链建议数据已移至独立文件 `ai-link-repair-store.json`，不再与文档索引混存。
 
-- `schemaVersion`
-- `semanticProfiles[docId]`
-
-通常不建议其他插件直接依赖 `suggestionCache`。
-
-## 3. `semanticProfiles` 的两类语义
-
-### 3.1 补链画像字段
-
-下面这组字段来自“孤立文档 AI 补链结果”，不是正文摘要：
-
-- `summaryShort`
-- `summaryMedium`
-- `keywordsJson`
-- `topicCandidatesJson`
-- `roleHintsJson`
-- `evidenceSnippetsJson`
-
-它们更适合拿来做：
-
-- 补链建议复用
-- 候选主题/目标页参考
-- 推荐理由回显
-
-不适合直接替代“文档摘要”。
-
-### 3.2 真实文档摘要字段
-
-下面这组字段才应该视为“可供其他插件复用的文档摘要索引”：
-
-- `documentSummaryShort`
-- `documentSummaryMedium`
-- `documentKeywordsJson`
-- `documentEvidenceSnippetsJson`
-- `documentSummaryUpdatedAt`
-
-推荐用途：
-
-- 文档摘要展示
-- 摘要命中后跳过重复 AI 摘要生成
-- 给其他 AI 工作流提供轻量上下文
-
-## 4. 推荐读取顺序
-
-其他插件按 `docId` 读取时，建议采用下面的优先级：
-
-1. 取 `semanticProfiles[docId]`
-2. 校验 `sourceUpdatedAt === 当前文档 updated`
-3. 命中后优先读取 `documentSummaryShort` / `documentSummaryMedium`
-4. 如果真实摘要字段不存在，再决定是否回退到你自己的摘要流程
-5. 不要默认回退到 `summaryShort` / `summaryMedium`
-
-也就是说：
-
-- `documentSummary*` 命中：可视为真实摘要可复用
-- 只有 `summary*` 命中：只能说明曾经生成过补链画像，不能说明已有正文摘要
-
-## 5. freshness 校验
-
-最小 freshness 校验建议：
+## 3. DocumentIndexProfile 字段说明
 
 ```ts
-profile.sourceUpdatedAt === currentDocument.updated
+interface DocumentIndexProfile {
+  documentId: string
+  sourceUpdatedAt: string        // 源文档 updated 时间戳
+  sourceHash: string             // 内容哈希，用于快速判断是否变化
+  title: string
+  path: string
+  hpath: string
+  tagsJson: string               // string[] — 文档标签
+  positioning: string            // 单句定位（< 120 字符）
+  propositionsJson: string       // PropositionItem[] — 原文命题
+  keywordsJson: string           // string[] — 关键词
+  primarySourceBlocksJson: string   // SourceBlockItem[] — 核心证据块（>= 80 字符，最多 8 块）
+  secondarySourceBlocksJson: string // SourceBlockItem[] — 补充证据块（30-80 字符，最多 12 块）
+  generatedAt: string            // 索引生成时间 ISO 8601
+}
+
+interface PropositionItem {
+  text: string                   // 命题文本
+  sourceBlockIds: string[]       // 支撑该命题的证据块 ID
+}
+
+interface SourceBlockItem {
+  blockId: string                // 思源块 ID
+  text: string                   // 块纯文本内容
+}
 ```
 
-更稳妥的校验建议：
+## 4. 字段语义
+
+### positioning（定位）
+一句话描述文档的主题和范围，使用中性描述性语言，不含评价性表述。
+
+### propositions（原文命题）
+3-8 条从文档中提取的事实性主张或关键观点。每条命题：
+- 是可独立理解的完整陈述
+- 绑定到至少一个证据块（`sourceBlockIds`）
+- 使用中性语言，不含"这篇文章介绍了…"等评价表述
+
+### primarySourceBlocks（核心证据块）
+文档中最能揭示实质内容的段落，字符数 >= 80，上限 8 块。
+
+### secondarySourceBlocks（补充证据块）
+较短但仍有价值的内容段落，字符数 30-80，上限 12 块。
+
+## 5. 最小读取示例
 
 ```ts
-profile.sourceUpdatedAt === currentDocument.updated
-&& typeof profile.sourceHash === 'string'
-```
-
-当前 `network-lens` 已写入：
-
-- `sourceUpdatedAt`
-- `sourceHash`
-
-如果你只想做最小可用复用，校验 `sourceUpdatedAt` 就够了。
-
-如果你希望降低误命中风险，建议同时把 `sourceHash` 作为后续扩展校验位预留出来。
-
-## 6. 最小读取示例
-
-下面是一个最小 TypeScript 示例，演示如何在其他插件里读取：
-
-```ts
-type DocumentSemanticProfileRecord = {
+interface DocumentIndexProfile {
   documentId: string
   sourceUpdatedAt: string
-  sourceHash: string
-  documentSummaryShort?: string
-  documentSummaryMedium?: string
-  documentKeywordsJson?: string
-  documentEvidenceSnippetsJson?: string
-  documentSummaryUpdatedAt?: string
-  summaryShort: string
-  summaryMedium: string
+  positioning: string
+  propositionsJson: string
+  keywordsJson: string
+  primarySourceBlocksJson: string
+  secondarySourceBlocksJson: string
 }
 
-async function loadFreshDocumentSummary(params: {
+interface PropositionItem {
+  text: string
+  sourceBlockIds: string[]
+}
+
+interface SourceBlockItem {
+  blockId: string
+  text: string
+}
+
+async function loadFreshDocumentIndex(params: {
   networkLensPlugin: {
     loadData?: (storageName: string) => Promise<any>
   } | null | undefined
@@ -146,7 +103,12 @@ async function loadFreshDocumentSummary(params: {
   updated: string
 }) {
   const snapshot = await params.networkLensPlugin?.loadData?.('ai-document-index.json')
-  const profile = snapshot?.semanticProfiles?.[params.docId] as DocumentSemanticProfileRecord | undefined
+
+  if (!snapshot || snapshot.schemaVersion < 3) {
+    return null
+  }
+
+  const profile = snapshot?.documentProfiles?.[params.docId] as DocumentIndexProfile | undefined
 
   if (!profile) {
     return null
@@ -156,98 +118,60 @@ async function loadFreshDocumentSummary(params: {
     return null
   }
 
-  if (!profile.documentSummaryShort?.trim()) {
+  if (!profile.positioning?.trim()) {
     return null
   }
 
   return {
-    summaryShort: profile.documentSummaryShort,
-    summaryMedium: profile.documentSummaryMedium || profile.documentSummaryShort,
-    keywords: parseJsonArray(profile.documentKeywordsJson),
-    evidenceSnippets: parseJsonArray(profile.documentEvidenceSnippetsJson),
-    indexedAt: profile.documentSummaryUpdatedAt || '',
+    positioning: profile.positioning,
+    propositions: parseJsonArray<PropositionItem>(profile.propositionsJson),
+    keywords: parseJsonArray<string>(profile.keywordsJson),
+    primarySourceBlocks: parseJsonArray<SourceBlockItem>(profile.primarySourceBlocksJson),
+    secondarySourceBlocks: parseJsonArray<SourceBlockItem>(profile.secondarySourceBlocksJson),
+    generatedAt: profile.generatedAt,
   }
 }
 
-function parseJsonArray(value?: string): string[] {
+function parseJsonArray<T>(value?: string): T[] {
   if (!value) {
     return []
   }
 
   try {
     const parsed = JSON.parse(value)
-    return Array.isArray(parsed) ? parsed.filter(item => typeof item === 'string') : []
+    return Array.isArray(parsed) ? parsed : []
   } catch {
     return []
   }
 }
 ```
 
-## 7. 不推荐的读取方式
+## 6. freshness 校验
 
-下面这些做法不建议：
+最小校验：
 
-- 直接把 `summaryShort` 当正文摘要显示
-- 命中 `semanticProfiles[docId]` 就认为摘要可复用
-- 依赖 `suggestionCache`
-- 跳过 `sourceUpdatedAt` 校验
+```ts
+profile.sourceUpdatedAt === currentDocument.updated
+```
 
-原因很直接：
+完整校验：
 
-- `summaryShort` 可能只是“优先补到主题页”这类补链建议摘要
-- `semanticProfiles` 是复合索引，不是纯摘要表
-- `suggestionCache` 绑定筛选条件、时间窗口和主题文档版本
+```ts
+profile.sourceUpdatedAt === currentDocument.updated
+&& typeof profile.sourceHash === 'string'
+&& profile.sourceHash.length > 0
+```
+
+## 7. 不推荐的做法
+
+- 跳过 `schemaVersion` 校验（老版本结构完全不同）
+- 跳过 `sourceUpdatedAt` freshness 校验
+- 将 `positioning` 视为评价性摘要（它是中性定位描述）
+- 将 `propositions` 中的 `sourceBlockIds` 当作可跳过的可选字段（它们是证据链的核心）
 
 ## 8. 兼容性说明
 
-当前 `schemaVersion` 已升级到 `2`。
-
-兼容边界如下：
-
-- 老索引可能只有补链画像字段，没有 `documentSummary*`
-- 新索引会同时保留补链画像字段和真实摘要字段
-- 读取方应把 `documentSummary*` 当可选字段处理
-
-因此推荐读取策略是：
-
-- 先检查 `documentSummaryShort`
-- 没有就回退到你自己的摘要生成流程
-- 不要自动回退到 `summaryShort`
-
-## 9. 当前适合复用的字段清单
-
-如果你的插件要复用“真实文档摘要”，推荐只读下面这些字段：
-
-- `documentId`
-- `sourceUpdatedAt`
-- `sourceHash`
-- `title`
-- `path`
-- `hpath`
-- `tagsJson`
-- `documentSummaryShort`
-- `documentSummaryMedium`
-- `documentKeywordsJson`
-- `documentEvidenceSnippetsJson`
-- `documentSummaryUpdatedAt`
-
-如果你的插件要复用“补链画像”，再另外读取：
-
-- `summaryShort`
-- `summaryMedium`
-- `keywordsJson`
-- `topicCandidatesJson`
-- `roleHintsJson`
-- `evidenceSnippetsJson`
-
-## 10. 推荐集成策略
-
-对其他插件，最稳的集成方式是：
-
-1. 先按 `docId` 读取 `semanticProfiles`
-2. 用 `sourceUpdatedAt === 当前文档 updated` 做 freshness 校验
-3. 命中则直接使用 `documentSummaryShort` / `documentSummaryMedium`
-4. 未命中则回退到你自己的 AI 摘要流程
-5. 不把补链画像字段当正文摘要兜底
-
-这条策略能最大限度复用 `network-lens` 已有索引，同时避免语义混淆。
+- `schemaVersion: 3` 是当前版本
+- `schemaVersion < 3` 的快照结构完全不同（旧版本使用 `semanticProfiles` 字段），不建议尝试兼容读取
+- 旧版索引不包含 `positioning`、`propositionsJson`、`primarySourceBlocksJson` 等字段
+- 建议读取方在 `schemaVersion < 3` 时直接返回 null，等待用户重新生成索引

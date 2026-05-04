@@ -15,9 +15,7 @@ interface AiProviderPresetDefinition {
   label: string
   baseUrl?: string
   defaultModel?: string
-  defaultEmbeddingModel?: string
   modelPlaceholder: string
-  embeddingPlaceholder: string
 }
 
 export function getAiProviderPresets(): Record<AiProviderPresetKey, AiProviderPresetDefinition> {
@@ -26,30 +24,23 @@ export function getAiProviderPresets(): Record<AiProviderPresetKey, AiProviderPr
       label: t('aiConfig.siliconFlow'),
       baseUrl: 'https://api.siliconflow.cn/v1',
       defaultModel: '',
-      defaultEmbeddingModel: '',
       modelPlaceholder: t('aiConfig.selectModelPlaceholder'),
-      embeddingPlaceholder: t('aiConfig.selectEmbeddingPlaceholder'),
     },
     openai: {
       label: 'OpenAI',
       baseUrl: 'https://api.openai.com/v1',
       defaultModel: 'gpt-5',
-      defaultEmbeddingModel: 'text-embedding-3-small',
       modelPlaceholder: 'gpt-5',
-      embeddingPlaceholder: 'text-embedding-3-small',
     },
     gemini: {
       label: 'Gemini',
       baseUrl: 'https://generativelanguage.googleapis.com/v1beta/openai',
       defaultModel: 'gemini-2.5-flash',
-      defaultEmbeddingModel: 'gemini-embedding-001',
       modelPlaceholder: 'gemini-2.5-flash',
-      embeddingPlaceholder: 'gemini-embedding-001',
     },
     custom: {
       label: t('aiConfig.custom'),
       modelPlaceholder: t('aiConfig.enterModelNameManually'),
-      embeddingPlaceholder: t('aiConfig.enterEmbeddingModelManually'),
     },
   }
 }
@@ -95,7 +86,6 @@ export function applyAiProviderPreset(config: {
   aiBaseUrl?: string
   aiApiKey?: string
   aiModel?: string
-  aiEmbeddingModel?: string
   aiRequestTimeoutSeconds?: number
   aiMaxTokens?: number
   aiTemperature?: number
@@ -109,7 +99,6 @@ export function applyAiProviderPreset(config: {
     aiBaseUrl: config.aiBaseUrl,
     aiApiKey: config.aiApiKey,
     aiModel: config.aiModel,
-    aiEmbeddingModel: config.aiEmbeddingModel,
     aiRequestTimeoutSeconds: config.aiRequestTimeoutSeconds,
     aiMaxTokens: config.aiMaxTokens,
     aiTemperature: config.aiTemperature,
@@ -128,7 +117,6 @@ export function ensureAiProviderConfigState(config: {
   aiBaseUrl?: string
   aiApiKey?: string
   aiModel?: string
-  aiEmbeddingModel?: string
   aiRequestTimeoutSeconds?: number
   aiMaxTokens?: number
   aiTemperature?: number
@@ -144,7 +132,6 @@ export function ensureAiProviderConfigState(config: {
         aiBaseUrl: config.aiBaseUrl,
         aiApiKey: config.aiApiKey,
         aiModel: config.aiModel,
-        aiEmbeddingModel: config.aiEmbeddingModel,
         aiRequestTimeoutSeconds: config.aiRequestTimeoutSeconds,
         aiMaxTokens: config.aiMaxTokens,
         aiTemperature: config.aiTemperature,
@@ -191,7 +178,6 @@ function getAiProviderDefaultConfig(provider: AiProviderPresetKey): AiProviderCo
     aiBaseUrl: preset.baseUrl ?? '',
     aiApiKey: '',
     aiModel: preset.defaultModel ?? '',
-    aiEmbeddingModel: preset.defaultEmbeddingModel ?? '',
     aiRequestTimeoutSeconds: DEFAULT_AI_REQUEST_TIMEOUT_SECONDS,
     aiMaxTokens: DEFAULT_AI_MAX_TOKENS,
     aiTemperature: DEFAULT_AI_TEMPERATURE,
@@ -208,7 +194,6 @@ function resolveAiProviderConfigSnapshot(
     aiBaseUrl: typeof snapshot?.aiBaseUrl === 'string' ? snapshot.aiBaseUrl : defaults.aiBaseUrl,
     aiApiKey: typeof snapshot?.aiApiKey === 'string' ? snapshot.aiApiKey : defaults.aiApiKey,
     aiModel: typeof snapshot?.aiModel === 'string' ? snapshot.aiModel : defaults.aiModel,
-    aiEmbeddingModel: typeof snapshot?.aiEmbeddingModel === 'string' ? snapshot.aiEmbeddingModel : defaults.aiEmbeddingModel,
     aiRequestTimeoutSeconds: normalizePositiveInteger(snapshot?.aiRequestTimeoutSeconds, defaults.aiRequestTimeoutSeconds),
     aiMaxTokens: normalizePositiveInteger(snapshot?.aiMaxTokens, defaults.aiMaxTokens),
     aiTemperature: normalizeTemperature(snapshot?.aiTemperature, defaults.aiTemperature),
@@ -221,7 +206,6 @@ function buildAiProviderConfigSnapshot(params: {
   aiBaseUrl?: string
   aiApiKey?: string
   aiModel?: string
-  aiEmbeddingModel?: string
   aiRequestTimeoutSeconds?: number
   aiMaxTokens?: number
   aiTemperature?: number
@@ -231,7 +215,6 @@ function buildAiProviderConfigSnapshot(params: {
     aiBaseUrl: params.aiBaseUrl,
     aiApiKey: params.aiApiKey,
     aiModel: params.aiModel,
-    aiEmbeddingModel: params.aiEmbeddingModel,
     aiRequestTimeoutSeconds: params.aiRequestTimeoutSeconds,
     aiMaxTokens: params.aiMaxTokens,
     aiTemperature: params.aiTemperature,
@@ -243,7 +226,6 @@ function applyAiProviderConfigSnapshot(config: {
   aiBaseUrl?: string
   aiApiKey?: string
   aiModel?: string
-  aiEmbeddingModel?: string
   aiRequestTimeoutSeconds?: number
   aiMaxTokens?: number
   aiTemperature?: number
@@ -252,7 +234,6 @@ function applyAiProviderConfigSnapshot(config: {
   config.aiBaseUrl = snapshot.aiBaseUrl
   config.aiApiKey = snapshot.aiApiKey
   config.aiModel = snapshot.aiModel
-  config.aiEmbeddingModel = snapshot.aiEmbeddingModel
   config.aiRequestTimeoutSeconds = snapshot.aiRequestTimeoutSeconds
   config.aiMaxTokens = snapshot.aiMaxTokens
   config.aiTemperature = snapshot.aiTemperature

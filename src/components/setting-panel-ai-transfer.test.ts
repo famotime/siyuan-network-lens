@@ -21,7 +21,6 @@ describe('setting panel ai transfer', () => {
           aiBaseUrl: 'https://api.openai.com/v1',
           aiApiKey: 'sk-openai',
           aiModel: 'gpt-5',
-          aiEmbeddingModel: 'text-embedding-3-small',
           aiRequestTimeoutSeconds: 60,
           aiMaxTokens: 8192,
           aiTemperature: 0.2,
@@ -31,7 +30,6 @@ describe('setting panel ai transfer', () => {
           aiBaseUrl: 'https://generativelanguage.googleapis.com/v1beta/openai',
           aiApiKey: 'sk-gemini',
           aiModel: 'gemini-2.5-flash',
-          aiEmbeddingModel: 'gemini-embedding-001',
           aiRequestTimeoutSeconds: 45,
           aiMaxTokens: 4096,
           aiTemperature: 0.3,
@@ -41,7 +39,6 @@ describe('setting panel ai transfer', () => {
       aiBaseUrl: 'https://generativelanguage.googleapis.com/v1beta/openai',
       aiApiKey: 'sk-gemini',
       aiModel: 'gemini-2.5-flash',
-      aiEmbeddingModel: 'gemini-embedding-001',
       aiRequestTimeoutSeconds: 45,
       aiMaxTokens: 4096,
       aiTemperature: 0.3,
@@ -61,7 +58,6 @@ describe('setting panel ai transfer', () => {
             aiBaseUrl: 'https://api.openai.com/v1',
             aiApiKey: 'sk-openai',
             aiModel: 'gpt-5',
-            aiEmbeddingModel: 'text-embedding-3-small',
             aiRequestTimeoutSeconds: 60,
             aiMaxTokens: 8192,
             aiTemperature: 0.2,
@@ -71,7 +67,6 @@ describe('setting panel ai transfer', () => {
             aiBaseUrl: 'https://generativelanguage.googleapis.com/v1beta/openai',
             aiApiKey: 'sk-gemini',
             aiModel: 'gemini-2.5-flash',
-            aiEmbeddingModel: 'gemini-embedding-001',
             aiRequestTimeoutSeconds: 45,
             aiMaxTokens: 4096,
             aiTemperature: 0.3,
@@ -98,7 +93,6 @@ describe('setting panel ai transfer', () => {
             aiBaseUrl: 'https://custom.example.com/v1',
             aiApiKey: 'sk-custom',
             aiModel: 'custom-model',
-            aiEmbeddingModel: 'custom-embedding',
             aiRequestTimeoutSeconds: 30,
             aiMaxTokens: 10240,
             aiTemperature: 0.7,
@@ -108,7 +102,6 @@ describe('setting panel ai transfer', () => {
       aiBaseUrl: 'https://custom.example.com/v1',
       aiApiKey: 'sk-custom',
       aiModel: 'custom-model',
-      aiEmbeddingModel: 'custom-embedding',
       aiRequestTimeoutSeconds: 30,
       aiMaxTokens: 10240,
       aiTemperature: 0.7,
@@ -127,7 +120,6 @@ describe('setting panel ai transfer', () => {
             aiBaseUrl: 'https://api.openai.com/v1',
             aiApiKey: 'sk-openai',
             aiModel: 'gpt-5',
-            aiEmbeddingModel: 'text-embedding-3-small',
             aiRequestTimeoutSeconds: '60',
             aiMaxTokens: '8192',
             aiTemperature: '0.4',
@@ -147,7 +139,6 @@ describe('setting panel ai transfer', () => {
     expect(config.aiBaseUrl).toBe('https://api.openai.com/v1')
     expect(config.aiApiKey).toBe('sk-openai')
     expect(config.aiModel).toBe('gpt-5')
-    expect(config.aiEmbeddingModel).toBe('text-embedding-3-small')
     expect(config.aiRequestTimeoutSeconds).toBe(60)
     expect(config.aiMaxTokens).toBe(8192)
     expect(config.aiTemperature).toBe(0.4)
@@ -158,7 +149,6 @@ describe('setting panel ai transfer', () => {
         aiBaseUrl: 'https://api.openai.com/v1',
         aiApiKey: 'sk-openai',
         aiModel: 'gpt-5',
-        aiEmbeddingModel: 'text-embedding-3-small',
         aiRequestTimeoutSeconds: 60,
         aiMaxTokens: 8192,
         aiTemperature: 0.4,

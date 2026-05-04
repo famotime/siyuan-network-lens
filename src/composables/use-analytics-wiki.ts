@@ -16,6 +16,7 @@ import type { PluginConfig } from '@/types/config'
 
 type GetIDsByHPathFn = (notebook: string, path: string) => Promise<string[]>
 type GetBlockKramdownFn = (id: string) => Promise<{ id: string, kramdown: string }>
+type GetChildBlocksFn = (id: string) => Promise<Array<{ id: string, type?: string, subtype?: string }>>
 
 export interface WikiPreviewThemePageItem {
   pageTitle: string
@@ -56,6 +57,8 @@ export async function buildWikiSourceSummaryMap(params: {
   config: PluginConfig
   aiIndexStore: AiDocumentIndexStore | null
   forwardProxy?: (url: string, method?: string, payload?: any, headers?: any[], timeout?: number, contentType?: string) => Promise<IResForwardProxy>
+  getChildBlocks?: GetChildBlocksFn
+  getBlockKramdown?: GetBlockKramdownFn
   generatedAt: string
 }) {
   const entries = await Promise.all(params.sourceDocuments.map(async (document) => {
@@ -64,6 +67,8 @@ export async function buildWikiSourceSummaryMap(params: {
       sourceDocument: document,
       indexStore: params.aiIndexStore,
       forwardProxy: params.forwardProxy,
+      getChildBlocks: params.getChildBlocks,
+      getBlockKramdown: params.getBlockKramdown,
       updatedAt: params.generatedAt,
     })
 

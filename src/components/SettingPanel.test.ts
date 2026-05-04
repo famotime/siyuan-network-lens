@@ -58,7 +58,6 @@ describe('SettingPanel', () => {
           aiBaseUrl: 'https://api.example.com/v1',
           aiApiKey: 'sk-test',
           aiModel: 'gpt-4.1-mini',
-          aiEmbeddingModel: 'BAAI/bge-m3',
           aiRequestTimeoutSeconds: 30,
           aiMaxTokens: 10240,
           aiTemperature: 0.7,
@@ -121,8 +120,6 @@ describe('SettingPanel', () => {
     expect(html).toContain('<svg')
     expect(html).not.toContain('setting-icon-button__text')
     expect(html).toContain('Model')
-    expect(html).toContain('Embedding Model (optional)')
-    expect(html).toContain('BAAI/bge-m3')
     expect(html).toContain('Timeout')
     expect(html).toContain('Max tokens')
     expect(html).toContain('Temperature')
@@ -206,7 +203,6 @@ describe('SettingPanel', () => {
             aiBaseUrl: 'https://api.example.com/v1',
             aiApiKey: 'sk-test',
             aiModel: 'gpt-4.1-mini',
-            aiEmbeddingModel: 'BAAI/bge-m3',
             aiRequestTimeoutSeconds: 30,
             aiMaxTokens: 10240,
             aiTemperature: 0.7,
@@ -268,7 +264,6 @@ describe('SettingPanel', () => {
           aiBaseUrl: 'https://api.siliconflow.cn/v1',
           aiApiKey: 'sk-test',
           aiModel: '',
-          aiEmbeddingModel: '',
           aiRequestTimeoutSeconds: 30,
           aiMaxTokens: 10240,
           aiTemperature: 0.7,
@@ -282,7 +277,6 @@ describe('SettingPanel', () => {
     const html = await renderToString(app)
 
     expect(html).toContain('Click to load chat models')
-    expect(html).toContain('Click to load embedding models')
     expect(html).not.toContain('>模型清单<')
     expect(html).not.toContain('加载模型列表')
   })

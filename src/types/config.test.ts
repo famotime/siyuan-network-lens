@@ -39,7 +39,6 @@ describe('config defaults', () => {
     expect(config.aiBaseUrl).toBe('')
     expect(config.aiApiKey).toBe('')
     expect(config.aiModel).toBe('')
-    expect(config.aiEmbeddingModel).toBe('')
     expect(config.aiRequestTimeoutSeconds).toBe(60)
     expect(config.aiMaxTokens).toBe(4096)
     expect(config.aiTemperature).toBe(0.7)
@@ -64,14 +63,12 @@ describe('config defaults', () => {
       aiBaseUrl: 'https://api.openai.com/v1',
       aiApiKey: 'stale-openai-key',
       aiModel: 'stale-openai-model',
-      aiEmbeddingModel: 'stale-openai-embedding',
       aiProviderPreset: 'gemini',
       aiProviderConfigs: {
         gemini: {
           aiBaseUrl: 'https://generativelanguage.googleapis.com/v1beta/openai',
           aiApiKey: 'gemini-key',
           aiModel: 'gemini-2.5-flash',
-          aiEmbeddingModel: 'gemini-embedding-001',
           aiRequestTimeoutSeconds: 120,
           aiMaxTokens: 102400,
           aiTemperature: 0.2,
@@ -91,7 +88,6 @@ describe('config defaults', () => {
     expect(config.aiBaseUrl).toBe('https://generativelanguage.googleapis.com/v1beta/openai')
     expect(config.aiApiKey).toBe('gemini-key')
     expect(config.aiModel).toBe('gemini-2.5-flash')
-    expect(config.aiEmbeddingModel).toBe('gemini-embedding-001')
     expect(config.aiRequestTimeoutSeconds).toBe(120)
     expect(config.aiMaxTokens).toBe(102400)
     expect(config.aiTemperature).toBe(0.2)

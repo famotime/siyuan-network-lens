@@ -1,8 +1,7 @@
 import { describe, expect, it } from 'vitest'
 
-import type { DocumentRecord, OrphanItem } from './analysis'
+import type { DocumentRecord } from './analysis'
 import { createAiDocumentIndexStore } from './ai-index-store'
-import type { AiLinkSuggestionResult } from './ai-link-suggestions'
 
 const baseDocument: DocumentRecord = {
   id: 'doc-1',
@@ -13,32 +12,6 @@ const baseDocument: DocumentRecord = {
   content: '这是第一段。\n这是第二段。',
   tags: ['AI', '索引'],
   updated: '20260403120000',
-}
-
-const baseOrphan: OrphanItem = {
-  documentId: 'doc-1',
-  title: '文档 1',
-  degree: 0,
-  createdAt: '20260401120000',
-  updatedAt: '20260403120000',
-  historicalReferenceCount: 1,
-  lastHistoricalAt: '20260402120000',
-  hasSparseEvidence: true,
-}
-
-const baseSuggestionResult: AiLinkSuggestionResult = {
-  generatedAt: '2026-04-03T12:00:00.000Z',
-  summary: '优先补到主题页。',
-  suggestions: [
-    {
-      targetDocumentId: 'theme-ai',
-      targetTitle: '主题-AI-索引',
-      targetType: 'theme-document',
-      confidence: 'high',
-      reason: '主题归属明确，补到主题页后更容易回查。',
-      draftText: '可归入主题-AI-索引。',
-    },
-  ],
 }
 
 function createMemoryStorage(initialValue?: any) {
@@ -58,149 +31,140 @@ function createMemoryStorage(initialValue?: any) {
 }
 
 describe('ai index store', () => {
-  it('keeps suggestion profile summaries separate from document summaries', async () => {
+  it('saves and reads a document index profile by document id', async () => {
     const storage = createMemoryStorage()
     const store = createAiDocumentIndexStore(storage)
 
-    await store.saveSuggestionIndex({
+    await store.saveDocumentIndex({
       config: {
         aiModel: 'gpt-test',
-        aiEmbeddingModel: 'embed-test',
       },
       sourceDocument: baseDocument,
-      orphan: baseOrphan,
-      themeDocuments: [],
-      filters: {},
-      timeRange: '7d',
-      result: baseSuggestionResult,
-    })
-
-    const profile = await store.getSemanticProfile('doc-1')
-
-    expect(profile).toEqual(expect.objectContaining({
-      documentId: 'doc-1',
-      summaryShort: '优先补到主题页。',
-      summaryMedium: '优先补到主题页。 主题归属明确，补到主题页后更容易回查。',
-      documentSummaryShort: undefined,
-      documentSummaryMedium: undefined,
-    }))
-  })
-
-  it('saves and reads a real document summary profile by document id', async () => {
-    const storage = createMemoryStorage()
-    const store = createAiDocumentIndexStore(storage)
-
-    await store.saveDocumentSummary({
-      config: {
-        aiModel: 'gpt-test',
-        aiEmbeddingModel: 'embed-test',
-      },
-      sourceDocument: baseDocument,
-      summaryShort: '这篇文档概述了 AI 索引页的组织思路。',
-      summaryMedium: '这篇文档概述了 AI 索引页的组织思路，并说明了主题页、标签和回查入口之间的关系。',
+      positioning: '本文记录了 AI 索引页的组织思路。',
+      propositions: [
+        { text: '主题页是索引入口', sourceBlockIds: ['b1'] },
+        { text: '标签帮助回查', sourceBlockIds: ['b2'] },
+      ],
       keywords: ['AI', '索引', '主题页'],
-      evidenceSnippets: ['这是第一段。', '这是第二段。'],
-      updatedAt: '2026-04-03T12:05:00.000Z',
+      primarySourceBlocks: [
+        { blockId: 'b1', text: '主题页是组织知识的核心入口。' },
+      ],
+      secondarySourceBlocks: [
+        { blockId: 'b2', text: '标签系统提供回查便利。' },
+      ],
+      generatedAt: '2026-04-03T12:05:00.000Z',
     })
 
-    const profile = await store.getSemanticProfile('doc-1')
+    const profile = await store.getDocumentProfile('doc-1')
 
     expect(profile).toEqual(expect.objectContaining({
       documentId: 'doc-1',
       sourceUpdatedAt: '20260403120000',
-      documentSummaryShort: '这篇文档概述了 AI 索引页的组织思路。',
-      documentSummaryMedium: '这篇文档概述了 AI 索引页的组织思路，并说明了主题页、标签和回查入口之间的关系。',
-      documentSummaryUpdatedAt: '2026-04-03T12:05:00.000Z',
+      positioning: '本文记录了 AI 索引页的组织思路。',
+      generatedAt: '2026-04-03T12:05:00.000Z',
     }))
-    expect(profile?.documentKeywordsJson).toBe(JSON.stringify(['AI', '索引', '主题页']))
-    expect(profile?.documentEvidenceSnippetsJson).toBe(JSON.stringify(['这是第一段。', '这是第二段。']))
+    expect(profile?.propositionsJson).toBe(JSON.stringify([
+      { text: '主题页是索引入口', sourceBlockIds: ['b1'] },
+      { text: '标签帮助回查', sourceBlockIds: ['b2'] },
+    ]))
+    expect(profile?.keywordsJson).toBe(JSON.stringify(['AI', '索引', '主题页']))
+    expect(profile?.primarySourceBlocksJson).toBe(JSON.stringify([
+      { blockId: 'b1', text: '主题页是组织知识的核心入口。' },
+    ]))
   })
 
-  it('returns a fresh semantic profile only when sourceUpdatedAt matches', async () => {
+  it('returns a fresh document profile only when sourceUpdatedAt matches', async () => {
     const storage = createMemoryStorage()
     const store = createAiDocumentIndexStore(storage)
 
-    await store.saveDocumentSummary({
-      config: {
-        aiModel: 'gpt-test',
-        aiEmbeddingModel: 'embed-test',
-      },
+    await store.saveDocumentIndex({
+      config: { aiModel: 'gpt-test' },
       sourceDocument: baseDocument,
-      summaryShort: '这是正文摘要。',
+      positioning: '定位描述。',
+      propositions: [{ text: '命题一', sourceBlockIds: [] }],
+      keywords: ['AI'],
+      primarySourceBlocks: [],
+      secondarySourceBlocks: [],
     })
 
-    await expect(store.getFreshSemanticProfile('doc-1', '20260403120000')).resolves.toEqual(
+    await expect(store.getFreshDocumentProfile('doc-1', '20260403120000')).resolves.toEqual(
       expect.objectContaining({
         documentId: 'doc-1',
-        documentSummaryShort: '这是正文摘要。',
+        positioning: '定位描述。',
       }),
     )
-    await expect(store.getFreshSemanticProfile('doc-1', '20260404120000')).resolves.toBeNull()
+    await expect(store.getFreshDocumentProfile('doc-1', '20260404120000')).resolves.toBeNull()
   })
 
-  it('returns a fresh document summary snapshot when the stored source timestamp still matches', async () => {
+  it('returns a fresh document summary snapshot via compatibility bridge', async () => {
     const storage = createMemoryStorage()
     const store = createAiDocumentIndexStore(storage)
 
-    await store.saveDocumentSummary({
-      config: {
-        aiModel: 'gpt-test',
-        aiEmbeddingModel: 'embed-test',
-      },
+    await store.saveDocumentIndex({
+      config: { aiModel: 'gpt-test' },
       sourceDocument: baseDocument,
-      summaryShort: '这是正文摘要。',
-      summaryMedium: '这是正文中摘要。',
+      positioning: '这是正文定位。',
+      propositions: [
+        { text: '命题一', sourceBlockIds: ['b1'] },
+        { text: '命题二', sourceBlockIds: ['b2'] },
+      ],
+      keywords: ['AI', '索引'],
+      primarySourceBlocks: [
+        { blockId: 'b1', text: '这是第一段。' },
+      ],
+      secondarySourceBlocks: [],
+      generatedAt: '2026-04-03T12:05:00.000Z',
+    })
+
+    const summary = await store.getFreshDocumentSummary('doc-1', '20260403120000')
+    expect(summary).toEqual({
+      summaryShort: '这是正文定位。',
+      summaryMedium: '命题一 命题二',
       keywords: ['AI', '索引'],
       evidenceSnippets: ['这是第一段。'],
       updatedAt: '2026-04-03T12:05:00.000Z',
     })
 
-    await expect(store.getFreshDocumentSummary('doc-1', '20260403120000')).resolves.toEqual({
-      summaryShort: '这是正文摘要。',
-      summaryMedium: '这是正文中摘要。',
-      keywords: ['AI', '索引'],
-      evidenceSnippets: ['这是第一段。'],
-      updatedAt: '2026-04-03T12:05:00.000Z',
-    })
     await expect(store.getFreshDocumentSummary('doc-1', '20260404120000')).resolves.toBeNull()
   })
 
-  it('loads a legacy snapshot without document summary fields', async () => {
+  it('returns null for legacy snapshot with schemaVersion < 3', async () => {
     const storage = createMemoryStorage({
       schemaVersion: 1,
       semanticProfiles: {
         'doc-legacy': {
           documentId: 'doc-legacy',
           sourceUpdatedAt: '20260401120000',
-          sourceHash: 'hash-1',
-          profileVersion: 1,
-          modelVersion: 'gpt-test',
-          title: '旧文档',
-          path: '/legacy.sy',
-          hpath: '/旧文档',
-          tagsJson: '[]',
-          summaryShort: '旧补链摘要',
-          summaryMedium: '旧补链摘要 理由',
-          keywordsJson: '[]',
-          topicCandidatesJson: '[]',
-          entitiesJson: '[]',
-          roleHintsJson: '[]',
-          embeddingJson: '[]',
-          evidenceSnippetsJson: '[]',
-          updatedAt: '2026-04-03T12:00:00.000Z',
+          summaryShort: '旧摘要',
         },
       },
-      suggestionCache: {},
     })
     const store = createAiDocumentIndexStore(storage)
 
-    const profile = await store.getSemanticProfile('doc-legacy')
+    const profile = await store.getDocumentProfile('doc-legacy')
+    expect(profile).toBeNull()
+  })
 
-    expect(profile).toEqual(expect.objectContaining({
-      documentId: 'doc-legacy',
-      summaryShort: '旧补链摘要',
-      documentSummaryShort: undefined,
-      documentSummaryMedium: undefined,
-    }))
+  it('deletes document index entries', async () => {
+    const storage = createMemoryStorage()
+    const store = createAiDocumentIndexStore(storage)
+
+    await store.saveDocumentIndex({
+      config: { aiModel: 'gpt-test' },
+      sourceDocument: baseDocument,
+      positioning: '定位描述。',
+      propositions: [],
+      keywords: [],
+      primarySourceBlocks: [],
+      secondarySourceBlocks: [],
+    })
+
+    const before = await store.getDocumentProfile('doc-1')
+    expect(before).not.toBeNull()
+
+    await store.deleteDocumentIndex(['doc-1'])
+
+    const after = await store.getDocumentProfile('doc-1')
+    expect(after).toBeNull()
   })
 })

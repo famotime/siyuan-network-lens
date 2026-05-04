@@ -56,12 +56,16 @@ import {
   type WikiPreviewThemePageItem,
 } from './use-analytics-wiki'
 import { createAiInboxService, isAiConfigComplete, type AiInboxResult, type AiInboxService } from '@/analytics/ai-inbox'
-import { ensureDocumentSummary } from '@/analytics/ai-document-summary'
+import { ensureDocumentIndex } from '@/analytics/ai-document-summary'
 import {
   createAiDocumentIndexStoreFromPlugin,
   type AiDocumentIndexStore,
-  type DocumentSemanticProfileRecord,
+  type DocumentIndexProfile,
 } from '@/analytics/ai-index-store'
+import {
+  createAiLinkRepairStoreFromPlugin,
+  type AiLinkRepairStore,
+} from '@/analytics/ai-link-repair-store'
 import { createAiWikiService, type AiWikiService } from '@/analytics/wiki-ai'
 import {
   createAiLinkSuggestionService,
@@ -210,6 +214,7 @@ export function useAnalyticsState(params: UseAnalyticsParams) {
     ? (params.createAiLinkSuggestionService?.({ forwardProxy: params.forwardProxy }) ?? createAiLinkSuggestionService({ forwardProxy: params.forwardProxy }))
     : null
   const aiIndexStore = params.aiIndexStore ?? createAiDocumentIndexStoreFromPlugin(params.plugin)
+  const aiLinkRepairStore: AiLinkRepairStore | null = createAiLinkRepairStoreFromPlugin(params.plugin)
   const aiWikiStore = params.aiWikiStore ?? createAiWikiStoreFromPlugin(params.plugin)
   const todaySuggestionHistoryStore = params.todaySuggestionHistoryStore ?? createTodaySuggestionHistoryStoreFromPlugin(params.plugin)
 
@@ -307,7 +312,7 @@ export function useAnalyticsState(params: UseAnalyticsParams) {
       }
     },
     invalidateAiSuggestionCache: async (documentId) => {
-      await aiIndexStore?.invalidateSuggestionCache(documentId)
+      await aiLinkRepairStore?.invalidateSuggestionCache(documentId)
     },
   })
 
@@ -578,7 +583,7 @@ export function useAnalyticsState(params: UseAnalyticsParams) {
     orphanAiSuggestionStates,
     aiInboxService,
     aiLinkSuggestionService,
-    aiIndexStore,
+    aiLinkRepairStore,
     notify,
   })
   const { generateAiInbox: generateAiInboxInternal, generateOrphanAiSuggestion, testAiConnection } = aiController
@@ -912,6 +917,8 @@ export function useAnalyticsState(params: UseAnalyticsParams) {
         config: appliedConfig.value,
         aiIndexStore,
         forwardProxy: params.forwardProxy,
+        getChildBlocks,
+        getBlockKramdown,
         generatedAt,
       })
       const payloads = buildWikiGenerationPayloads({
@@ -1118,12 +1125,19 @@ export function useAnalyticsState(params: UseAnalyticsParams) {
       return false
     }
 
+    if (!aiIndexStore || !params.forwardProxy) {
+      notify(t('analytics.docSummary.aiRequired'), 3000, 'error')
+      return false
+    }
+
     try {
-      const result = await ensureDocumentSummary({
+      const result = await ensureDocumentIndex({
         config: appliedConfig.value,
         sourceDocument: document,
         indexStore: aiIndexStore,
         forwardProxy: params.forwardProxy,
+        getChildBlocks,
+        getBlockKramdown,
         force: true,
       })
       notify(t('analytics.controller.docIndexGenerated'), 2000)
@@ -1139,15 +1153,15 @@ export function useAnalyticsState(params: UseAnalyticsParams) {
     if (!aiIndexStore) {
       return false
     }
-    const profile = await aiIndexStore.getSemanticProfile(documentId)
-    return profile !== null && Boolean(profile.documentSummaryShort ?? profile.summaryShort)
+    const profile = await aiIndexStore.getDocumentProfile(documentId)
+    return profile !== null && Boolean(profile.positioning)
   }
 
-  async function getDocIndexProfile(documentId: string): Promise<DocumentSemanticProfileRecord | null> {
+  async function getDocIndexProfile(documentId: string): Promise<DocumentIndexProfile | null> {
     if (!aiIndexStore) {
       return null
     }
-    return aiIndexStore.getSemanticProfile(documentId)
+    return aiIndexStore.getDocumentProfile(documentId)
   }
 
   async function openDocIndex(documentId: string): Promise<void> {
@@ -1167,56 +1181,84 @@ export function useAnalyticsState(params: UseAnalyticsParams) {
     const title = `📑 ${t('summaryDetail.documentIndex.viewTitle', { title: documentTitle })}`
     const safeName = title.replace(/[/:*?"<>|\\]/g, '_')
     const docPath = `/索引/${safeName}`
-    const tagsJson = parseJsonArray(profile.tagsJson)
-    const keywordsJson = parseJsonArray(profile.documentKeywordsJson ?? profile.keywordsJson)
-    const evidenceSnippetsJson = parseJsonArray(profile.documentEvidenceSnippetsJson ?? profile.evidenceSnippetsJson)
+    const tags = parseStringArray(profile.tagsJson)
+    const keywords = parseStringArray(profile.keywordsJson)
+    const propositions = parseObjectArray<{ text: string, sourceBlockIds: string[] }>(profile.propositionsJson)
+    const primaryBlocks = parseObjectArray<{ blockId: string, text: string }>(profile.primarySourceBlocksJson)
+    const secondaryBlocks = parseObjectArray<{ blockId: string, text: string }>(profile.secondarySourceBlocksJson)
+
+    const blockIndexMap = new Map<string, string>()
+    const allBlocks = [...primaryBlocks, ...secondaryBlocks]
+    allBlocks.forEach((block, i) => {
+      blockIndexMap.set(block.blockId, String(i + 1))
+    })
+
+    function formatBlockRef(blockId: string): string {
+      const index = blockIndexMap.get(blockId) || blockId
+      return `^((${blockId} "${index}"))^`
+    }
 
     const lines: string[] = []
     lines.push(`> ⚠️ ${t('summaryDetail.documentIndex.viewWarning')}`)
     lines.push('')
-    lines.push(`## ${t('summaryDetail.documentIndex.viewSummaryShort')}`)
+
+    lines.push(`## ${t('summaryDetail.documentIndex.viewPositioning')}`)
     lines.push('')
-    lines.push(profile.documentSummaryShort || profile.summaryShort || '-')
-    lines.push('')
-    lines.push(`## ${t('summaryDetail.documentIndex.viewSummaryMedium')}`)
-    lines.push('')
-    lines.push(profile.documentSummaryMedium || profile.summaryMedium || '-')
+    lines.push(profile.positioning || '-')
     lines.push('')
 
-    if (tagsJson.length) {
+    if (propositions.length) {
+      lines.push(`## ${t('summaryDetail.documentIndex.viewPropositions')}`)
+      lines.push('')
+      for (const prop of propositions) {
+        const refSuffix = prop.sourceBlockIds.length
+          ? ' ' + prop.sourceBlockIds.map(id => formatBlockRef(id)).join(' ')
+          : ''
+        lines.push(`- ${prop.text}${refSuffix}`)
+      }
+      lines.push('')
+    }
+
+    if (tags.length) {
       lines.push('## Tags')
       lines.push('')
-      lines.push(tagsJson.map(tag => `\`${tag}\``).join(' '))
+      lines.push(tags.map(tag => `\`${tag}\``).join(' '))
       lines.push('')
     }
 
-    if (keywordsJson.length) {
+    if (keywords.length) {
       lines.push(`## ${t('summaryDetail.documentIndex.viewKeywords')}`)
       lines.push('')
-      lines.push(keywordsJson.map(kw => `\`${kw}\``).join(' '))
+      lines.push(keywords.map(kw => `\`${kw}\``).join(' '))
       lines.push('')
     }
 
-    if (evidenceSnippetsJson.length) {
-      lines.push(`## ${t('summaryDetail.documentIndex.viewEvidence')}`)
+    if (primaryBlocks.length) {
+      lines.push(`## ${t('summaryDetail.documentIndex.viewPrimarySourceBlocks')}`)
       lines.push('')
-      for (const snippet of evidenceSnippetsJson) {
-        lines.push(`> ${snippet}`)
+      for (const block of primaryBlocks) {
+        lines.push(`> ${block.text}`)
+        lines.push(`> ${formatBlockRef(block.blockId)}`)
         lines.push('')
       }
     }
 
-    const hasEmbedding = Boolean(profile.embeddingJson && profile.embeddingJson !== '[]')
-    lines.push(`## ${t('summaryDetail.documentIndex.viewEmbedding')}`)
-    lines.push('')
-    lines.push(hasEmbedding ? t('summaryDetail.documentIndex.viewEmbeddingAvailable') : t('summaryDetail.documentIndex.viewEmbeddingEmpty'))
+    if (secondaryBlocks.length) {
+      lines.push(`## ${t('summaryDetail.documentIndex.viewSecondarySourceBlocks')}`)
+      lines.push('')
+      for (const block of secondaryBlocks) {
+        lines.push(`> ${block.text}`)
+        lines.push(`> ${formatBlockRef(block.blockId)}`)
+        lines.push('')
+      }
+    }
+
     lines.push('')
 
-    const updatedAt = profile.documentSummaryUpdatedAt || profile.updatedAt
-    if (updatedAt) {
-      lines.push(`---`)
+    if (profile.generatedAt) {
+      lines.push('---')
       lines.push('')
-      lines.push(`*${t('summaryDetail.documentIndex.viewUpdatedAt')}: ${updatedAt}*`)
+      lines.push(`*${t('summaryDetail.documentIndex.viewUpdatedAt')}: ${profile.generatedAt}*`)
     }
 
     const markdown = lines.join('\n')
@@ -1253,17 +1295,29 @@ export function useAnalyticsState(params: UseAnalyticsParams) {
     if (!aiIndexStore) {
       return 0
     }
-    await aiIndexStore.deleteDocumentSummary(documentIds)
+    await aiIndexStore.deleteDocumentIndex(documentIds)
     return documentIds.length
   }
 
-  function parseJsonArray(value: string): string[] {
+  function parseStringArray(value: string): string[] {
     if (!value) {
       return []
     }
     try {
       const parsed = JSON.parse(value)
       return Array.isArray(parsed) ? parsed.filter((item: unknown): item is string => typeof item === 'string' && item.trim().length > 0) : []
+    } catch {
+      return []
+    }
+  }
+
+  function parseObjectArray<T>(value: string): T[] {
+    if (!value) {
+      return []
+    }
+    try {
+      const parsed = JSON.parse(value)
+      return Array.isArray(parsed) ? parsed : []
     } catch {
       return []
     }

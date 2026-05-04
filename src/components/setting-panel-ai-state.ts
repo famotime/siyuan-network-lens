@@ -12,7 +12,6 @@ export function syncAiProviderConfigSnapshot(config: PluginConfig, provider: AiP
     aiBaseUrl: config.aiBaseUrl ?? '',
     aiApiKey: config.aiApiKey ?? '',
     aiModel: config.aiModel ?? '',
-    aiEmbeddingModel: config.aiEmbeddingModel ?? '',
     aiRequestTimeoutSeconds: config.aiRequestTimeoutSeconds,
     aiMaxTokens: config.aiMaxTokens,
     aiTemperature: config.aiTemperature,

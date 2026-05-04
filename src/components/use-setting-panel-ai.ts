@@ -42,7 +42,6 @@ export function useSettingPanelAi(config: PluginConfig) {
   const aiConnectionError = ref('')
   const selectedAiProviderPreset = ref<AiProviderPresetKey>(config.aiProviderPreset ?? 'custom')
   const siliconFlowChatModelOptions = ref<Array<{ value: string, label: string, key: string }>>([])
-  const siliconFlowEmbeddingModelOptions = ref<Array<{ value: string, label: string, key: string }>>([])
   const siliconFlowModelCatalogLoading = ref(false)
   const siliconFlowModelCatalogError = ref('')
   const siliconFlowModelCatalogLoaded = ref(false)
@@ -59,14 +58,9 @@ export function useSettingPanelAi(config: PluginConfig) {
   const showSiliconFlowModelSelects = computed(() => selectedAiProviderPreset.value === 'siliconflow')
   const canLoadSiliconFlowModels = computed(() => Boolean(config.aiApiKey?.trim()))
   const showSiliconFlowChatModelSelect = computed(() => showSiliconFlowModelSelects.value)
-  const showSiliconFlowEmbeddingModelSelect = computed(() => showSiliconFlowModelSelects.value)
   const siliconFlowChatModelSelectOptions = computed(() => buildAiModelOptionItems(
     siliconFlowChatModelOptions.value.map(option => option.value),
     config.aiModel,
-  ))
-  const siliconFlowEmbeddingModelSelectOptions = computed(() => buildAiModelOptionItems(
-    siliconFlowEmbeddingModelOptions.value.map(option => option.value),
-    config.aiEmbeddingModel,
   ))
   const siliconFlowChatModelPlaceholder = computed(() => buildSiliconFlowModelSelectPlaceholder({
     kind: 'chat',
@@ -76,32 +70,17 @@ export function useSettingPanelAi(config: PluginConfig) {
     error: siliconFlowModelCatalogError.value,
     optionCount: siliconFlowChatModelOptions.value.length,
   }))
-  const siliconFlowEmbeddingModelPlaceholder = computed(() => buildSiliconFlowModelSelectPlaceholder({
-    kind: 'embedding',
-    apiKey: config.aiApiKey,
-    loading: siliconFlowModelCatalogLoading.value,
-    loaded: siliconFlowModelCatalogLoaded.value,
-    error: siliconFlowModelCatalogError.value,
-    optionCount: siliconFlowEmbeddingModelOptions.value.length,
-  }))
   const siliconFlowChatModelSelectTitle = computed(() => buildSiliconFlowModelSelectTitle({
     baseTitle: aiFieldTooltips.value.siliconFlowChatModel,
     placeholder: siliconFlowChatModelPlaceholder.value,
     error: siliconFlowModelCatalogError.value,
   }))
-  const siliconFlowEmbeddingModelSelectTitle = computed(() => buildSiliconFlowModelSelectTitle({
-    baseTitle: aiFieldTooltips.value.siliconFlowEmbeddingModel,
-    placeholder: siliconFlowEmbeddingModelPlaceholder.value,
-    error: siliconFlowModelCatalogError.value,
-  }))
-
   watch(
     [
       () => selectedAiProviderPreset.value,
       () => config.aiBaseUrl ?? '',
       () => config.aiApiKey ?? '',
       () => config.aiModel ?? '',
-      () => config.aiEmbeddingModel ?? '',
       () => config.aiRequestTimeoutSeconds,
       () => config.aiMaxTokens,
       () => config.aiTemperature,
@@ -237,7 +216,6 @@ export function useSettingPanelAi(config: PluginConfig) {
         forwardProxy,
       })
       siliconFlowChatModelOptions.value = buildAiModelOptionItems(catalog.chatModels, config.aiModel)
-      siliconFlowEmbeddingModelOptions.value = buildAiModelOptionItems(catalog.embeddingModels, config.aiEmbeddingModel)
       siliconFlowModelCatalogLoaded.value = true
     } catch (error) {
       siliconFlowModelCatalogError.value = error instanceof Error ? error.message : 'Failed to load model list'
@@ -248,7 +226,6 @@ export function useSettingPanelAi(config: PluginConfig) {
 
   function resetSiliconFlowModelCatalog() {
     siliconFlowChatModelOptions.value = []
-    siliconFlowEmbeddingModelOptions.value = []
     siliconFlowModelCatalogLoading.value = false
     siliconFlowModelCatalogError.value = ''
     siliconFlowModelCatalogLoaded.value = false
@@ -296,13 +273,9 @@ export function useSettingPanelAi(config: PluginConfig) {
     showSiliconFlowModelSelects,
     canLoadSiliconFlowModels,
     showSiliconFlowChatModelSelect,
-    showSiliconFlowEmbeddingModelSelect,
     siliconFlowChatModelSelectOptions,
-    siliconFlowEmbeddingModelSelectOptions,
     siliconFlowChatModelPlaceholder,
-    siliconFlowEmbeddingModelPlaceholder,
     siliconFlowChatModelSelectTitle,
-    siliconFlowEmbeddingModelSelectTitle,
     handleTestConnection,
     handleAiProviderPresetChange,
     handleImportAiSettingsClick,

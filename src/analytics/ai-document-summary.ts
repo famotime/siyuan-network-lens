@@ -1,9 +1,13 @@
 import type { DocumentRecord } from './analysis'
-import { normalizeTags, resolveDocumentTitle } from './document-utils'
 import type { AiDocumentIndexStore } from './ai-index-store'
+import type { ClassifiedSourceBlocks } from './document-index-source-blocks'
+import { collectDocumentSourceBlocks } from './document-index-source-blocks'
+import { normalizeTags, resolveDocumentTitle } from './document-utils'
 import { isAiConfigComplete, resolveAiEndpoint, resolveAiRequestOptions } from './ai-inbox'
 import { t } from '@/i18n/ui'
 import type { PluginConfig } from '@/types/config'
+
+const TAG = '[NetworkLens][DocIndex]'
 
 type ForwardProxyFn = (
   url: string,
@@ -14,18 +18,25 @@ type ForwardProxyFn = (
   contentType?: string,
 ) => Promise<IResForwardProxy>
 
+type GetChildBlocksFn = (id: string) => Promise<Array<{ id: string, type?: string, subtype?: string }>>
+type GetBlockKramdownFn = (id: string) => Promise<{ id: string, kramdown: string }>
+
 type AiConfig = Pick<
   PluginConfig,
-  | 'aiEnabled'
   | 'aiBaseUrl'
   | 'aiApiKey'
   | 'aiModel'
-  | 'aiEmbeddingModel'
   | 'aiRequestTimeoutSeconds'
   | 'aiMaxTokens'
   | 'aiTemperature'
   | 'aiMaxContextMessages'
 >
+
+export interface EvidenceCompilationResult {
+  positioning: string
+  propositions: Array<{ text: string, sourceBlockIds: string[] }>
+  keywords: string[]
+}
 
 export interface DocumentSummaryResult {
   summaryShort: string
@@ -37,14 +48,70 @@ export interface DocumentSummaryResult {
 export interface EnsuredDocumentSummaryResult extends DocumentSummaryResult {
   updatedAt: string
   fromCache: boolean
-  embeddingJson?: string
+}
+
+export async function ensureDocumentIndex(params: {
+  config: AiConfig
+  sourceDocument: DocumentRecord
+  indexStore: Pick<AiDocumentIndexStore, 'getFreshDocumentProfile' | 'saveDocumentIndex'>
+  forwardProxy: ForwardProxyFn
+  getChildBlocks: GetChildBlocksFn
+  getBlockKramdown: GetBlockKramdownFn
+  force?: boolean
+  updatedAt?: string
+}): Promise<{ fromCache: boolean, updatedAt: string }> {
+  const sourceUpdatedAt = params.sourceDocument.updated ?? ''
+
+  if (!params.force && sourceUpdatedAt) {
+    const freshProfile = await params.indexStore.getFreshDocumentProfile(
+      params.sourceDocument.id,
+      sourceUpdatedAt,
+    )
+    if (freshProfile) {
+      return { fromCache: true, updatedAt: freshProfile.generatedAt }
+    }
+  }
+
+  const updatedAt = params.updatedAt || new Date().toISOString()
+
+  if (!isAiConfigComplete(params.config)) {
+    throw new Error(t('analytics.docSummary.aiRequired'))
+  }
+
+  const sourceBlocks = await collectDocumentSourceBlocks({
+    documentId: params.sourceDocument.id,
+    getChildBlocks: params.getChildBlocks,
+    getBlockKramdown: params.getBlockKramdown,
+  })
+
+  const result = await requestEvidenceCompilation({
+    config: params.config,
+    forwardProxy: params.forwardProxy,
+    sourceDocument: params.sourceDocument,
+    sourceBlocks,
+  })
+
+  await params.indexStore.saveDocumentIndex({
+    config: params.config,
+    sourceDocument: params.sourceDocument,
+    positioning: result.positioning,
+    propositions: result.propositions,
+    keywords: result.keywords,
+    primarySourceBlocks: sourceBlocks.primary,
+    secondarySourceBlocks: sourceBlocks.secondary,
+    generatedAt: updatedAt,
+  })
+
+  return { fromCache: false, updatedAt }
 }
 
 export async function ensureDocumentSummary(params: {
   config: AiConfig
   sourceDocument: DocumentRecord
-  indexStore?: Pick<AiDocumentIndexStore, 'getFreshDocumentSummary' | 'saveDocumentSummary'> | null
+  indexStore?: Pick<AiDocumentIndexStore, 'getFreshDocumentSummary' | 'saveDocumentIndex'> | null
   forwardProxy?: ForwardProxyFn
+  getChildBlocks?: GetChildBlocksFn
+  getBlockKramdown?: GetBlockKramdownFn
   force?: boolean
   updatedAt?: string
 }): Promise<EnsuredDocumentSummaryResult> {
@@ -54,88 +121,94 @@ export async function ensureDocumentSummary(params: {
     : null
 
   if (freshSummary) {
-    return {
-      ...freshSummary,
-      fromCache: true,
-    }
+    return { ...freshSummary, fromCache: true }
   }
 
-  const updatedAt = params.updatedAt || new Date().toISOString()
-
-  if (!params.forwardProxy || !isAiConfigComplete(params.config)) {
+  if (!params.forwardProxy || !params.getChildBlocks || !params.getBlockKramdown) {
     throw new Error(t('analytics.docSummary.aiRequired'))
   }
 
-  const aiResult = await requestDocumentAiSummary({
+  const { fromCache, updatedAt } = await ensureDocumentIndex({
     config: params.config,
+    sourceDocument: params.sourceDocument,
+    indexStore: params.indexStore!,
     forwardProxy: params.forwardProxy,
-    sourceDocument: params.sourceDocument,
+    getChildBlocks: params.getChildBlocks,
+    getBlockKramdown: params.getBlockKramdown,
+    force: params.force,
+    updatedAt: params.updatedAt,
   })
-  const summaryResult = aiResult.summary
-  const embeddingJson = aiResult.embeddingJson
 
-  await params.indexStore?.saveDocumentSummary?.({
-    config: params.config,
-    sourceDocument: params.sourceDocument,
-    summaryShort: summaryResult.summaryShort,
-    summaryMedium: summaryResult.summaryMedium,
-    keywords: summaryResult.keywords,
-    evidenceSnippets: summaryResult.evidenceSnippets,
-    embeddingJson,
-    updatedAt,
-  })
+  const freshSummaryAfterIndex = await params.indexStore?.getFreshDocumentSummary?.(
+    params.sourceDocument.id,
+    sourceUpdatedAt,
+  )
+
+  if (freshSummaryAfterIndex) {
+    return { ...freshSummaryAfterIndex, fromCache }
+  }
 
   return {
-    ...summaryResult,
+    summaryShort: '',
+    summaryMedium: '',
+    keywords: [],
+    evidenceSnippets: [],
     updatedAt,
-    fromCache: false,
-    embeddingJson,
+    fromCache,
   }
 }
 
-const SUMMARY_SYSTEM_PROMPT = `You are a thoughtful reading companion for a personal knowledge base. Your job is to deeply read a document and produce an insightful index that captures what the document is about, what the author cares about, and why this document matters.
+const EVIDENCE_COMPILATION_SYSTEM_PROMPT = `You are an evidence compiler for a personal knowledge base. Read a document and its evidence blocks, then produce a structured index.
 
-You must return JSON only — no Markdown, no code blocks, no explanation.
+Return ONLY a valid JSON object. No markdown fences, no explanation, no extra text before or after the JSON.
 
-The JSON shape:
+Required JSON structure:
 {
-  "summaryShort": string,
-  "summaryMedium": string,
-  "keywords": string[],
-  "evidenceSnippets": string[]
+  "positioning": "one sentence describing the document topic",
+  "propositions": [
+    { "text": "a factual claim from the document", "sourceBlockIds": ["block-id-1"] }
+  ],
+  "keywords": ["keyword1", "keyword2"]
 }
 
-Guidelines for each field:
+Field rules:
 
-summaryShort — One sentence (under 150 characters) that captures the core idea or purpose of this document. Write as if you are telling a friend what this document is about, not as a title or tag. For example: "作者记录了搭建个人知识索引系统的完整思路和踩坑经验" rather than "知识索引系统搭建".
+positioning — One sentence (under 120 chars). Neutral description of what the document covers. No evaluative language.
 
-summaryMedium — A thoughtful paragraph (3-6 sentences) that reads like a knowledgeable person's impression of this document. Cover: what problem or question does it address? What are the key ideas or conclusions? What makes it interesting or useful? Write naturally, not in bullet points.
+propositions — 3 to 6 items. Each is a factual claim or key idea from the document. Each must:
+  - Be self-contained and understandable without reading the document
+  - Reference at least one sourceBlockId from the evidence blocks provided
+  - Use neutral language, no "this document explains" or similar
+  - Keep each proposition under 100 characters
 
-keywords — 5-10 keywords that someone would use to search for this document. Include both explicit topics from the text and implicit themes you infer from reading it. Mix specific terms with broader concepts.
+keywords — 5 to 8 keywords. Mix specific terms and broader concepts.
 
-evidenceSnippets — 2-4 passages from the document that best reveal its substance. Choose passages that are insightful, representative of the author's thinking, or capture key conclusions — not generic introductions or filler text. Quote them exactly.
+IMPORTANT:
+- sourceBlockIds must be real block IDs from the evidence blocks below
+- All text in the same language as the document
+- Return ONLY the JSON object, nothing else`
 
-All text must be in the same language as the document content. Keep proper nouns unchanged.`
-
-async function requestDocumentAiSummary(params: {
+async function requestEvidenceCompilation(params: {
   config: AiConfig
   forwardProxy: ForwardProxyFn
   sourceDocument: DocumentRecord
-}): Promise<{ summary: DocumentSummaryResult, embeddingJson?: string }> {
+  sourceBlocks: ClassifiedSourceBlocks
+}): Promise<EvidenceCompilationResult> {
   const title = resolveDocumentTitle(params.sourceDocument)
-  const content = params.sourceDocument.content ?? ''
   const tags = normalizeTags(params.sourceDocument.tags)
 
+  const allBlocks = [...params.sourceBlocks.primary, ...params.sourceBlocks.secondary]
+  const blockSection = allBlocks.length > 0
+    ? allBlocks.map(block => `[${block.blockId}] ${block.text}`).join('\n\n')
+    : '(No evidence blocks extracted)'
+
   const userMessage = [
-    `Please read the following document carefully and produce its index.`,
-    '',
-    `Title: ${title}`,
+    `Document: ${title}`,
     params.sourceDocument.hpath ? `Path: ${params.sourceDocument.hpath}` : '',
     tags.length ? `Tags: ${tags.join(', ')}` : '',
     '',
-    '---',
-    content,
-    '---',
+    'Evidence blocks:',
+    blockSection,
   ].filter(Boolean).join('\n')
 
   const requestOptions = resolveAiRequestOptions(params.config)
@@ -143,11 +216,18 @@ async function requestDocumentAiSummary(params: {
   const body = JSON.stringify({
     model: params.config.aiModel,
     messages: [
-      { role: 'system', content: SUMMARY_SYSTEM_PROMPT },
+      { role: 'system', content: EVIDENCE_COMPILATION_SYSTEM_PROMPT },
       { role: 'user', content: userMessage },
     ],
-    max_tokens: Math.min(requestOptions.maxTokens, 2048),
-    temperature: 0.7,
+    max_tokens: Math.min(requestOptions.maxTokens, 4096),
+    temperature: 0.3,
+  })
+
+  console.info(TAG, 'Evidence compilation request', {
+    title,
+    blockCount: allBlocks.length,
+    model: params.config.aiModel,
+    endpoint,
   })
 
   const response = await params.forwardProxy(
@@ -168,80 +248,131 @@ async function requestDocumentAiSummary(params: {
 
   const payload = JSON.parse(response.body)
   const aiContent: string = payload?.choices?.[0]?.message?.content ?? ''
-  const summary = parseAiSummaryResponse(aiContent)
+  const finishReason = payload?.choices?.[0]?.finish_reason ?? 'unknown'
 
-  let embeddingJson: string | undefined
-  if (params.config.aiEmbeddingModel?.trim()) {
-    try {
-      embeddingJson = await requestDocumentEmbedding({
-        config: params.config,
-        forwardProxy: params.forwardProxy,
-        text: `${title}\n${content.slice(0, 500)}`,
-      })
-    } catch {
-      embeddingJson = undefined
-    }
-  }
+  console.info(TAG, 'Evidence compilation response', {
+    finishReason,
+    contentLength: aiContent.length,
+    contentPreview: aiContent.slice(0, 200),
+  })
 
-  return { summary, embeddingJson }
+  return parseEvidenceCompilationResponse(aiContent, allBlocks.map(b => b.blockId))
 }
 
-function parseAiSummaryResponse(raw: string): DocumentSummaryResult {
-  const cleaned = raw.replace(/^```(?:json)?\s*/i, '').replace(/\s*```$/i, '').trim()
-  const parsed = JSON.parse(cleaned)
+function parseEvidenceCompilationResponse(raw: string, validBlockIds: string[]): EvidenceCompilationResult {
+  const cleaned = stripCodeFences(raw)
+  const parsed = tryParseJson(cleaned)
 
-  const summaryShort = typeof parsed.summaryShort === 'string' && parsed.summaryShort.trim()
-    ? parsed.summaryShort.trim().slice(0, 300)
-    : ''
-  const summaryMedium = typeof parsed.summaryMedium === 'string' && parsed.summaryMedium.trim()
-    ? parsed.summaryMedium.trim()
-    : ''
-  const keywords = Array.isArray(parsed.keywords)
-    ? deduplicateStrings(parsed.keywords.filter((k: unknown): k is string => typeof k === 'string'))
-    : []
-  const evidenceSnippets = Array.isArray(parsed.evidenceSnippets)
-    ? deduplicateStrings(parsed.evidenceSnippets.filter((s: unknown): s is string => typeof s === 'string'))
-    : []
-
-  if (!summaryShort && !summaryMedium) {
+  if (!parsed) {
+    console.warn(TAG, 'Failed to parse AI response as JSON', {
+      rawLength: raw.length,
+      rawPreview: raw.slice(0, 300),
+      rawTail: raw.slice(-100),
+    })
     throw new Error(t('analytics.docSummary.invalidAiResponse'))
   }
 
-  return { summaryShort, summaryMedium, keywords, evidenceSnippets }
-}
+  const validIdSet = new Set(validBlockIds)
 
-async function requestDocumentEmbedding(params: {
-  config: AiConfig
-  forwardProxy: ForwardProxyFn
-  text: string
-}): Promise<string> {
-  const endpoint = resolveAiEndpoint(params.config.aiBaseUrl!, 'embeddings')
-  const requestOptions = resolveAiRequestOptions(params.config)
-  const response = await params.forwardProxy(
-    endpoint,
-    'POST',
-    JSON.stringify({
-      model: params.config.aiEmbeddingModel,
-      input: [params.text],
-    }),
-    [
-      { Authorization: `Bearer ${params.config.aiApiKey}` },
-      { Accept: 'application/json' },
-    ],
-    requestOptions.timeoutMs,
-    'application/json',
-  )
+  const positioning = typeof parsed.positioning === 'string' && parsed.positioning.trim()
+    ? parsed.positioning.trim().slice(0, 200)
+    : ''
 
-  if (!response || response.status < 200 || response.status >= 300) {
-    throw new Error(t('analytics.docSummary.embeddingRequestFailed', { status: String(response?.status ?? 'unknown') }))
-  }
-
-  const payload = JSON.parse(response.body)
-  const embedding = Array.isArray(payload?.data) && Array.isArray(payload.data[0]?.embedding)
-    ? payload.data[0].embedding
+  const propositions = Array.isArray(parsed.propositions)
+    ? parsed.propositions
+        .filter((p: any) => p && typeof p.text === 'string' && p.text.trim())
+        .map((p: any) => ({
+          text: p.text.trim(),
+          sourceBlockIds: Array.isArray(p.sourceBlockIds)
+            ? p.sourceBlockIds.filter((id: any) => typeof id === 'string' && validIdSet.has(id))
+            : [],
+        }))
+        .slice(0, 10)
     : []
 
-  return JSON.stringify(embedding)
+  const keywords = Array.isArray(parsed.keywords)
+    ? deduplicateStrings(parsed.keywords.filter((k: unknown): k is string => typeof k === 'string'))
+    : []
+
+  console.info(TAG, 'Parsed evidence compilation', {
+    hasPositioning: Boolean(positioning),
+    propositionCount: propositions.length,
+    keywordCount: keywords.length,
+  })
+
+  if (!positioning && propositions.length === 0) {
+    console.warn(TAG, 'AI response had neither positioning nor propositions', {
+      rawPreview: raw.slice(0, 200),
+    })
+    throw new Error(t('analytics.docSummary.invalidAiResponse'))
+  }
+
+  return { positioning, propositions, keywords }
+}
+
+function stripCodeFences(text: string): string {
+  return text
+    .replace(/^```(?:json)?\s*/i, '')
+    .replace(/\s*```\s*$/i, '')
+    .trim()
+}
+
+function tryParseJson(text: string): any | null {
+  try {
+    return JSON.parse(text)
+  } catch {
+    // Try to extract JSON object from surrounding text
+    const match = text.match(/\{[\s\S]*\}/)
+    if (match) {
+      try {
+        return JSON.parse(match[0])
+      } catch {
+        // Attempt to fix truncated JSON by closing open strings/arrays/objects
+        const fixed = attemptTruncationFix(match[0])
+        if (fixed) {
+          try {
+            return JSON.parse(fixed)
+          } catch {
+            // give up
+          }
+        }
+      }
+    }
+    return null
+  }
+}
+
+function attemptTruncationFix(text: string): string | null {
+  let fixed = text
+
+  // Count unmatched brackets/braces
+  const openBraces = (fixed.match(/{/g) || []).length
+  const closeBraces = (fixed.match(/}/g) || []).length
+  const openBrackets = (fixed.match(/\[/g) || []).length
+  const closeBrackets = (fixed.match(/]/g) || []).length
+
+  // If the text ends mid-string (inside a quoted value), close the string first
+  const lastQuoteIndex = fixed.lastIndexOf('"')
+  if (lastQuoteIndex >= 0) {
+    const afterLastQuote = fixed.slice(lastQuoteIndex + 1)
+    // If there's no closing quote paired properly, add one
+    const quotesBefore = (fixed.slice(0, lastQuoteIndex).match(/"/g) || []).length
+    if (quotesBefore % 2 !== 0) {
+      fixed += '"'
+    }
+  }
+
+  // Close any unclosed arrays
+  for (let i = 0; i < openBrackets - closeBrackets; i++) {
+    fixed += ']'
+  }
+
+  // Close any unclosed objects
+  for (let i = 0; i < openBraces - closeBraces; i++) {
+    fixed += '}'
+  }
+
+  return fixed
 }
 
 function deduplicateStrings(values: string[]): string[] {

@@ -4,7 +4,7 @@ export interface AiProviderConfigSnapshot {
   aiBaseUrl: string
   aiApiKey: string
   aiModel: string
-  aiEmbeddingModel: string
+
   aiRequestTimeoutSeconds: number
   aiMaxTokens: number
   aiTemperature: number

@@ -322,32 +322,6 @@
             type="text"
           >
         </label>
-        <label v-if="showAiServiceSettings" class="setting-field setting-field--full">
-          <span class="setting-field__label setting-field__label--hint" :title="AI_FIELD_TOOLTIPS.embeddingModel">{{ t('settings.ai.embeddingModelOptional') }}</span>
-          <select
-            v-if="showSiliconFlowEmbeddingModelSelect"
-            v-model="config.aiEmbeddingModel"
-            :title="siliconFlowEmbeddingModelSelectTitle"
-            @focus="handleSiliconFlowModelSelectOpen"
-            @mousedown="handleSiliconFlowModelSelectOpen"
-          >
-            <option value="">{{ siliconFlowEmbeddingModelPlaceholder }}</option>
-            <option
-              v-for="option in siliconFlowEmbeddingModelSelectOptions"
-              :key="option.key"
-              :value="option.value"
-            >
-              {{ option.label }}
-            </option>
-          </select>
-          <input
-            v-else
-            v-model.trim="config.aiEmbeddingModel"
-            :placeholder="aiProviderPresetMeta.embeddingPlaceholder"
-            :title="AI_FIELD_TOOLTIPS.embeddingModel"
-            type="text"
-          >
-        </label>
         <label v-if="showAiServiceSettings" class="setting-field">
           <span class="setting-field__label setting-field__label--hint" :title="AI_FIELD_TOOLTIPS.timeout">{{ t('settings.ai.timeout') }}</span>
           <div class="setting-input-with-suffix">
@@ -498,13 +472,9 @@ const {
   showSiliconFlowModelSelects,
   canLoadSiliconFlowModels,
   showSiliconFlowChatModelSelect,
-  showSiliconFlowEmbeddingModelSelect,
   siliconFlowChatModelSelectOptions,
-  siliconFlowEmbeddingModelSelectOptions,
   siliconFlowChatModelPlaceholder,
-  siliconFlowEmbeddingModelPlaceholder,
   siliconFlowChatModelSelectTitle,
-  siliconFlowEmbeddingModelSelectTitle,
   handleTestConnection,
   handleAiProviderPresetChange,
   handleImportAiSettingsClick,

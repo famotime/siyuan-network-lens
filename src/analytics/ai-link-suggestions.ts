@@ -24,7 +24,6 @@ type AiConfig = Pick<
   | 'aiBaseUrl'
   | 'aiApiKey'
   | 'aiModel'
-  | 'aiEmbeddingModel'
   | 'aiRequestTimeoutSeconds'
   | 'aiMaxTokens'
   | 'aiTemperature'
@@ -43,7 +42,6 @@ interface CandidateTarget {
   documentId: string
   title: string
   targetType: CandidateTargetType
-  embeddingInput: string
   reasons: string[]
   baseScore: number
 }
@@ -140,21 +138,9 @@ export function createAiLinkSuggestionService(deps: {
         throw new Error(t('analytics.aiLink.notEnoughCandidateTargets'))
       }
 
-      const embeddingModel = params.config.aiEmbeddingModel?.trim()
-      validateEmbeddingModelConfig(params.config)
-      const rankedCandidates = embeddingModel
-        ? await rankCandidatesWithEmbeddings({
-            config: params.config,
-            forwardProxy: deps.forwardProxy,
-            candidates,
-            sourceDocument: params.sourceDocument,
-            titleCleanupConfig: params.config,
-            onProgress: params.onProgress,
-          })
-        : rankCandidatesWithoutEmbeddings({
-            candidates,
-            onProgress: params.onProgress,
-          })
+      const rankedCandidates = rankCandidatesWithoutEmbeddings({
+        candidates,
+      })
 
       const topCandidates = rankedCandidates
         .sort((left, right) => right.finalScore - left.finalScore || left.title.localeCompare(right.title, 'zh-CN'))
@@ -197,7 +183,6 @@ export function createAiLinkSuggestionService(deps: {
                 title: candidate.title,
                 targetType: candidate.targetType,
                 baseScore: candidate.baseScore,
-                embeddingScore: candidate.embeddingScore,
                 finalScore: candidate.finalScore,
                 reasons: candidate.reasons,
               })),
@@ -293,73 +278,11 @@ function isLikelyEnglishSentence(text: string) {
   return latinWords.length >= 4
 }
 
-function validateEmbeddingModelConfig(config: AiConfig) {
-  const embeddingModel = config.aiEmbeddingModel?.trim()
-  if (!embeddingModel) {
-    return
-  }
-
-  if (isSiliconFlowBaseUrl(config.aiBaseUrl) && isOpenAiStyleEmbeddingModel(embeddingModel)) {
-    throw new Error(t('analytics.aiLink.invalidSiliconFlowEmbeddingModel'))
-  }
-}
-
-function isSiliconFlowBaseUrl(baseUrl?: string) {
-  if (!baseUrl?.trim()) {
-    return false
-  }
-
-  try {
-    return new URL(baseUrl).hostname === 'api.siliconflow.cn'
-  } catch {
-    return /^https?:\/\/api\.siliconflow\.cn(?:\/|$)/i.test(baseUrl.trim())
-  }
-}
-
-function isOpenAiStyleEmbeddingModel(model: string) {
-  return /^text-embedding-/i.test(model.trim())
-}
-
-async function rankCandidatesWithEmbeddings(params: {
-  config: AiConfig
-  forwardProxy: ForwardProxyFn
-  sourceDocument: DocumentRecord
-  candidates: CandidateTarget[]
-  titleCleanupConfig?: DocumentTitleCleanupConfig | null
-  onProgress?: (message: string) => void
-}) {
-  params.onProgress?.(t('analytics.aiLink.analyzingEmbeddings'))
-  const embeddingRequestInputs = [
-    buildEmbeddingInput(params.sourceDocument, params.titleCleanupConfig),
-    ...params.candidates.map(candidate => candidate.embeddingInput),
-  ]
-  const embeddings = await requestEmbeddings({
-    config: params.config,
-    forwardProxy: params.forwardProxy,
-    inputs: embeddingRequestInputs,
-  })
-  const sourceEmbedding = embeddings[0]
-
-  params.onProgress?.(t('analytics.aiLink.retrievingCandidates'))
-  return params.candidates
-    .map((candidate, index) => ({
-      ...candidate,
-      embeddingScore: cosineSimilarity(sourceEmbedding, embeddings[index + 1]),
-    }))
-    .map(candidate => ({
-      ...candidate,
-      finalScore: roundScore(candidate.baseScore * 0.45 + candidate.embeddingScore * 0.55),
-    }))
-}
-
 function rankCandidatesWithoutEmbeddings(params: {
   candidates: CandidateTarget[]
-  onProgress?: (message: string) => void
 }) {
-  params.onProgress?.(t('analytics.aiLink.embeddingModelNotConfiguredFallback'))
   return params.candidates.map(candidate => ({
     ...candidate,
-    embeddingScore: 0,
     finalScore: roundScore(candidate.baseScore),
   }))
 }
@@ -389,7 +312,6 @@ function buildCandidates(params: {
         documentId: match.themeDocumentId,
         title: resolveNormalizedDocumentTitle(themeDocument, params.titleCleanupConfig),
         targetType: 'theme-document' as const,
-        embeddingInput: buildEmbeddingInput(themeDocument, params.titleCleanupConfig),
         reasons: [
           t('analytics.aiLink.candidateThemeMatch', { count: match.matchCount }, params.locale),
           t('analytics.aiLink.candidateTopicEntry', params.locale),
@@ -413,7 +335,6 @@ function buildCandidates(params: {
         documentId: item.documentId,
         title: resolveNormalizedDocumentTitle(document, params.titleCleanupConfig),
         targetType: 'core-document' as const,
-        embeddingInput: buildEmbeddingInput(document, params.titleCleanupConfig),
         reasons: [
           t('analytics.aiLink.candidateReferencedByDocs', { count: item.distinctSourceDocuments }, params.locale),
           t('analytics.aiLink.candidateInboundRefsCurrentWindow', { count: item.inboundReferences }, params.locale),
@@ -424,19 +345,6 @@ function buildCandidates(params: {
     .filter((item): item is CandidateTarget => item !== null)
 
   return [...themeCandidates, ...rankingCandidates]
-}
-
-function buildEmbeddingInput(
-  document: Pick<DocumentRecord, 'title' | 'name' | 'hpath' | 'path' | 'tags' | 'content'>,
-  titleCleanupConfig?: DocumentTitleCleanupConfig | null,
-): string {
-  const normalizedDocument = normalizeDocumentTitleFields(document as DocumentRecord, titleCleanupConfig)
-  return [
-    `${t('analytics.aiLink.embeddingInputTitle')}: ${resolveNormalizedDocumentTitle(normalizedDocument, titleCleanupConfig)}`,
-    normalizedDocument.hpath ? `${t('analytics.aiLink.embeddingInputPath')}: ${normalizedDocument.hpath}` : '',
-    normalizeTags(normalizedDocument.tags).length ? `${t('analytics.aiLink.embeddingInputTags')}: ${normalizeTags(normalizedDocument.tags).join(', ')}` : '',
-    extractContentPreview(normalizedDocument.content),
-  ].filter(Boolean).join('\n')
 }
 
 function normalizeDocumentTitleFields<T extends Pick<DocumentRecord, 'id' | 'title' | 'name' | 'hpath' | 'path'>>(document: T, config?: DocumentTitleCleanupConfig | null): T {
@@ -511,7 +419,7 @@ function extractContentPreview(content?: string) {
   if (!content) {
     return ''
   }
-  return `${t('analytics.aiLink.embeddingInputContentPreview')}: ${content.replace(/\s+/g, ' ').trim().slice(0, 240)}`
+  return content.replace(/\s+/g, ' ').trim().slice(0, 240)
 }
 
 function normalizeTags(tags?: readonly string[] | string): string[] {
@@ -522,44 +430,6 @@ function normalizeTags(tags?: readonly string[] | string): string[] {
     return tags.map(tag => tag.trim()).filter(Boolean)
   }
   return tags.split(/[,\s#]+/).map(tag => tag.trim()).filter(Boolean)
-}
-
-async function requestEmbeddings(params: {
-  config: AiConfig
-  forwardProxy: ForwardProxyFn
-  inputs: string[]
-}) {
-  const endpoint = resolveAiEndpoint(params.config.aiBaseUrl!, 'embeddings')
-  const requestOptions = resolveAiRequestOptions(params.config)
-  const response = await params.forwardProxy(
-    endpoint,
-    'POST',
-    JSON.stringify({
-      model: params.config.aiEmbeddingModel,
-      input: params.inputs,
-    }),
-    [
-      { Authorization: `Bearer ${params.config.aiApiKey}` },
-      { Accept: 'application/json' },
-    ],
-    requestOptions.timeoutMs,
-    'application/json',
-  )
-
-  if (!response || response.status < 200 || response.status >= 300) {
-    throw new Error(t('analytics.aiLink.embeddingRequestFailed', { status: response?.status ?? 'unknown status' }))
-  }
-
-  const payload = JSON.parse(response.body)
-  const embeddings = Array.isArray(payload?.data)
-    ? payload.data.map((item: any) => Array.isArray(item?.embedding) ? item.embedding : [])
-    : []
-
-  if (embeddings.length !== params.inputs.length) {
-    throw new Error(t('analytics.aiLink.embeddingCountMismatch'))
-  }
-
-  return embeddings
 }
 
 async function requestChatCompletion(params: {
@@ -591,25 +461,6 @@ async function requestChatCompletion(params: {
   }
 
   return JSON.parse(response.body)
-}
-
-function cosineSimilarity(left: number[], right: number[]) {
-  if (!left.length || left.length !== right.length) {
-    return 0
-  }
-
-  let dot = 0
-  let leftNorm = 0
-  let rightNorm = 0
-  for (let index = 0; index < left.length; index += 1) {
-    dot += left[index] * right[index]
-    leftNorm += left[index] * left[index]
-    rightNorm += right[index] * right[index]
-  }
-  if (!leftNorm || !rightNorm) {
-    return 0
-  }
-  return roundScore(dot / (Math.sqrt(leftNorm) * Math.sqrt(rightNorm)))
 }
 
 function roundScore(value: number) {

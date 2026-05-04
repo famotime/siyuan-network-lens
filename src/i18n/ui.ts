@@ -372,10 +372,6 @@ const UI_TEXT = {
         en_US: 'Model',
         zh_CN: '模型',
       },
-      embeddingModelOptional: {
-        en_US: 'Embedding Model (optional)',
-        zh_CN: 'Embedding Model（可选）',
-      },
       timeout: {
         en_US: 'Timeout',
         zh_CN: '超时',
@@ -556,37 +552,29 @@ const UI_TEXT = {
         en_US: 'Document Index: {title}',
         zh_CN: '文档索引：{title}',
       },
-      viewSummaryShort: {
-        en_US: 'Summary',
-        zh_CN: '摘要',
+      viewPositioning: {
+        en_US: 'Positioning',
+        zh_CN: '定位',
       },
-      viewSummaryMedium: {
-        en_US: 'Detailed Summary',
-        zh_CN: '详细摘要',
+      viewPropositions: {
+        en_US: 'Propositions',
+        zh_CN: '原文命题',
       },
       viewKeywords: {
         en_US: 'Keywords',
         zh_CN: '关键词',
       },
-      viewEvidence: {
-        en_US: 'Evidence Snippets',
-        zh_CN: '关键片段',
+      viewPrimarySourceBlocks: {
+        en_US: 'Core Evidence Blocks',
+        zh_CN: '核心证据块',
+      },
+      viewSecondarySourceBlocks: {
+        en_US: 'Supplementary Evidence Blocks',
+        zh_CN: '补充证据块',
       },
       viewUpdatedAt: {
         en_US: 'Index updated at',
         zh_CN: '索引更新时间',
-      },
-      viewEmbedding: {
-        en_US: 'Embedding',
-        zh_CN: '向量嵌入',
-      },
-      viewEmbeddingAvailable: {
-        en_US: 'Embedding vector available',
-        zh_CN: '向量嵌入已生成',
-      },
-      viewEmbeddingEmpty: {
-        en_US: 'No embedding configured (set an embedding model in AI settings)',
-        zh_CN: '未配置向量嵌入（请在 AI 设置中配置 Embedding 模型）',
       },
       viewWarning: {
         en_US: 'This is a temporary document generated for viewing the document index only. It is not part of your notes. Please delete it immediately after viewing to avoid confusion with your actual notes.',
@@ -1353,10 +1341,6 @@ const UI_TEXT = {
       en_US: 'OpenAI-compatible services usually require a /v1 suffix, for example https://api.siliconflow.cn/v1',
       zh_CN: '兼容 OpenAI 的服务通常需要 /v1 后缀，例如 https://api.siliconflow.cn/v1',
     },
-    tooltipEmbeddingModel: {
-      en_US: 'Optional. Improves AI link recall for orphan docs; leave blank to use topic and structure signals. For SiliconFlow, use BAAI/bge-m3, BAAI/bge-large-zh-v1.5, or Qwen/Qwen3-Embedding-* instead of OpenAI model names like text-embedding-3-small.',
-      zh_CN: '可选。可提升孤立文档 AI 补链召回；留空则仅使用主题和结构信号。对于 SiliconFlow，请使用 BAAI/bge-m3、BAAI/bge-large-zh-v1.5 或 Qwen/Qwen3-Embedding-*，不要使用 text-embedding-3-small 这类 OpenAI 模型名。',
-    },
     tooltipTimeout: {
       en_US: 'Request timeout in seconds',
       zh_CN: '请求超时秒数',
@@ -1377,10 +1361,6 @@ const UI_TEXT = {
       en_US: 'Automatically load SiliconFlow chat models when the select opens',
       zh_CN: '打开下拉时自动加载 SiliconFlow 聊天模型清单',
     },
-    tooltipSiliconFlowEmbeddingModel: {
-      en_US: 'Automatically load SiliconFlow embedding models when the select opens',
-      zh_CN: '打开下拉时自动加载 SiliconFlow embedding 模型清单',
-    },
     enterApiKeyFirst: {
       en_US: 'Enter API Key first',
       zh_CN: '请先填写 API Key',
@@ -1388,10 +1368,6 @@ const UI_TEXT = {
     loadingChatModels: {
       en_US: 'Loading chat models...',
       zh_CN: '正在加载聊天模型...',
-    },
-    loadingEmbeddingModels: {
-      en_US: 'Loading embedding models...',
-      zh_CN: '正在加载 embedding 模型...',
     },
     loadFailedRetry: {
       en_US: 'Load failed, click to retry',
@@ -1401,17 +1377,9 @@ const UI_TEXT = {
       en_US: 'Select chat model',
       zh_CN: '请选择聊天模型',
     },
-    selectEmbeddingModel: {
-      en_US: 'Select embedding model',
-      zh_CN: '请选择 embedding 模型',
-    },
     clickToLoadChatModels: {
       en_US: 'Click to load chat models',
       zh_CN: '点击加载聊天模型',
-    },
-    clickToLoadEmbeddingModels: {
-      en_US: 'Click to load embedding models',
-      zh_CN: '点击加载 embedding 模型',
     },
     siliconFlow: {
       en_US: 'SiliconFlow',
@@ -1425,17 +1393,9 @@ const UI_TEXT = {
       en_US: 'Select from the model list, for example deepseek-ai/DeepSeek-V3',
       zh_CN: '从模型列表中选择，例如 deepseek-ai/DeepSeek-V3',
     },
-    selectEmbeddingPlaceholder: {
-      en_US: 'Select from the model list, for example BAAI/bge-m3',
-      zh_CN: '从模型列表中选择，例如 BAAI/bge-m3',
-    },
     enterModelNameManually: {
       en_US: 'Enter model name manually',
       zh_CN: '手动输入模型名',
-    },
-    enterEmbeddingModelManually: {
-      en_US: 'Enter embedding model name manually',
-      zh_CN: '手动输入 embedding 模型名',
     },
     settingsExported: {
       en_US: 'AI settings exported',
@@ -2104,10 +2064,6 @@ const UI_TEXT = {
         en_US: 'AI summary request failed (HTTP {status})',
         zh_CN: 'AI 摘要请求失败（HTTP {status}）',
       },
-      embeddingRequestFailed: {
-        en_US: 'Embedding request failed (HTTP {status})',
-        zh_CN: '向量嵌入请求失败（HTTP {status}）',
-      },
       aiRequired: {
         en_US: 'AI is required for document indexing. Please configure Base URL, API Key, and Model in settings.',
         zh_CN: '文档索引需要 AI 支持，请在设置中配置 Base URL、API Key 和 Model。',
@@ -2178,13 +2134,13 @@ const UI_TEXT = {
         en_US: 'The current doc is not in the orphan doc list',
         zh_CN: '当前文档不在孤立文档列表中',
       },
-      analyzingDocumentSemantics: {
-        en_US: 'Analyzing document semantics and generating embeddings...',
-        zh_CN: '正在分析文档语义并生成向量...',
-      },
       failedToSaveAiIndexRecord: {
         en_US: 'Failed to save AI index record',
         zh_CN: '保存 AI 索引记录失败',
+      },
+      analyzingDocumentSemantics: {
+        en_US: 'Analyzing document structure...',
+        zh_CN: '正在分析文档结构……',
       },
       failedToGenerateAiLinkSuggestions: {
         en_US: 'Failed to generate AI link suggestions',
@@ -2296,30 +2252,6 @@ const UI_TEXT = {
         en_US: 'AI is analyzing...',
         zh_CN: 'AI 正在分析……',
       },
-      invalidSiliconFlowEmbeddingModel: {
-        en_US: 'For SiliconFlow, Embedding Model cannot be an OpenAI model name like text-embedding-3-small. Use models such as BAAI/bge-m3, BAAI/bge-large-zh-v1.5, or Qwen/Qwen3-Embedding instead.',
-        zh_CN: 'SiliconFlow 的 Embedding Model 不能填写 text-embedding-3-small 这类 OpenAI 模型名，请改用如 BAAI/bge-m3、BAAI/bge-large-zh-v1.5 或 Qwen/Qwen3-Embedding 系列模型',
-      },
-      analyzingEmbeddings: {
-        en_US: 'Analyzing document semantics and generating embeddings...',
-        zh_CN: '正在分析文档语义并生成 embedding…',
-      },
-      retrievingCandidates: {
-        en_US: 'Retrieving candidates from embeddings and structure signals...',
-        zh_CN: '正在基于 embedding 与结构信号召回候选…',
-      },
-      embeddingModelNotConfiguredFallback: {
-        en_US: 'Embedding Model is not configured. Falling back to topic matches and structure signals...',
-        zh_CN: '未配置 Embedding Model，改为基于主题命中与结构信号召回候选…',
-      },
-      embeddingRequestFailed: {
-        en_US: 'Embedding request failed ({status})',
-        zh_CN: 'Embedding 请求失败（{status}）',
-      },
-      embeddingCountMismatch: {
-        en_US: 'Embedding count does not match input count',
-        zh_CN: 'Embedding 返回数量与输入数量不一致',
-      },
       requestFailed: {
         en_US: 'AI link suggestion request failed ({status})',
         zh_CN: 'AI 补链请求失败（{status}）',
@@ -2355,22 +2287,6 @@ const UI_TEXT = {
       candidateInboundRefsCurrentWindow: {
         en_US: '{count} inbound refs in the current window',
         zh_CN: '当前窗口内有 {count} 条入链',
-      },
-      embeddingInputTitle: {
-        en_US: 'Title',
-        zh_CN: '标题',
-      },
-      embeddingInputPath: {
-        en_US: 'Path',
-        zh_CN: '路径',
-      },
-      embeddingInputTags: {
-        en_US: 'Tags',
-        zh_CN: '标签',
-      },
-      embeddingInputContentPreview: {
-        en_US: 'Content preview',
-        zh_CN: '内容摘要',
       },
     },
     aiInbox: {

@@ -3,13 +3,11 @@ import { t } from '@/i18n/ui'
 export function getAiFieldTooltips() {
   return {
     baseUrl: t('aiConfig.tooltipBaseUrl'),
-    embeddingModel: t('aiConfig.tooltipEmbeddingModel'),
     timeout: t('aiConfig.tooltipTimeout'),
     maxTokens: t('aiConfig.tooltipMaxTokens'),
     temperature: t('aiConfig.tooltipTemperature'),
     maxContextMessages: t('aiConfig.tooltipMaxContextMessages'),
     siliconFlowChatModel: t('aiConfig.tooltipSiliconFlowChatModel'),
-    siliconFlowEmbeddingModel: t('aiConfig.tooltipSiliconFlowEmbeddingModel'),
   } as const
 }
 
@@ -29,7 +27,7 @@ export function shouldAutoLoadSiliconFlowModelCatalog(params: {
 }
 
 export function buildSiliconFlowModelSelectPlaceholder(params: {
-  kind: 'chat' | 'embedding'
+  kind: 'chat'
   apiKey?: string
   loading: boolean
   loaded: boolean
@@ -40,19 +38,13 @@ export function buildSiliconFlowModelSelectPlaceholder(params: {
     return t('aiConfig.enterApiKeyFirst')
   }
   if (params.loading) {
-    return params.kind === 'chat'
-      ? t('aiConfig.loadingChatModels')
-      : t('aiConfig.loadingEmbeddingModels')
+    return t('aiConfig.loadingChatModels')
   }
   if (params.error) {
     return t('aiConfig.loadFailedRetry')
   }
   if (params.loaded || params.optionCount > 0) {
-    return params.kind === 'chat'
-      ? t('aiConfig.selectChatModel')
-      : t('aiConfig.selectEmbeddingModel')
+    return t('aiConfig.selectChatModel')
   }
-  return params.kind === 'chat'
-    ? t('aiConfig.clickToLoadChatModels')
-    : t('aiConfig.clickToLoadEmbeddingModels')
+  return t('aiConfig.clickToLoadChatModels')
 }

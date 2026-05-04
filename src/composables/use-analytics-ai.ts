@@ -5,7 +5,7 @@ import type {
   TimeRange,
   TrendReport,
 } from '@/analytics/analysis'
-import type { AiDocumentIndexStore } from '@/analytics/ai-index-store'
+import type { AiLinkRepairStore } from '@/analytics/ai-link-repair-store'
 import type { AiInboxResult, AiInboxService } from '@/analytics/ai-inbox'
 import type {
   AiLinkSuggestionService,
@@ -38,7 +38,7 @@ export function createAnalyticsAiController(params: {
   orphanAiSuggestionStates: Ref<Map<string, OrphanAiSuggestionState>>
   aiInboxService: AiInboxService | null
   aiLinkSuggestionService: AiLinkSuggestionService | null
-  aiIndexStore: AiDocumentIndexStore | null
+  aiLinkRepairStore: AiLinkRepairStore | null
   notify: ShowMessageFn
 }) {
   function updateOrphanAiSuggestionState(documentId: string, nextState: OrphanAiSuggestionState) {
@@ -168,9 +168,9 @@ export function createAnalyticsAiController(params: {
         },
       })
 
-      if (params.aiIndexStore) {
+      if (params.aiLinkRepairStore) {
         try {
-          await params.aiIndexStore.saveSuggestionIndex({
+          await params.aiLinkRepairStore.saveSuggestionIndex({
             config: params.config,
             sourceDocument,
             orphan,

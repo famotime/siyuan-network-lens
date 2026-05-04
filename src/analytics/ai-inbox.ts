@@ -112,7 +112,6 @@ export interface AiInboxConnectionResult {
 
 export interface AiModelCatalogResult {
   chatModels: string[]
-  embeddingModels: string[]
 }
 
 export interface AiInboxPayload {
@@ -1147,24 +1146,15 @@ export async function fetchSiliconFlowModelCatalog(params: {
   }
 
   const requestOptions = resolveAiRequestOptions(params.config)
-  const [chatModels, embeddingModels] = await Promise.all([
-    requestModelIds({
-      endpoint: `${resolveAiEndpoint(aiBaseUrl, 'models')}?sub_type=chat`,
-      apiKey: aiApiKey,
-      forwardProxy: params.forwardProxy,
-      timeoutMs: requestOptions.timeoutMs,
-    }),
-    requestModelIds({
-      endpoint: `${resolveAiEndpoint(aiBaseUrl, 'models')}?sub_type=embedding`,
-      apiKey: aiApiKey,
-      forwardProxy: params.forwardProxy,
-      timeoutMs: requestOptions.timeoutMs,
-    }),
-  ])
+  const chatModels = await requestModelIds({
+    endpoint: `${resolveAiEndpoint(aiBaseUrl, 'models')}?sub_type=chat`,
+    apiKey: aiApiKey,
+    forwardProxy: params.forwardProxy,
+    timeoutMs: requestOptions.timeoutMs,
+  })
 
   return {
     chatModels,
-    embeddingModels,
   }
 }
 
