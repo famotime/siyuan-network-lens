@@ -1,5 +1,6 @@
 import type { DocumentRecord, ReferenceRecord, TimeRange } from './analysis'
 import { filterReferencesByTimeRange } from './analysis'
+import { isChildPath, normalizePath, toChildPathPrefix } from './analysis-context'
 
 export interface LinkAssociationItem {
   documentId: string
@@ -129,38 +130,14 @@ function isChildDocument(parent: Partial<DocumentRecord>, candidate: Partial<Doc
     return false
   }
 
-  const pathPrefix = toChildPathPrefix(parent.path)
-  if (pathPrefix && normalizePath(candidate.path).startsWith(pathPrefix)) {
+  if (parent.path && candidate.path && isChildPath(parent.path, candidate.path)) {
     return true
   }
 
-  const hierarchyPrefix = toHierarchyPrefix(parent.hpath)
+  const hierarchyPrefix = toChildPathPrefix(parent.hpath)
   if (hierarchyPrefix && normalizePath(candidate.hpath).startsWith(hierarchyPrefix)) {
     return true
   }
 
   return false
-}
-
-function toChildPathPrefix(path?: string): string {
-  const normalized = normalizePath(path)
-  if (!normalized) {
-    return ''
-  }
-  if (normalized.endsWith('.sy')) {
-    return `${normalized.slice(0, -3)}/`
-  }
-  return normalized.endsWith('/') ? normalized : `${normalized}/`
-}
-
-function toHierarchyPrefix(hpath?: string): string {
-  const normalized = normalizePath(hpath)
-  if (!normalized) {
-    return ''
-  }
-  return normalized.endsWith('/') ? normalized : `${normalized}/`
-}
-
-function normalizePath(value?: string): string {
-  return (value ?? '').replace(/\\/g, '/').trim()
 }

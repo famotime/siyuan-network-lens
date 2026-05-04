@@ -268,7 +268,7 @@ describe('useAnalyticsState', () => {
     expect(readCard?.value).toBe('5')
     expect(state.summaryCards.value.find(card => card.key === 'largeDocuments')?.label).toBe('Large docs · text')
     expect(state.summaryCards.value.find(card => card.key === 'largeDocuments')?.value).toBe('0')
-    expect(state.report.value?.ranking.map(item => item.documentId)).toEqual(['doc-b'])
+    expect(state.report.value?.ranking.map(item => item.documentId)).toEqual(['doc-b', 'doc-a'])
     expect(state.selectedEvidenceDocument.value).toBe('doc-b')
     expect(state.themeOptions.value.map(item => item.label)).toEqual(['机器学习', 'AI'])
   })
@@ -778,7 +778,7 @@ describe('useAnalyticsState', () => {
     await state.refresh()
     await nextTick()
 
-    expect(state.report.value?.ranking.map(item => item.documentId)).toEqual(['doc-b'])
+    expect(state.report.value?.ranking.map(item => item.documentId)).toEqual(['doc-b', 'doc-a'])
   })
 
   it('filters by selected themes and allows toggling orphan theme links before refresh', async () => {

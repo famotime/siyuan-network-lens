@@ -184,7 +184,7 @@ describe('analyzeReferenceGraph', () => {
     })
 
     expect(report.summary.totalDocuments).toBe(2)
-    expect(report.ranking.map(item => item.documentId)).toEqual(['doc-target'])
+    expect(report.ranking.map(item => item.documentId)).toEqual(['doc-target', 'doc-new'])
   })
 
   it('excludes wiki pages from filtered samples and graph analysis when a wiki suffix is configured', () => {
@@ -215,7 +215,7 @@ describe('analyzeReferenceGraph', () => {
 
     expect(filtered.map(document => document.id)).toEqual(['doc-a', 'doc-b'])
     expect(report.summary.totalDocuments).toBe(2)
-    expect(report.ranking.map(item => item.documentId)).toEqual(['doc-b'])
+    expect(report.ranking.map(item => item.documentId)).toEqual(['doc-b', 'doc-a'])
   })
 
   it('removes excluded documents and their edges from graph analysis', () => {
@@ -239,7 +239,7 @@ describe('analyzeReferenceGraph', () => {
 
     expect(report.summary.totalDocuments).toBe(2)
     expect(report.summary.totalReferences).toBe(1)
-    expect(report.ranking.map(item => item.documentId)).toEqual(['doc-theme'])
+    expect(report.ranking.map(item => item.documentId)).toEqual(['doc-theme', 'doc-source'])
   })
 
   it('aggregates ranking, communities, orphan documents, and actionable suggestions', () => {
@@ -257,10 +257,12 @@ describe('analyzeReferenceGraph', () => {
     expect((report as any).summary.dormantCount).toBe(1)
 
     expect(report.ranking[0]).toMatchObject({
-      documentId: 'doc-a',
-      inboundReferences: 3,
-      distinctSourceDocuments: 3,
-      lastActiveAt: '20260310120000',
+      documentId: 'doc-b',
+      inboundReferences: 2,
+      distinctSourceDocuments: 2,
+      outboundReferences: 2,
+      childDocumentCount: 0,
+      lastActiveAt: '20260309120000',
     })
 
     expect(report.communities.map(community => community.documentIds)).toEqual([
@@ -388,6 +390,97 @@ describe('analyzeReferenceGraph', () => {
 
     const dormantBeta = report.dormantDocuments.find(item => item.documentId === 'doc-b')
     expect(dormantBeta?.historicalReferenceCount).toBe(1)
+  })
+
+  it('counts child documents by path hierarchy', () => {
+    const report = analyzeReferenceGraph({
+      documents: [
+        { id: 'doc-parent', box: 'box-1', path: '/parent.sy', hpath: '/Parent', title: 'Parent', tags: [], created: '20260101090000', updated: '20260310120000' },
+        { id: 'doc-child-1', box: 'box-1', path: '/parent/child1.sy', hpath: '/Parent/Child1', title: 'Child1', tags: [], created: '20260102090000', updated: '20260310120000' },
+        { id: 'doc-child-2', box: 'box-1', path: '/parent/child2.sy', hpath: '/Parent/Child2', title: 'Child2', tags: [], created: '20260103090000', updated: '20260310120000' },
+        { id: 'doc-grandchild', box: 'box-1', path: '/parent/child1/grandchild.sy', hpath: '/Parent/Child1/Grandchild', title: 'Grandchild', tags: [], created: '20260104090000', updated: '20260310120000' },
+        { id: 'doc-unrelated', box: 'box-1', path: '/other.sy', hpath: '/Other', title: 'Other', tags: [], created: '20260105090000', updated: '20260310120000' },
+      ],
+      references: [],
+      now,
+      timeRange: 'all',
+    })
+
+    const parent = report.ranking.find(item => item.documentId === 'doc-parent')
+    const child1 = report.ranking.find(item => item.documentId === 'doc-child-1')
+    const unrelated = report.ranking.find(item => item.documentId === 'doc-unrelated')
+
+    // Parent has 3 direct children: child1, child2, grandchild
+    expect(parent?.childDocumentCount).toBe(3)
+    // Child1 has 1 direct child: grandchild
+    expect(child1?.childDocumentCount).toBe(1)
+    // Unrelated has no children
+    expect(unrelated).toBeUndefined()
+  })
+
+  it('ranks by unified connection score: distinct source docs + outbound refs + child docs', () => {
+    const report = analyzeReferenceGraph({
+      documents: [
+        { id: 'doc-hub', box: 'box-1', path: '/hub.sy', hpath: '/Hub', title: 'Hub', tags: [], created: '20260101090000', updated: '20260310120000' },
+        { id: 'doc-source', box: 'box-1', path: '/source.sy', hpath: '/Source', title: 'Source', tags: [], created: '20260102090000', updated: '20260310120000' },
+        { id: 'doc-parent', box: 'box-1', path: '/parent.sy', hpath: '/Parent', title: 'Parent', tags: [], created: '20260103090000', updated: '20260310120000' },
+        { id: 'doc-child-a', box: 'box-1', path: '/parent/a.sy', hpath: '/Parent/A', title: 'ChildA', tags: [], created: '20260104090000', updated: '20260310120000' },
+        { id: 'doc-child-b', box: 'box-1', path: '/parent/b.sy', hpath: '/Parent/B', title: 'ChildB', tags: [], created: '20260105090000', updated: '20260310120000' },
+      ],
+      references: [
+        { id: 'ref-1', sourceDocumentId: 'doc-source', sourceBlockId: 'blk-1', targetDocumentId: 'doc-hub', targetBlockId: 'blk-2', content: '[[Hub]]', sourceUpdated: '20260310120000' },
+      ],
+      now,
+      timeRange: 'all',
+    })
+
+    const hub = report.ranking.find(item => item.documentId === 'doc-hub')!
+    const parent = report.ranking.find(item => item.documentId === 'doc-parent')!
+    const source = report.ranking.find(item => item.documentId === 'doc-source')!
+
+    // Hub: 1 distinct source doc + 0 outbound + 0 children = score 1
+    expect(hub.distinctSourceDocuments + hub.outboundReferences + hub.childDocumentCount).toBe(1)
+    // Parent: 0 distinct source docs + 0 outbound + 2 children = score 2
+    expect(parent.distinctSourceDocuments + parent.outboundReferences + parent.childDocumentCount).toBe(2)
+    // Source: 0 distinct source docs + 1 outbound + 0 children = score 1
+    expect(source.distinctSourceDocuments + source.outboundReferences + source.childDocumentCount).toBe(1)
+
+    // Parent (score 2) > Hub (score 1, but has inbound tiebreaker) >= Source (score 1)
+    expect(report.ranking[0].documentId).toBe('doc-parent')
+  })
+
+  it('includes outbound-only documents in ranking even with zero inbound refs', () => {
+    const report = analyzeReferenceGraph({
+      documents: [
+        { id: 'doc-outbound-only', box: 'box-1', path: '/out.sy', hpath: '/Outbound', title: 'Outbound Only', tags: [], created: '20260101090000', updated: '20260310120000' },
+        { id: 'doc-target', box: 'box-1', path: '/target.sy', hpath: '/Target', title: 'Target', tags: [], created: '20260102090000', updated: '20260310120000' },
+      ],
+      references: [
+        { id: 'ref-1', sourceDocumentId: 'doc-outbound-only', sourceBlockId: 'blk-1', targetDocumentId: 'doc-target', targetBlockId: 'blk-2', content: '[[Target]]', sourceUpdated: '20260310120000' },
+      ],
+      now,
+      timeRange: 'all',
+    })
+
+    const outboundOnly = report.ranking.find(item => item.documentId === 'doc-outbound-only')
+    expect(outboundOnly).toBeDefined()
+    expect(outboundOnly?.outboundReferences).toBe(1)
+    expect(outboundOnly?.inboundReferences).toBe(0)
+  })
+
+  it('does not count cross-notebook documents as children', () => {
+    const report = analyzeReferenceGraph({
+      documents: [
+        { id: 'doc-parent', box: 'box-1', path: '/parent.sy', hpath: '/Parent', title: 'Parent', tags: [], created: '20260101090000', updated: '20260310120000' },
+        { id: 'doc-other-box-child', box: 'box-2', path: '/parent/child.sy', hpath: '/Parent/Child', title: 'CrossBoxChild', tags: [], created: '20260102090000', updated: '20260310120000' },
+      ],
+      references: [],
+      now,
+      timeRange: 'all',
+    })
+
+    const parent = report.ranking.find(item => item.documentId === 'doc-parent')
+    expect(parent).toBeUndefined()
   })
 })
 

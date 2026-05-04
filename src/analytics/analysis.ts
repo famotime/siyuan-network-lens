@@ -14,6 +14,7 @@ import {
   diffDays,
   excludeWikiDocuments,
   filterDocumentsByTimeRange,
+  isChildPath,
   isReferenceInTimeRange,
   isTopicPageCandidate,
   latestTimestamp,
@@ -80,6 +81,7 @@ export interface RankingItem {
   inboundReferences: number
   distinctSourceDocuments: number
   outboundReferences: number
+  childDocumentCount: number
   lastActiveAt: string
 }
 
@@ -249,6 +251,8 @@ export function analyzeReferenceGraph(params: {
     evidenceByDocument[documentId] = [...items].sort((left, right) => compareTimestamp(right.sourceUpdated, left.sourceUpdated))
   }
 
+  const childCountByDocument = buildChildCountMap(documents)
+
   const ranking = documents
     .map((document) => {
       const inbound = inboundByDocument.get(document.id) ?? []
@@ -260,18 +264,21 @@ export function analyzeReferenceGraph(params: {
         inboundReferences: inbound.length,
         distinctSourceDocuments: distinctSourceDocuments.size,
         outboundReferences: outboundTargets.size,
+        childDocumentCount: childCountByDocument.get(document.id) ?? 0,
         lastActiveAt: inbound.reduce((latest, reference) => {
           return compareTimestamp(reference.sourceUpdated, latest) > 0 ? reference.sourceUpdated : latest
         }, ''),
       }
     })
-    .filter(item => item.inboundReferences > 0)
+    .filter(item => item.inboundReferences > 0 || item.outboundReferences > 0 || item.childDocumentCount > 0)
     .sort((left, right) => {
+      const leftScore = left.distinctSourceDocuments + left.outboundReferences + left.childDocumentCount
+      const rightScore = right.distinctSourceDocuments + right.outboundReferences + right.childDocumentCount
+      if (rightScore !== leftScore) {
+        return rightScore - leftScore
+      }
       if (right.inboundReferences !== left.inboundReferences) {
         return right.inboundReferences - left.inboundReferences
-      }
-      if (right.distinctSourceDocuments !== left.distinctSourceDocuments) {
-        return right.distinctSourceDocuments - left.distinctSourceDocuments
       }
       return compareTimestamp(right.lastActiveAt, left.lastActiveAt)
     })
@@ -706,6 +713,24 @@ function buildPropagationFocusIds(
     }
   }
   return [...ids].sort()
+}
+
+function buildChildCountMap(documents: NormalizedDocument[]): Map<string, number> {
+  const counts = new Map<string, number>()
+  for (const parent of documents) {
+    for (const candidate of documents) {
+      if (candidate.id === parent.id) {
+        continue
+      }
+      if (candidate.box !== parent.box) {
+        continue
+      }
+      if (isChildPath(parent.path, candidate.path)) {
+        counts.set(parent.id, (counts.get(parent.id) ?? 0) + 1)
+      }
+    }
+  }
+  return counts
 }
 
 function computeDistancesFromNode(

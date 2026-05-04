@@ -460,3 +460,23 @@ export function countUniqueDirectedEdges(references: NormalizedReference[]): num
   }
   return edges.size
 }
+
+export function normalizePath(value?: string): string {
+  return (value ?? '').replace(/\\/g, '/').trim()
+}
+
+export function toChildPathPrefix(path?: string): string {
+  const normalized = normalizePath(path)
+  if (!normalized) {
+    return ''
+  }
+  if (normalized.endsWith('.sy')) {
+    return `${normalized.slice(0, -3)}/`
+  }
+  return normalized.endsWith('/') ? normalized : `${normalized}/`
+}
+
+export function isChildPath(parentPath: string, candidatePath: string): boolean {
+  const prefix = toChildPathPrefix(parentPath)
+  return !!prefix && normalizePath(candidatePath).startsWith(prefix)
+}
