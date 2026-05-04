@@ -1,12 +1,11 @@
-import type { WikiSectionKey } from './wiki-page-model'
 import { WIKI_PAGE_HEADINGS, getWikiSectionHeading } from './wiki-page-model'
-import type { WIKI_LLM_OUTPUT_KEYS } from './wiki-generation'
+import type { WikiPagePlan, WikiSectionDraft, WikiTemplateDiagnosis } from './wiki-template-model'
 import { t } from '@/i18n/ui'
 
-type ThemeWikiLlmOutput = Record<typeof WIKI_LLM_OUTPUT_KEYS[number], string | string[]>
+export const WIKI_SECTION_MARKER_PREFIX = '<!-- network-lens-wiki-section:'
 
 export interface WikiRenderedSectionMeta {
-  key: Exclude<WikiSectionKey, 'manualNotes'>
+  key: string
   heading: string
   markdown: string
 }
@@ -23,7 +22,9 @@ export function renderThemeWikiDraft(params: {
   generatedAt: string
   model: string
   sourceDocumentCount: number
-  llmOutput: ThemeWikiLlmOutput
+  diagnosis: WikiTemplateDiagnosis
+  pagePlan: WikiPagePlan
+  sections: WikiSectionDraft[]
 }): RenderedWikiDraft {
   const sections: WikiRenderedSectionMeta[] = [
     {
@@ -36,31 +37,7 @@ export function renderThemeWikiDraft(params: {
         t('wikiMaintain.modelLine', { value: params.model }),
       ].join('\n'),
     },
-    {
-      key: 'overview',
-      heading: getWikiSectionHeading('overview'),
-      markdown: normalizeSectionBody(params.llmOutput.overview),
-    },
-    {
-      key: 'keyDocuments',
-      heading: getWikiSectionHeading('keyDocuments'),
-      markdown: normalizeSectionBody(params.llmOutput.keyDocuments),
-    },
-    {
-      key: 'structureObservations',
-      heading: getWikiSectionHeading('structureObservations'),
-      markdown: normalizeSectionBody(params.llmOutput.structureObservations),
-    },
-    {
-      key: 'evidence',
-      heading: getWikiSectionHeading('evidence'),
-      markdown: normalizeSectionBody(params.llmOutput.evidence),
-    },
-    {
-      key: 'actions',
-      heading: getWikiSectionHeading('actions'),
-      markdown: normalizeSectionBody(params.llmOutput.actions),
-    },
+    ...resolveRenderedSections(params.pagePlan, params.sections),
   ]
 
   const managedMarkdown = [
@@ -69,6 +46,7 @@ export function renderThemeWikiDraft(params: {
     `## ${WIKI_PAGE_HEADINGS.managedRoot}`,
     '',
     ...sections.flatMap(section => [
+      buildSectionMarker(section.key),
       `### ${section.heading}`,
       section.markdown || t('wikiMaintain.noContentYet'),
       '',
@@ -90,11 +68,59 @@ export function renderThemeWikiDraft(params: {
   }
 }
 
-function normalizeSectionBody(value: string | string[]): string {
-  if (Array.isArray(value)) {
-    return value.length
-      ? value.map(item => `- ${item}`).join('\n')
-      : ''
+function resolveRenderedSections(pagePlan: WikiPagePlan, sectionDrafts: WikiSectionDraft[]): WikiRenderedSectionMeta[] {
+  const sectionDraftMap = new Map(sectionDrafts.map(section => [section.sectionType, section]))
+
+  return pagePlan.sectionOrder.map((sectionType) => {
+    const draft = sectionDraftMap.get(sectionType)
+    return {
+      key: sectionType,
+      heading: resolveSectionHeading(sectionType, draft),
+      markdown: normalizeSectionDraftBody(draft),
+    }
+  })
+}
+
+function normalizeSectionDraftBody(draft?: WikiSectionDraft): string {
+  if (!draft || !draft.blocks.length) {
+    return ''
   }
-  return value.trim()
+
+  if (draft.format === 'overview') {
+    return draft.blocks
+      .map(block => block.text.trim())
+      .filter(Boolean)
+      .join('\n\n')
+  }
+
+  return draft.blocks
+    .map(block => block.text.trim())
+    .filter(Boolean)
+    .map(item => `- ${item}`)
+    .join('\n')
+}
+
+function resolveSectionHeading(sectionType: string, draft?: WikiSectionDraft): string {
+  if (draft?.title?.trim()) {
+    return draft.title.trim()
+  }
+
+  switch (sectionType) {
+    case 'intro':
+      return getWikiSectionHeading('overview')
+    case 'highlights':
+      return getWikiSectionHeading('keyDocuments')
+    case 'sources':
+      return getWikiSectionHeading('evidence')
+    default:
+      return sectionType
+        .split('_')
+        .filter(Boolean)
+        .map(part => part.charAt(0).toUpperCase() + part.slice(1))
+        .join(' ')
+  }
+}
+
+function buildSectionMarker(sectionKey: string): string {
+  return `${WIKI_SECTION_MARKER_PREFIX}${sectionKey} -->`
 }

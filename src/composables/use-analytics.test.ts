@@ -1585,21 +1585,72 @@ describe('useAnalyticsState', () => {
   })
 
   it('builds wiki previews from the current filtered scope and applies generated pages', async () => {
-    const generateThemeSections = vi.fn(async ({ payload }: any) => ({
-      overview: `${payload.themeName} 的主题概览`,
-      keyDocuments: payload.sourceDocuments.length
-        ? payload.sourceDocuments.map((item: any) => `优先维护 ${item.title}`)
-        : ['暂无核心文档'],
-      structureObservations: payload.templateSignals.propositionCount
-        ? [`当前共有 ${payload.templateSignals.propositionCount} 条主题命题`]
-        : ['结构稳定'],
-      evidence: payload.sourceDocuments.flatMap((item: any) => item.primarySourceBlocks).length
-        ? [payload.sourceDocuments.flatMap((item: any) => item.primarySourceBlocks)[0].text]
-        : ['暂无证据'],
-      actions: payload.sourceDocuments.length
-        ? [`先补齐 ${payload.sourceDocuments[0].title} 的主题入口`]
-        : ['暂无动作'],
+    const diagnoseThemeTemplate = vi.fn(async () => ({
+      templateType: 'tech_topic',
+      confidence: 'high',
+      reason: '测试诊断',
+      enabledModules: ['intro', 'highlights', 'core_principles', 'sources'],
+      suppressedModules: [],
+      evidenceSummary: '测试证据',
     }))
+    const planThemePage = vi.fn(async () => ({
+      templateType: 'tech_topic',
+      confidence: 'high',
+      coreSections: ['intro', 'highlights', 'sources'],
+      optionalSections: ['core_principles'],
+      sectionOrder: ['intro', 'highlights', 'core_principles', 'sources'],
+      sectionGoals: {
+        intro: '主题概览',
+      },
+      sectionFormats: {
+        intro: 'overview',
+        highlights: 'structured',
+        core_principles: 'structured',
+        sources: 'catalog',
+      },
+    }))
+    const generateThemeSection = vi.fn(async ({ payload, sectionType }: any) => {
+      switch (sectionType) {
+        case 'intro':
+          return {
+            sectionType,
+            title: `${payload.themeName} 的主题概览`,
+            format: 'overview',
+            blocks: [{ text: `${payload.themeName} 的主题概览`, sourceRefs: ['doc-a'] }],
+            sourceRefs: ['doc-a'],
+          }
+        case 'highlights':
+          return {
+            sectionType,
+            title: '关键文档',
+            format: 'structured',
+            blocks: payload.sourceDocuments.length
+              ? payload.sourceDocuments.map((item: any) => ({ text: `优先维护 ${item.title}`, sourceRefs: [item.documentId] }))
+              : [{ text: '暂无核心文档', sourceRefs: [] }],
+            sourceRefs: payload.sourceDocuments.map((item: any) => item.documentId),
+          }
+        case 'core_principles':
+          return {
+            sectionType,
+            title: '核心原则',
+            format: 'structured',
+            blocks: payload.templateSignals.propositionCount
+              ? [{ text: `当前共有 ${payload.templateSignals.propositionCount} 条主题命题`, sourceRefs: ['doc-a'] }]
+              : [{ text: '结构稳定', sourceRefs: [] }],
+            sourceRefs: ['doc-a'],
+          }
+        default:
+          return {
+            sectionType,
+            title: '关系证据',
+            format: 'catalog',
+            blocks: payload.sourceDocuments.flatMap((item: any) => item.primarySourceBlocks).length
+              ? [{ text: payload.sourceDocuments.flatMap((item: any) => item.primarySourceBlocks)[0].text, sourceRefs: ['doc-a'] }]
+              : [{ text: '暂无证据', sourceRefs: [] }],
+            sourceRefs: ['doc-a'],
+          }
+      }
+    })
     const saveDocumentIndex = vi.fn(async () => undefined)
     const savePageRecord = vi.fn(async () => undefined)
     const openTab = vi.fn()
@@ -1656,7 +1707,9 @@ describe('useAnalyticsState', () => {
         url,
       }),
       createAiWikiService: () => ({
-        generateThemeSections,
+        diagnoseThemeTemplate,
+        planThemePage,
+        generateThemeSection,
       }),
       aiIndexStore: {
         getFreshDocumentSummary: vi.fn(async () => null),
@@ -1698,7 +1751,9 @@ describe('useAnalyticsState', () => {
     await (state as any).prepareWikiPreview()
     await nextTick()
 
-    expect(generateThemeSections).toHaveBeenCalledTimes(1)
+    expect(diagnoseThemeTemplate).toHaveBeenCalledTimes(1)
+    expect(planThemePage).toHaveBeenCalledTimes(1)
+    expect(generateThemeSection).toHaveBeenCalledTimes(4)
     expect((state as any).wikiPreview.value).toEqual(expect.objectContaining({
       themePages: expect.arrayContaining([
         expect.objectContaining({
@@ -1743,19 +1798,61 @@ describe('useAnalyticsState', () => {
   })
 
   it('builds wiki previews from a requested scoped document set instead of the whole sample', async () => {
-    const generateThemeSections = vi.fn(async ({ payload }: any) => ({
-      overview: `${payload.themeName} 的主题概览`,
-      keyDocuments: payload.sourceDocuments.length
-        ? payload.sourceDocuments.map((item: any) => `优先维护 ${item.title}`)
-        : ['暂无核心文档'],
-      structureObservations: ['结构稳定'],
-      evidence: payload.sourceDocuments.flatMap((item: any) => item.primarySourceBlocks).length
-        ? [payload.sourceDocuments.flatMap((item: any) => item.primarySourceBlocks)[0].text]
-        : ['暂无证据'],
-      actions: payload.sourceDocuments.length
-        ? [`先补齐 ${payload.sourceDocuments[0].title} 的主题入口`]
-        : ['暂无动作'],
+    const diagnoseThemeTemplate = vi.fn(async () => ({
+      templateType: 'tech_topic',
+      confidence: 'high',
+      reason: '测试诊断',
+      enabledModules: ['intro', 'highlights', 'sources'],
+      suppressedModules: [],
+      evidenceSummary: '测试证据',
     }))
+    const planThemePage = vi.fn(async () => ({
+      templateType: 'tech_topic',
+      confidence: 'high',
+      coreSections: ['intro', 'highlights', 'sources'],
+      optionalSections: [],
+      sectionOrder: ['intro', 'highlights', 'sources'],
+      sectionGoals: {
+        intro: '主题概览',
+      },
+      sectionFormats: {
+        intro: 'overview',
+        highlights: 'structured',
+        sources: 'catalog',
+      },
+    }))
+    const generateThemeSection = vi.fn(async ({ payload, sectionType }: any) => {
+      switch (sectionType) {
+        case 'intro':
+          return {
+            sectionType,
+            title: `${payload.themeName} 的主题概览`,
+            format: 'overview',
+            blocks: [{ text: `${payload.themeName} 的主题概览`, sourceRefs: ['doc-a'] }],
+            sourceRefs: ['doc-a'],
+          }
+        case 'highlights':
+          return {
+            sectionType,
+            title: '关键文档',
+            format: 'structured',
+            blocks: payload.sourceDocuments.length
+              ? payload.sourceDocuments.map((item: any) => ({ text: `优先维护 ${item.title}`, sourceRefs: [item.documentId] }))
+              : [{ text: '暂无核心文档', sourceRefs: [] }],
+            sourceRefs: payload.sourceDocuments.map((item: any) => item.documentId),
+          }
+        default:
+          return {
+            sectionType,
+            title: '关系证据',
+            format: 'catalog',
+            blocks: payload.sourceDocuments.flatMap((item: any) => item.primarySourceBlocks).length
+              ? [{ text: payload.sourceDocuments.flatMap((item: any) => item.primarySourceBlocks)[0].text, sourceRefs: ['doc-a'] }]
+              : [{ text: '暂无证据', sourceRefs: [] }],
+            sourceRefs: ['doc-a'],
+          }
+      }
+    })
     const storedProfiles = new Map<string, any>()
 
     const state = useAnalyticsState({
@@ -1805,7 +1902,9 @@ describe('useAnalyticsState', () => {
         url,
       }),
       createAiWikiService: () => ({
-        generateThemeSections,
+        diagnoseThemeTemplate,
+        planThemePage,
+        generateThemeSection,
       }),
       aiIndexStore: {
         getFreshDocumentSummary: vi.fn(async () => null),
@@ -1849,8 +1948,10 @@ describe('useAnalyticsState', () => {
     })
     await nextTick()
 
-    expect(generateThemeSections).toHaveBeenCalledTimes(1)
-    expect(generateThemeSections).toHaveBeenCalledWith(expect.objectContaining({
+    expect(diagnoseThemeTemplate).toHaveBeenCalledTimes(1)
+    expect(planThemePage).toHaveBeenCalledTimes(1)
+    expect(generateThemeSection).toHaveBeenCalledTimes(3)
+    expect(diagnoseThemeTemplate).toHaveBeenCalledWith(expect.objectContaining({
       payload: expect.objectContaining({
         sourceDocuments: [
           expect.objectContaining({

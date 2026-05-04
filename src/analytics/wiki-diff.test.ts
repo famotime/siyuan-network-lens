@@ -9,20 +9,23 @@ const nextDraft = {
     '',
     '## AI 管理区',
     '',
+    '<!-- network-lens-wiki-section:meta -->',
     '### 页面头信息',
     '- 配对主题页：主题-AI-索引',
     '',
-    '### 主题概览',
+    '<!-- network-lens-wiki-section:intro -->',
+    '### 自定义引言',
     '新的概览',
     '',
-    '### 关键文档',
+    '<!-- network-lens-wiki-section:highlights -->',
+    '### 重点亮点',
     '- AI 核心',
   ].join('\n'),
   fullMarkdown: 'unused',
   sectionMetadata: [
     { key: 'meta', heading: '页面头信息', markdown: '- 配对主题页：主题-AI-索引' },
-    { key: 'overview', heading: '主题概览', markdown: '新的概览' },
-    { key: 'keyDocuments', heading: '关键文档', markdown: '- AI 核心' },
+    { key: 'intro', heading: '自定义引言', markdown: '新的概览' },
+    { key: 'highlights', heading: '重点亮点', markdown: '- AI 核心' },
   ],
 }
 
@@ -37,7 +40,7 @@ describe('wiki diff', () => {
     })
 
     expect(preview.status).toBe('create')
-    expect(preview.affectedSections).toEqual(['meta', 'overview', 'keyDocuments'])
+    expect(preview.affectedSections).toEqual(['meta', 'intro', 'highlights'])
     expect(preview.sourceDocumentCount).toBe(2)
     expect(preview.oldSummary).toBe('')
     expect(preview.newSummary).toContain('新的概览')
@@ -72,20 +75,55 @@ describe('wiki diff', () => {
           '',
           '## AI 管理区',
           '',
+          '<!-- network-lens-wiki-section:meta -->',
           '### 页面头信息',
           '- 配对主题页：主题-AI-索引',
           '',
-          '### 主题概览',
+          '<!-- network-lens-wiki-section:intro -->',
+          '### 自定义引言',
           '旧概览',
           '',
-          '### 关键文档',
+          '<!-- network-lens-wiki-section:highlights -->',
+          '### 重点亮点',
           '- AI 核心',
         ].join('\n'),
       },
     })
 
     expect(preview.status).toBe('update')
-    expect(preview.affectedSections).toEqual(['overview'])
+    expect(preview.affectedSections).toEqual(['intro'])
+  })
+
+  it('treats a heading change under the same dynamic section key as an affected section', () => {
+    const preview = buildWikiPreview({
+      pageType: 'theme',
+      pageTitle: '主题-AI-索引-llm-wiki',
+      sourceDocumentIds: ['doc-1'],
+      generatedAt: '2026-04-09T12:00:00.000Z',
+      nextDraft,
+      existingPage: {
+        managedMarkdown: [
+          '# 主题-AI-索引-llm-wiki',
+          '',
+          '## AI 管理区',
+          '',
+          '<!-- network-lens-wiki-section:meta -->',
+          '### 页面头信息',
+          '- 配对主题页：主题-AI-索引',
+          '',
+          '<!-- network-lens-wiki-section:intro -->',
+          '### 旧引言标题',
+          '新的概览',
+          '',
+          '<!-- network-lens-wiki-section:highlights -->',
+          '### 重点亮点',
+          '- AI 核心',
+        ].join('\n'),
+      },
+    })
+
+    expect(preview.status).toBe('update')
+    expect(preview.affectedSections).toEqual(['intro'])
   })
 
   it('marks a page as conflict when the live managed fingerprint diverges from the last applied fingerprint', () => {

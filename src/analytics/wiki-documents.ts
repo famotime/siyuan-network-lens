@@ -4,13 +4,12 @@ import { fingerprintWikiContent } from './wiki-diff'
 import {
   WIKI_BLOCK_ATTR_KEYS,
   WIKI_PAGE_HEADINGS,
-  getWikiSectionHeading,
   getWikiHeadingCandidates,
   matchesWikiHeading,
   type WikiApplyResult,
   type WikiPageType,
 } from './wiki-page-model'
-import type { RenderedWikiDraft } from './wiki-renderer'
+import { WIKI_SECTION_MARKER_PREFIX, type RenderedWikiDraft } from './wiki-renderer'
 import { buildWikiPageStorageKey, type AiWikiStore, type WikiPageSnapshotRecord } from './wiki-store'
 import type { WikiPagePreviewResult } from './wiki-diff'
 import { t } from '@/i18n/ui'
@@ -427,7 +426,7 @@ async function buildIndexDraft(params: {
           : ''
         return {
           record,
-          summary: extractOverviewSummary(pageMarkdown),
+          summary: extractIntroSummary(pageMarkdown),
         }
       }),
   )
@@ -755,19 +754,14 @@ function normalizeDocumentPath(path: string): string {
     : withLeadingSlash
 }
 
-function extractOverviewSummary(markdown: string): string {
-  const heading = `### ${getWikiSectionHeading('overview')}`
-  const startIndex = markdown.indexOf(heading)
-  if (startIndex < 0) {
+function extractIntroSummary(markdown: string): string {
+  const sectionBodies = parseManagedSectionBodies(markdown)
+  const introBody = sectionBodies.get('intro') ?? sectionBodies.get('overview') ?? firstNonMetaSection(sectionBodies)
+  if (!introBody) {
     return ''
   }
 
-  const bodyStartIndex = startIndex + heading.length
-  const nextHeadingIndex = markdown.indexOf('\n### ', bodyStartIndex)
-  const sectionBody = markdown
-    .slice(bodyStartIndex, nextHeadingIndex >= 0 ? nextHeadingIndex : markdown.length)
-
-  return sectionBody
+  return introBody
     .replace(/^\s*-\s*/gm, '')
     .replace(/\s+/g, ' ')
     .trim()
@@ -791,6 +785,82 @@ async function safeReadBlockMarkdown(blockId: string, getBlockKramdown: GetBlock
     return block?.kramdown ?? ''
   } catch {
     return ''
+  }
+}
+
+function parseManagedSectionBodies(markdown: string): Map<string, string> {
+  const sectionMap = new Map<string, string>()
+  const lines = markdown.split(/\r?\n/)
+  let currentKey = ''
+  let currentHeading = ''
+  let bodyLines: string[] = []
+
+  const flush = () => {
+    if (!currentHeading) {
+      return
+    }
+    sectionMap.set(normalizeDynamicSectionKey(currentKey || currentHeading), bodyLines.join('\n').trim())
+  }
+
+  for (const line of lines) {
+    const markerKey = parseSectionMarker(line)
+    if (markerKey) {
+      flush()
+      currentKey = markerKey
+      currentHeading = ''
+      bodyLines = []
+      continue
+    }
+
+    const headingMatch = line.match(/^###\s+(.+)$/)
+    if (headingMatch) {
+      flush()
+      currentHeading = headingMatch[1].trim()
+      bodyLines = []
+      continue
+    }
+
+    if (currentHeading) {
+      bodyLines.push(line)
+    }
+  }
+
+  flush()
+  return sectionMap
+}
+
+function firstNonMetaSection(sectionMap: Map<string, string>): string {
+  for (const [key, value] of sectionMap.entries()) {
+    if (key !== 'meta' && value.trim()) {
+      return value
+    }
+  }
+  return ''
+}
+
+function parseSectionMarker(line: string): string {
+  const trimmed = line.trim()
+  if (!trimmed.startsWith(WIKI_SECTION_MARKER_PREFIX) || !trimmed.endsWith('-->')) {
+    return ''
+  }
+  return trimmed
+    .slice(WIKI_SECTION_MARKER_PREFIX.length, -3)
+    .trim()
+}
+
+function normalizeDynamicSectionKey(key: string): string {
+  switch (key) {
+    case 'overview':
+      return 'intro'
+    case 'keyDocuments':
+      return 'highlights'
+    case 'evidence':
+      return 'sources'
+    case '主题概览':
+    case 'Topic overview':
+      return 'intro'
+    default:
+      return key
   }
 }
 

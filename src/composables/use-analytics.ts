@@ -936,17 +936,31 @@ export function useAnalyticsState(params: UseAnalyticsParams) {
           return null
         }
 
-        const llmOutput = await aiWikiService.generateThemeSections({
+        const diagnosis = await aiWikiService.diagnoseThemeTemplate({
           config: appliedConfig.value,
           payload,
         })
+        const pagePlan = await aiWikiService.planThemePage({
+          config: appliedConfig.value,
+          payload,
+          diagnosis,
+        })
+        const sections = await Promise.all(pagePlan.sectionOrder.map(sectionType => aiWikiService.generateThemeSection({
+          config: appliedConfig.value,
+          payload,
+          diagnosis,
+          pagePlan,
+          sectionType,
+        })))
         const draft = renderThemeWikiDraft({
           pageTitle: payload.pageTitle,
           pairedThemeTitle: payload.themeDocumentTitle,
           generatedAt,
           model: appliedConfig.value.aiModel?.trim() || 'unknown',
           sourceDocumentCount: payload.sourceDocuments.length,
-          llmOutput: llmOutput as any,
+          diagnosis,
+          pagePlan,
+          sections,
         })
         const pageKey = buildWikiPageStorageKey({
           pageType: 'theme',

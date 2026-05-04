@@ -6,11 +6,41 @@ import { WIKI_BLOCK_ATTR_KEYS } from './wiki-page-model'
 import { renderThemeWikiDraft } from './wiki-renderer'
 import { applyWikiDocuments } from './wiki-documents'
 import { buildWikiPageStorageKey, createAiWikiStore } from './wiki-store'
+import type { WikiPagePlan, WikiSectionDraft, WikiTemplateDiagnosis } from './wiki-template-model'
 
 afterEach(() => {
   delete (globalThis as typeof globalThis & { siyuan?: unknown }).siyuan
   vi.resetModules()
 })
+
+const TEST_DIAGNOSIS: WikiTemplateDiagnosis = {
+  templateType: 'tech_topic',
+  confidence: 'high',
+  reason: '当前主题适合技术主题模板。',
+  enabledModules: ['intro', 'highlights', 'core_principles', 'sources'],
+  suppressedModules: [],
+  evidenceSummary: '核心证据来自主题页与来源文档。',
+}
+
+const TEST_PAGE_PLAN: WikiPagePlan = {
+  templateType: 'tech_topic',
+  confidence: 'high',
+  coreSections: ['intro', 'highlights', 'sources'],
+  optionalSections: ['core_principles'],
+  sectionOrder: ['intro', 'highlights', 'core_principles', 'sources'],
+  sectionGoals: {
+    intro: '概括主题范围。',
+    highlights: '列出关键入口。',
+    core_principles: '沉淀核心原则。',
+    sources: '保留来源证据。',
+  },
+  sectionFormats: {
+    intro: 'overview',
+    highlights: 'structured',
+    core_principles: 'structured',
+    sources: 'catalog',
+  },
+}
 
 describe('wiki documents', () => {
   it('derives wiki target notebook and directory from the first configured theme full path', async () => {
@@ -22,13 +52,14 @@ describe('wiki documents', () => {
       generatedAt: '2026-04-09T12:00:00.000Z',
       model: 'gpt-4.1-mini',
       sourceDocumentCount: 1,
-      llmOutput: {
-        overview: '主题概览',
-        keyDocuments: ['AI 核心'],
-        structureObservations: ['结构观察'],
-        evidence: ['引用证据'],
-        actions: ['后续动作'],
-      },
+      diagnosis: TEST_DIAGNOSIS,
+      pagePlan: TEST_PAGE_PLAN,
+      sections: buildThemeSections({
+        intro: '主题概览',
+        highlights: ['AI 核心'],
+        corePrinciples: ['结构观察'],
+        sources: ['引用证据'],
+      }),
     })
     const preview = buildWikiPreview({
       pageType: 'theme',
@@ -96,13 +127,14 @@ describe('wiki documents', () => {
       generatedAt: '2026-04-09T12:00:00.000Z',
       model: 'gpt-4.1-mini',
       sourceDocumentCount: 2,
-      llmOutput: {
-        overview: '当前主题聚焦 AI 索引编排。',
-        keyDocuments: ['优先阅读 AI 核心。'],
-        structureObservations: ['桥接点仍集中在 AI 导航页。'],
-        evidence: ['AI 导航 -> AI 核心 在本窗口新增 1 条引用。'],
-        actions: ['补齐 AI 核心 的主题入口。'],
-      },
+      diagnosis: TEST_DIAGNOSIS,
+      pagePlan: TEST_PAGE_PLAN,
+      sections: buildThemeSections({
+        intro: '当前主题聚焦 AI 索引编排。',
+        highlights: ['优先阅读 AI 核心。'],
+        corePrinciples: ['桥接点仍集中在 AI 导航页。'],
+        sources: ['AI 导航 -> AI 核心 在本窗口新增 1 条引用。'],
+      }),
     })
     const preview = buildWikiPreview({
       pageType: 'theme',
@@ -186,6 +218,7 @@ describe('wiki documents', () => {
     )
     expect(kernel.getDocumentMarkdownByPath('/主题/LLM-Wiki-索引')).toContain(buildDocLinkMarkdown('doc-1', '主题-AI-索引-llm-wiki'))
     expect(kernel.getDocumentMarkdownByPath('/主题/LLM-Wiki-索引')).toContain(buildDocLinkMarkdown('doc-theme-ai', '主题-AI-索引'))
+    expect(kernel.getDocumentMarkdownByPath('/主题/LLM-Wiki-索引')).toContain('当前主题聚焦 AI 索引编排。')
     expect(kernel.getDocumentMarkdownByPath('/主题/LLM-Wiki-索引')).toContain('零散记录')
     expect(kernel.getDocumentMarkdownByPath('/主题/LLM-Wiki-维护日志')).toContain('- Created pages: 1')
     expect(kernel.getDocumentMarkdownByPath('/主题/LLM-Wiki-维护日志')).toContain('主题-AI-索引-llm-wiki')
@@ -280,13 +313,14 @@ describe('wiki documents', () => {
       generatedAt: '2026-04-09T12:00:00.000Z',
       model: 'gpt-4.1-mini',
       sourceDocumentCount: 1,
-      llmOutput: {
-        overview: '新的概览',
-        keyDocuments: ['AI 核心'],
-        structureObservations: ['桥接点仍偏少'],
-        evidence: ['AI 导航 -> AI 核心'],
-        actions: ['补主题入口'],
-      },
+      diagnosis: TEST_DIAGNOSIS,
+      pagePlan: TEST_PAGE_PLAN,
+      sections: buildThemeSections({
+        intro: '新的概览',
+        highlights: ['AI 核心'],
+        corePrinciples: ['桥接点仍偏少'],
+        sources: ['AI 导航 -> AI 核心'],
+      }),
     })
     const preview = buildWikiPreview({
       pageType: 'theme',
@@ -468,6 +502,7 @@ describe('wiki documents', () => {
           '',
           '## AI 管理区',
           '',
+          '<!-- network-lens-wiki-section:intro -->',
           '### 主题概览',
           '稳定内容',
         ].join('\n'),
@@ -486,6 +521,7 @@ describe('wiki documents', () => {
           '',
           '## AI 管理区',
           '',
+          '<!-- network-lens-wiki-section:intro -->',
           '### 主题概览',
           '外部修改后的内容',
         ].join('\n'),
@@ -718,13 +754,14 @@ describe('wiki documents', () => {
       generatedAt: '2026-04-09T12:00:00.000Z',
       model: 'gpt-4.1-mini',
       sourceDocumentCount: 1,
-      llmOutput: {
-        overview: '主题概览',
-        keyDocuments: ['AI 核心'],
-        structureObservations: ['结构观察'],
-        evidence: ['引用证据'],
-        actions: ['整理动作'],
-      },
+      diagnosis: TEST_DIAGNOSIS,
+      pagePlan: TEST_PAGE_PLAN,
+      sections: buildThemeSections({
+        intro: '主题概览',
+        highlights: ['AI 核心'],
+        corePrinciples: ['结构观察'],
+        sources: ['引用证据'],
+      }),
     })
     const preview = buildWikiPreview({
       pageType: 'theme',
@@ -783,6 +820,7 @@ function buildStaticThemeDraft(pageTitle: string, pairedThemeTitle: string, over
       '',
       '## AI 管理区',
       '',
+      '<!-- network-lens-wiki-section:intro -->',
       '### 主题概览',
       overview,
     ].join('\n'),
@@ -791,6 +829,7 @@ function buildStaticThemeDraft(pageTitle: string, pairedThemeTitle: string, over
       '',
       '## AI 管理区',
       '',
+      '<!-- network-lens-wiki-section:intro -->',
       '### 主题概览',
       overview,
       '',
@@ -800,13 +839,53 @@ function buildStaticThemeDraft(pageTitle: string, pairedThemeTitle: string, over
     ].join('\n'),
     sectionMetadata: [
       {
-        key: 'overview' as const,
+        key: 'intro',
         heading: '主题概览',
         markdown: overview,
       },
     ],
     pairedThemeTitle,
   }
+}
+
+function buildThemeSections(params: {
+  intro: string
+  highlights: string[]
+  corePrinciples: string[]
+  sources: string[]
+}): WikiSectionDraft[] {
+  return [
+    {
+      sectionType: 'intro',
+      title: '主题概览',
+      format: 'overview',
+      blocks: params.intro
+        ? [{ text: params.intro, sourceRefs: ['doc-ai-core'] }]
+        : [],
+      sourceRefs: ['doc-ai-core'],
+    },
+    {
+      sectionType: 'highlights',
+      title: '关键文档',
+      format: 'structured',
+      blocks: params.highlights.map(text => ({ text, sourceRefs: ['doc-ai-core'] })),
+      sourceRefs: ['doc-ai-core'],
+    },
+    {
+      sectionType: 'core_principles',
+      title: '核心原则',
+      format: 'structured',
+      blocks: params.corePrinciples.map(text => ({ text, sourceRefs: ['doc-ai-bridge'] })),
+      sourceRefs: ['doc-ai-bridge'],
+    },
+    {
+      sectionType: 'sources',
+      title: '关系证据',
+      format: 'catalog',
+      blocks: params.sources.map(text => ({ text, sourceRefs: ['doc-ai-bridge', 'doc-ai-core'] })),
+      sourceRefs: ['doc-ai-bridge', 'doc-ai-core'],
+    },
+  ]
 }
 
 function createMemoryWikiStore(initialSnapshot?: any) {
