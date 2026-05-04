@@ -7,6 +7,7 @@ import type {
 import type { AiDocumentIndexStore } from '@/analytics/ai-index-store'
 import type { WikiPagePreviewResult } from '@/analytics/wiki-diff'
 import type { WikiApplyBatchResult } from '@/analytics/wiki-documents'
+import { WIKI_SECTION_MARKER_PREFIX } from '@/analytics/wiki-renderer'
 import { getWikiHeadingCandidates } from '@/analytics/wiki-page-model'
 import type { RenderedWikiDraft } from '@/analytics/wiki-renderer'
 import type { WikiScopeSummary } from '@/analytics/wiki-scope'
@@ -177,12 +178,30 @@ export function resolveWikiScopeDocuments(params: {
 export function resolveAffectedSectionHeadings(params: {
   preview: WikiPagePreviewResult
   draft: RenderedWikiDraft
+  existingManagedMarkdown?: string
+}): string[] {
+  const sectionHeadingMap = new Map<string, string>()
+
+  for (const [sectionKey, heading] of parseManagedSectionHeadingMap(params.existingManagedMarkdown ?? '')) {
+    sectionHeadingMap.set(sectionKey, heading)
+  }
+
+  for (const section of params.draft.sectionMetadata) {
+    sectionHeadingMap.set(section.key, section.heading)
+  }
+
+  return params.preview.affectedSections.map(sectionId => sectionHeadingMap.get(sectionId) ?? resolveWikiSectionDisplayLabel(sectionId))
+}
+
+export function resolveWikiSectionOrderLabels(params: {
+  pagePlan: WikiPagePlan
+  draft: RenderedWikiDraft
 }): string[] {
   const sectionHeadingMap = new Map(
     params.draft.sectionMetadata.map(section => [section.key, section.heading] as const),
   )
 
-  return params.preview.affectedSections.map(sectionId => sectionHeadingMap.get(sectionId) ?? humanizeSectionId(sectionId))
+  return params.pagePlan.sectionOrder.map(sectionId => sectionHeadingMap.get(sectionId) ?? resolveWikiSectionDisplayLabel(sectionId))
 }
 
 function extractManagedMarkdown(fullMarkdown: string): string {
@@ -202,4 +221,49 @@ function humanizeSectionId(sectionId: string): string {
     .filter(Boolean)
     .map(part => part.charAt(0).toUpperCase() + part.slice(1))
     .join(' ')
+}
+
+function resolveWikiSectionDisplayLabel(sectionId: string): string {
+  switch (sectionId) {
+    case 'intro':
+      return t('analytics.wikiPage.overviewHeading')
+    case 'highlights':
+      return t('analytics.wikiPage.keyDocumentsHeading')
+    case 'sources':
+      return t('analytics.wikiPage.evidenceHeading')
+    default:
+      return humanizeSectionId(sectionId)
+  }
+}
+
+function parseManagedSectionHeadingMap(markdown: string): Map<string, string> {
+  const headingMap = new Map<string, string>()
+  const lines = markdown.split(/\r?\n/)
+  let currentKey = ''
+
+  for (const line of lines) {
+    const markerKey = parseSectionMarker(line)
+    if (markerKey) {
+      currentKey = markerKey
+      continue
+    }
+
+    const headingMatch = line.match(/^###\s+(.+)$/)
+    if (headingMatch && currentKey) {
+      headingMap.set(currentKey, headingMatch[1].trim())
+    }
+  }
+
+  return headingMap
+}
+
+function parseSectionMarker(line: string): string {
+  const trimmed = line.trim()
+  if (!trimmed.startsWith(WIKI_SECTION_MARKER_PREFIX) || !trimmed.endsWith('-->')) {
+    return ''
+  }
+
+  return trimmed
+    .slice(WIKI_SECTION_MARKER_PREFIX.length, -3)
+    .trim()
 }

@@ -87,11 +87,11 @@
             <span>{{ t('wikiMaintain.template') }}: {{ resolveTemplateLabel(page.diagnosis.templateType) }}</span>
             <span>{{ t('wikiMaintain.confidence') }}: {{ resolveConfidenceLabel(page.diagnosis.confidence) }}</span>
             <span>{{ t('wikiMaintain.affectedSections') }}: {{ page.affectedSectionHeadings.length ? page.affectedSectionHeadings.join(', ') : t('wikiMaintain.noChanges') }}</span>
-            <span>{{ t('wikiMaintain.sectionOrder') }}: {{ page.pagePlan.sectionOrder.length ? page.pagePlan.sectionOrder.join(', ') : t('wikiMaintain.noChanges') }}</span>
+            <span>{{ t('wikiMaintain.sectionOrder') }}: {{ resolveSectionOrderLabels(page) }}</span>
             <span>{{ t('wikiMaintain.manualNotes') }}: {{ page.hasManualNotes ? t('wikiMaintain.existing') : t('wikiMaintain.createdOnFirstWrite') }}</span>
           </div>
-          <p class="wiki-panel__summary"><strong>{{ t('wikiMaintain.diagnosisReason') }}</strong>{{ page.diagnosis.reason }}</p>
-          <p class="wiki-panel__summary"><strong>{{ t('wikiMaintain.diagnosisEvidence') }}</strong>{{ page.diagnosis.evidenceSummary }}</p>
+          <p class="wiki-panel__summary"><strong>{{ t('wikiMaintain.diagnosisReason') }}:</strong> {{ page.diagnosis.reason }}</p>
+          <p class="wiki-panel__summary"><strong>{{ t('wikiMaintain.diagnosisEvidence') }}:</strong> {{ page.diagnosis.evidenceSummary }}</p>
           <p class="wiki-panel__summary"><strong>{{ t('wikiMaintain.oldSummary') }}</strong>{{ page.preview.oldSummary || t('wikiMaintain.noPreviousContent') }}</p>
           <p class="wiki-panel__summary"><strong>{{ t('wikiMaintain.newSummary') }}</strong>{{ page.preview.newSummary || t('wikiMaintain.noNewContent') }}</p>
           <p v-if="page.preview.conflictReason" class="wiki-panel__conflict">{{ page.preview.conflictReason }}</p>
@@ -144,6 +144,7 @@
 import { computed, ref } from 'vue'
 
 import type { WikiPreviewState } from '@/composables/use-analytics'
+import { resolveWikiSectionOrderLabels } from '@/composables/use-analytics-wiki'
 import { t } from '@/i18n/ui'
 
 const props = defineProps<{
@@ -225,6 +226,15 @@ function resolveConfidenceLabel(confidence: string) {
     default:
       return confidence
   }
+}
+
+function resolveSectionOrderLabels(page: WikiPreviewState['themePages'][number]) {
+  const labels = resolveWikiSectionOrderLabels({
+    pagePlan: page.pagePlan,
+    draft: page.draft,
+  })
+
+  return labels.length ? labels.join(', ') : t('wikiMaintain.noChanges')
 }
 </script>
 

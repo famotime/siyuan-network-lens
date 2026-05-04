@@ -99,7 +99,12 @@ describe('WikiMaintainPanel', () => {
               draft: {
                 managedMarkdown: '# draft',
                 fullMarkdown: '# draft',
-                sectionMetadata: [],
+                sectionMetadata: [
+                  { key: 'intro', heading: 'Topic overview', markdown: 'overview body' },
+                  { key: 'highlights', heading: 'Highlights', markdown: 'highlight body' },
+                  { key: 'core_principles', heading: 'Core principles', markdown: 'principles body' },
+                  { key: 'sources', heading: 'Relationship evidence', markdown: 'evidence body' },
+                ],
               },
             },
             {
@@ -151,7 +156,11 @@ describe('WikiMaintainPanel', () => {
               draft: {
                 managedMarkdown: '# draft',
                 fullMarkdown: '# draft',
-                sectionMetadata: [],
+                sectionMetadata: [
+                  { key: 'intro', heading: 'Introduction', markdown: 'intro body' },
+                  { key: 'comparison', heading: 'Comparison', markdown: 'comparison body' },
+                  { key: 'sources', heading: 'Sources', markdown: 'sources body' },
+                ],
               },
             },
           ],
@@ -208,10 +217,12 @@ describe('WikiMaintainPanel', () => {
     expect(html).toContain('Confidence: MEDIUM')
     expect(html).toContain('Affected sections: Topic overview, Core principles, Relationship evidence')
     expect(html).toContain('Affected sections: Comparison')
-    expect(html).toContain('Section order: intro, highlights, core_principles, sources')
-    expect(html).toContain('Section order: intro, comparison, sources')
+    expect(html).toContain('Section order: Topic overview, Highlights, Core principles, Relationship evidence')
+    expect(html).toContain('Section order: Introduction, Comparison, Sources')
     expect(html).toContain('Manual notes: Existing')
     expect(html).toContain('Manual notes: Created on first write')
+    expect(html).toContain('Diagnosis reason:</strong> 技术主题特征明确')
+    expect(html).toContain('Diagnosis evidence:</strong> 来源文档聚焦技术概念与原则。')
     expect(html).toContain('零散记录')
     expect(html).toContain('Open index page')
     expect(html).toContain('Open log page')

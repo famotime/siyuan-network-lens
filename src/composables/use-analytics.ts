@@ -1023,7 +1023,11 @@ export function useAnalyticsState(params: UseAnalyticsParams) {
           diagnosis,
           pagePlan,
           draft,
-          affectedSectionHeadings: resolveAffectedSectionHeadings({ preview, draft }),
+          affectedSectionHeadings: resolveAffectedSectionHeadings({
+            preview,
+            draft,
+            existingManagedMarkdown: existingPage?.managedMarkdown,
+          }),
           hasManualNotes: existingPage?.hasManualNotes ?? false,
         } satisfies WikiPreviewThemePageItem
       }))
