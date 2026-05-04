@@ -24,6 +24,7 @@ export const WIKI_PAGE_HEADING_KEYS = ['managedRoot', 'manualNotes'] as const
 export type WikiPageHeadingKey = typeof WIKI_PAGE_HEADING_KEYS[number]
 
 type WikiHeadingLookupKey = WikiPageHeadingKey | Exclude<WikiSectionKey, 'manualNotes'>
+type WikiLegacySectionKey = Exclude<WikiSectionKey, 'manualNotes'>
 
 const WIKI_PAGE_HEADING_VARIANTS = {
   managedRoot: ['AI managed area', 'AI 管理区'],
@@ -36,9 +37,7 @@ const WIKI_PAGE_HEADING_VARIANTS = {
   actions: ['Cleanup actions', '整理动作'],
 } as const satisfies Record<WikiHeadingLookupKey, readonly [string, string]>
 
-type WikiPageHeadingMap = Record<WikiPageHeadingKey, string> & Record<Exclude<WikiSectionKey, 'manualNotes'>, string>
-
-const legacyHeadingEntries: Record<Exclude<WikiSectionKey, 'manualNotes'>, string> = {
+export const WIKI_LEGACY_SECTION_HEADINGS: Record<WikiLegacySectionKey, string> = {
   meta: t('analytics.wikiPage.metaHeading'),
   overview: t('analytics.wikiPage.overviewHeading'),
   keyDocuments: t('analytics.wikiPage.keyDocumentsHeading'),
@@ -47,26 +46,14 @@ const legacyHeadingEntries: Record<Exclude<WikiSectionKey, 'manualNotes'>, strin
   actions: t('analytics.wikiPage.actionsHeading'),
 }
 
-export const WIKI_PAGE_HEADINGS: WikiPageHeadingMap = Object.assign(
-  Object.fromEntries(
-    Object.entries({
-      managedRoot: t('analytics.wikiPage.managedRootHeading'),
-      manualNotes: t('wikiMaintain.manualNotes'),
-    }),
-  ) as Record<WikiPageHeadingKey, string>,
-  Object.create(null),
-) as WikiPageHeadingMap
-
-for (const [key, value] of Object.entries(legacyHeadingEntries) as Array<[Exclude<WikiSectionKey, 'manualNotes'>, string]>) {
-  Object.defineProperty(WIKI_PAGE_HEADINGS, key, {
-    value,
-    enumerable: false,
-    configurable: false,
-    writable: false,
-  })
+export const WIKI_PAGE_HEADINGS: Record<WikiPageHeadingKey, string> = {
+  managedRoot: t('analytics.wikiPage.managedRootHeading'),
+  manualNotes: t('wikiMaintain.manualNotes'),
 }
 
-Object.freeze(WIKI_PAGE_HEADINGS)
+export function getWikiSectionHeading(key: WikiLegacySectionKey): string {
+  return WIKI_LEGACY_SECTION_HEADINGS[key]
+}
 
 export const WIKI_BLOCK_ATTR_KEYS = {
   pageType: 'custom-network-lens-wiki-page-type',

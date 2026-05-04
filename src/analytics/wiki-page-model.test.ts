@@ -3,12 +3,14 @@ import { afterEach, describe, expect, it, vi } from 'vitest'
 import {
   WIKI_APPLY_RESULTS,
   WIKI_BLOCK_ATTR_KEYS,
+  WIKI_LEGACY_SECTION_HEADINGS,
   WIKI_PAGE_HEADINGS,
   WIKI_PAGE_TYPES,
   WIKI_PREVIEW_STATUSES,
-  resolveWikiSectionKeyFromHeading,
   buildThemeWikiPageTitle,
+  getWikiSectionHeading,
   isWikiDocumentTitle,
+  resolveWikiSectionKeyFromHeading,
 } from './wiki-page-model'
 
 afterEach(() => {
@@ -63,14 +65,20 @@ describe('wiki page model', () => {
     })
   })
 
-  it('keeps legacy managed section headings available for downstream compatibility', async () => {
+  it('exposes legacy managed section headings via an explicit compatibility contract', async () => {
     expect(Object.keys(WIKI_PAGE_HEADINGS)).toEqual(['managedRoot', 'manualNotes'])
-    expect((WIKI_PAGE_HEADINGS as Record<string, string>).meta).toBe('Page meta')
-    expect((WIKI_PAGE_HEADINGS as Record<string, string>).overview).toBe('Topic overview')
-    expect((WIKI_PAGE_HEADINGS as Record<string, string>).keyDocuments).toBe('Key documents')
-    expect((WIKI_PAGE_HEADINGS as Record<string, string>).structureObservations).toBe('Structure observations')
-    expect((WIKI_PAGE_HEADINGS as Record<string, string>).evidence).toBe('Relationship evidence')
-    expect((WIKI_PAGE_HEADINGS as Record<string, string>).actions).toBe('Cleanup actions')
+    expect((WIKI_PAGE_HEADINGS as Record<string, string>).meta).toBeUndefined()
+    expect(WIKI_LEGACY_SECTION_HEADINGS).toEqual({
+      meta: 'Page meta',
+      overview: 'Topic overview',
+      keyDocuments: 'Key documents',
+      structureObservations: 'Structure observations',
+      evidence: 'Relationship evidence',
+      actions: 'Cleanup actions',
+    })
+    expect(getWikiSectionHeading('meta')).toBe('Page meta')
+    expect(getWikiSectionHeading('overview')).toBe('Topic overview')
+    expect(getWikiSectionHeading('actions')).toBe('Cleanup actions')
     expect(resolveWikiSectionKeyFromHeading('Page meta')).toBe('meta')
     expect(resolveWikiSectionKeyFromHeading('Topic overview')).toBe('overview')
     expect(resolveWikiSectionKeyFromHeading('Cleanup actions')).toBe('actions')
@@ -90,11 +98,13 @@ describe('wiki page model', () => {
     vi.resetModules()
 
     const zhModule = await import('./wiki-page-model')
-    const zhHeadings = zhModule.WIKI_PAGE_HEADINGS as Record<string, string>
 
     expect(Object.keys(zhModule.WIKI_PAGE_HEADINGS)).toEqual(['managedRoot', 'manualNotes'])
-    expect(zhHeadings.meta).toBe('页面头信息')
-    expect(zhHeadings.overview).toBe('主题概览')
+    expect((zhModule.WIKI_PAGE_HEADINGS as Record<string, string>).meta).toBeUndefined()
+    expect(zhModule.WIKI_LEGACY_SECTION_HEADINGS.meta).toBe('页面头信息')
+    expect(zhModule.WIKI_LEGACY_SECTION_HEADINGS.overview).toBe('主题概览')
+    expect(zhModule.getWikiSectionHeading('meta')).toBe('页面头信息')
+    expect(zhModule.getWikiSectionHeading('overview')).toBe('主题概览')
     expect(zhModule.resolveWikiSectionKeyFromHeading('页面头信息')).toBe('meta')
     expect(zhModule.resolveWikiSectionKeyFromHeading('主题概览')).toBe('overview')
   })

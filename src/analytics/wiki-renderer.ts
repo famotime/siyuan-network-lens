@@ -1,5 +1,5 @@
 import type { WikiSectionKey } from './wiki-page-model'
-import { WIKI_PAGE_HEADINGS } from './wiki-page-model'
+import { WIKI_PAGE_HEADINGS, getWikiSectionHeading } from './wiki-page-model'
 import type { WIKI_LLM_OUTPUT_KEYS } from './wiki-generation'
 import { t } from '@/i18n/ui'
 
@@ -28,7 +28,7 @@ export function renderThemeWikiDraft(params: {
   const sections: WikiRenderedSectionMeta[] = [
     {
       key: 'meta',
-      heading: WIKI_PAGE_HEADINGS.meta,
+      heading: getWikiSectionHeading('meta'),
       markdown: [
         t('wikiMaintain.pairedTopicPageLine', { value: params.pairedThemeTitle }),
         t('wikiMaintain.generatedAtLine', { value: params.generatedAt }),
@@ -38,27 +38,27 @@ export function renderThemeWikiDraft(params: {
     },
     {
       key: 'overview',
-      heading: WIKI_PAGE_HEADINGS.overview,
+      heading: getWikiSectionHeading('overview'),
       markdown: normalizeSectionBody(params.llmOutput.overview),
     },
     {
       key: 'keyDocuments',
-      heading: WIKI_PAGE_HEADINGS.keyDocuments,
+      heading: getWikiSectionHeading('keyDocuments'),
       markdown: normalizeSectionBody(params.llmOutput.keyDocuments),
     },
     {
       key: 'structureObservations',
-      heading: WIKI_PAGE_HEADINGS.structureObservations,
+      heading: getWikiSectionHeading('structureObservations'),
       markdown: normalizeSectionBody(params.llmOutput.structureObservations),
     },
     {
       key: 'evidence',
-      heading: WIKI_PAGE_HEADINGS.evidence,
+      heading: getWikiSectionHeading('evidence'),
       markdown: normalizeSectionBody(params.llmOutput.evidence),
     },
     {
       key: 'actions',
-      heading: WIKI_PAGE_HEADINGS.actions,
+      heading: getWikiSectionHeading('actions'),
       markdown: normalizeSectionBody(params.llmOutput.actions),
     },
   ]

@@ -5,10 +5,10 @@ import {
   WIKI_SECTION_TYPES,
   WIKI_SHARED_SECTION_TYPES,
   WIKI_TEMPLATE_TYPES,
-  type WikiSectionFormat,
-  type WikiSectionType,
   type WikiPagePlan,
   type WikiSectionDraft,
+  type WikiSectionFormat,
+  type WikiSectionType,
   type WikiTemplateDiagnosis,
 } from './wiki-template-model'
 
@@ -80,8 +80,8 @@ describe('wiki template model', () => {
       coreSections: WikiSectionType[]
       optionalSections: WikiSectionType[]
       sectionOrder: WikiSectionType[]
-      sectionGoals: Record<string, string>
-      sectionFormats: Record<string, WikiSectionFormat>
+      sectionGoals: Partial<Record<WikiSectionType, string>>
+      sectionFormats: Partial<Record<WikiSectionType, WikiSectionFormat>>
     }>()
     expectTypeOf<WikiSectionDraft>().toEqualTypeOf<{
       sectionType: WikiSectionType

@@ -56,6 +56,6 @@ export interface WikiPagePlan {
   coreSections: WikiSectionType[]
   optionalSections: WikiSectionType[]
   sectionOrder: WikiSectionType[]
-  sectionGoals: Record<string, string>
-  sectionFormats: Record<string, WikiSectionFormat>
+  sectionGoals: Partial<Record<WikiSectionType, string>>
+  sectionFormats: Partial<Record<WikiSectionType, WikiSectionFormat>>
 }

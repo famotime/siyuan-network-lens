@@ -4,6 +4,7 @@ import { fingerprintWikiContent } from './wiki-diff'
 import {
   WIKI_BLOCK_ATTR_KEYS,
   WIKI_PAGE_HEADINGS,
+  getWikiSectionHeading,
   getWikiHeadingCandidates,
   matchesWikiHeading,
   type WikiApplyResult,
@@ -755,7 +756,7 @@ function normalizeDocumentPath(path: string): string {
 }
 
 function extractOverviewSummary(markdown: string): string {
-  const heading = `### ${WIKI_PAGE_HEADINGS.overview}`
+  const heading = `### ${getWikiSectionHeading('overview')}`
   const startIndex = markdown.indexOf(heading)
   if (startIndex < 0) {
     return ''
