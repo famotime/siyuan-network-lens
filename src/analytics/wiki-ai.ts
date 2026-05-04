@@ -14,7 +14,7 @@ import {
   type WikiTemplateType,
 } from './wiki-template-model'
 import { resolveSectionOrder } from './wiki-template-selection'
-import { t } from '@/i18n/ui'
+import { resolveUiLocale, t } from '@/i18n/ui'
 import type { PluginConfig } from '@/types/config'
 
 type ForwardProxyFn = (
@@ -291,6 +291,7 @@ function normalizeTemplateDiagnosis(value: any): WikiTemplateDiagnosis {
     ['intro', 'highlights', 'sources'],
   )
   const suppressedModules = normalizeSectionTypeList(value?.suppressedModules, [])
+    .filter(sectionType => !isWikiSharedSectionType(sectionType))
 
   return {
     templateType,
@@ -520,17 +521,27 @@ function normalizePlannedSectionOrder(
   },
 ): WikiSectionType[] {
   const allowedSet = new Set(params.allowedSections)
-  const requestedSet = new Set(requestedOrder.filter(sectionType => allowedSet.has(sectionType)))
+  const filteredRequested = uniqueSectionTypes(requestedOrder.filter(sectionType => allowedSet.has(sectionType)))
+  const requiredSharedBase = WIKI_SHARED_SECTION_TYPES.filter(sectionType => allowedSet.has(sectionType))
+
+  if (
+    filteredRequested.length > 0
+    && requiredSharedBase.every(sectionType => filteredRequested.includes(sectionType))
+  ) {
+    return uniqueSectionTypes([
+      ...filteredRequested,
+      ...requiredSharedBase.filter(sectionType => !filteredRequested.includes(sectionType)),
+      ...params.allowedSections.filter(sectionType => !filteredRequested.includes(sectionType) && !WIKI_SHARED_SECTION_TYPES.includes(sectionType as typeof WIKI_SHARED_SECTION_TYPES[number])),
+    ])
+  }
+
   const fallbackOrder = resolveSectionOrder({
     templateType: params.templateType,
     enabledModules: uniqueSectionTypes(params.allowedSections),
     confidence: params.confidence,
   }).filter(sectionType => allowedSet.has(sectionType))
 
-  return uniqueSectionTypes([
-    ...fallbackOrder,
-    ...params.allowedSections.filter(sectionType => requestedSet.has(sectionType)),
-  ])
+  return uniqueSectionTypes(fallbackOrder)
 }
 
 function normalizeString(value: unknown, fallback: string): string {
@@ -546,7 +557,7 @@ function prefixFallback(value: string): string {
   if (!value.trim() || /^(Fallback|回退)：/i.test(value)) {
     return value
   }
-  return value.startsWith('No clear ') ? `Fallback: ${value}` : `回退：${value}`
+  return resolveUiLocale() === 'zh_CN' ? `回退：${value}` : `Fallback: ${value}`
 }
 
 function buildAllowedPagePlanSections(params: {
@@ -554,7 +565,7 @@ function buildAllowedPagePlanSections(params: {
   suppressedModules: WikiSectionType[]
   optionalSections: typeof WIKI_OPTIONAL_SECTION_TYPES[number][]
 }): WikiSectionType[] {
-  const suppressed = new Set(params.suppressedModules)
+  const suppressed = new Set(params.suppressedModules.filter(sectionType => !isWikiSharedSectionType(sectionType)))
   const enabledOptionalSections = params.enabledModules.filter((item): item is typeof WIKI_OPTIONAL_SECTION_TYPES[number] =>
     isWikiOptionalSectionType(item),
   )

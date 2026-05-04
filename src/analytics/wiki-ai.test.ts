@@ -310,6 +310,132 @@ describe('ai wiki service', () => {
     })
   })
 
+  it('preserves valid requested order after filtering and appends missing required sections', async () => {
+    let callIndex = 0
+    const forwardProxy = vi.fn(async () => {
+      callIndex += 1
+
+      if (callIndex === 1) {
+        return {
+          body: JSON.stringify({
+            choices: [
+              {
+                message: {
+                  content: JSON.stringify({
+                    templateType: 'tech_topic',
+                    confidence: 'high',
+                    reason: '主题适合技术型模板。',
+                    enabledModules: ['intro', 'highlights', 'comparison', 'misunderstandings', 'sources'],
+                    suppressedModules: [],
+                    evidenceSummary: '存在稳定结构信号。',
+                  }),
+                },
+              },
+            ],
+          }),
+          status: 200,
+        } as any
+      }
+
+      return {
+        body: JSON.stringify({
+          choices: [
+            {
+              message: {
+                content: JSON.stringify({
+                  templateType: 'tech_topic',
+                  confidence: 'high',
+                  coreSections: ['intro', 'sources'],
+                  optionalSections: ['comparison', 'misunderstandings'],
+                  sectionOrder: ['comparison', 'sources', 'intro', 'highlights'],
+                }),
+              },
+            },
+          ],
+        }),
+        status: 200,
+      } as any
+    })
+
+    const service = createAiWikiService({ forwardProxy })
+    const diagnosis = await service.diagnoseThemeTemplate({
+      config: buildConfig(),
+      payload: buildPayload(),
+    })
+    const pagePlan = await service.planThemePage({
+      config: buildConfig(),
+      payload: buildPayload(),
+      diagnosis,
+    })
+
+    expect(pagePlan.sectionOrder).toEqual(['comparison', 'sources', 'intro', 'highlights', 'misunderstandings'])
+  })
+
+  it('keeps shared base sections even when the model tries to suppress them', async () => {
+    let callIndex = 0
+    const forwardProxy = vi.fn(async () => {
+      callIndex += 1
+
+      if (callIndex === 1) {
+        return {
+          body: JSON.stringify({
+            choices: [
+              {
+                message: {
+                  content: JSON.stringify({
+                    templateType: 'tech_topic',
+                    confidence: 'medium',
+                    reason: '主题仍需要基础章节。',
+                    enabledModules: ['intro', 'highlights', 'comparison', 'sources'],
+                    suppressedModules: ['intro', 'sources', 'comparison'],
+                    evidenceSummary: '模型尝试抑制基础章节。',
+                  }),
+                },
+              },
+            ],
+          }),
+          status: 200,
+        } as any
+      }
+
+      return {
+        body: JSON.stringify({
+          choices: [
+            {
+              message: {
+                content: JSON.stringify({
+                  templateType: 'tech_topic',
+                  confidence: 'medium',
+                  coreSections: ['highlights'],
+                  optionalSections: ['comparison'],
+                  sectionOrder: ['comparison'],
+                }),
+              },
+            },
+          ],
+        }),
+        status: 200,
+      } as any
+    })
+
+    const service = createAiWikiService({ forwardProxy })
+    const diagnosis = await service.diagnoseThemeTemplate({
+      config: buildConfig(),
+      payload: buildPayload(),
+    })
+    const pagePlan = await service.planThemePage({
+      config: buildConfig(),
+      payload: buildPayload(),
+      diagnosis,
+    })
+
+    expect(diagnosis.suppressedModules).toEqual(['comparison'])
+    expect(pagePlan.sectionOrder).toContain('intro')
+    expect(pagePlan.sectionOrder).toContain('highlights')
+    expect(pagePlan.sectionOrder).toContain('sources')
+    expect(pagePlan.sectionOrder).not.toContain('comparison')
+  })
+
   it('coerces the returned section type to the requested section contract', async () => {
     const forwardProxy = vi.fn(async () => ({
       body: JSON.stringify({
@@ -693,5 +819,86 @@ describe('ai wiki service', () => {
       ],
       sourceRefs: [],
     })
+  })
+
+  it('uses english fallback prefixes in english locale', async () => {
+    const forwardProxy = vi.fn(async (_url: string, _method?: string, payload?: any) => {
+      const userPrompt = JSON.parse(payload).messages[1].content as string
+
+      if (userPrompt.includes('Diagnose the best wiki template')) {
+        return {
+          body: JSON.stringify({
+            choices: [
+              {
+                message: {
+                  content: JSON.stringify({}),
+                },
+              },
+            ],
+          }),
+          status: 200,
+        } as any
+      }
+
+      if (userPrompt.includes('Generate a wiki page plan')) {
+        return {
+          body: JSON.stringify({
+            choices: [
+              {
+                message: {
+                  content: JSON.stringify({}),
+                },
+              },
+            ],
+          }),
+          status: 200,
+        } as any
+      }
+
+      return {
+        body: JSON.stringify({
+          choices: [
+            {
+              message: {
+                content: JSON.stringify({}),
+              },
+            },
+          ],
+        }),
+        status: 200,
+      } as any
+    })
+
+    const service = createAiWikiService({ forwardProxy })
+    const diagnosis = await service.diagnoseThemeTemplate({
+      config: buildConfig(),
+      payload: {
+        ...buildPayload(),
+        sourceDocuments: [],
+      },
+    })
+    const pagePlan = await service.planThemePage({
+      config: buildConfig(),
+      payload: {
+        ...buildPayload(),
+        sourceDocuments: [],
+      },
+      diagnosis,
+    })
+    const section = await service.generateThemeSection({
+      config: buildConfig(),
+      payload: {
+        ...buildPayload(),
+        sourceDocuments: [],
+      },
+      diagnosis,
+      pagePlan,
+      sectionType: 'intro',
+    })
+
+    expect(diagnosis.reason).toBe('Fallback: No clear template reason yet')
+    expect(diagnosis.evidenceSummary).toBe('Fallback: No clear template evidence yet')
+    expect(section.title).toBe('Fallback: Topic overview')
+    expect(section.blocks[0]?.text).toBe('Fallback: No clear topic overview yet')
   })
 })
