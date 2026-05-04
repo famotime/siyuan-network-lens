@@ -26,11 +26,11 @@ export function renderThemeWikiDraft(params: {
   pagePlan: WikiPagePlan
   sections: WikiSectionDraft[]
 }): RenderedWikiDraft {
-  const sections: WikiRenderedSectionMeta[] = [
+  const sections = [
     {
       key: 'meta',
       heading: getWikiSectionHeading('meta'),
-      markdown: [
+      body: [
         t('wikiMaintain.pairedTopicPageLine', { value: params.pairedThemeTitle }),
         t('wikiMaintain.generatedAtLine', { value: params.generatedAt }),
         t('wikiMaintain.sourceDocsLine', { value: params.sourceDocumentCount }),
@@ -38,7 +38,11 @@ export function renderThemeWikiDraft(params: {
       ].join('\n'),
     },
     ...resolveRenderedSections(params.pagePlan, params.sections),
-  ]
+  ].map(section => ({
+    key: section.key,
+    heading: section.heading,
+    markdown: section.body || t('wikiMaintain.noContentYet'),
+  })) satisfies WikiRenderedSectionMeta[]
 
   const managedMarkdown = [
     `# ${params.pageTitle}`,
@@ -48,7 +52,7 @@ export function renderThemeWikiDraft(params: {
     ...sections.flatMap(section => [
       buildSectionMarker(section.key),
       `### ${section.heading}`,
-      section.markdown || t('wikiMaintain.noContentYet'),
+      section.markdown,
       '',
     ]),
   ].join('\n').trim()
@@ -68,7 +72,7 @@ export function renderThemeWikiDraft(params: {
   }
 }
 
-function resolveRenderedSections(pagePlan: WikiPagePlan, sectionDrafts: WikiSectionDraft[]): WikiRenderedSectionMeta[] {
+function resolveRenderedSections(pagePlan: WikiPagePlan, sectionDrafts: WikiSectionDraft[]): Array<{ key: string, heading: string, body: string }> {
   const sectionDraftMap = new Map(sectionDrafts.map(section => [section.sectionType, section]))
 
   return pagePlan.sectionOrder.map((sectionType) => {
@@ -76,7 +80,7 @@ function resolveRenderedSections(pagePlan: WikiPagePlan, sectionDrafts: WikiSect
     return {
       key: sectionType,
       heading: resolveSectionHeading(sectionType, draft),
-      markdown: normalizeSectionDraftBody(draft),
+      body: normalizeSectionDraftBody(draft),
     }
   })
 }

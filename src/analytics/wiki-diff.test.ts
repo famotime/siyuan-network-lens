@@ -1,7 +1,9 @@
 import { describe, expect, it } from 'vitest'
 
 import { buildWikiPreview, fingerprintWikiContent } from './wiki-diff'
+import { renderThemeWikiDraft } from './wiki-renderer'
 import type { WikiPageSnapshotRecord } from './wiki-store'
+import type { WikiPagePlan, WikiTemplateDiagnosis } from './wiki-template-model'
 
 const nextDraft = {
   managedMarkdown: [
@@ -27,6 +29,31 @@ const nextDraft = {
     { key: 'intro', heading: '自定义引言', markdown: '新的概览' },
     { key: 'highlights', heading: '重点亮点', markdown: '- AI 核心' },
   ],
+}
+
+const testDiagnosis: WikiTemplateDiagnosis = {
+  templateType: 'tech_topic',
+  confidence: 'high',
+  reason: '测试诊断',
+  enabledModules: ['intro', 'sources'],
+  suppressedModules: [],
+  evidenceSummary: '测试证据',
+}
+
+const testPagePlan: WikiPagePlan = {
+  templateType: 'tech_topic',
+  confidence: 'high',
+  coreSections: ['intro', 'sources', 'highlights'],
+  optionalSections: [],
+  sectionOrder: ['intro', 'sources'],
+  sectionGoals: {
+    intro: '主题概览',
+    sources: '资料目录',
+  },
+  sectionFormats: {
+    intro: 'overview',
+    sources: 'catalog',
+  },
 }
 
 describe('wiki diff', () => {
@@ -160,6 +187,49 @@ describe('wiki diff', () => {
 
     expect(preview.status).toBe('update')
     expect(preview.affectedSections).toEqual(['core_principles'])
+  })
+
+  it('does not mark an unchanged empty section as affected when both sides render the same placeholder', () => {
+    const draftWithEmptySection = renderThemeWikiDraft({
+      pageTitle: '主题-AI-索引-llm-wiki',
+      pairedThemeTitle: '主题-AI-索引',
+      generatedAt: '2026-04-09T12:00:00.000Z',
+      model: 'gpt-4.1-mini',
+      sourceDocumentCount: 1,
+      diagnosis: testDiagnosis,
+      pagePlan: testPagePlan,
+      sections: [
+        {
+          sectionType: 'intro',
+          title: '自定义引言',
+          format: 'overview',
+          blocks: [{ text: '新的概览', sourceRefs: ['doc-1'] }],
+          sourceRefs: ['doc-1'],
+        },
+        {
+          sectionType: 'sources',
+          title: '资料目录',
+          format: 'catalog',
+          blocks: [],
+          sourceRefs: [],
+        },
+      ],
+    })
+    const existingManagedMarkdown = draftWithEmptySection.managedMarkdown.replace('新的概览', '旧概览')
+
+    const preview = buildWikiPreview({
+      pageType: 'theme',
+      pageTitle: '主题-AI-索引-llm-wiki',
+      sourceDocumentIds: ['doc-1'],
+      generatedAt: '2026-04-09T12:00:00.000Z',
+      nextDraft: draftWithEmptySection,
+      existingPage: {
+        managedMarkdown: existingManagedMarkdown,
+      },
+    })
+
+    expect(preview.status).toBe('update')
+    expect(preview.affectedSections).toEqual(['intro'])
   })
 
   it('marks a page as conflict when the live managed fingerprint diverges from the last applied fingerprint', () => {
