@@ -126,6 +126,42 @@ describe('wiki diff', () => {
     expect(preview.affectedSections).toEqual(['intro'])
   })
 
+  it('marks a removed dynamic section as affected when it exists in the old managed page only', () => {
+    const preview = buildWikiPreview({
+      pageType: 'theme',
+      pageTitle: '主题-AI-索引-llm-wiki',
+      sourceDocumentIds: ['doc-1'],
+      generatedAt: '2026-04-09T12:00:00.000Z',
+      nextDraft,
+      existingPage: {
+        managedMarkdown: [
+          '# 主题-AI-索引-llm-wiki',
+          '',
+          '## AI 管理区',
+          '',
+          '<!-- network-lens-wiki-section:meta -->',
+          '### 页面头信息',
+          '- 配对主题页：主题-AI-索引',
+          '',
+          '<!-- network-lens-wiki-section:intro -->',
+          '### 自定义引言',
+          '新的概览',
+          '',
+          '<!-- network-lens-wiki-section:highlights -->',
+          '### 重点亮点',
+          '- AI 核心',
+          '',
+          '<!-- network-lens-wiki-section:core_principles -->',
+          '### 核心原则',
+          '- 先保留证据，再下结论。',
+        ].join('\n'),
+      },
+    })
+
+    expect(preview.status).toBe('update')
+    expect(preview.affectedSections).toEqual(['core_principles'])
+  })
+
   it('marks a page as conflict when the live managed fingerprint diverges from the last applied fingerprint', () => {
     const storedRecord: WikiPageSnapshotRecord = {
       pageType: 'theme',

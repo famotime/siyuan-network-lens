@@ -47,7 +47,8 @@ export function buildWikiPreview(params: {
     ? fingerprintWikiContent(oldManagedMarkdown)
     : ''
   const oldSectionMap = parseManagedSectionMap(oldManagedMarkdown)
-  const affectedSections = params.nextDraft.sectionMetadata
+  const nextSectionKeys = new Set(params.nextDraft.sectionMetadata.map(section => section.key))
+  const nextAffectedSections = params.nextDraft.sectionMetadata
     .filter((section) => {
       const previous = oldSectionMap.get(section.key)
       if (!previous) {
@@ -56,6 +57,12 @@ export function buildWikiPreview(params: {
       return previous.heading !== section.heading || previous.markdown !== section.markdown.trim()
     })
     .map(section => section.key)
+  const removedSections = [...oldSectionMap.keys()]
+    .filter(sectionKey => !nextSectionKeys.has(sectionKey))
+  const affectedSections = [...new Set([
+    ...nextAffectedSections,
+    ...removedSections,
+  ])]
 
   const lastAppliedManagedFingerprint = params.storedRecord?.lastApply?.managedFingerprint ?? ''
   const hasConflict = Boolean(
