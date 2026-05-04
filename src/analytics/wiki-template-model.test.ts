@@ -6,9 +6,11 @@ import {
   WIKI_SHARED_SECTION_TYPES,
   WIKI_TEMPLATE_TYPES,
   type WikiPagePlan,
+  type WikiOptionalSectionType,
   type WikiSectionDraft,
   type WikiSectionFormat,
   type WikiSectionType,
+  type WikiSharedSectionType,
   type WikiTemplateDiagnosis,
 } from './wiki-template-model'
 
@@ -66,6 +68,26 @@ describe('wiki template model', () => {
 
   it('uses the task 1 diagnosis, page plan, and section draft shapes', () => {
     expectTypeOf<WikiSectionFormat>().toEqualTypeOf<'overview' | 'structured' | 'qa' | 'debate' | 'catalog'>()
+    expectTypeOf<WikiSharedSectionType>().toEqualTypeOf<'intro' | 'highlights' | 'sources'>()
+    expectTypeOf<WikiOptionalSectionType>().toEqualTypeOf<
+      | 'core_principles'
+      | 'method_path'
+      | 'use_cases'
+      | 'basic_steps'
+      | 'advanced_usage'
+      | 'faq'
+      | 'troubleshooting'
+      | 'viewpoints'
+      | 'controversies'
+      | 'open_questions'
+      | 'cases'
+      | 'impacts'
+      | 'work_map'
+      | 'representative_works'
+      | 'reading_order'
+      | 'comparison'
+      | 'misunderstandings'
+    >()
     expectTypeOf<WikiTemplateDiagnosis>().toEqualTypeOf<{
       templateType: 'tech_topic' | 'product_howto' | 'social_topic' | 'media_list'
       confidence: 'high' | 'medium' | 'low'
@@ -77,8 +99,8 @@ describe('wiki template model', () => {
     expectTypeOf<WikiPagePlan>().toEqualTypeOf<{
       templateType: 'tech_topic' | 'product_howto' | 'social_topic' | 'media_list'
       confidence: 'high' | 'medium' | 'low'
-      coreSections: WikiSectionType[]
-      optionalSections: WikiSectionType[]
+      coreSections: WikiSharedSectionType[]
+      optionalSections: WikiOptionalSectionType[]
       sectionOrder: WikiSectionType[]
       sectionGoals: Partial<Record<WikiSectionType, string>>
       sectionFormats: Partial<Record<WikiSectionType, WikiSectionFormat>>
@@ -103,8 +125,8 @@ describe('wiki template model', () => {
     const pagePlan: WikiPagePlan = {
       templateType: 'product_howto',
       confidence: 'medium',
-      coreSections: ['intro', 'highlights', 'sources'],
-      optionalSections: ['use_cases', 'basic_steps', 'faq'],
+      coreSections: ['intro', 'highlights', 'sources'] satisfies WikiSharedSectionType[],
+      optionalSections: ['use_cases', 'basic_steps', 'faq'] satisfies WikiOptionalSectionType[],
       sectionOrder: ['intro', 'highlights', 'use_cases', 'basic_steps', 'sources'],
       sectionGoals: {
         intro: '给出主题快速导读',

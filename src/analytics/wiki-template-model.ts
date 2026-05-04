@@ -7,6 +7,8 @@ export const WIKI_TEMPLATE_TYPES = [
 export type WikiTemplateType = typeof WIKI_TEMPLATE_TYPES[number]
 
 export const WIKI_SHARED_SECTION_TYPES = ['intro', 'highlights', 'sources'] as const
+export type WikiSharedSectionType = typeof WIKI_SHARED_SECTION_TYPES[number]
+
 export const WIKI_OPTIONAL_SECTION_TYPES = [
   'core_principles',
   'method_path',
@@ -26,6 +28,8 @@ export const WIKI_OPTIONAL_SECTION_TYPES = [
   'comparison',
   'misunderstandings',
 ] as const
+export type WikiOptionalSectionType = typeof WIKI_OPTIONAL_SECTION_TYPES[number]
+
 export const WIKI_SECTION_TYPES = [...WIKI_SHARED_SECTION_TYPES, ...WIKI_OPTIONAL_SECTION_TYPES] as const
 export type WikiSectionType = typeof WIKI_SECTION_TYPES[number]
 
@@ -53,8 +57,8 @@ export interface WikiSectionDraft {
 export interface WikiPagePlan {
   templateType: WikiTemplateType
   confidence: WikiTemplateConfidence
-  coreSections: WikiSectionType[]
-  optionalSections: WikiSectionType[]
+  coreSections: WikiSharedSectionType[]
+  optionalSections: WikiOptionalSectionType[]
   sectionOrder: WikiSectionType[]
   sectionGoals: Partial<Record<WikiSectionType, string>>
   sectionFormats: Partial<Record<WikiSectionType, WikiSectionFormat>>
