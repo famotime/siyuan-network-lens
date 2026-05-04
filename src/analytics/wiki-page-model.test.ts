@@ -6,7 +6,6 @@ import {
   WIKI_PAGE_HEADINGS,
   WIKI_PAGE_TYPES,
   WIKI_PREVIEW_STATUSES,
-  WIKI_SECTION_KEYS,
   buildThemeWikiPageTitle,
   isWikiDocumentTitle,
 } from './wiki-page-model'
@@ -17,28 +16,13 @@ afterEach(() => {
 })
 
 describe('wiki page model', () => {
-  it('exposes stable page types, sections and headings for managed wiki pages', () => {
+  it('exposes stable page shell headings for managed wiki pages', () => {
     expect(WIKI_PAGE_TYPES).toEqual(['theme', 'index', 'log'])
-    expect(WIKI_SECTION_KEYS).toEqual([
-      'meta',
-      'overview',
-      'keyDocuments',
-      'structureObservations',
-      'evidence',
-      'actions',
-      'manualNotes',
-    ])
     expect(WIKI_PREVIEW_STATUSES).toEqual(['create', 'update', 'unchanged', 'conflict'])
     expect(WIKI_APPLY_RESULTS).toEqual(['created', 'updated', 'skipped', 'conflict'])
     expect(WIKI_PAGE_HEADINGS).toEqual({
       managedRoot: 'AI managed area',
       manualNotes: 'Manual notes',
-      meta: 'Page meta',
-      overview: 'Topic overview',
-      keyDocuments: 'Key documents',
-      structureObservations: 'Structure observations',
-      evidence: 'Relationship evidence',
-      actions: 'Cleanup actions',
     })
     expect(WIKI_BLOCK_ATTR_KEYS).toEqual({
       pageType: 'custom-network-lens-wiki-page-type',
@@ -75,12 +59,6 @@ describe('wiki page model', () => {
     expect(zhHeadings).toEqual({
       managedRoot: 'AI 管理区',
       manualNotes: '人工备注',
-      meta: '页面头信息',
-      overview: '主题概览',
-      keyDocuments: '关键文档',
-      structureObservations: '结构观察',
-      evidence: '关系证据',
-      actions: '整理动作',
     })
   })
 })
