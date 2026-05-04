@@ -227,6 +227,156 @@ describe('ai wiki service', () => {
     expect(forwardProxy).toHaveBeenCalledTimes(3)
   })
 
+  it('normalizes invalid page-plan order, keeps shared base sections, and removes suppressed modules', async () => {
+    let callIndex = 0
+    const forwardProxy = vi.fn(async () => {
+      callIndex += 1
+
+      if (callIndex === 1) {
+        return {
+          body: JSON.stringify({
+            choices: [
+              {
+                message: {
+                  content: JSON.stringify({
+                    templateType: 'tech_topic',
+                    confidence: 'high',
+                    reason: '主题适合技术型模板。',
+                    enabledModules: ['intro', 'highlights', 'faq', 'comparison', 'sources'],
+                    suppressedModules: ['faq'],
+                    evidenceSummary: '存在稳定结构信号。',
+                  }),
+                },
+              },
+            ],
+          }),
+          status: 200,
+        } as any
+      }
+
+      return {
+        body: JSON.stringify({
+          choices: [
+            {
+              message: {
+                content: JSON.stringify({
+                  templateType: 'tech_topic',
+                  confidence: 'high',
+                  coreSections: ['sources'],
+                  optionalSections: ['faq', 'comparison', 'misunderstandings'],
+                  sectionOrder: ['faq', 'comparison', 'sources', 'faq'],
+                  sectionGoals: {
+                    faq: '不应保留',
+                    comparison: '补充对比视角',
+                    sources: '保留来源证据',
+                  },
+                  sectionFormats: {
+                    faq: 'qa',
+                    comparison: 'structured',
+                    sources: 'catalog',
+                  },
+                }),
+              },
+            },
+          ],
+        }),
+        status: 200,
+      } as any
+    })
+
+    const service = createAiWikiService({ forwardProxy })
+    const diagnosis = await service.diagnoseThemeTemplate({
+      config: buildConfig(),
+      payload: buildPayload(),
+    })
+    const pagePlan = await service.planThemePage({
+      config: buildConfig(),
+      payload: buildPayload(),
+      diagnosis,
+    })
+
+    expect(pagePlan.coreSections).toEqual(['intro', 'highlights', 'sources'])
+    expect(pagePlan.optionalSections).toEqual(['comparison', 'misunderstandings'])
+    expect(pagePlan.sectionOrder).toEqual(['intro', 'highlights', 'comparison', 'misunderstandings', 'sources'])
+    expect(pagePlan.sectionOrder).not.toContain('faq')
+    expect(pagePlan.sectionGoals).toEqual({
+      intro: expect.stringMatching(/Fallback|回退/),
+      comparison: '补充对比视角',
+      sources: '保留来源证据',
+    })
+    expect(pagePlan.sectionFormats).toEqual({
+      comparison: 'structured',
+      sources: 'catalog',
+    })
+  })
+
+  it('coerces the returned section type to the requested section contract', async () => {
+    const forwardProxy = vi.fn(async () => ({
+      body: JSON.stringify({
+        choices: [
+          {
+            message: {
+              content: JSON.stringify({
+                sectionType: 'sources',
+                title: '常见问题',
+                format: 'qa',
+                blocks: [
+                  {
+                    text: '问题 1：如何补链？',
+                    sourceRefs: ['blk-2'],
+                  },
+                ],
+                sourceRefs: ['blk-2'],
+              }),
+            },
+          },
+        ],
+      }),
+      status: 200,
+    }) as any)
+
+    const service = createAiWikiService({ forwardProxy })
+    const section = await service.generateThemeSection({
+      config: buildConfig(),
+      payload: buildPayload(),
+      diagnosis: {
+        templateType: 'tech_topic',
+        confidence: 'high',
+        reason: '主题适合技术型模板。',
+        enabledModules: ['intro', 'highlights', 'faq', 'sources'],
+        suppressedModules: [],
+        evidenceSummary: '存在稳定结构信号。',
+      },
+      pagePlan: {
+        templateType: 'tech_topic',
+        confidence: 'high',
+        coreSections: ['intro', 'highlights', 'sources'],
+        optionalSections: ['faq'],
+        sectionOrder: ['intro', 'highlights', 'faq', 'sources'],
+        sectionGoals: {
+          faq: '回答高频问题',
+        },
+        sectionFormats: {
+          faq: 'qa',
+        },
+      },
+      sectionType: 'faq',
+    })
+
+    expect(section).toEqual({
+      sectionType: 'faq',
+      title: '常见问题',
+      format: 'qa',
+      blocks: [
+        {
+          text: '问题 1：如何补链？',
+          sourceRefs: ['blk-2'],
+        },
+      ],
+      sourceRefs: ['blk-2'],
+    })
+  })
+
   it('keeps the legacy whole-page section API working via staged calls', async () => {
     const forwardProxy = vi.fn(async (_url: string, _method?: string, payload?: any) => {
       const userPrompt = JSON.parse(payload).messages[1].content as string
@@ -515,10 +665,10 @@ describe('ai wiki service', () => {
     expect(diagnosis).toEqual({
       templateType: 'tech_topic',
       confidence: 'low',
-      reason: '暂无足够证据支持明确模板判断',
+      reason: '回退：暂无足够证据支持明确模板判断',
       enabledModules: ['intro', 'highlights', 'sources'],
       suppressedModules: [],
-      evidenceSummary: '当前缺少足够的来源文档与分析信号',
+      evidenceSummary: '回退：当前缺少足够的来源文档与分析信号',
     })
     expect(pagePlan).toEqual({
       templateType: 'tech_topic',
@@ -526,16 +676,18 @@ describe('ai wiki service', () => {
       coreSections: ['intro', 'highlights', 'sources'],
       optionalSections: [],
       sectionOrder: ['intro', 'highlights', 'sources'],
-      sectionGoals: {},
+      sectionGoals: {
+        intro: '回退：因模型未返回完整有效的页面规划，已使用保守回退规划。',
+      },
       sectionFormats: {},
     })
     expect(section).toEqual({
       sectionType: 'intro',
-      title: '主题概览',
+      title: '回退：主题概览',
       format: 'overview',
       blocks: [
         {
-          text: '暂无明显主题概览',
+          text: '回退：暂无明显主题概览',
           sourceRefs: [],
         },
       ],

@@ -1496,6 +1496,10 @@ const UI_TEXT = {
         en_US: 'No clear template evidence yet',
         zh_CN: '当前缺少足够的来源文档与分析信号',
       },
+      pagePlanFallbackGoal: {
+        en_US: 'Fallback: a conservative page plan was used because the model did not return a complete valid page plan.',
+        zh_CN: '回退：因模型未返回完整有效的页面规划，已使用保守回退规划。',
+      },
       noClearTopicOverviewYet: {
         en_US: 'No clear topic overview yet',
         zh_CN: '暂无明显主题概览',
@@ -1515,6 +1519,22 @@ const UI_TEXT = {
       noClearCleanupActionsYet: {
         en_US: 'No clear cleanup actions yet',
         zh_CN: '暂无明确整理动作',
+      },
+      noClearFaqYet: {
+        en_US: 'No clear FAQ items yet',
+        zh_CN: '暂无明确常见问题',
+      },
+      noClearTroubleshootingYet: {
+        en_US: 'No clear troubleshooting guidance yet',
+        zh_CN: '暂无明确排障建议',
+      },
+      noClearMisunderstandingsYet: {
+        en_US: 'No clear misunderstandings to clarify yet',
+        zh_CN: '暂无明确误区澄清',
+      },
+      noClearOpenQuestionsYet: {
+        en_US: 'No clear open questions yet',
+        zh_CN: '暂无明确待解问题',
       },
       conflictReasonManagedAreaMismatch: {
         en_US: 'The current AI managed area does not match the fingerprint from the last plugin write. Manual edits or external updates may exist.',

@@ -279,6 +279,11 @@ function extractChatCompletionContent(payload: any): string {
 }
 
 function normalizeTemplateDiagnosis(value: any): WikiTemplateDiagnosis {
+  const isFallback = !isWikiTemplateType(value?.templateType)
+    || !isWikiTemplateConfidence(value?.confidence)
+    || !Array.isArray(value?.enabledModules)
+    || typeof value?.reason !== 'string'
+    || typeof value?.evidenceSummary !== 'string'
   const templateType = isWikiTemplateType(value?.templateType) ? value.templateType : 'tech_topic'
   const confidence = isWikiTemplateConfidence(value?.confidence) ? value.confidence : 'low'
   const enabledModules = normalizeSectionTypeList(
@@ -290,33 +295,42 @@ function normalizeTemplateDiagnosis(value: any): WikiTemplateDiagnosis {
   return {
     templateType,
     confidence,
-    reason: normalizeString(value?.reason, t('analytics.wiki.noClearTemplateReasonYet')),
+    reason: normalizeFallbackString(value?.reason, t('analytics.wiki.noClearTemplateReasonYet'), isFallback),
     enabledModules,
-    suppressedModules: suppressedModules.filter(sectionType => !enabledModules.includes(sectionType)),
-    evidenceSummary: normalizeString(value?.evidenceSummary, t('analytics.wiki.noClearTemplateEvidenceYet')),
+    suppressedModules,
+    evidenceSummary: normalizeFallbackString(value?.evidenceSummary, t('analytics.wiki.noClearTemplateEvidenceYet'), isFallback),
   }
 }
 
 function normalizePagePlan(value: any, diagnosis: WikiTemplateDiagnosis): WikiPagePlan {
   const templateType = isWikiTemplateType(value?.templateType) ? value.templateType : diagnosis.templateType
   const confidence = isWikiTemplateConfidence(value?.confidence) ? value.confidence : diagnosis.confidence
-  const coreSections = normalizeSharedSectionList(value?.coreSections, ['intro', 'highlights', 'sources'])
-  const optionalSections = normalizeOptionalSectionList(
+  const coreSections = uniqueSharedSectionTypes([
+    'intro',
+    'highlights',
+    'sources',
+    ...normalizeSharedSectionList(value?.coreSections, ['intro', 'highlights', 'sources']),
+  ])
+  const rawOptionalSections = normalizeOptionalSectionList(
     value?.optionalSections,
     diagnosis.enabledModules.filter((item): item is typeof WIKI_OPTIONAL_SECTION_TYPES[number] =>
       WIKI_OPTIONAL_SECTION_TYPES.includes(item as typeof WIKI_OPTIONAL_SECTION_TYPES[number]),
     ),
   )
-  const allowedSections = uniqueSectionTypes([
-    ...coreSections,
-    ...optionalSections,
-    ...diagnosis.enabledModules,
-  ]).filter(sectionType => !diagnosis.suppressedModules.includes(sectionType))
+  const allowedSections = buildAllowedPagePlanSections({
+    enabledModules: diagnosis.enabledModules,
+    suppressedModules: diagnosis.suppressedModules,
+    optionalSections: rawOptionalSections,
+  })
+  const optionalSections = rawOptionalSections.filter(sectionType => allowedSections.includes(sectionType))
   const requestedOrder = normalizeSectionTypeList(value?.sectionOrder, [])
+  const fallbackUsed = !Array.isArray(value?.coreSections)
+    || !Array.isArray(value?.optionalSections)
+    || !Array.isArray(value?.sectionOrder)
   const sectionOrder = normalizePlannedSectionOrder(requestedOrder, {
     templateType,
     confidence,
-    fallbackEnabledModules: allowedSections,
+    allowedSections,
   })
 
   return {
@@ -325,17 +339,23 @@ function normalizePagePlan(value: any, diagnosis: WikiTemplateDiagnosis): WikiPa
     coreSections,
     optionalSections,
     sectionOrder,
-    sectionGoals: normalizeSectionGoalMap(value?.sectionGoals, sectionOrder),
+    sectionGoals: normalizeSectionGoalMap(
+      value?.sectionGoals,
+      sectionOrder,
+      fallbackUsed || sectionOrder.some(sectionType => !requestedOrder.includes(sectionType)),
+    ),
     sectionFormats: normalizeSectionFormatMap(value?.sectionFormats, sectionOrder),
   }
 }
 
 function normalizeSectionDraft(value: any, requestedSectionType: WikiSectionType): WikiSectionDraft {
-  const sectionType = isWikiSectionType(value?.sectionType) ? value.sectionType : requestedSectionType
+  const returnedSectionType = isWikiSectionType(value?.sectionType) ? value.sectionType : null
+  const sectionType = requestedSectionType
   const format = isWikiSectionFormat(value?.format)
     ? value.format
     : inferSectionFormat(sectionType)
-  const blocks = normalizeDraftBlocks(value?.blocks, sectionType)
+  const fallbackUsed = !Array.isArray(value?.blocks) || typeof value?.title !== 'string'
+  const blocks = normalizeDraftBlocks(value?.blocks, sectionType, fallbackUsed)
   const sourceRefs = uniqueStrings([
     ...normalizeStringList(value?.sourceRefs),
     ...blocks.flatMap(block => block.sourceRefs),
@@ -343,7 +363,7 @@ function normalizeSectionDraft(value: any, requestedSectionType: WikiSectionType
 
   return {
     sectionType,
-    title: normalizeString(value?.title, defaultSectionTitle(sectionType)),
+    title: normalizeFallbackString(value?.title, defaultSectionTitle(sectionType), fallbackUsed),
     format,
     blocks,
     sourceRefs,
@@ -424,8 +444,8 @@ function normalizeSectionList(value: unknown, fallback: string): string[] {
   return [fallback]
 }
 
-function normalizeDraftBlocks(value: unknown, sectionType: WikiSectionType): WikiSectionDraft['blocks'] {
-  if (Array.isArray(value)) {
+function normalizeDraftBlocks(value: unknown, sectionType: WikiSectionType, forceFallback = false): WikiSectionDraft['blocks'] {
+  if (!forceFallback && Array.isArray(value)) {
     const blocks = value
       .filter((item): item is { text?: unknown, sourceRefs?: unknown } => Boolean(item) && typeof item === 'object')
       .map(item => ({
@@ -440,27 +460,34 @@ function normalizeDraftBlocks(value: unknown, sectionType: WikiSectionType): Wik
   }
 
   return [{
-    text: defaultSectionFallback(sectionType),
+    text: prefixFallback(defaultSectionFallback(sectionType)),
     sourceRefs: [],
   }]
 }
 
-function normalizeSectionGoalMap(value: unknown, allowedSections: WikiSectionType[]): WikiPagePlan['sectionGoals'] {
-  if (!value || typeof value !== 'object') {
-    return {}
-  }
-
-  const allowed = new Set(allowedSections)
+function normalizeSectionGoalMap(
+  value: unknown,
+  allowedSections: WikiSectionType[],
+  includeFallbackSignal: boolean,
+): WikiPagePlan['sectionGoals'] {
   const result: WikiPagePlan['sectionGoals'] = {}
 
-  for (const [key, item] of Object.entries(value)) {
-    if (!allowed.has(key as WikiSectionType)) {
-      continue
+  if (value && typeof value === 'object') {
+    const allowed = new Set(allowedSections)
+
+    for (const [key, item] of Object.entries(value)) {
+      if (!allowed.has(key as WikiSectionType)) {
+        continue
+      }
+      const normalized = normalizeString(item, '')
+      if (normalized) {
+        result[key as WikiSectionType] = normalized
+      }
     }
-    const normalized = normalizeString(item, '')
-    if (normalized) {
-      result[key as WikiSectionType] = normalized
-    }
+  }
+
+  if (includeFallbackSignal && !result.intro) {
+    result.intro = t('analytics.wiki.pagePlanFallbackGoal')
   }
 
   return result
@@ -489,23 +516,56 @@ function normalizePlannedSectionOrder(
   params: {
     templateType: WikiTemplateType
     confidence: WikiTemplateConfidence
-    fallbackEnabledModules: WikiSectionType[]
+    allowedSections: WikiSectionType[]
   },
 ): WikiSectionType[] {
-  const uniqueRequested = uniqueSectionTypes(requestedOrder)
-  if (uniqueRequested.length > 0) {
-    return uniqueRequested
-  }
-
-  return resolveSectionOrder({
+  const allowedSet = new Set(params.allowedSections)
+  const requestedSet = new Set(requestedOrder.filter(sectionType => allowedSet.has(sectionType)))
+  const fallbackOrder = resolveSectionOrder({
     templateType: params.templateType,
-    enabledModules: uniqueSectionTypes(params.fallbackEnabledModules),
+    enabledModules: uniqueSectionTypes(params.allowedSections),
     confidence: params.confidence,
-  })
+  }).filter(sectionType => allowedSet.has(sectionType))
+
+  return uniqueSectionTypes([
+    ...fallbackOrder,
+    ...params.allowedSections.filter(sectionType => requestedSet.has(sectionType)),
+  ])
 }
 
 function normalizeString(value: unknown, fallback: string): string {
   return typeof value === 'string' && value.trim() ? value.trim() : fallback
+}
+
+function normalizeFallbackString(value: unknown, fallback: string, fallbackUsed: boolean): string {
+  const normalized = normalizeString(value, fallback)
+  return fallbackUsed ? prefixFallback(normalized) : normalized
+}
+
+function prefixFallback(value: string): string {
+  if (!value.trim() || /^(Fallback|回退)：/i.test(value)) {
+    return value
+  }
+  return value.startsWith('No clear ') ? `Fallback: ${value}` : `回退：${value}`
+}
+
+function buildAllowedPagePlanSections(params: {
+  enabledModules: WikiSectionType[]
+  suppressedModules: WikiSectionType[]
+  optionalSections: typeof WIKI_OPTIONAL_SECTION_TYPES[number][]
+}): WikiSectionType[] {
+  const suppressed = new Set(params.suppressedModules)
+  const enabledOptionalSections = params.enabledModules.filter((item): item is typeof WIKI_OPTIONAL_SECTION_TYPES[number] =>
+    isWikiOptionalSectionType(item),
+  )
+
+  return uniqueSectionTypes([
+    'intro',
+    'highlights',
+    ...enabledOptionalSections,
+    ...params.optionalSections,
+    'sources',
+  ]).filter(sectionType => !suppressed.has(sectionType))
 }
 
 function normalizeStringList(value: unknown): string[] {
@@ -603,6 +663,14 @@ function defaultSectionFallback(sectionType: WikiSectionType): string {
       return t('analytics.wiki.noKeyDocumentSuggestionsYet')
     case 'sources':
       return t('analytics.wiki.noClearRelationshipEvidenceYet')
+    case 'faq':
+      return t('analytics.wiki.noClearFaqYet')
+    case 'troubleshooting':
+      return t('analytics.wiki.noClearTroubleshootingYet')
+    case 'misunderstandings':
+      return t('analytics.wiki.noClearMisunderstandingsYet')
+    case 'open_questions':
+      return t('analytics.wiki.noClearOpenQuestionsYet')
     default:
       return t('analytics.wiki.noClearStructureObservationsYet')
   }
