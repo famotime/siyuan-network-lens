@@ -953,6 +953,9 @@ export function useAnalyticsState(params: UseAnalyticsParams) {
           pagePlan,
           sectionType,
         })))
+        const sourceDocumentTitleMap = Object.fromEntries(
+          payload.sourceDocuments.map(doc => [doc.documentId, doc.title]),
+        )
         const draft = renderThemeWikiDraft({
           pageTitle: payload.pageTitle,
           pairedThemeTitle: payload.themeDocumentTitle,
@@ -962,6 +965,7 @@ export function useAnalyticsState(params: UseAnalyticsParams) {
           diagnosis,
           pagePlan,
           sections,
+          sourceDocumentTitleMap,
         })
         const pageKey = buildWikiPageStorageKey({
           pageType: 'theme',
@@ -1111,6 +1115,7 @@ export function useAnalyticsState(params: UseAnalyticsParams) {
           prependBlock,
           appendBlock,
           updateBlock,
+          deleteBlock,
           getChildBlocks,
           getBlockKramdown,
           getBlockAttrs,

@@ -2726,6 +2726,10 @@ const UI_TEXT = {
         en_US: 'Cleanup actions',
         zh_CN: '整理动作',
       },
+      sourcesHeading: {
+        en_US: 'References',
+        zh_CN: '参考来源',
+      },
     },
     documentDetailDescription: {
       en_US: 'Follow the active document and summarize its community role, bridge position, and dormant risk.',

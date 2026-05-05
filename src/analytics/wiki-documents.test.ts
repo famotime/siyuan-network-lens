@@ -728,7 +728,8 @@ describe('wiki documents', () => {
       pageId: 'wiki-conflict',
       result: 'updated',
     })
-    expect(kernel.api.updateBlock).toHaveBeenCalledWith('markdown', nextDraft.managedMarkdown, 'wiki-conflict::managed')
+    expect(kernel.api.deleteBlock).toHaveBeenCalled()
+    expect(kernel.api.prependBlock).toHaveBeenCalledWith('markdown', nextDraft.managedMarkdown, 'wiki-conflict')
     expect(kernel.getDocumentMarkdownByPath('/主题/LLM Wiki/主题-冲突-llm-wiki')).toContain('插件新生成内容')
     expect(kernel.getDocumentMarkdownByPath('/主题/LLM Wiki/主题-冲突-llm-wiki')).toContain('- 冲突备注')
   })
@@ -997,7 +998,9 @@ function createFakeWikiKernel(initialDocuments?: Array<{
       if (!document || dataType !== 'markdown') {
         return []
       }
-      document.markdown = [extractTitleBlock(document.markdown), data, extractManualBlock(document.markdown)]
+      const hasManualBlock = document.childBlocks.some(block => block.role === 'manual')
+      const manualBlock = hasManualBlock ? extractManualBlock(document.markdown) : ''
+      document.markdown = [extractTitleBlock(document.markdown), data, manualBlock]
         .filter(Boolean)
         .join('\n\n')
       refreshDocumentBlocks(document)
@@ -1047,6 +1050,15 @@ function createFakeWikiKernel(initialDocuments?: Array<{
           .join('\n\n')
       }
       refreshDocumentBlocks(document)
+      return []
+    }),
+    deleteBlock: vi.fn(async (id: string) => {
+      const [documentId] = id.split('::')
+      const document = documentsById.get(documentId)
+      if (!document) {
+        return []
+      }
+      document.childBlocks = document.childBlocks.filter(block => block.id !== id)
       return []
     }),
     getChildBlocks: vi.fn(async (id: string) => {

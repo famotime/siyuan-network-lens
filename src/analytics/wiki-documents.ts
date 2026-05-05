@@ -21,6 +21,7 @@ const INDEX_MANUAL_NOTES_MARKDOWN = [
 ].join('\n')
 
 type BlockOpFn = (dataType: 'markdown' | 'dom', data: string, id: string) => Promise<any>
+type BlockDeleteFn = (id: string) => Promise<any>
 type GetBlockKramdownFn = (id: string) => Promise<{ id: string, kramdown: string }>
 type GetChildBlocksFn = (id: string) => Promise<Array<{ id: string, type?: string }>>
 type GetIDsByHPathFn = (notebook: string, path: string) => Promise<string[]>
@@ -97,6 +98,7 @@ export async function applyWikiDocuments(params: {
     prependBlock: BlockOpFn
     appendBlock: BlockOpFn
     updateBlock: BlockOpFn
+    deleteBlock: BlockDeleteFn
     getChildBlocks: GetChildBlocksFn
     getBlockKramdown: GetBlockKramdownFn
     getBlockAttrs: GetBlockAttrsFn
@@ -160,6 +162,7 @@ export async function applyWikiDocuments(params: {
       pageId: existingPageId,
       themeDocumentId: page.themeDocumentId,
       draft: page.draft,
+      overwriteConflicts: params.overwriteConflicts,
       api: params.api,
     })
 
@@ -340,11 +343,13 @@ async function upsertManagedWikiPage(params: {
   pageId?: string
   themeDocumentId?: string
   draft: RenderedWikiDraft
+  overwriteConflicts?: boolean
   api: {
     createDocWithMd: CreateDocWithMdFn
     prependBlock: BlockOpFn
     appendBlock: BlockOpFn
     updateBlock: BlockOpFn
+    deleteBlock: BlockDeleteFn
     getChildBlocks: GetChildBlocksFn
     getBlockKramdown: GetBlockKramdownFn
     getBlockAttrs: GetBlockAttrsFn
@@ -359,15 +364,26 @@ async function upsertManagedWikiPage(params: {
     }
   }
 
-  const structure = await resolveWikiPageStructure(params.pageId, params.api)
-  if (structure.managedBlockId) {
-    await params.api.updateBlock('markdown', params.draft.managedMarkdown, structure.managedBlockId)
-  } else {
+  if (params.overwriteConflicts) {
+    const fullMarkdown = await safeReadBlockMarkdown(params.pageId, params.api.getBlockKramdown)
+    const manualNotesMarkdown = extractManualNotesMarkdown(fullMarkdown)
+    const children = await params.api.getChildBlocks(params.pageId)
+    for (const child of children) {
+      await params.api.deleteBlock(child.id)
+    }
     await params.api.prependBlock('markdown', params.draft.managedMarkdown, params.pageId)
-  }
+    await params.api.appendBlock('markdown', manualNotesMarkdown || INDEX_MANUAL_NOTES_MARKDOWN, params.pageId)
+  } else {
+    const structure = await resolveWikiPageStructure(params.pageId, params.api)
+    if (structure.managedBlockId) {
+      await params.api.updateBlock('markdown', params.draft.managedMarkdown, structure.managedBlockId)
+    } else {
+      await params.api.prependBlock('markdown', params.draft.managedMarkdown, params.pageId)
+    }
 
-  if (!structure.manualBlockId) {
-    await params.api.appendBlock('markdown', INDEX_MANUAL_NOTES_MARKDOWN, params.pageId)
+    if (!structure.manualBlockId) {
+      await params.api.appendBlock('markdown', INDEX_MANUAL_NOTES_MARKDOWN, params.pageId)
+    }
   }
 
   return {
@@ -782,6 +798,17 @@ function extractManagedMarkdown(fullMarkdown: string): string {
     return fullMarkdown.trim()
   }
   return fullMarkdown.slice(0, manualHeadingIndex).trim()
+}
+
+function extractManualNotesMarkdown(fullMarkdown: string): string {
+  const manualHeadingIndex = getWikiHeadingCandidates('manualNotes', '##')
+    .map(heading => fullMarkdown.indexOf(`\n${heading}`))
+    .filter(index => index >= 0)
+    .sort((left, right) => left - right)[0] ?? -1
+  if (manualHeadingIndex < 0) {
+    return ''
+  }
+  return fullMarkdown.slice(manualHeadingIndex + 1).trim()
 }
 
 async function safeReadBlockMarkdown(blockId: string, getBlockKramdown: GetBlockKramdownFn) {
