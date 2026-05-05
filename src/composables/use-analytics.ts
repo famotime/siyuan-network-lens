@@ -46,23 +46,13 @@ import {
   createThemeSuggestionController,
 } from './use-analytics-interactions'
 import { createAnalyticsAiController } from './use-analytics-ai'
-import {
-  buildWikiPreviewSummary,
-  buildWikiScopeDescriptionLines,
-  buildWikiSourceProfileMap,
-  resolveAffectedSectionHeadings,
-  resolveExistingWikiPage,
-  resolveWikiScopeDocuments,
-  type WikiPreviewRequest,
-  type WikiPreviewState,
-  type WikiPreviewThemePageItem,
-} from './use-analytics-wiki'
+import { type WikiPreviewRequest, type WikiPreviewState, type WikiPreviewThemePageItem } from './use-analytics-wiki'
+import { createAnalyticsWikiActionsController } from './use-analytics-wiki-actions'
+import { createAnalyticsDocumentIndexController } from './use-analytics-document-index'
 import { createAiInboxService, isAiConfigComplete, type AiInboxResult, type AiInboxService } from '@/analytics/ai-inbox'
-import { ensureDocumentIndex } from '@/analytics/ai-document-summary'
 import {
   createAiDocumentIndexStoreFromPlugin,
   type AiDocumentIndexStore,
-  type DocumentIndexProfile,
 } from '@/analytics/ai-index-store'
 import {
   createAiLinkRepairStoreFromPlugin,
@@ -75,13 +65,7 @@ import {
   type AiLinkSuggestionService,
   type OrphanAiSuggestionState,
 } from '@/analytics/ai-link-suggestions'
-import { buildThemeWikiPageTitle } from '@/analytics/wiki-page-model'
-import type { WikiThemeBundle } from '@/analytics/wiki-generation'
-import { renderThemeWikiDraft } from '@/analytics/wiki-renderer'
-import { buildWikiPreview } from '@/analytics/wiki-diff'
-import { applyWikiDocuments, buildSiblingDocumentPath } from '@/analytics/wiki-documents'
 import {
-  buildWikiPageStorageKey,
   createAiWikiStoreFromPlugin,
   type AiWikiStore,
 } from '@/analytics/wiki-store'
@@ -90,7 +74,7 @@ import {
   type TodaySuggestionHistoryEntry,
   type TodaySuggestionHistoryStore,
 } from '@/analytics/today-suggestion-history-store'
-import { normalizeTags, parseSiyuanTimestamp, resolveDocumentTitle } from '@/analytics/document-utils'
+import { normalizeTags, parseSiyuanTimestamp } from '@/analytics/document-utils'
 import { resolveUiLanguageTag, t } from '@/i18n/ui'
 import type { PluginConfig } from '@/types/config'
 import { createPluginLogger } from '@/utils/plugin-logger'
@@ -590,6 +574,64 @@ export function useAnalyticsState(params: UseAnalyticsParams) {
     notify,
   })
   const { generateAiInbox: generateAiInboxInternal, generateOrphanAiSuggestion, testAiConnection } = aiController
+  const wikiActions = createAnalyticsWikiActionsController({
+    config: params.config,
+    appliedConfig,
+    snapshot,
+    report,
+    trends,
+    filters,
+    timeRange,
+    filteredDocuments,
+    associationDocumentMap,
+    themeDocuments,
+    aiConfigReady,
+    wikiPreviewLoading,
+    wikiApplyLoading,
+    wikiError,
+    wikiPreview,
+    wikiPreviewCache,
+    aiIndexStore,
+    aiWikiStore,
+    aiWikiService,
+    forwardProxy: params.forwardProxy,
+    getChildBlocks,
+    getBlockKramdown,
+    createDocWithMd,
+    getIDsByHPath,
+    prependBlock,
+    appendBlock,
+    updateBlock,
+    deleteBlock,
+    getBlockAttrs,
+    setBlockAttrs,
+    resolveNotebookName,
+    notify,
+  })
+  const {
+    restoreCachedWikiPreview,
+    prepareWikiPreview,
+    applyWikiChanges,
+  } = wikiActions
+  const documentIndexController = createAnalyticsDocumentIndexController({
+    documentMap,
+    notebookOptions,
+    appliedConfig,
+    aiIndexStore,
+    forwardProxy: params.forwardProxy,
+    getChildBlocks,
+    getBlockKramdown,
+    createDocWithMd,
+    notify,
+    openDocument,
+  })
+  const {
+    generateDocIndex,
+    hasDocIndex,
+    openDocIndex,
+    batchGenerateDocIndex,
+    batchDeleteDocIndex,
+  } = documentIndexController
 
   watch(pathOptions, (options) => {
     if (options.length === 0) {
@@ -876,479 +918,8 @@ export function useAnalyticsState(params: UseAnalyticsParams) {
     return result
   }
 
-  function restoreCachedWikiPreview(themeDocumentId: string) {
-    wikiError.value = ''
-    const cached = wikiPreviewCache.value.get(themeDocumentId)
-    wikiPreview.value = cached ?? null
-  }
-
-  async function prepareWikiPreview(request?: WikiPreviewRequest) {
-    wikiPreviewLoading.value = true
-    wikiError.value = ''
-
-    try {
-      if (!params.config.wikiEnabled) {
-        throw new Error(t('analytics.controller.enableWikiFirst'))
-      }
-      if (!params.config.aiEnabled || !aiConfigReady.value) {
-        throw new Error(t('analytics.controller.enableSuggestionsAndAi'))
-      }
-      if (!snapshot.value || !report.value || !trends.value) {
-        throw new Error(t('analytics.controller.analysisNotReady'))
-      }
-      if (!aiWikiService) {
-        throw new Error(t('analytics.controller.aiProxyNotInitialized'))
-      }
-      if (!aiWikiStore) {
-        throw new Error(t('analytics.controller.wikiStorageNotInitialized'))
-      }
-      if (!request?.themeDocumentId) {
-        throw new Error(t('analytics.controller.wikiThemeDocumentRequired'))
-      }
-
-      const generatedAt = new Date().toISOString()
-      const themeDocument = themeDocuments.value.find(document => document.documentId === request.themeDocumentId)
-      if (!themeDocument) {
-        throw new Error(t('analytics.controller.wikiThemeDocumentNotFound'))
-      }
-
-      const scopedDocuments = resolveWikiScopeDocuments({
-        sourceDocumentIds: request?.sourceDocumentIds,
-        fallbackDocuments: filteredDocuments.value,
-        associationDocumentMap: associationDocumentMap.value,
-      })
-      const sourceDocuments = scopedDocuments.filter(document => document.id !== themeDocument.documentId)
-      const scopeDescriptionLines = buildWikiScopeDescriptionLines({
-        timeRange: timeRange.value,
-        filters: filters.value,
-        resolveNotebookName,
-        scopeDescriptionLine: request?.scopeDescriptionLine,
-      })
-      const sourceProfileMap = await buildWikiSourceProfileMap({
-        sourceDocuments,
-        config: appliedConfig.value,
-        aiIndexStore,
-        forwardProxy: params.forwardProxy,
-        getChildBlocks,
-        getBlockKramdown,
-        generatedAt,
-      })
-      const scopedDocumentMap = new Map(scopedDocuments.map(document => [document.id, document]))
-      const payload = buildSingleThemeWikiPayload({
-        config: appliedConfig.value,
-        themeDocument,
-        sourceDocuments,
-        report: report.value,
-        trends: trends.value,
-        documentMap: scopedDocumentMap,
-        getDocumentProfile: document => sourceProfileMap.get(document.id) ?? null,
-      })
-
-      const diagnosis = await aiWikiService.diagnoseThemeTemplate({
-        config: appliedConfig.value,
-        payload,
-      })
-      const pagePlan = await aiWikiService.planThemePage({
-        config: appliedConfig.value,
-        payload,
-        diagnosis,
-      })
-      const sections = await Promise.all(pagePlan.sectionOrder.map(sectionType => aiWikiService.generateThemeSection({
-        config: appliedConfig.value,
-        payload,
-        diagnosis,
-        pagePlan,
-        sectionType,
-      })))
-      const sourceDocumentTitleMap = Object.fromEntries(
-        payload.sourceDocuments.map(doc => [doc.documentId, doc.title]),
-      )
-      const draft = renderThemeWikiDraft({
-        pageTitle: payload.pageTitle,
-        pairedThemeDocumentId: payload.themeDocumentId,
-        pairedThemeTitle: payload.themeDocumentTitle,
-        generatedAt,
-        model: appliedConfig.value.aiModel?.trim() || 'unknown',
-        sourceDocumentCount: payload.sourceDocuments.length,
-        diagnosis,
-        pagePlan,
-        sections,
-        sourceDocumentTitleMap,
-      })
-      const pageKey = buildWikiPageStorageKey({
-        pageType: 'theme',
-        pageTitle: payload.pageTitle,
-        themeDocumentId: payload.themeDocumentId,
-      })
-      const storedRecord = await aiWikiStore.getPageRecord(pageKey)
-      const existingPage = await resolveExistingWikiPage({
-        notebook: themeDocument.box,
-        pageHPath: buildSiblingDocumentPath(themeDocument.hpath, payload.pageTitle, appliedConfig.value.wikiContainerName),
-        storedRecord,
-        getIDsByHPath,
-        getBlockKramdown,
-      })
-      const preview = buildWikiPreview({
-        pageType: 'theme',
-        pageTitle: payload.pageTitle,
-        sourceDocumentIds: payload.sourceDocuments.map(document => document.documentId),
-        generatedAt,
-        nextDraft: draft,
-        existingPage: existingPage?.managedMarkdown
-          ? {
-              managedMarkdown: existingPage.managedMarkdown,
-            }
-          : undefined,
-        storedRecord: storedRecord ?? undefined,
-      })
-
-      const nextRecord: WikiPageSnapshotRecord = {
-        pageType: 'theme',
-        pageTitle: payload.pageTitle,
-        pageId: existingPage?.pageId ?? storedRecord?.pageId,
-        themeDocumentId: payload.themeDocumentId,
-        themeDocumentTitle: payload.themeDocumentTitle,
-        sourceDocumentIds: payload.sourceDocuments.map(document => document.documentId),
-        pageFingerprint: preview.pageFingerprint,
-        managedFingerprint: preview.managedFingerprint,
-        lastGeneratedAt: generatedAt,
-        lastPreview: {
-          generatedAt,
-          status: preview.status,
-          sourceDocumentIds: payload.sourceDocuments.map(document => document.documentId),
-          pageFingerprint: preview.pageFingerprint,
-          managedFingerprint: preview.managedFingerprint,
-        },
-        lastApply: storedRecord?.lastApply,
-      }
-      await aiWikiStore.savePageRecord(nextRecord)
-
-      const themePage: WikiPreviewThemePageItem = {
-        pageTitle: payload.pageTitle,
-        themeName: payload.themeName,
-        themeDocumentId: payload.themeDocumentId,
-        themeDocumentTitle: payload.themeDocumentTitle,
-        themeDocumentBox: themeDocument.box,
-        themeDocumentHPath: themeDocument.hpath,
-        sourceDocumentIds: payload.sourceDocuments.map(document => document.documentId),
-        preview,
-        diagnosis,
-        pagePlan,
-        draft,
-        affectedSectionHeadings: resolveAffectedSectionHeadings({
-          preview,
-          draft,
-          existingManagedMarkdown: existingPage?.managedMarkdown,
-        }),
-        hasManualNotes: existingPage?.hasManualNotes ?? false,
-      }
-
-      wikiPreview.value = {
-        generatedAt,
-        scope: {
-          summary: buildWikiPreviewSummary({
-            sourceDocumentCount: sourceDocuments.length,
-            draft,
-            existingFullMarkdown: existingPage?.fullMarkdown,
-          }),
-          descriptionLines: scopeDescriptionLines,
-        },
-        themePages: [themePage],
-        unclassifiedDocuments: [],
-        excludedWikiDocuments: [],
-      }
-      wikiPreviewCache.value.set(request.themeDocumentId, wikiPreview.value)
-    } catch (error) {
-      const message = error instanceof Error ? error.message : t('analytics.controller.failedToGenerateWikiPreview')
-      wikiError.value = message
-      wikiPreview.value = null
-      notify(message, 5000, 'error')
-    } finally {
-      wikiPreviewLoading.value = false
-    }
-  }
-
-  async function applyWikiChanges(overwriteConflicts = false) {
-    wikiApplyLoading.value = true
-    wikiError.value = ''
-
-    try {
-      if (!wikiPreview.value) {
-        throw new Error(t('analytics.controller.noWikiPreviewAvailable'))
-      }
-      if (!aiWikiStore) {
-        throw new Error(t('analytics.controller.wikiStorageNotInitialized'))
-      }
-      if (!createDocWithMd || !getIDsByHPath || !getBlockAttrs || !setBlockAttrs) {
-        throw new Error(t('analytics.controller.wikiWriteCapabilityNotInitialized'))
-      }
-
-      const result = await applyWikiDocuments({
-        config: {
-          themeNotebookId: appliedConfig.value.themeNotebookId,
-          themeDocumentPath: appliedConfig.value.themeDocumentPath,
-          wikiIndexTitle: appliedConfig.value.wikiIndexTitle ?? 'LLM-Wiki-Index',
-          wikiLogTitle: appliedConfig.value.wikiLogTitle ?? 'LLM-Wiki-Maintenance-Log',
-          wikiPageSuffix: appliedConfig.value.wikiPageSuffix ?? '-llm-wiki',
-          wikiContainerName: appliedConfig.value.wikiContainerName ?? 'LLM Wiki',
-        },
-        notebooks: snapshot.value?.notebooks,
-        generatedAt: new Date().toISOString(),
-        scopeSummary: {
-          sourceDocumentCount: wikiPreview.value.scope.summary.sourceDocumentCount,
-          themeGroupCount: 1,
-          unclassifiedDocumentCount: 0,
-          excludedWikiDocumentCount: 0,
-        },
-        scopeDescriptionLines: wikiPreview.value.scope.descriptionLines,
-        themePages: wikiPreview.value.themePages.map(page => ({
-          pageTitle: page.pageTitle,
-          themeName: page.themeName,
-          themeDocumentId: page.themeDocumentId,
-          themeDocumentTitle: page.themeDocumentTitle,
-          themeDocumentBox: page.themeDocumentBox,
-          themeDocumentHPath: page.themeDocumentHPath,
-          sourceDocumentIds: page.sourceDocumentIds,
-          preview: page.preview,
-          draft: page.draft,
-        })),
-        unclassifiedDocuments: wikiPreview.value.unclassifiedDocuments,
-        overwriteConflicts,
-        store: aiWikiStore,
-        api: {
-          createDocWithMd,
-          getIDsByHPath,
-          prependBlock,
-          appendBlock,
-          updateBlock,
-          deleteBlock,
-          getChildBlocks,
-          getBlockKramdown,
-          getBlockAttrs,
-          setBlockAttrs,
-        },
-      })
-
-      wikiPreview.value = {
-        ...wikiPreview.value,
-        applyResult: result,
-      }
-    } catch (error) {
-      const message = error instanceof Error ? error.message : t('analytics.controller.failedToWriteWiki')
-      wikiError.value = message
-      notify(message, 5000, 'error')
-    } finally {
-      wikiApplyLoading.value = false
-    }
-  }
-
   function openWikiDocument(documentId: string) {
     openDocument(documentId)
-  }
-
-  async function generateDocIndex(documentId: string): Promise<boolean> {
-    const document = documentMap.value.get(documentId)
-    if (!document) {
-      notify(t('analytics.controller.documentNotFound'), 3000, 'error')
-      return false
-    }
-
-    if (!aiIndexStore || !params.forwardProxy) {
-      notify(t('analytics.docSummary.aiRequired'), 3000, 'error')
-      return false
-    }
-
-    try {
-      const result = await ensureDocumentIndex({
-        config: appliedConfig.value,
-        sourceDocument: document,
-        indexStore: aiIndexStore,
-        forwardProxy: params.forwardProxy,
-        getChildBlocks,
-        getBlockKramdown,
-        force: true,
-      })
-      notify(t('analytics.controller.docIndexGenerated'), 2000)
-      return !result.fromCache
-    } catch (error) {
-      const message = error instanceof Error ? error.message : t('analytics.controller.docIndexGenerateFailed')
-      notify(message, 3000, 'error')
-      return false
-    }
-  }
-
-  async function hasDocIndex(documentId: string): Promise<boolean> {
-    if (!aiIndexStore) {
-      return false
-    }
-    const profile = await aiIndexStore.getDocumentProfile(documentId)
-    return profile !== null && Boolean(profile.positioning)
-  }
-
-  async function getDocIndexProfile(documentId: string): Promise<DocumentIndexProfile | null> {
-    if (!aiIndexStore) {
-      return null
-    }
-    return aiIndexStore.getDocumentProfile(documentId)
-  }
-
-  async function openDocIndex(documentId: string): Promise<void> {
-    const profile = await getDocIndexProfile(documentId)
-    if (!profile) {
-      notify(t('analytics.controller.docIndexNotFound'), 3000, 'error')
-      return
-    }
-
-    const firstNotebook = notebookOptions.value[0]
-    if (!firstNotebook || !createDocWithMd) {
-      notify(t('analytics.controller.docIndexCreateFailed'), 3000, 'error')
-      return
-    }
-
-    const documentTitle = profile.title || documentId
-    const title = `📑 ${t('summaryDetail.documentIndex.viewTitle', { title: documentTitle })}`
-    const safeName = title.replace(/[/:*?"<>|\\]/g, '_')
-    const docPath = `/索引/${safeName}`
-    const tags = parseStringArray(profile.tagsJson)
-    const keywords = parseStringArray(profile.keywordsJson)
-    const propositions = parseObjectArray<{ text: string, sourceBlockIds: string[] }>(profile.propositionsJson)
-    const primaryBlocks = parseObjectArray<{ blockId: string, text: string }>(profile.primarySourceBlocksJson)
-    const secondaryBlocks = parseObjectArray<{ blockId: string, text: string }>(profile.secondarySourceBlocksJson)
-
-    const blockIndexMap = new Map<string, string>()
-    const allBlocks = [...primaryBlocks, ...secondaryBlocks]
-    allBlocks.forEach((block, i) => {
-      blockIndexMap.set(block.blockId, String(i + 1))
-    })
-
-    function formatBlockRef(blockId: string): string {
-      const index = blockIndexMap.get(blockId) || blockId
-      return `^((${blockId} "${index}"))^`
-    }
-
-    const lines: string[] = []
-    lines.push(`> ⚠️ ${t('summaryDetail.documentIndex.viewWarning')}`)
-    lines.push('')
-
-    lines.push(`## ${t('summaryDetail.documentIndex.viewPositioning')}`)
-    lines.push('')
-    lines.push(profile.positioning || '-')
-    lines.push('')
-
-    if (propositions.length) {
-      lines.push(`## ${t('summaryDetail.documentIndex.viewPropositions')}`)
-      lines.push('')
-      for (const prop of propositions) {
-        const refSuffix = prop.sourceBlockIds.length
-          ? ' ' + prop.sourceBlockIds.map(id => formatBlockRef(id)).join(' ')
-          : ''
-        lines.push(`- ${prop.text}${refSuffix}`)
-      }
-      lines.push('')
-    }
-
-    if (tags.length) {
-      lines.push('## Tags')
-      lines.push('')
-      lines.push(tags.map(tag => `\`${tag}\``).join(' '))
-      lines.push('')
-    }
-
-    if (keywords.length) {
-      lines.push(`## ${t('summaryDetail.documentIndex.viewKeywords')}`)
-      lines.push('')
-      lines.push(keywords.map(kw => `\`${kw}\``).join(' '))
-      lines.push('')
-    }
-
-    if (primaryBlocks.length) {
-      lines.push(`## ${t('summaryDetail.documentIndex.viewPrimarySourceBlocks')}`)
-      lines.push('')
-      for (const block of primaryBlocks) {
-        lines.push(`> ${block.text}`)
-        lines.push(`> ${formatBlockRef(block.blockId)}`)
-        lines.push('')
-      }
-    }
-
-    if (secondaryBlocks.length) {
-      lines.push(`## ${t('summaryDetail.documentIndex.viewSecondarySourceBlocks')}`)
-      lines.push('')
-      for (const block of secondaryBlocks) {
-        lines.push(`> ${block.text}`)
-        lines.push(`> ${formatBlockRef(block.blockId)}`)
-        lines.push('')
-      }
-    }
-
-    lines.push('')
-
-    if (profile.generatedAt) {
-      lines.push('---')
-      lines.push('')
-      lines.push(`*${t('summaryDetail.documentIndex.viewUpdatedAt')}: ${profile.generatedAt}*`)
-    }
-
-    const markdown = lines.join('\n')
-
-    try {
-      const newDocId = await createDocWithMd(firstNotebook.id, docPath, markdown)
-      openDocument(newDocId)
-    } catch (error) {
-      const message = error instanceof Error ? error.message : t('analytics.controller.docIndexCreateFailed')
-      notify(message, 3000, 'error')
-    }
-  }
-
-  async function batchGenerateDocIndex(documentIds: string[], onProgress?: (done: number, total: number) => void): Promise<{ success: number, failed: number }> {
-    let success = 0
-    let failed = 0
-    for (let i = 0; i < documentIds.length; i++) {
-      try {
-        const result = await generateDocIndex(documentIds[i])
-        if (result) {
-          success++
-        } else {
-          failed++
-        }
-      } catch {
-        failed++
-      }
-      onProgress?.(i + 1, documentIds.length)
-    }
-    return { success, failed }
-  }
-
-  async function batchDeleteDocIndex(documentIds: string[]): Promise<number> {
-    if (!aiIndexStore) {
-      return 0
-    }
-    await aiIndexStore.deleteDocumentIndex(documentIds)
-    return documentIds.length
-  }
-
-  function parseStringArray(value: string): string[] {
-    if (!value) {
-      return []
-    }
-    try {
-      const parsed = JSON.parse(value)
-      return Array.isArray(parsed) ? parsed.filter((item: unknown): item is string => typeof item === 'string' && item.trim().length > 0) : []
-    } catch {
-      return []
-    }
-  }
-
-  function parseObjectArray<T>(value: string): T[] {
-    if (!value) {
-      return []
-    }
-    try {
-      const parsed = JSON.parse(value)
-      return Array.isArray(parsed) ? parsed : []
-    } catch {
-      return []
-    }
   }
 
   const linkInteractions = createLinkAssociationInteractions({
@@ -1512,100 +1083,5 @@ function buildAppliedAnalysisConfig(
     readTitleSuffixes: appliedAnalysisConfig.readTitleSuffixes,
     readPaths: appliedAnalysisConfig.readPaths,
     wikiPageSuffix: appliedAnalysisConfig.wikiPageSuffix,
-  }
-}
-
-function buildSingleThemeWikiPayload(params: {
-  config: Pick<PluginConfig, 'wikiPageSuffix'>
-  themeDocument: { documentId: string, title: string, themeName: string }
-  sourceDocuments: DocumentRecord[]
-  report: NonNullable<ReturnType<typeof analyzeReferenceGraph>>
-  trends: NonNullable<ReturnType<typeof analyzeTrends>>
-  documentMap: ReadonlyMap<string, DocumentRecord>
-  getDocumentProfile: (document: DocumentRecord) => DocumentIndexProfile | null
-}): WikiThemeBundle {
-  const bundleDocuments = params.sourceDocuments.map((document) => {
-    const profile = params.getDocumentProfile(document)
-    if (!profile) {
-      throw new Error(`Missing document index profile for wiki source document: ${document.id}`)
-    }
-
-    const parseJsonArray = <T>(value?: string): T[] => {
-      if (!value) {
-        return []
-      }
-      try {
-        const parsed = JSON.parse(value)
-        return Array.isArray(parsed) ? parsed : []
-      } catch {
-        return []
-      }
-    }
-
-    return {
-      documentId: document.id,
-      title: profile.title || document.title || document.hpath || document.path || document.id,
-      positioning: profile.positioning || '',
-      propositions: parseJsonArray<any>(profile.propositionsJson)
-        .filter((item): item is { text: string, sourceBlockIds?: string[] } => Boolean(item) && typeof item.text === 'string')
-        .map(item => ({
-          text: item.text.trim(),
-          sourceBlockIds: Array.isArray(item.sourceBlockIds) ? item.sourceBlockIds.filter((id): id is string => typeof id === 'string' && id.trim().length > 0) : [],
-        }))
-        .filter(item => item.text.length > 0),
-      keywords: parseJsonArray<unknown>(profile.keywordsJson)
-        .filter((item): item is string => typeof item === 'string')
-        .map(item => item.trim())
-        .filter(Boolean),
-      primarySourceBlocks: parseJsonArray<any>(profile.primarySourceBlocksJson)
-        .filter((item): item is { blockId: string, text: string } => Boolean(item) && typeof item.blockId === 'string' && typeof item.text === 'string')
-        .map(item => ({ blockId: item.blockId.trim(), text: item.text.trim() }))
-        .filter(item => item.blockId.length > 0 && item.text.length > 0),
-      secondarySourceBlocks: parseJsonArray<any>(profile.secondarySourceBlocksJson)
-        .filter((item): item is { blockId: string, text: string } => Boolean(item) && typeof item.blockId === 'string' && typeof item.text === 'string')
-        .map(item => ({ blockId: item.blockId.trim(), text: item.text.trim() }))
-        .filter(item => item.blockId.length > 0 && item.text.length > 0),
-      sourceUpdatedAt: profile.sourceUpdatedAt,
-      generatedAt: profile.generatedAt,
-    }
-  })
-
-  const sourceDocumentIds = bundleDocuments.map(item => item.documentId)
-  const sourceDocumentIdSet = new Set(sourceDocumentIds)
-  const relationshipEvidence: string[] = []
-
-  for (const targetDocumentId of sourceDocumentIds) {
-    const refs = params.report.evidenceByDocument[targetDocumentId] ?? []
-    for (const ref of refs) {
-      if (!sourceDocumentIdSet.has(ref.sourceDocumentId)) {
-        continue
-      }
-      const sourceTitle = resolveDocumentTitle(params.documentMap.get(ref.sourceDocumentId) as any)
-      const targetTitle = resolveDocumentTitle(params.documentMap.get(targetDocumentId) as any)
-      relationshipEvidence.push(`${sourceTitle} -> ${targetTitle}：${ref.content}`)
-    }
-  }
-
-  return {
-    themeName: params.themeDocument.themeName,
-    pageTitle: buildThemeWikiPageTitle(params.themeDocument.title, params.config.wikiPageSuffix ?? ''),
-    themeDocumentId: params.themeDocument.documentId,
-    themeDocumentTitle: params.themeDocument.title,
-    sourceDocuments: bundleDocuments,
-    templateSignals: {
-      sourceDocumentCount: bundleDocuments.length,
-      propositionCount: bundleDocuments.reduce((sum, item) => sum + item.propositions.length, 0),
-      primarySourceBlockCount: bundleDocuments.reduce((sum, item) => sum + item.primarySourceBlocks.length, 0),
-      secondarySourceBlockCount: bundleDocuments.reduce((sum, item) => sum + item.secondarySourceBlocks.length, 0),
-    },
-    analysisSignals: {
-      coreDocumentIds: params.report.ranking.map(item => item.documentId).filter(documentId => sourceDocumentIdSet.has(documentId)),
-      bridgeDocumentIds: params.report.bridgeDocuments.map(item => item.documentId).filter(documentId => sourceDocumentIdSet.has(documentId)),
-      propagationDocumentIds: params.report.propagationNodes.map(item => item.documentId).filter(documentId => sourceDocumentIdSet.has(documentId)),
-      orphanDocumentIds: params.report.orphans.map(item => item.documentId).filter(documentId => sourceDocumentIdSet.has(documentId)),
-      risingDocumentIds: params.trends.risingDocuments.map(item => item.documentId).filter(documentId => sourceDocumentIdSet.has(documentId)),
-      fallingDocumentIds: params.trends.fallingDocuments.map(item => item.documentId).filter(documentId => sourceDocumentIdSet.has(documentId)),
-      relationshipEvidence,
-    },
   }
 }

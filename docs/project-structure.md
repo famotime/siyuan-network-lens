@@ -1,6 +1,6 @@
 # 项目结构
 
-更新时间：2026-04-12
+更新时间：2026-05-05
 
 ## 顶层目录
 
@@ -37,7 +37,11 @@
 - `src/analytics/summary-detail-types.ts`
   - 顶部卡片与详情 section 共享类型定义。
 - `src/analytics/siyuan-data.ts`
-  - 从思源数据库读取文档和引用快照，并合并 `refs` 与 markdown fallback。
+  - 从思源数据库读取文档和引用快照，作为数据采集层的装配入口。
+- `src/analytics/siyuan-data-queries.ts`
+  - 集中维护快照查询 SQL、思源时间戳格式化与 markdown fallback 目标块查询。
+- `src/analytics/siyuan-data-merge.ts`
+  - 集中处理 `refs` 与 markdown fallback 的引用去重合并规则。
 - `src/analytics/internal-links.ts`
   - markdown fallback 内部链接解析，当前支持 `siyuan://blocks/...` 与 `((...))`。
 - `src/analytics/theme-documents.ts`
@@ -86,26 +90,34 @@
 ## 组合式状态层
 
 - `src/composables/use-analytics.ts`
-  - 主状态容器。负责组合快照、筛选、分析结果、watcher、公开 API 与 UI 联动状态。
+  - 主状态容器。负责组合快照、筛选、分析结果、watcher、公开 API 与 UI 联动状态，并作为多个子控制器的统一出口。
 - `src/composables/use-analytics-ai.ts`
   - AI Inbox、连接测试与孤立文档 AI 补链相关状态与动作。
+- `src/composables/use-analytics-document-index.ts`
+  - 文档索引控制器，负责单篇/批量索引生成、索引页渲染与索引页打开。
 - `src/composables/use-analytics-derived.ts`
   - 新增纯派生选择器。负责标签选项、路径候选、孤立主题建议映射、详情计数和关联映射构建。
 - `src/composables/use-analytics-interactions.ts`
   - 新增交互副作用控制器。负责关联同步和孤立主题建议写入/撤销的状态与消息反馈。
 - `src/composables/use-analytics-wiki.ts`
   - Wiki 预览与写回相关类型、局部 helper 与共享状态边界。
+- `src/composables/use-analytics-wiki-actions.ts`
+  - Wiki 维护控制器，负责单主题 wiki 预览生成、缓存恢复与写回调用链。
+- `src/composables/use-app-filters.ts`
+  - 页面级筛选与可见卡片控制器，负责筛选选项构建、可见卡片过滤与页面级 setter wrapper。
 - `src/composables/use-app-wiki-panel.ts`
   - 页面级 wiki 面板控制器，负责 request 构造、placement 与显隐切换。
 
 ## UI 层
 
 - `src/App.vue`
-  - 主界面，消费 `useAnalyticsState` 与页面级 wiki 面板控制器，负责筛选器、顶部操作区和页面级布局组装。
+  - 主界面，消费 `useAnalyticsState`、`use-app-filters.ts` 与页面级 wiki 面板控制器，负责筛选器、顶部操作区和页面级布局组装。
 - `src/components/SettingPanel.vue`
-  - 设置界面，负责主题文档、统计卡片开关、已读规则、AI 接入和 LLM Wiki 配置的页面组装。
+  - 设置界面，负责主题文档、统计卡片开关、已读规则、AI 接入和 LLM Wiki 配置的页面组装；基础区块已改为按 section 元数据渲染。
 - `src/components/setting-panel-data.ts`
   - 新增设置页数据 helper，负责默认值修正、标签选项收集和笔记本/标签初始化加载。
+- `src/components/setting-panel-sections.ts`
+  - 设置页基础区块元数据 helper，集中分析范围、主题文档、已读规则三组字段的渲染配置。
 - `src/components/use-setting-panel-ai.ts`
   - AI 设置区控制器，负责 provider 切换、连接测试、导入导出与 SiliconFlow 模型目录加载。
 - `src/components/setting-panel-ai-state.ts`
@@ -145,11 +157,17 @@
 ## 测试分布
 
 - `src/analytics/*.test.ts`
-  - 覆盖图分析、趋势、fallback 引用采集、主题文档、已读规则、wiki 生成/写入流程、卡片详情与共享 helper。
+  - 覆盖图分析、趋势、fallback 引用采集、数据采集 helper、主题文档、已读规则、wiki 生成/写入流程、卡片详情与共享 helper。
 - `src/composables/use-analytics.test.ts`
   - 覆盖主 composable 的公开行为，包括 AI/Wiki 状态重置与 LLM Wiki 预览/写入闭环。
+- `src/composables/use-analytics-document-index.test.ts`
+  - 覆盖文档索引控制器的索引页渲染、单篇生成、批量进度与删除行为。
+- `src/composables/use-analytics-wiki-actions.test.ts`
+  - 覆盖 wiki 动作控制器的缓存恢复与写回调用边界。
 - `src/composables/use-analytics-derived.test.ts`
   - 覆盖新拆分出的纯派生选择器。
+- `src/composables/use-app-filters.test.ts`
+  - 覆盖页面级筛选选项构建、可见卡片回退与 setter wrapper。
 - `src/composables/use-app-wiki-panel.test.ts`
   - 覆盖页面级 wiki 面板 request 构造、去重与显隐控制。
 - `src/components/*.test.ts`

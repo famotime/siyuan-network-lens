@@ -27,10 +27,21 @@ It focuses on structure, evidence, and cleanup actions, not large graph renderin
 - Theme-doc repair suggestions
 - AI Inbox and LLM Wiki maintenance
 
+## Implementation Notes
+
+The current codebase is organized around a thin analytics state container plus focused controllers for wiki actions, document indexing, page-level filters, and setting-panel sections. The data collection layer is also split so SQL/query concerns and reference merge rules stay outside the snapshot assembly entrypoint.
+
+## Development
+
+- Install: `npm install --legacy-peer-deps`
+- Test: `npm test`
+- Build: `npm run build`
+
+`npm run build` updates the root `package.zip`, which is expected for this plugin project.
+
 ## Usage
 
 Feature notes, usage tips, and discussion are in the SiYuan community thread:
 
 [We don't need a cooler graph. We need a dashboard with actions.](https://ld246.com/article/1774075839744)
-
 

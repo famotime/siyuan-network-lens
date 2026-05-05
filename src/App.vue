@@ -241,7 +241,7 @@
 </template>
 
 <script setup lang="ts">
-import { computed, watch } from 'vue'
+import { computed } from 'vue'
 import { openTab, showMessage, type Plugin } from 'siyuan'
 
 import FilterSelect from '@/components/FilterSelect.vue'
@@ -253,6 +253,7 @@ import { isSummaryCardVisible } from '@/analytics/summary-card-config'
 import { pickOppositePluginText, pickPluginText } from '@/i18n/plugin'
 import { useAnalyticsState } from '@/composables/use-analytics'
 import { createAppWikiPanelController } from '@/composables/use-app-wiki-panel'
+import { createAppFilterController } from '@/composables/use-app-filters'
 import { appendBlock, createDocWithMd, deleteBlock, forwardProxy, getBlockAttrs, getBlockKramdown, getChildBlocks, getIDsByHPath, prependBlock, setBlockAttrs, updateBlock } from '@/api'
 import { isAlphaSettingVisible, isAlphaSummaryCardVisible } from '@/plugin/alpha-feature-config'
 import { t } from '@/i18n/ui'
@@ -406,65 +407,35 @@ const wikiPanelProps = computed(() => ({
   formatTimestamp,
 }))
 const showWikiFeature = isAlphaSettingVisible('llm-wiki')
-
-const visibleSummaryCards = computed(() => {
-  if (!props.config.showSummaryCards) {
-    return []
-  }
-  return summaryCards.value.filter(card => isSummaryCardVisible(props.config, card.key) && isAlphaSummaryCardVisible(card.key))
+const {
+  visibleSummaryCards,
+  timeRangeFilterOptions,
+  notebookFilterOptions,
+  tagFilterOptions,
+  updateOrphanSort,
+  updateDormantDays,
+  updatePathScope,
+  updateMaxPathDepth,
+  updateFromDocumentId,
+  updateToDocumentId,
+} = createAppFilterController({
+  config: props.config,
+  timeRangeOptions,
+  notebookOptions,
+  tagOptions,
+  summaryCards,
+  selectedSummaryCardKey,
+  isSummaryCardVisible,
+  isAlphaSummaryCardVisible,
+  allNotebookLabel: t('app.filter.allNotebooks'),
+  selectSummaryCard,
+  orphanSort,
+  dormantDays,
+  pathScope,
+  maxPathDepth,
+  fromDocumentId,
+  toDocumentId,
 })
-
-const timeRangeFilterOptions = computed(() => timeRangeOptions.value.map(option => ({
-  value: option.value,
-  label: option.label,
-})))
-
-const notebookFilterOptions = computed(() => [
-  { value: '', label: t('app.filter.allNotebooks') },
-  ...notebookOptions.value.map(notebook => ({
-    value: notebook.id,
-    label: notebook.name,
-  })),
-])
-
-const tagFilterOptions = computed(() => tagOptions.value.map(tag => ({
-  value: tag,
-  label: tag,
-  key: tag,
-})))
-
-watch(visibleSummaryCards, (cards) => {
-  if (cards.length === 0) {
-    return
-  }
-  if (!cards.some(card => card.key === selectedSummaryCardKey.value)) {
-    selectSummaryCard(cards[0].key)
-  }
-}, { immediate: true })
-
-function updateOrphanSort(value: typeof orphanSort.value) {
-  orphanSort.value = value
-}
-
-function updateDormantDays(value: number) {
-  dormantDays.value = value
-}
-
-function updatePathScope(value: typeof pathScope.value) {
-  pathScope.value = value
-}
-
-function updateMaxPathDepth(value: number) {
-  maxPathDepth.value = value
-}
-
-function updateFromDocumentId(value: string) {
-  fromDocumentId.value = value
-}
-
-function updateToDocumentId(value: string) {
-  toDocumentId.value = value
-}
 </script>
 
 <style lang="scss" scoped>

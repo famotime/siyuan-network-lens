@@ -64,13 +64,14 @@ describe('App trend detail layout', () => {
   width: 100%;`)
   })
 
-  it('keeps filter layout and summary visibility selection in App composition', async () => {
+  it('keeps filter layout while delegating summary visibility selection to the app filter controller', async () => {
     const source = await readFile(new URL('./App.vue', import.meta.url), 'utf8')
 
     expect(source).toContain('filter-panel__row--meta')
     expect(source).toContain('filter-panel__row--focus')
     expect(source).toContain('visibleSummaryCards')
-    expect(source).toContain('watch(visibleSummaryCards')
+    expect(source).toContain("import { createAppFilterController } from '@/composables/use-app-filters'")
+    expect(source).toContain('createAppFilterController({')
     expect(source).toContain("from '@/analytics/summary-card-config'")
     expect(source).toContain("from '@/plugin/alpha-feature-config'")
     expect(source).toContain('isSummaryCardVisible')

@@ -1,110 +1,36 @@
 <template>
   <div class="setting-panel">
-    <div class="setting-group">
+    <div
+      v-for="section in baseSections"
+      :key="section.key"
+      class="setting-group"
+    >
       <div class="setting-header">
-        <h3>{{ t('settings.analysisScope.title') }}</h3>
-        <p>{{ t('settings.analysisScope.description') }}</p>
+        <h3>{{ section.title }}</h3>
+        <p>{{ section.description }}</p>
       </div>
       <div class="setting-form">
-        <label class="setting-field setting-field--full">
-          <span>{{ t('settings.analysisScope.excludedPaths') }}</span>
+        <label
+          v-for="field in section.fields"
+          :key="field.modelKey"
+          :class="['setting-field', field.fullWidth ? 'setting-field--full' : '']"
+        >
+          <span>{{ field.label }}</span>
+          <template v-if="field.type === 'tag-multiselect'">
+            <div class="setting-select-shell">
+              <ThemeMultiSelect
+                v-model="config[field.modelKey]"
+                :options="field.options ?? []"
+                :all-label="field.allLabel ?? ''"
+                :empty-label="field.emptyLabel ?? ''"
+                :selection-unit="field.selectionUnit ?? ''"
+              />
+            </div>
+          </template>
           <input
-            v-model.trim="config.analysisExcludedPaths"
-            :placeholder="t('settings.analysisScope.excludedPathsPlaceholder')"
-            type="text"
-          >
-        </label>
-        <label class="setting-field">
-          <span>{{ t('settings.analysisScope.namePrefixes') }}</span>
-          <input
-            v-model.trim="config.analysisExcludedNamePrefixes"
-            :placeholder="t('settings.analysisScope.namePrefixesPlaceholder')"
-            type="text"
-          >
-        </label>
-        <label class="setting-field">
-          <span>{{ t('settings.analysisScope.nameSuffixes') }}</span>
-          <input
-            v-model.trim="config.analysisExcludedNameSuffixes"
-            :placeholder="t('settings.analysisScope.nameSuffixesPlaceholder')"
-            type="text"
-          >
-        </label>
-      </div>
-    </div>
-
-    <div class="setting-group">
-      <div class="setting-header">
-        <h3>{{ t('settings.topicDocs.title') }}</h3>
-        <p>{{ t('settings.topicDocs.description') }}</p>
-      </div>
-      <div class="setting-form">
-        <label class="setting-field setting-field--full">
-          <span>{{ t('settings.topicDocs.pathLabel') }}</span>
-          <input
-            v-model.trim="config.themeDocumentPath"
-            :placeholder="t('settings.topicDocs.pathPlaceholder')"
-            type="text"
-          >
-        </label>
-        <label class="setting-field">
-          <span>{{ t('settings.topicDocs.namePrefixes') }}</span>
-          <input
-            v-model.trim="config.themeNamePrefix"
-            :placeholder="t('settings.topicDocs.namePrefixesPlaceholder')"
-            type="text"
-          >
-        </label>
-        <label class="setting-field">
-          <span>{{ t('settings.topicDocs.nameSuffixes') }}</span>
-          <input
-            v-model.trim="config.themeNameSuffix"
-            :placeholder="t('settings.topicDocs.nameSuffixesPlaceholder')"
-            type="text"
-          >
-        </label>
-      </div>
-    </div>
-
-    <div class="setting-group">
-      <div class="setting-header">
-        <h3>{{ t('settings.readRules.title') }}</h3>
-        <p>{{ t('settings.readRules.description') }}</p>
-      </div>
-      <div class="setting-form">
-        <label class="setting-field setting-field--full">
-          <span>{{ t('settings.readRules.readPaths') }}</span>
-          <input
-            v-model.trim="config.readPaths"
-            :placeholder="t('settings.readRules.readPathsPlaceholder')"
-            type="text"
-          >
-        </label>
-        <label class="setting-field setting-field--full">
-          <span>{{ t('settings.readRules.readTags') }}</span>
-          <div class="setting-select-shell">
-            <ThemeMultiSelect
-              v-model="config.readTagNames"
-              :options="readTagOptions"
-              :all-label="t('settings.readRules.noneSelected')"
-              :empty-label="t('settings.readRules.noTagsAvailable')"
-              :selection-unit="t('settings.readRules.tagUnit')"
-            />
-          </div>
-        </label>
-        <label class="setting-field">
-          <span>{{ t('settings.readRules.titlePrefixes') }}</span>
-          <input
-            v-model.trim="config.readTitlePrefixes"
-            :placeholder="t('settings.readRules.titlePrefixesPlaceholder')"
-            type="text"
-          >
-        </label>
-        <label class="setting-field">
-          <span>{{ t('settings.readRules.titleSuffixes') }}</span>
-          <input
-            v-model.trim="config.readTitleSuffixes"
-            :placeholder="t('settings.readRules.titleSuffixesPlaceholder')"
+            v-else
+            v-model.trim="config[field.modelKey]"
+            :placeholder="field.placeholder"
             type="text"
           >
         </label>
@@ -431,11 +357,12 @@
 </template>
 
 <script setup lang="ts">
-import { onMounted, ref } from 'vue'
+import { computed, onMounted, ref } from 'vue'
 
 import { lsNotebooks, sql } from '@/api'
 import { SUMMARY_CARD_DEFINITIONS } from '@/analytics/summary-card-config'
 import { loadSettingPanelData, migrateLegacyThemeDocumentPath, type NotebookOption } from '@/components/setting-panel-data'
+import { buildBaseSettingSections } from '@/components/setting-panel-sections'
 import { useSettingPanelAi } from '@/components/use-setting-panel-ai'
 import { t } from '@/i18n/ui'
 import ThemeMultiSelect from '@/components/ThemeMultiSelect.vue'
@@ -453,6 +380,10 @@ const readTagOptions = ref<Array<{ value: string, label: string, key: string }>>
 const summaryCardSettings = SUMMARY_CARD_DEFINITIONS
   .filter(item => item.showInSettings !== false)
   .filter(item => isAlphaSummaryCardVisible(item.key))
+const baseSections = computed(() => buildBaseSettingSections({
+  readTagOptions: readTagOptions.value,
+  t,
+}))
 const showAiServiceSettings = isAlphaSettingVisible('ai-service')
 const showWikiSettings = isAlphaSettingVisible('llm-wiki')
 const showAiSettingsGroup = showAiServiceSettings || showWikiSettings
