@@ -173,7 +173,6 @@ export function resolveWikiScopeDocuments(params: {
   sourceDocumentIds?: string[]
   fallbackDocuments: DocumentRecord[]
   associationDocumentMap: Map<string, DocumentRecord>
-  documentMap: Map<string, DocumentRecord>
 }): DocumentRecord[] {
   if (!params.sourceDocumentIds?.length) {
     return params.fallbackDocuments
@@ -183,7 +182,7 @@ export function resolveWikiScopeDocuments(params: {
   const visited = new Set<string>()
 
   for (const documentId of params.sourceDocumentIds) {
-    const document = params.associationDocumentMap.get(documentId) ?? params.documentMap.get(documentId)
+    const document = params.associationDocumentMap.get(documentId)
     if (!document || visited.has(document.id)) {
       continue
     }

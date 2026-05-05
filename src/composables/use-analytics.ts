@@ -908,7 +908,6 @@ export function useAnalyticsState(params: UseAnalyticsParams) {
         sourceDocumentIds: request?.sourceDocumentIds,
         fallbackDocuments: filteredDocuments.value,
         associationDocumentMap: associationDocumentMap.value,
-        documentMap: documentMap.value,
       })
       const sourceDocuments = scopedDocuments.filter(document => document.id !== themeDocument.documentId)
       const scopeDescriptionLines = buildWikiScopeDescriptionLines({
