@@ -15,7 +15,7 @@
           {{ previewLoading ? t('wikiMaintain.generating') : t('wikiMaintain.generatePreview') }}
         </button>
         <button
-          class="ghost-button"
+          class="action-button"
           type="button"
           :disabled="applyLoading || !canApply"
           @click="applyWikiChanges(allowOverwriteConflicts)"
