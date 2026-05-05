@@ -37,13 +37,28 @@
           :key="item.documentId"
           class="ranking-entry"
         >
-          <article class="ranking-item">
-            <DocumentTitle
-              :document-id="item.documentId"
-              :title="resolveTitle(item.documentId)"
-              :open-document="openDocument"
-              :is-theme-document="item.isThemeDocument"
-            />
+          <article :class="['ranking-item', { 'ranking-item--collapsed': props.collapsedItems[item.documentId] }]">
+            <div class="ranking-item__title-row">
+              <DocumentTitle
+                :document-id="item.documentId"
+                :title="resolveTitle(item.documentId)"
+                :open-document="openDocument"
+                :is-theme-document="item.isThemeDocument"
+              />
+              <button
+                v-if="props.onToggleItemCollapse"
+                class="ranking-item__collapse-toggle"
+                type="button"
+                :aria-expanded="!props.collapsedItems[item.documentId]"
+                @click="props.onToggleItemCollapse(item.documentId)"
+              >
+                <span
+                  class="ranking-item__caret"
+                  aria-hidden="true"
+                />
+              </button>
+            </div>
+            <div v-show="!props.collapsedItems[item.documentId]">
             <div class="ranking-item__meta">
               <span>{{ t('rankingPanel.connectionSummary', { inbound: item.inboundReferences, sources: item.distinctSourceDocuments, outbound: item.outboundReferences, children: item.childDocumentCount }) }}</span>
             </div>
@@ -216,6 +231,7 @@
                 v-bind="wikiPanelProps"
               />
             </div>
+            </div>
           </article>
         </div>
       </div>
@@ -271,9 +287,13 @@ const props = withDefaults(defineProps<{
   toggleCoreDocumentWikiPanel: (documentId: string) => void | Promise<void>
   showWikiPanelActions?: boolean
   variant?: 'panel' | 'detail'
+  collapsedItems?: Record<string, boolean>
+  onToggleItemCollapse?: (documentId: string) => void
 }>(), {
   showWikiPanelActions: true,
   variant: 'panel',
+  collapsedItems: () => ({}),
+  onToggleItemCollapse: undefined,
 })
 
 function resolveAssociations(documentId: string): LinkAssociations {
@@ -394,17 +414,73 @@ function resolveAssociations(documentId: string): LinkAssociations {
   background: var(--surface-card-soft);
 }
 
+.ranking-item--collapsed {
+  padding-top: 10px;
+  padding-bottom: 10px;
+}
+
+.ranking-item__title-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.ranking-item__collapse-toggle {
+  width: 28px;
+  height: 28px;
+  border: 0;
+  border-radius: 999px;
+  background: transparent;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0;
+  flex-shrink: 0;
+  transition: background-color 0.2s;
+}
+
+.ranking-item__collapse-toggle:hover {
+  background: var(--surface-card-soft);
+}
+
+.ranking-item__caret {
+  width: 6px;
+  height: 6px;
+  border-right: 1.5px solid var(--panel-muted);
+  border-bottom: 1.5px solid var(--panel-muted);
+  transform: rotate(45deg);
+  transition: transform 0.2s ease;
+}
+
+.ranking-item__collapse-toggle[aria-expanded='false'] .ranking-item__caret {
+  transform: rotate(-45deg);
+}
+
 .ranking-item__meta,
-.ranking-item__timestamps,
-.ranking-item__actions {
+.ranking-item__timestamps {
   display: flex;
   gap: 12px;
   flex-wrap: wrap;
 }
 
+.ranking-item__actions {
+  display: flex;
+  gap: 12px;
+  flex-wrap: wrap;
+  width: 100%;
+  margin-top: 4px;
+}
+
+.ranking-item__actions .ghost-button {
+  flex: 1;
+}
+
 .ranking-item__wiki {
   display: grid;
   gap: 12px;
+  margin-top: 8px;
 }
 
 .ranking-item__timestamps {

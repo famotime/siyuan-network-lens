@@ -471,6 +471,14 @@ const UI_TEXT = {
       en_US: 'Expand details',
       zh_CN: '展开详情',
     },
+    collapseAll: {
+      en_US: 'Collapse all',
+      zh_CN: '全部折叠',
+    },
+    expandAll: {
+      en_US: 'Expand all',
+      zh_CN: '全部展开',
+    },
     historyLabel: {
       en_US: 'History:',
       zh_CN: '历史：',

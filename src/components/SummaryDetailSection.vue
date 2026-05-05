@@ -9,6 +9,14 @@
         <div class="panel-header__actions">
           <span class="meta-text">{{ summaryCountLabel }}</span>
           <button
+            v-if="collapsibleItemIds.length > 1"
+            class="panel-header__collapse-all"
+            type="button"
+            @click="toggleCollapseAll"
+          >
+            {{ allCollapsed ? t('summaryDetail.expandAll') : t('summaryDetail.collapseAll') }}
+          </button>
+          <button
             class="panel-toggle"
             type="button"
             :aria-expanded="isExpanded"
@@ -246,7 +254,7 @@
             <article
               v-for="item in listItems"
               :key="`${detail.key}-${item.documentId}`"
-              class="summary-detail-item"
+              :class="['summary-detail-item', { 'summary-detail-item--collapsed': collapsedItems[item.documentId] }]"
             >
               <div class="summary-detail-item__header">
                 <DocumentTitle
@@ -255,63 +263,78 @@
                   :open-document="openDocument"
                   :is-theme-document="item.isThemeDocument"
                 />
-                <span
-                  v-if="item.badge"
-                  class="badge"
-                >
-                  {{ item.badge }}
-                </span>
-              </div>
-              <p class="summary-detail-item__meta">
-                {{ item.meta }}
-              </p>
-              <SuggestionCallout
-                v-if="hasSuggestionCallout(item)"
-                :suggestions="buildSuggestionCalloutItems(item)"
-              >
-                <div
-                  v-if="item.themeSuggestions?.length"
-                  class="detail-theme-section"
-                >
-                  <div class="detail-theme-tags">
-                    <button
-                      v-for="suggestion in item.themeSuggestions"
-                      :key="`${item.documentId}-${suggestion.themeDocumentId}`"
-                      :class="['detail-theme-tag', { 'detail-theme-tag--active': isThemeSuggestionActive(item.documentId, suggestion.themeDocumentId) }]"
-                      type="button"
-                      :title="t('summaryDetail.themeSuggestionTooltip', { title: suggestion.themeDocumentTitle, count: suggestion.matchCount })"
-                      @click="toggleOrphanThemeSuggestion(item.documentId, suggestion.themeDocumentId)"
-                    >
-                      <span class="detail-theme-name">{{ suggestion.themeName }}</span>
-                    </button>
-                  </div>
-                </div>
-              </SuggestionCallout>
-              <div
-                v-if="showDocumentIndex && detail.key === 'documents'"
-                class="doc-index-actions"
-              >
-                <button
-                  class="doc-index-button"
-                  type="button"
-                  :disabled="docIndexGenerating[item.documentId]"
-                  @click="handleGenerateDocIndex(item.documentId)"
-                >
+                <div class="summary-detail-item__header-end">
                   <span
-                    v-if="docIndexGenerating[item.documentId]"
-                    class="doc-index-spinner"
-                    aria-hidden="true"
-                  />
-                  {{ docIndexGenerating[item.documentId] ? t('summaryDetail.documentIndex.generating') : t('summaryDetail.documentIndex.generate') }}
-                </button>
-                <button
-                  class="doc-index-button doc-index-button--view"
-                  type="button"
-                  :disabled="!docIndexExists[item.documentId]"
-                  @click="handleOpenDocIndex(item.documentId)"
+                    v-if="item.badge"
+                    class="badge"
+                  >
+                    {{ item.badge }}
+                  </span>
+                  <button
+                    class="summary-detail-item__collapse-toggle"
+                    type="button"
+                    :aria-expanded="!collapsedItems[item.documentId]"
+                    @click="toggleItemCollapse(item.documentId)"
+                  >
+                    <span
+                      class="summary-detail-item__caret"
+                      aria-hidden="true"
+                    />
+                  </button>
+                </div>
+              </div>
+              <div v-show="!collapsedItems[item.documentId]">
+                <p class="summary-detail-item__meta">
+                  {{ item.meta }}
+                </p>
+                <SuggestionCallout
+                  v-if="hasSuggestionCallout(item)"
+                  :suggestions="buildSuggestionCalloutItems(item)"
                 >
-                  {{ t('summaryDetail.documentIndex.view') }}
-                </button>
+                  <div
+                    v-if="item.themeSuggestions?.length"
+                    class="detail-theme-section"
+                  >
+                    <div class="detail-theme-tags">
+                      <button
+                        v-for="suggestion in item.themeSuggestions"
+                        :key="`${item.documentId}-${suggestion.themeDocumentId}`"
+                        :class="['detail-theme-tag', { 'detail-theme-tag--active': isThemeSuggestionActive(item.documentId, suggestion.themeDocumentId) }]"
+                        type="button"
+                        :title="t('summaryDetail.themeSuggestionTooltip', { title: suggestion.themeDocumentTitle, count: suggestion.matchCount })"
+                        @click="toggleOrphanThemeSuggestion(item.documentId, suggestion.themeDocumentId)"
+                      >
+                        <span class="detail-theme-name">{{ suggestion.themeName }}</span>
+                      </button>
+                    </div>
+                  </div>
+                </SuggestionCallout>
+                <div
+                  v-if="showDocumentIndex && detail.key === 'documents'"
+                  class="doc-index-actions"
+                >
+                  <button
+                    class="doc-index-button"
+                    type="button"
+                    :disabled="docIndexGenerating[item.documentId]"
+                    @click="handleGenerateDocIndex(item.documentId)"
+                  >
+                    <span
+                      v-if="docIndexGenerating[item.documentId]"
+                      class="doc-index-spinner"
+                      aria-hidden="true"
+                    />
+                    {{ docIndexGenerating[item.documentId] ? t('summaryDetail.documentIndex.generating') : t('summaryDetail.documentIndex.generate') }}
+                  </button>
+                  <button
+                    class="doc-index-button doc-index-button--view"
+                    type="button"
+                    :disabled="!docIndexExists[item.documentId]"
+                    @click="handleOpenDocIndex(item.documentId)"
+                  >
+                    {{ t('summaryDetail.documentIndex.view') }}
+                  </button>
+                </div>
               </div>
             </article>
           </div>
@@ -491,6 +514,8 @@
           :is-wiki-panel-visible-for-core-document="isCoreDocumentWikiPanelVisible"
           :toggle-core-document-wiki-panel="toggleCoreDocumentWikiPanel"
           :show-wiki-panel-actions="showWikiPanelActions"
+          :collapsed-items="collapsedItems"
+          :on-toggle-item-collapse="toggleItemCollapse"
         />
       </template>
       <template v-else-if="detail.kind === 'trends'">
@@ -831,6 +856,44 @@ const listItems = computed<DetailItemWithThemeSuggestions[]>(() => {
   }))
 })
 
+const collapsedItems = ref<Record<string, boolean>>({})
+
+const collapsibleItemIds = computed(() => {
+  if (props.detail.kind === 'list') {
+    return listItems.value.map(item => item.documentId)
+  }
+  if (props.detail.kind === 'ranking') {
+    return props.detail.ranking.map(item => item.documentId)
+  }
+  return []
+})
+
+const allCollapsed = computed(() => {
+  const ids = collapsibleItemIds.value
+  return ids.length > 0 && ids.every(id => collapsedItems.value[id])
+})
+
+function toggleCollapseAll() {
+  const ids = collapsibleItemIds.value
+  const shouldCollapse = !allCollapsed.value
+  const next: Record<string, boolean> = {}
+  for (const id of ids) {
+    next[id] = shouldCollapse
+  }
+  collapsedItems.value = next
+}
+
+function toggleItemCollapse(documentId: string) {
+  collapsedItems.value = { ...collapsedItems.value, [documentId]: !collapsedItems.value[documentId] }
+}
+
+watch(
+  () => props.detail,
+  () => {
+    collapsedItems.value = {}
+  },
+)
+
 const docIndexExists = ref<Record<string, boolean>>({})
 const docIndexGenerating = ref<Record<string, boolean>>({})
 
@@ -1144,6 +1207,22 @@ async function handleAiInboxActionTargetClick(
   flex-shrink: 0;
 }
 
+.panel-header__collapse-all {
+  border: 1px solid var(--panel-border);
+  background: transparent;
+  color: var(--b3-theme-primary);
+  font-size: 12px;
+  padding: 4px 10px;
+  border-radius: 6px;
+  cursor: pointer;
+  transition: background-color 0.2s;
+  white-space: nowrap;
+}
+
+.panel-header__collapse-all:hover {
+  background: color-mix(in srgb, var(--b3-theme-primary) 15%, transparent);
+}
+
 .ai-history-button {
   width: 28px;
   height: 28px;
@@ -1438,6 +1517,11 @@ async function handleAiInboxActionTargetClick(
   background: var(--surface-card-soft);
 }
 
+.summary-detail-item--collapsed {
+  padding-top: 8px;
+  padding-bottom: 8px;
+}
+
 .summary-detail-item__header,
 .path-controls {
   display: flex;
@@ -1448,6 +1532,44 @@ async function handleAiInboxActionTargetClick(
 .summary-detail-item__header {
   align-items: center;
   justify-content: space-between;
+}
+
+.summary-detail-item__header-end {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  flex-shrink: 0;
+}
+
+.summary-detail-item__collapse-toggle {
+  width: 24px;
+  height: 24px;
+  border: 0;
+  border-radius: 999px;
+  background: transparent;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0;
+  transition: background-color 0.2s;
+}
+
+.summary-detail-item__collapse-toggle:hover {
+  background: var(--surface-card-soft);
+}
+
+.summary-detail-item__caret {
+  width: 6px;
+  height: 6px;
+  border-right: 1.5px solid var(--panel-muted);
+  border-bottom: 1.5px solid var(--panel-muted);
+  transform: rotate(45deg);
+  transition: transform 0.2s ease;
+}
+
+.summary-detail-item__collapse-toggle[aria-expanded='false'] .summary-detail-item__caret {
+  transform: rotate(-45deg);
 }
 
 .summary-detail-item__meta {
