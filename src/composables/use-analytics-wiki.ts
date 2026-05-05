@@ -224,7 +224,10 @@ export function resolveWikiSectionOrderLabels(params: {
 }
 
 function stripIalFromKramdown(text: string): string {
-  return text.replace(/\s*\{:\s[^}]*\}\s*$/gm, '').trim()
+  return text
+    .replace(/^( *[-*] )\{:\s[^}]*\}/gm, '$1')
+    .replace(/^\s*\{:\s[^}]*\}\s*$/gm, '')
+    .trim()
 }
 
 function extractManagedMarkdown(fullMarkdown: string): string {
