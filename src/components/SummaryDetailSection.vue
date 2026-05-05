@@ -1427,8 +1427,8 @@ async function handleAiInboxActionTargetClick(
 }
 
 .summary-detail-item {
-  padding: 14px 12px;
-  border-radius: 12px;
+  padding: 14px 8px;
+  border-radius: 8px;
   background: var(--surface-card);
   border: 1px solid var(--panel-border);
   transition: background-color 0.2s;
