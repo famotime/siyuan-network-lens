@@ -728,8 +728,9 @@ describe('wiki documents', () => {
       pageId: 'wiki-conflict',
       result: 'updated',
     })
-    expect(kernel.api.deleteBlock).toHaveBeenCalled()
-    expect(kernel.api.prependBlock).toHaveBeenCalledWith('markdown', nextDraft.managedMarkdown, 'wiki-conflict')
+    expect(kernel.api.deleteBlock).toHaveBeenCalledWith('wiki-conflict::managed')
+    expect(kernel.api.deleteBlock).not.toHaveBeenCalledWith('wiki-conflict::manual')
+    expect(kernel.api.updateBlock).toHaveBeenCalledWith('markdown', nextDraft.managedMarkdown, 'wiki-conflict::managed')
     expect(kernel.getDocumentMarkdownByPath('/主题/LLM Wiki/主题-冲突-llm-wiki')).toContain('插件新生成内容')
     expect(kernel.getDocumentMarkdownByPath('/主题/LLM Wiki/主题-冲突-llm-wiki')).toContain('- 冲突备注')
   })

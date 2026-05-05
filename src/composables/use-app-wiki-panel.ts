@@ -41,7 +41,6 @@ export function createAppWikiPanelController(params: {
     }
     wikiPanelPlacement.value = 'documents'
     wikiPanelCoreDocumentId.value = ''
-    await prepareCurrentWikiPreview()
   }
 
   async function toggleCoreDocumentWikiPanel(documentId: string) {
@@ -66,7 +65,6 @@ export function createAppWikiPanelController(params: {
     }
     wikiPanelPlacement.value = 'ranking'
     wikiPanelCoreDocumentId.value = documentId
-    await prepareCurrentWikiPreview()
   }
 
   return {

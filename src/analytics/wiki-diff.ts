@@ -107,10 +107,37 @@ export function fingerprintWikiContent(value: string): string {
 }
 
 function summarizeMarkdown(value: string): string {
-  return value
+  const body = skipMetaSection(value)
+  return body
     .replace(/\s+/g, ' ')
     .trim()
-    .slice(0, 160)
+    .slice(0, 300)
+}
+
+function skipMetaSection(value: string): string {
+  const lines = value.split(/\r?\n/)
+  let skipUntilNextH3 = false
+
+  for (let index = 0; index < lines.length; index += 1) {
+    const line = lines[index].trim()
+    if (!line.startsWith('### ')) {
+      continue
+    }
+
+    const heading = line.replace(/^###\s+/, '').replace(/\s*\{:[^}]*\}$/, '').trim()
+    if (heading === 'Page meta' || heading === '页面头信息') {
+      skipUntilNextH3 = true
+      continue
+    }
+
+    if (skipUntilNextH3) {
+      return lines.slice(index + 1).join('\n')
+    }
+
+    return lines.slice(index + 1).join('\n')
+  }
+
+  return value
 }
 
 function parseManagedSectionMap(markdown: string): Map<string, ParsedManagedSection> {

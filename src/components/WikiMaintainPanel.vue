@@ -90,11 +90,18 @@
             <span>{{ t('wikiMaintain.sectionOrder') }}: {{ resolveSectionOrderLabels(page) }}</span>
             <span>{{ t('wikiMaintain.manualNotes') }}: {{ page.hasManualNotes ? t('wikiMaintain.existing') : t('wikiMaintain.createdOnFirstWrite') }}</span>
           </div>
-          <p class="wiki-panel__summary"><strong>{{ t('wikiMaintain.diagnosisReason') }}:</strong> {{ page.diagnosis.reason }}</p>
-          <p class="wiki-panel__summary"><strong>{{ t('wikiMaintain.diagnosisEvidence') }}:</strong> {{ page.diagnosis.evidenceSummary }}</p>
-          <p class="wiki-panel__summary"><strong>{{ t('wikiMaintain.oldSummary') }}</strong>{{ page.preview.oldSummary || t('wikiMaintain.noPreviousContent') }}</p>
-          <p class="wiki-panel__summary"><strong>{{ t('wikiMaintain.newSummary') }}</strong>{{ page.preview.newSummary || t('wikiMaintain.noNewContent') }}</p>
+          <p class="wiki-panel__summary wiki-panel__summary--primary">{{ page.preview.newSummary || t('wikiMaintain.noNewContent') }}</p>
+          <p v-if="page.preview.oldSummary" class="wiki-panel__summary wiki-panel__summary--muted">{{ t('wikiMaintain.oldSummary') }} {{ page.preview.oldSummary }}</p>
           <p v-if="page.preview.conflictReason" class="wiki-panel__conflict">{{ page.preview.conflictReason }}</p>
+          <div class="wiki-panel__item-actions">
+            <button
+              class="ghost-button"
+              type="button"
+              @click="detailPage = page"
+            >
+              {{ t('wikiMaintain.openDetail') }}
+            </button>
+          </div>
         </article>
       </div>
 
@@ -137,6 +144,28 @@
         </div>
       </div>
     </template>
+
+    <Teleport to="body">
+      <div
+        v-if="detailPage"
+        class="wiki-detail-overlay"
+        @click.self="detailPage = null"
+      >
+        <div class="wiki-detail-dialog">
+          <div class="wiki-detail-dialog__header">
+            <h3>{{ detailPage.pageTitle }}</h3>
+            <button
+              class="ghost-button"
+              type="button"
+              @click="detailPage = null"
+            >
+              &times;
+            </button>
+          </div>
+          <pre class="wiki-detail-dialog__body">{{ stripMetaSection(detailPage.draft.managedMarkdown) }}</pre>
+        </div>
+      </div>
+    </Teleport>
   </section>
 </template>
 
@@ -161,6 +190,7 @@ const props = defineProps<{
 }>()
 
 const allowOverwriteConflicts = ref(false)
+const detailPage = ref<WikiPreviewState['themePages'][number] | null>(null)
 
 const statusLabelMap = {
   create: t('wikiMaintain.statusCreate'),
@@ -235,6 +265,32 @@ function resolveSectionOrderLabels(page: WikiPreviewState['themePages'][number])
   })
 
   return labels.length ? labels.join(', ') : t('wikiMaintain.noChanges')
+}
+
+function stripMetaSection(markdown: string): string {
+  const lines = markdown.split(/\r?\n/)
+  let skipUntilNextH3 = false
+
+  for (let index = 0; index < lines.length; index += 1) {
+    const line = lines[index].trim()
+    if (!line.startsWith('### ')) {
+      continue
+    }
+
+    const heading = line.replace(/^###\s+/, '').replace(/\s*\{:[^}]*\}$/, '').trim()
+    if (heading === 'Page meta' || heading === '页面头信息') {
+      skipUntilNextH3 = true
+      continue
+    }
+
+    if (skipUntilNextH3) {
+      return lines.slice(index).join('\n')
+    }
+
+    return lines.slice(index).join('\n')
+  }
+
+  return markdown
 }
 </script>
 
@@ -360,6 +416,22 @@ function resolveSectionOrderLabels(page: WikiPreviewState['themePages'][number])
   margin-top: 8px;
 }
 
+.wiki-panel__summary--primary {
+  font-size: 14px;
+  line-height: 1.7;
+}
+
+.wiki-panel__summary--muted {
+  font-size: 12px;
+  color: color-mix(in srgb, var(--b3-theme-on-background) 48%, transparent);
+}
+
+.wiki-panel__item-actions {
+  display: flex;
+  gap: 8px;
+  margin-top: 10px;
+}
+
 .wiki-panel__conflict {
   margin: 10px 0 0;
   color: var(--b3-theme-error);
@@ -386,5 +458,50 @@ function resolveSectionOrderLabels(page: WikiPreviewState['themePages'][number])
   to {
     transform: rotate(360deg);
   }
+}
+
+.wiki-detail-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 1000;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: color-mix(in srgb, var(--b3-theme-background) 72%, transparent);
+  backdrop-filter: blur(4px);
+}
+
+.wiki-detail-dialog {
+  display: grid;
+  grid-template-rows: auto 1fr;
+  width: min(90vw, 720px);
+  max-height: 80vh;
+  border-radius: 14px;
+  background: var(--b3-theme-surface);
+  box-shadow: 0 12px 40px color-mix(in srgb, var(--b3-theme-on-background) 18%, transparent);
+  overflow: hidden;
+}
+
+.wiki-detail-dialog__header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 14px 18px;
+  border-bottom: 1px solid color-mix(in srgb, var(--b3-theme-on-background) 8%, transparent);
+}
+
+.wiki-detail-dialog__header h3 {
+  margin: 0;
+}
+
+.wiki-detail-dialog__body {
+  margin: 0;
+  padding: 18px;
+  overflow: auto;
+  font-family: var(--b3-font-family);
+  font-size: 13px;
+  line-height: 1.8;
+  white-space: pre-wrap;
+  word-break: break-word;
 }
 </style>

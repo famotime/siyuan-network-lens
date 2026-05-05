@@ -28,16 +28,13 @@ describe('createAppWikiPanelController', () => {
       sourceDocumentIds: ['doc-a', 'doc-b'],
       scopeDescriptionLine: '- Scope source: current doc sample',
     })
-    expect(prepareWikiPreview).toHaveBeenCalledWith({
-      sourceDocumentIds: ['doc-a', 'doc-b'],
-      scopeDescriptionLine: '- Scope source: current doc sample',
-    })
+    expect(prepareWikiPreview).not.toHaveBeenCalled()
 
     await controller.toggleDocumentWikiPanel()
 
     expect(controller.wikiPanelPlacement.value).toBe('')
     expect(controller.wikiPanelCoreDocumentId.value).toBe('')
-    expect(prepareWikiPreview).toHaveBeenCalledTimes(1)
+    expect(prepareWikiPreview).not.toHaveBeenCalled()
   })
 
   it('opens the ranking-scope wiki panel with a deduplicated association request', async () => {
@@ -63,10 +60,6 @@ describe('createAppWikiPanelController', () => {
       themeDocumentId: 'doc-a',
     })
     expect(controller.isCoreDocumentWikiPanelVisible('doc-a')).toBe(true)
-    expect(prepareWikiPreview).toHaveBeenCalledWith({
-      sourceDocumentIds: ['doc-a', 'doc-b', 'doc-c', 'doc-d', 'doc-e'],
-      scopeDescriptionLine: '- Scope source: related range for core doc "Beta" (outbound / inbound / child docs)',
-      themeDocumentId: 'doc-a',
-    })
+    expect(prepareWikiPreview).not.toHaveBeenCalled()
   })
 })

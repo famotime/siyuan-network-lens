@@ -765,7 +765,7 @@ input {
 }
 
 .panel {
-  padding: 24px;
+  padding: 24px 16px;
 }
 
 .panel--primary {
@@ -943,7 +943,7 @@ input {
 .mini-list__entry,
 .community-detail,
 .detail-card {
-  padding: 14px;
+  padding: 14px 12px;
   border-radius: 12px;
   background: var(--surface-card);
   border: 1px solid var(--panel-border);

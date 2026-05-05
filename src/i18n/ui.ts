@@ -1303,6 +1303,10 @@ const UI_TEXT = {
       en_US: 'No new content',
       zh_CN: '暂无新内容',
     },
+    openDetail: {
+      en_US: 'View details',
+      zh_CN: '打开详情',
+    },
     pairedTopicPageLine: {
       en_US: '- Paired topic page: {value}',
       zh_CN: '- 配对主题页：{value}',

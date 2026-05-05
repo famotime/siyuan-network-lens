@@ -365,14 +365,25 @@ async function upsertManagedWikiPage(params: {
   }
 
   if (params.overwriteConflicts) {
-    const fullMarkdown = await safeReadBlockMarkdown(params.pageId, params.api.getBlockKramdown)
-    const manualNotesMarkdown = extractManualNotesMarkdown(fullMarkdown)
+    const structure = await resolveWikiPageStructure(params.pageId, params.api)
     const children = await params.api.getChildBlocks(params.pageId)
+    const manualIdSet = new Set(structure.manualBlockIds)
+
     for (const child of children) {
-      await params.api.deleteBlock(child.id)
+      if (!manualIdSet.has(child.id)) {
+        await params.api.deleteBlock(child.id)
+      }
     }
-    await params.api.prependBlock('markdown', params.draft.managedMarkdown, params.pageId)
-    await params.api.appendBlock('markdown', manualNotesMarkdown || INDEX_MANUAL_NOTES_MARKDOWN, params.pageId)
+
+    if (structure.managedBlockId) {
+      await params.api.updateBlock('markdown', params.draft.managedMarkdown, structure.managedBlockId)
+    } else {
+      await params.api.prependBlock('markdown', params.draft.managedMarkdown, params.pageId)
+    }
+
+    if (structure.manualBlockIds.length === 0) {
+      await params.api.appendBlock('markdown', INDEX_MANUAL_NOTES_MARKDOWN, params.pageId)
+    }
   } else {
     const structure = await resolveWikiPageStructure(params.pageId, params.api)
     if (structure.managedBlockId) {
@@ -623,23 +634,28 @@ async function resolveWikiPageStructure(
 ) {
   const children = await api.getChildBlocks(pageId)
   let managedBlockId = ''
-  let manualBlockId = ''
+  const manualBlockIds: string[] = []
+  let inManualSection = false
 
   for (const child of children) {
     const markdown = await safeReadBlockMarkdown(child.id, api.getBlockKramdown)
     const trimmedMarkdown = markdown.trim()
-    if (matchesWikiHeading(trimmedMarkdown, 'managedRoot', '##')) {
-      managedBlockId = child.id
-      continue
-    }
+
     if (matchesWikiHeading(trimmedMarkdown, 'manualNotes', '##')) {
-      manualBlockId = child.id
+      inManualSection = true
+    }
+
+    if (inManualSection) {
+      manualBlockIds.push(child.id)
+    } else if (matchesWikiHeading(trimmedMarkdown, 'managedRoot', '##')) {
+      managedBlockId = child.id
     }
   }
 
   return {
     managedBlockId: managedBlockId || undefined,
-    manualBlockId: manualBlockId || undefined,
+    manualBlockId: manualBlockIds[0] || undefined,
+    manualBlockIds,
   }
 }
 
@@ -795,14 +811,6 @@ function extractManagedMarkdown(fullMarkdown: string): string {
     return fullMarkdown.trim()
   }
   return fullMarkdown.slice(0, manualHeadingIndex).trim()
-}
-
-function extractManualNotesMarkdown(fullMarkdown: string): string {
-  const manualHeadingIndex = findHeadingIndex(fullMarkdown, 'manualNotes', '##')
-  if (manualHeadingIndex < 0) {
-    return ''
-  }
-  return fullMarkdown.slice(manualHeadingIndex + 1).trim()
 }
 
 async function safeReadBlockMarkdown(blockId: string, getBlockKramdown: GetBlockKramdownFn) {
