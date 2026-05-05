@@ -618,8 +618,9 @@ async function readWikiPageState(
     getBlockKramdown: GetBlockKramdownFn
   },
 ) {
-  const fullMarkdown = await safeReadBlockMarkdown(pageId, api.getBlockKramdown)
-  const managedMarkdown = extractManagedMarkdown(fullMarkdown)
+  const rawMarkdown = await safeReadBlockMarkdown(pageId, api.getBlockKramdown)
+  const fullMarkdown = stripIalFromKramdown(rawMarkdown)
+  const managedMarkdown = extractManagedMarkdown(rawMarkdown)
 
   return {
     fullMarkdown,
@@ -635,7 +636,8 @@ async function readPlainPageState(
     getBlockKramdown: GetBlockKramdownFn
   },
 ) {
-  const fullMarkdown = await safeReadBlockMarkdown(pageId, api.getBlockKramdown)
+  const rawMarkdown = await safeReadBlockMarkdown(pageId, api.getBlockKramdown)
+  const fullMarkdown = stripIalFromKramdown(rawMarkdown)
   return {
     fullMarkdown,
     pageFingerprint: fingerprintWikiContent(fullMarkdown),
@@ -822,12 +824,17 @@ function extractIntroSummary(markdown: string): string {
     .slice(0, 80)
 }
 
+function stripIalFromKramdown(text: string): string {
+  return text.replace(/\s*\{:\s[^}]*\}\s*$/gm, '').trim()
+}
+
 function extractManagedMarkdown(fullMarkdown: string): string {
-  const manualHeadingIndex = findHeadingIndex(fullMarkdown, 'manualNotes', '##')
+  const normalized = stripIalFromKramdown(fullMarkdown)
+  const manualHeadingIndex = findHeadingIndex(normalized, 'manualNotes', '##')
   if (manualHeadingIndex < 0) {
-    return fullMarkdown.trim()
+    return normalized
   }
-  return fullMarkdown.slice(0, manualHeadingIndex).trim()
+  return normalized.slice(0, manualHeadingIndex).trim()
 }
 
 async function safeReadBlockMarkdown(blockId: string, getBlockKramdown: GetBlockKramdownFn) {

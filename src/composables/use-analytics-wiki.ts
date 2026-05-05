@@ -204,12 +204,17 @@ export function resolveWikiSectionOrderLabels(params: {
   return params.pagePlan.sectionOrder.map(sectionId => sectionHeadingMap.get(sectionId) ?? resolveWikiSectionDisplayLabel(sectionId))
 }
 
+function stripIalFromKramdown(text: string): string {
+  return text.replace(/\s*\{:\s[^}]*\}\s*$/gm, '').trim()
+}
+
 function extractManagedMarkdown(fullMarkdown: string): string {
-  const manualHeadingIndex = findHeadingIndex(fullMarkdown, 'manualNotes', '##')
+  const normalized = stripIalFromKramdown(fullMarkdown)
+  const manualHeadingIndex = findHeadingIndex(normalized, 'manualNotes', '##')
   if (manualHeadingIndex < 0) {
-    return fullMarkdown.trim()
+    return normalized
   }
-  return fullMarkdown.slice(0, manualHeadingIndex).trim()
+  return normalized.slice(0, manualHeadingIndex).trim()
 }
 
 function humanizeSectionId(sectionId: string): string {
