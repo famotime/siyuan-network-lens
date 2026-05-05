@@ -822,6 +822,7 @@ const props = withDefaults(defineProps<{
     prepareWikiPreview: () => void | Promise<void>
     applyWikiChanges: (overwriteConflicts?: boolean) => void | Promise<void>
     openWikiDocument: (documentId: string) => void
+    formatTimestamp: (timestamp?: string) => string
   }
   showDocumentIndex?: boolean
   generateDocIndex?: (documentId: string) => Promise<boolean>

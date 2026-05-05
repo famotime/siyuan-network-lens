@@ -15,6 +15,7 @@ const wikiPanelProps = {
   prepareWikiPreview: vi.fn(),
   applyWikiChanges: vi.fn(),
   openWikiDocument: vi.fn(),
+  formatTimestamp: (ts?: string) => ts ?? '',
 }
 
 const baseProps = {

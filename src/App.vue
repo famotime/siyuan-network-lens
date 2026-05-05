@@ -340,6 +340,7 @@ const {
   refresh,
   generateAiInbox,
   prepareWikiPreview,
+  restoreCachedWikiPreview,
   applyWikiChanges,
   generateOrphanAiSuggestion,
   selectEvidence,
@@ -388,6 +389,7 @@ const {
   resolveLinkAssociations,
   resolveTitle,
   prepareWikiPreview,
+  onSwitchDocument: restoreCachedWikiPreview,
 })
 
 const wikiPanelProps = computed(() => ({
@@ -401,6 +403,7 @@ const wikiPanelProps = computed(() => ({
   prepareWikiPreview: prepareCurrentWikiPreview,
   applyWikiChanges,
   openWikiDocument,
+  formatTimestamp,
 }))
 const showWikiFeature = isAlphaSettingVisible('llm-wiki')
 

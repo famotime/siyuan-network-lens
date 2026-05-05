@@ -4,7 +4,7 @@ import type {
   DocumentRecord,
   TimeRange,
 } from '@/analytics/analysis'
-import type { AiDocumentIndexStore } from '@/analytics/ai-index-store'
+import type { AiDocumentIndexStore, DocumentIndexProfile } from '@/analytics/ai-index-store'
 import type { WikiPagePreviewResult } from '@/analytics/wiki-diff'
 import type { WikiApplyBatchResult } from '@/analytics/wiki-documents'
 import { WIKI_SECTION_MARKER_PREFIX } from '@/analytics/wiki-renderer'
@@ -90,7 +90,8 @@ export async function buildWikiSourceProfileMap(params: {
     throw new Error('Wiki topic bundle requires AI document index dependencies')
   }
 
-  const entries = await Promise.all(params.sourceDocuments.map(async (document) => {
+  const entries: Array<readonly [string, DocumentIndexProfile]> = []
+  for (const document of params.sourceDocuments) {
     await ensureDocumentIndex({
       config: params.config,
       sourceDocument: document,
@@ -109,8 +110,8 @@ export async function buildWikiSourceProfileMap(params: {
       throw new Error(`Missing fresh document index profile after ensuring wiki source document: ${document.id}`)
     }
 
-    return [document.id, profile] as const
-  }))
+    entries.push([document.id, profile])
+  }
 
   return new Map(entries)
 }

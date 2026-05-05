@@ -1195,6 +1195,10 @@ const UI_TEXT = {
       en_US: 'Generate topic wiki previews from the current scope, then write them back to topic pages, the index page, and the maintenance log after confirmation.',
       zh_CN: '基于当前分析范围生成主题 Wiki 预览，确认后再写回主题页、索引页和维护日志。',
     },
+    generatedAt: {
+      en_US: 'Generated at',
+      zh_CN: '生成于',
+    },
     generating: {
       en_US: 'Generating...',
       zh_CN: '生成中...',
@@ -1619,6 +1623,10 @@ const UI_TEXT = {
       scopeSourceCurrentDocSample: {
         en_US: '- Scope source: current doc sample',
         zh_CN: '- 范围来源：当前文档样本',
+      },
+      scopeSourceRelatedRange: {
+        en_US: '- Scope source: related range for core doc "{title}" (outbound / inbound / child docs)',
+        zh_CN: '- 范围来源：核心文档"{title}"的关联范围（出链 / 入链 / 子文档）',
       },
       timeWindowLine: {
         en_US: '- Time window: {value}',

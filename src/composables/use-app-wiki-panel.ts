@@ -1,5 +1,6 @@
 import { ref, type ComputedRef } from 'vue'
 
+import { t } from '@/i18n/ui'
 import type { WikiPreviewRequest } from './use-analytics-wiki'
 
 type DocumentIdItem = { documentId: string }
@@ -15,6 +16,7 @@ export function createAppWikiPanelController(params: {
   resolveLinkAssociations: (documentId: string) => LinkAssociations
   resolveTitle: (documentId: string) => string
   prepareWikiPreview: (request?: WikiPreviewRequest) => Promise<void>
+  onSwitchDocument: (themeDocumentId: string) => void
 }) {
   const wikiPanelPlacement = ref<'ranking' | ''>('')
   const wikiPanelCoreDocumentId = ref('')
@@ -35,6 +37,8 @@ export function createAppWikiPanelController(params: {
       return
     }
 
+    params.onSwitchDocument(documentId)
+
     const associations = params.resolveLinkAssociations(documentId)
     const sourceDocumentIds = [
       documentId,
@@ -45,7 +49,7 @@ export function createAppWikiPanelController(params: {
 
     activeWikiPreviewRequest.value = {
       sourceDocumentIds: [...new Set(sourceDocumentIds)],
-      scopeDescriptionLine: `- Scope source: related range for core doc "${params.resolveTitle(documentId)}" (outbound / inbound / child docs)`,
+      scopeDescriptionLine: t('analytics.wiki.scopeSourceRelatedRange', { title: params.resolveTitle(documentId) }),
       themeDocumentId: documentId,
     }
     wikiPanelPlacement.value = 'ranking'

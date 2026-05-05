@@ -256,6 +256,7 @@ export function useAnalyticsState(params: UseAnalyticsParams) {
   const wikiApplyLoading = ref(false)
   const wikiError = ref('')
   const wikiPreview = ref<WikiPreviewState | null>(null)
+  const wikiPreviewCache = ref<Map<string, WikiPreviewState>>(new Map())
   const appliedAnalysisConfig = ref(readAppliedAnalysisConfig(params.config))
   const timeRangeOptions = computed(() => buildTimeRangeOptions())
   const appliedConfig = computed(() => buildAppliedAnalysisConfig(params.config, appliedAnalysisConfig.value))
@@ -706,6 +707,7 @@ export function useAnalyticsState(params: UseAnalyticsParams) {
     orphanAiSuggestionStates.value = new Map()
     wikiError.value = ''
     wikiPreview.value = null
+    wikiPreviewCache.value = new Map()
   }
 
   async function loadTodaySuggestionHistory() {
@@ -872,6 +874,12 @@ export function useAnalyticsState(params: UseAnalyticsParams) {
       await persistAiInboxHistory(result)
     }
     return result
+  }
+
+  function restoreCachedWikiPreview(themeDocumentId: string) {
+    wikiError.value = ''
+    const cached = wikiPreviewCache.value.get(themeDocumentId)
+    wikiPreview.value = cached ?? null
   }
 
   async function prepareWikiPreview(request?: WikiPreviewRequest) {
@@ -1049,6 +1057,7 @@ export function useAnalyticsState(params: UseAnalyticsParams) {
         unclassifiedDocuments: [],
         excludedWikiDocuments: [],
       }
+      wikiPreviewCache.value.set(request.themeDocumentId, wikiPreview.value)
     } catch (error) {
       const message = error instanceof Error ? error.message : t('analytics.controller.failedToGenerateWikiPreview')
       wikiError.value = message
@@ -1455,6 +1464,7 @@ export function useAnalyticsState(params: UseAnalyticsParams) {
     formatDelta,
     generateAiInbox,
     prepareWikiPreview,
+    restoreCachedWikiPreview,
     applyWikiChanges,
     generateOrphanAiSuggestion,
     testAiConnection,

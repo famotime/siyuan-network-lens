@@ -45,6 +45,9 @@
 
     <template v-else>
       <div v-if="preview" class="wiki-panel__scope">
+        <p class="wiki-panel__generated-at">
+          {{ t('wikiMaintain.generatedAt') }}: {{ formatTimestamp(preview.generatedAt) }}
+        </p>
         <div class="wiki-panel__scope-grid">
           <div class="wiki-panel__scope-card" :title="t('wikiMaintain.sourceDocumentsTooltip')">
             <span>{{ t('wikiMaintain.sourceDocuments') }}</span>
@@ -199,6 +202,7 @@ const props = defineProps<{
   prepareWikiPreview: () => void | Promise<void>
   applyWikiChanges: (overwriteConflicts?: boolean) => void | Promise<void>
   openWikiDocument: (documentId: string) => void
+  formatTimestamp: (timestamp?: string) => string
 }>()
 
 const allowOverwriteConflicts = ref(false)
@@ -365,6 +369,12 @@ function stripMetaSection(markdown: string): string {
 .wiki-panel__scope {
   display: grid;
   gap: 12px;
+}
+
+.wiki-panel__generated-at {
+  margin: 0;
+  font-size: 12px;
+  color: color-mix(in srgb, var(--b3-theme-on-background) 55%, transparent);
 }
 
 .wiki-panel__scope-grid {

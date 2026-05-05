@@ -6,6 +6,7 @@ import { createAppWikiPanelController } from './use-app-wiki-panel'
 describe('createAppWikiPanelController', () => {
   it('opens the ranking-scope wiki panel with a deduplicated association request', async () => {
     const prepareWikiPreview = vi.fn(async () => undefined)
+    const onSwitchDocument = vi.fn()
     const controller = createAppWikiPanelController({
       filteredDocuments: computed(() => []),
       resolveLinkAssociations: () => ({
@@ -15,6 +16,7 @@ describe('createAppWikiPanelController', () => {
       }),
       resolveTitle: () => 'Beta',
       prepareWikiPreview,
+      onSwitchDocument,
     })
 
     await controller.toggleCoreDocumentWikiPanel('doc-a')
@@ -27,6 +29,7 @@ describe('createAppWikiPanelController', () => {
       themeDocumentId: 'doc-a',
     })
     expect(controller.isCoreDocumentWikiPanelVisible('doc-a')).toBe(true)
+    expect(onSwitchDocument).toHaveBeenCalledWith('doc-a')
     expect(prepareWikiPreview).not.toHaveBeenCalled()
   })
 })

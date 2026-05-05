@@ -193,6 +193,7 @@ describe('WikiMaintainPanel', () => {
         prepareWikiPreview: () => undefined,
         applyWikiChanges: () => undefined,
         openWikiDocument: () => undefined,
+        formatTimestamp: (ts?: string) => ts ?? '',
       }),
     })
 
@@ -256,6 +257,7 @@ describe('WikiMaintainPanel', () => {
         prepareWikiPreview: () => undefined,
         applyWikiChanges: () => undefined,
         openWikiDocument: () => undefined,
+        formatTimestamp: (ts?: string) => ts ?? '',
       }),
     })
 
@@ -356,6 +358,7 @@ describe('WikiMaintainPanel', () => {
         prepareWikiPreview: () => undefined,
         applyWikiChanges: () => undefined,
         openWikiDocument: () => undefined,
+        formatTimestamp: (ts?: string) => ts ?? '',
       }),
     })
 
