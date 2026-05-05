@@ -364,19 +364,30 @@ async function upsertManagedWikiPage(params: {
     }
   }
 
+  const structure = await resolveWikiPageStructure(params.pageId, params.api)
+
   if (params.overwriteConflicts) {
-    const structure = await resolveWikiPageStructure(params.pageId, params.api)
     const children = await params.api.getChildBlocks(params.pageId)
-    const manualIdSet = new Set(structure.manualBlockIds)
+    const preserveIds = new Set([
+      ...structure.manualBlockIds,
+      ...(structure.managedBlockId ? [structure.managedBlockId] : []),
+    ])
 
     for (const child of children) {
-      if (!manualIdSet.has(child.id)) {
+      if (!preserveIds.has(child.id)) {
         await params.api.deleteBlock(child.id)
       }
     }
 
     if (structure.managedBlockId) {
-      await params.api.updateBlock('markdown', params.draft.managedMarkdown, structure.managedBlockId)
+      const managedChildren = await params.api.getChildBlocks(structure.managedBlockId)
+      for (const child of managedChildren) {
+        await params.api.deleteBlock(child.id)
+      }
+      const sectionContent = stripManagedHeadingLines(params.draft.managedMarkdown)
+      if (sectionContent) {
+        await params.api.prependBlock('markdown', sectionContent, structure.managedBlockId)
+      }
     } else {
       await params.api.prependBlock('markdown', params.draft.managedMarkdown, params.pageId)
     }
@@ -385,9 +396,15 @@ async function upsertManagedWikiPage(params: {
       await params.api.appendBlock('markdown', INDEX_MANUAL_NOTES_MARKDOWN, params.pageId)
     }
   } else {
-    const structure = await resolveWikiPageStructure(params.pageId, params.api)
     if (structure.managedBlockId) {
-      await params.api.updateBlock('markdown', params.draft.managedMarkdown, structure.managedBlockId)
+      const managedChildren = await params.api.getChildBlocks(structure.managedBlockId)
+      for (const child of managedChildren) {
+        await params.api.deleteBlock(child.id)
+      }
+      const sectionContent = stripManagedHeadingLines(params.draft.managedMarkdown)
+      if (sectionContent) {
+        await params.api.prependBlock('markdown', sectionContent, structure.managedBlockId)
+      }
     } else {
       await params.api.prependBlock('markdown', params.draft.managedMarkdown, params.pageId)
     }
@@ -896,6 +913,28 @@ function normalizeDynamicSectionKey(key: string): string {
     default:
       return key
   }
+}
+
+function stripManagedHeadingLines(markdown: string): string {
+  const lines = markdown.split(/\r?\n/)
+  let skipIndex = 0
+
+  for (let index = 0; index < lines.length; index += 1) {
+    const trimmed = lines[index].trim()
+    if (!trimmed) {
+      continue
+    }
+    if (trimmed.startsWith('# ') && skipIndex === 0) {
+      skipIndex = index + 1
+      continue
+    }
+    if (trimmed.startsWith('## ') && matchesWikiHeading(trimmed, 'managedRoot', '##')) {
+      skipIndex = index + 1
+      break
+    }
+  }
+
+  return lines.slice(skipIndex).join('\n').trim()
 }
 
 function formatApplyResultLabel(result: WikiApplyResult): string {

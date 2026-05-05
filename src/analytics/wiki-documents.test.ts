@@ -391,7 +391,11 @@ describe('wiki documents', () => {
       pageId: 'wiki-theme-ai',
       result: 'updated',
     })
-    expect(kernel.api.updateBlock).toHaveBeenCalledWith('markdown', themeDraft.managedMarkdown, 'wiki-theme-ai::managed')
+    expect(kernel.api.prependBlock).toHaveBeenCalledWith(
+      'markdown',
+      expect.not.stringContaining('# 主题-AI-索引-llm-wiki'),
+      'wiki-theme-ai::managed',
+    )
     expect(kernel.getDocumentMarkdownByPath('/主题/LLM Wiki/主题-AI-索引-llm-wiki')).toContain('新的概览')
     expect(kernel.getDocumentMarkdownByPath('/主题/LLM Wiki/主题-AI-索引-llm-wiki')).toContain('- 保留这段人工补充')
     expect(kernel.getDocumentMarkdownByPath('/主题/LLM Wiki/主题-AI-索引-llm-wiki')).not.toContain('旧概览')
@@ -728,9 +732,13 @@ describe('wiki documents', () => {
       pageId: 'wiki-conflict',
       result: 'updated',
     })
-    expect(kernel.api.deleteBlock).toHaveBeenCalledWith('wiki-conflict::managed')
+    expect(kernel.api.deleteBlock).not.toHaveBeenCalledWith('wiki-conflict::managed')
     expect(kernel.api.deleteBlock).not.toHaveBeenCalledWith('wiki-conflict::manual')
-    expect(kernel.api.updateBlock).toHaveBeenCalledWith('markdown', nextDraft.managedMarkdown, 'wiki-conflict::managed')
+    expect(kernel.api.prependBlock).toHaveBeenCalledWith(
+      'markdown',
+      expect.not.stringContaining('# 主题-冲突-llm-wiki'),
+      'wiki-conflict::managed',
+    )
     expect(kernel.getDocumentMarkdownByPath('/主题/LLM Wiki/主题-冲突-llm-wiki')).toContain('插件新生成内容')
     expect(kernel.getDocumentMarkdownByPath('/主题/LLM Wiki/主题-冲突-llm-wiki')).toContain('- 冲突备注')
   })
@@ -995,8 +1003,32 @@ function createFakeWikiKernel(initialDocuments?: Array<{
       return existingId ? [existingId] : []
     }),
     prependBlock: vi.fn(async (dataType: 'markdown' | 'dom', data: string, parentID: string) => {
+      if (dataType !== 'markdown') {
+        return []
+      }
+      if (parentID.includes('::')) {
+        const [documentId, role] = parentID.split('::')
+        const document = documentsById.get(documentId)
+        if (!document) {
+          return []
+        }
+        if (role === 'managed') {
+          document.markdown = [
+            extractTitleBlock(document.markdown),
+            data,
+            extractManualBlock(document.markdown),
+          ].filter(Boolean).join('\n\n')
+        } else if (role === 'manual') {
+          document.markdown = [
+            extractManagedBlock(document.markdown),
+            data,
+          ].filter(Boolean).join('\n\n')
+        }
+        refreshDocumentBlocks(document)
+        return []
+      }
       const document = documentsById.get(parentID)
-      if (!document || dataType !== 'markdown') {
+      if (!document) {
         return []
       }
       const hasManualBlock = document.childBlocks.some(block => block.role === 'manual')
