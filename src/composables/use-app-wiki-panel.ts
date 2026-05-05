@@ -62,6 +62,7 @@ export function createAppWikiPanelController(params: {
     activeWikiPreviewRequest.value = {
       sourceDocumentIds: [...new Set(sourceDocumentIds)],
       scopeDescriptionLine: `- Scope source: related range for core doc "${params.resolveTitle(documentId)}" (outbound / inbound / child docs)`,
+      themeDocumentId: documentId,
     }
     wikiPanelPlacement.value = 'ranking'
     wikiPanelCoreDocumentId.value = documentId

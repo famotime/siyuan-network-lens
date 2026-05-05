@@ -241,7 +241,7 @@
         class="detail-wiki-stack"
       >
         <button
-          class="ghost-button ghost-button--filled detail-wiki-action"
+          class="action-button detail-wiki-action"
           type="button"
           @click="toggleDocumentWikiPanel"
         >

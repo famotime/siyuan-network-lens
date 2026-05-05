@@ -60,11 +60,13 @@ describe('createAppWikiPanelController', () => {
     expect(controller.activeWikiPreviewRequest.value).toEqual({
       sourceDocumentIds: ['doc-a', 'doc-b', 'doc-c', 'doc-d', 'doc-e'],
       scopeDescriptionLine: '- Scope source: related range for core doc "Beta" (outbound / inbound / child docs)',
+      themeDocumentId: 'doc-a',
     })
     expect(controller.isCoreDocumentWikiPanelVisible('doc-a')).toBe(true)
     expect(prepareWikiPreview).toHaveBeenCalledWith({
       sourceDocumentIds: ['doc-a', 'doc-b', 'doc-c', 'doc-d', 'doc-e'],
       scopeDescriptionLine: '- Scope source: related range for core doc "Beta" (outbound / inbound / child docs)',
+      themeDocumentId: 'doc-a',
     })
   })
 })

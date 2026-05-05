@@ -1036,13 +1036,17 @@ export function useAnalyticsState(params: UseAnalyticsParams) {
         } satisfies WikiPreviewThemePageItem
       }))
 
+      const filteredThemePages = themePages
+        .filter((item): item is WikiPreviewThemePageItem => item !== null)
+        .filter(item => !request?.themeDocumentId || item.themeDocumentId === request.themeDocumentId)
+
       wikiPreview.value = {
         generatedAt,
         scope: {
           summary: scope.summary,
           descriptionLines: scopeDescriptionLines,
         },
-        themePages: themePages.filter((item): item is WikiPreviewThemePageItem => item !== null),
+        themePages: filteredThemePages,
         unclassifiedDocuments: payloads.unclassifiedDocuments.map(document => ({
           documentId: document.documentId,
           title: document.title,

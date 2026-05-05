@@ -96,6 +96,38 @@ export function matchesWikiHeading(
   return getWikiHeadingCandidates(key, level).some(heading => value.startsWith(heading))
 }
 
+export function findHeadingIndex(
+  fullMarkdown: string,
+  key: WikiHistoricalHeadingKey,
+  level?: '##' | '###',
+): number {
+  const candidates = getWikiHeadingCandidates(key, level)
+
+  // Exact match (fast path).
+  const exactIndex = candidates
+    .map(heading => fullMarkdown.indexOf(`\n${heading}`))
+    .filter(index => index >= 0)
+    .sort((left, right) => left - right)[0] ?? -1
+  if (exactIndex >= 0) {
+    return exactIndex
+  }
+
+  // IAL-aware fallback: heading with optional trailing {: ... } attributes.
+  for (const heading of candidates) {
+    const pattern = new RegExp(`\n${escapeRegExp(heading)}\\s*(\\{:[^}]*\\})?`)
+    const match = pattern.exec(fullMarkdown)
+    if (match) {
+      return match.index
+    }
+  }
+
+  return -1
+}
+
+function escapeRegExp(value: string): string {
+  return value.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
+}
+
 export function resolveWikiSectionKeyFromHeading(heading: string): string {
   for (const key of [
     ...WIKI_PAGE_HEADING_KEYS,

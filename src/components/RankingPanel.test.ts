@@ -44,7 +44,7 @@ describe('RankingPanel', () => {
     expect(source).not.toContain('uiText(')
   })
 
-  it('renders a wiki maintenance block after each core document card and keeps the filled button style', async () => {
+  it('renders a wiki maintenance button inside theme document cards only', async () => {
     const app = createSSRApp({
       render: () => h(RankingPanel, {
         variant: 'detail',
@@ -59,7 +59,7 @@ describe('RankingPanel', () => {
             childDocumentCount: 0,
             createdAt: '20260301090000',
             updatedAt: '20260311120000',
-            isThemeDocument: false,
+            isThemeDocument: true,
             suggestions: [],
           },
           {
@@ -98,11 +98,12 @@ describe('RankingPanel', () => {
 
     const html = await renderToString(app)
 
-    expect((html.match(/Maintain LLM Wiki|Hide LLM Wiki/g) ?? [])).toHaveLength(2)
-    expect((html.match(/ghost-button ghost-button--filled/g) ?? []).length).toBeGreaterThanOrEqual(3)
+    expect((html.match(/Maintain LLM Wiki|Hide LLM Wiki/g) ?? [])).toHaveLength(1)
+    expect(html).toContain('Hide LLM Wiki')
+    expect(html).not.toContain('Maintain LLM Wiki')
+    expect((html.match(/ghost-button ghost-button--filled/g) ?? []).length).toBeGreaterThanOrEqual(2)
     expect(html).toContain('范围来源：核心文档《Alpha》关联范围')
     expect((html.match(/wiki-panel panel/g) ?? [])).toHaveLength(1)
-    expect(html.indexOf('Updated: 20260311120000')).toBeLessThan(html.indexOf('范围来源：核心文档《Alpha》关联范围'))
   })
 
   it('hides core document wiki actions when the alpha gate disables wiki entry points', async () => {

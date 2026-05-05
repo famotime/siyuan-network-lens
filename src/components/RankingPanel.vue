@@ -200,23 +200,23 @@
               </div>
             </div>
             <SuggestionCallout :suggestions="item.suggestions ?? []" />
-          </article>
-          <div
-            v-if="showWikiPanelActions"
-            class="ranking-item__wiki"
-          >
-            <button
-              class="ghost-button ghost-button--filled"
-              type="button"
-              @click="toggleCoreDocumentWikiPanel(item.documentId)"
+            <div
+              v-if="showWikiPanelActions && item.isThemeDocument"
+              class="ranking-item__wiki"
             >
-              {{ isWikiPanelVisibleForCoreDocument(item.documentId) ? t('rankingPanel.hideWiki') : t('rankingPanel.maintainWiki') }}
-            </button>
-            <WikiMaintainPanel
-              v-if="isWikiPanelVisibleForCoreDocument(item.documentId)"
-              v-bind="wikiPanelProps"
-            />
-          </div>
+              <button
+                class="action-button"
+                type="button"
+                @click="toggleCoreDocumentWikiPanel(item.documentId)"
+              >
+                {{ isWikiPanelVisibleForCoreDocument(item.documentId) ? t('rankingPanel.hideWiki') : t('rankingPanel.maintainWiki') }}
+              </button>
+              <WikiMaintainPanel
+                v-if="isWikiPanelVisibleForCoreDocument(item.documentId)"
+                v-bind="wikiPanelProps"
+              />
+            </div>
+          </article>
         </div>
       </div>
       <div
@@ -409,6 +409,35 @@ function resolveAssociations(documentId: string): LinkAssociations {
 
 .ranking-item__timestamps {
   row-gap: 4px;
+}
+
+.action-button {
+  border: 0;
+  cursor: pointer;
+  font: inherit;
+  line-height: 1.2;
+  white-space: nowrap;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  transition: opacity 0.2s, background-color 0.2s;
+  font-weight: 500;
+  min-width: 108px;
+  padding: 6px 12px;
+  border-radius: 8px;
+  background: var(--b3-theme-primary);
+  color: var(--b3-theme-on-primary, #fff);
+  box-shadow: 0 2px 6px color-mix(in srgb, var(--b3-theme-primary) 30%, transparent);
+}
+
+.action-button:hover:not(:disabled) {
+  opacity: 0.9;
+}
+
+.action-button:disabled {
+  opacity: 0.5;
+  cursor: progress;
+  box-shadow: none;
 }
 
 .ghost-button {

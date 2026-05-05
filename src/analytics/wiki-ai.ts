@@ -146,6 +146,8 @@ export function createAiWikiService(deps: {
               'Generate exactly one wiki section draft.',
               'The JSON must include sectionType, title, format, blocks, and sourceRefs.',
               'Each block must include text and sourceRefs.',
+              'For every block, populate sourceRefs with the documentId values from the provided source documents that best support that block content. Use documentId, never blockId.',
+              'For the sources (catalog) section, each block sourceRefs must include all relevant source documentIds so the renderer can produce explicit reference entries.',
             ].join(' '),
           },
           {

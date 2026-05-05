@@ -4,7 +4,7 @@ import { fingerprintWikiContent } from './wiki-diff'
 import {
   WIKI_BLOCK_ATTR_KEYS,
   WIKI_PAGE_HEADINGS,
-  getWikiHeadingCandidates,
+  findHeadingIndex,
   matchesWikiHeading,
   type WikiApplyResult,
   type WikiPageType,
@@ -790,10 +790,7 @@ function extractIntroSummary(markdown: string): string {
 }
 
 function extractManagedMarkdown(fullMarkdown: string): string {
-  const manualHeadingIndex = getWikiHeadingCandidates('manualNotes', '##')
-    .map(heading => fullMarkdown.indexOf(`\n${heading}`))
-    .filter(index => index >= 0)
-    .sort((left, right) => left - right)[0] ?? -1
+  const manualHeadingIndex = findHeadingIndex(fullMarkdown, 'manualNotes', '##')
   if (manualHeadingIndex < 0) {
     return fullMarkdown.trim()
   }
@@ -801,10 +798,7 @@ function extractManagedMarkdown(fullMarkdown: string): string {
 }
 
 function extractManualNotesMarkdown(fullMarkdown: string): string {
-  const manualHeadingIndex = getWikiHeadingCandidates('manualNotes', '##')
-    .map(heading => fullMarkdown.indexOf(`\n${heading}`))
-    .filter(index => index >= 0)
-    .sort((left, right) => left - right)[0] ?? -1
+  const manualHeadingIndex = findHeadingIndex(fullMarkdown, 'manualNotes', '##')
   if (manualHeadingIndex < 0) {
     return ''
   }

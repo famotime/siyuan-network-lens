@@ -7,6 +7,7 @@ import {
   WIKI_PAGE_TYPES,
   WIKI_PREVIEW_STATUSES,
   buildThemeWikiPageTitle,
+  findHeadingIndex,
   isWikiDocumentTitle,
   resolveWikiSectionKeyFromHeading,
 } from './wiki-page-model'
@@ -95,5 +96,32 @@ describe('wiki page model', () => {
     expect(zhModule.resolveWikiSectionKeyFromHeading('主题概览')).toBe('intro')
     expect(zhModule.resolveWikiSectionKeyFromHeading('关键文档')).toBe('highlights')
     expect(zhModule.resolveWikiSectionKeyFromHeading('关系证据')).toBe('sources')
+  })
+
+  describe('findHeadingIndex', () => {
+    it('finds a plain heading without IAL attributes', () => {
+      const markdown = '# Title\n\n## AI managed area\n\ncontent\n\n## Manual notes\n\n- note'
+      const index = findHeadingIndex(markdown, 'manualNotes', '##')
+      expect(index).toBeGreaterThanOrEqual(0)
+      expect(markdown.slice(index + 1)).toMatch(/^## Manual notes/)
+    })
+
+    it('finds a heading with trailing IAL attributes', () => {
+      const markdown = '# Title\n\n## Manual notes {: id="20260311120000-abcdef"}\n\n- note'
+      const index = findHeadingIndex(markdown, 'manualNotes', '##')
+      expect(index).toBeGreaterThanOrEqual(0)
+      expect(markdown.slice(index + 1)).toMatch(/^## Manual notes/)
+    })
+
+    it('returns -1 when the heading is not present', () => {
+      const markdown = '# Title\n\n## AI managed area\n\ncontent'
+      expect(findHeadingIndex(markdown, 'manualNotes', '##')).toBe(-1)
+    })
+
+    it('finds the earliest matching heading', () => {
+      const markdown = '# Title\n\n## Manual notes\n\nfirst\n\n## Manual notes\n\nsecond'
+      const index = findHeadingIndex(markdown, 'manualNotes', '##')
+      expect(markdown.slice(index + 1)).toMatch(/^## Manual notes\n\nfirst/)
+    })
   })
 })

@@ -8,7 +8,7 @@ import type { AiDocumentIndexStore } from '@/analytics/ai-index-store'
 import type { WikiPagePreviewResult } from '@/analytics/wiki-diff'
 import type { WikiApplyBatchResult } from '@/analytics/wiki-documents'
 import { WIKI_SECTION_MARKER_PREFIX } from '@/analytics/wiki-renderer'
-import { getWikiHeadingCandidates } from '@/analytics/wiki-page-model'
+import { findHeadingIndex } from '@/analytics/wiki-page-model'
 import type { RenderedWikiDraft } from '@/analytics/wiki-renderer'
 import type { WikiScopeSummary } from '@/analytics/wiki-scope'
 import type { WikiPageSnapshotRecord } from '@/analytics/wiki-store'
@@ -51,6 +51,7 @@ export interface WikiPreviewState {
 export interface WikiPreviewRequest {
   sourceDocumentIds?: string[]
   scopeDescriptionLine?: string
+  themeDocumentId?: string
 }
 
 export function deduplicateStrings(values: string[]): string[] {
@@ -126,8 +127,7 @@ export async function resolveExistingWikiPage(params: {
       pageId,
       fullMarkdown,
       managedMarkdown: extractManagedMarkdown(fullMarkdown),
-      hasManualNotes: getWikiHeadingCandidates('manualNotes', '##')
-        .some(heading => fullMarkdown.includes(`\n${heading}`)),
+      hasManualNotes: findHeadingIndex(fullMarkdown, 'manualNotes', '##') >= 0,
     }
   } catch {
     return null
@@ -205,10 +205,7 @@ export function resolveWikiSectionOrderLabels(params: {
 }
 
 function extractManagedMarkdown(fullMarkdown: string): string {
-  const manualHeadingIndex = getWikiHeadingCandidates('manualNotes', '##')
-    .map(heading => fullMarkdown.indexOf(`\n${heading}`))
-    .filter(index => index >= 0)
-    .sort((left, right) => left - right)[0] ?? -1
+  const manualHeadingIndex = findHeadingIndex(fullMarkdown, 'manualNotes', '##')
   if (manualHeadingIndex < 0) {
     return fullMarkdown.trim()
   }

@@ -1,11 +1,9 @@
 <template>
   <section class="wiki-panel panel">
     <div class="wiki-panel__header">
-      <div>
-        <p class="wiki-panel__eyebrow">LLM Wiki</p>
-        <h2>{{ t('wikiMaintain.title') }}</h2>
-        <p class="wiki-panel__description">{{ t('wikiMaintain.description') }}</p>
-      </div>
+      <p class="wiki-panel__eyebrow">LLM Wiki</p>
+      <h2>{{ t('wikiMaintain.title') }}</h2>
+      <p class="wiki-panel__description">{{ t('wikiMaintain.description') }}</p>
       <div class="wiki-panel__actions">
         <button
           class="action-button"
@@ -13,6 +11,7 @@
           :disabled="previewLoading || !canPreparePreview"
           @click="prepareWikiPreview"
         >
+          <span v-if="previewLoading" class="spinner" aria-hidden="true" />
           {{ previewLoading ? t('wikiMaintain.generating') : t('wikiMaintain.generatePreview') }}
         </button>
         <button
@@ -21,6 +20,7 @@
           :disabled="applyLoading || !canApply"
           @click="applyWikiChanges(allowOverwriteConflicts)"
         >
+          <span v-if="applyLoading" class="spinner" aria-hidden="true" />
           {{ applyLoading ? t('wikiMaintain.applying') : t('wikiMaintain.applyChanges') }}
         </button>
       </div>
@@ -246,10 +246,8 @@ function resolveSectionOrderLabels(page: WikiPreviewState['themePages'][number])
 }
 
 .wiki-panel__header {
-  display: flex;
-  justify-content: space-between;
-  gap: 16px;
-  align-items: flex-start;
+  display: grid;
+  gap: 10px;
 }
 
 .wiki-panel__eyebrow {
@@ -368,9 +366,25 @@ function resolveSectionOrderLabels(page: WikiPreviewState['themePages'][number])
 }
 
 @media (max-width: 720px) {
-  .wiki-panel__header,
   .wiki-panel__item-head {
     flex-direction: column;
+  }
+}
+
+.spinner {
+  display: inline-block;
+  width: 14px;
+  height: 14px;
+  border: 2px solid currentColor;
+  border-right-color: transparent;
+  border-radius: 50%;
+  animation: spin 0.6s linear infinite;
+  vertical-align: -2px;
+}
+
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
   }
 }
 </style>

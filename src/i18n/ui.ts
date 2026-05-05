@@ -1509,8 +1509,8 @@ const UI_TEXT = {
         zh_CN: '请只生成一个 wiki 章节草稿。主题：{theme}。章节类型：{sectionType}。',
       },
       generateThemeSectionSchemaPrompt: {
-        en_US: 'Return JSON only with sectionType, title, format, blocks, and sourceRefs. Each block must include text and sourceRefs.',
-        zh_CN: '请只返回 JSON，并包含 sectionType、title、format、blocks、sourceRefs。每个 block 必须包含 text 和 sourceRefs。',
+        en_US: 'Return JSON only with sectionType, title, format, blocks, and sourceRefs. Each block must include text and sourceRefs. Populate sourceRefs with documentId values (not blockId) from the provided source documents that support each block.',
+        zh_CN: '请只返回 JSON，并包含 sectionType、title、format、blocks、sourceRefs。每个 block 必须包含 text 和 sourceRefs。请使用所提供的源文档 documentId（非 blockId）填充每个 block 的 sourceRefs。',
       },
       generateStructuredContentPrompt: {
         en_US: 'Generate structured content for the topic wiki page. Topic: {theme}.',
