@@ -82,16 +82,33 @@
             </div>
             <span class="wiki-panel__status">{{ t('wikiMaintain.status') }}: {{ statusLabelMap[page.preview.status] }}</span>
           </div>
-          <div class="wiki-panel__meta">
-            <span>{{ t('wikiMaintain.sourceDocs') }}: {{ page.preview.sourceDocumentCount }}</span>
-            <span>{{ t('wikiMaintain.template') }}: {{ resolveTemplateLabel(page.diagnosis.templateType) }}</span>
-            <span>{{ t('wikiMaintain.confidence') }}: {{ resolveConfidenceLabel(page.diagnosis.confidence) }}</span>
-            <span>{{ t('wikiMaintain.affectedSections') }}: {{ page.affectedSectionHeadings.length ? page.affectedSectionHeadings.join(', ') : t('wikiMaintain.noChanges') }}</span>
-            <span>{{ t('wikiMaintain.sectionOrder') }}: {{ resolveSectionOrderLabels(page) }}</span>
-            <span>{{ t('wikiMaintain.manualNotes') }}: {{ page.hasManualNotes ? t('wikiMaintain.existing') : t('wikiMaintain.createdOnFirstWrite') }}</span>
-          </div>
-          <p class="wiki-panel__summary wiki-panel__summary--primary">{{ page.preview.newSummary || t('wikiMaintain.noNewContent') }}</p>
-          <p v-if="page.preview.oldSummary" class="wiki-panel__summary wiki-panel__summary--muted">{{ t('wikiMaintain.oldSummary') }} {{ page.preview.oldSummary }}</p>
+          <dl class="wiki-panel__meta">
+            <div class="wiki-panel__meta-item">
+              <dt>{{ t('wikiMaintain.sourceDocs') }}</dt>
+              <dd>{{ page.preview.sourceDocumentCount }}</dd>
+            </div>
+            <div class="wiki-panel__meta-item">
+              <dt>{{ t('wikiMaintain.template') }}</dt>
+              <dd>{{ resolveTemplateLabel(page.diagnosis.templateType) }}</dd>
+            </div>
+            <div class="wiki-panel__meta-item">
+              <dt>{{ t('wikiMaintain.confidence') }}</dt>
+              <dd>{{ resolveConfidenceLabel(page.diagnosis.confidence) }}</dd>
+            </div>
+            <div class="wiki-panel__meta-item">
+              <dt>{{ t('wikiMaintain.affectedSections') }}</dt>
+              <dd>{{ page.affectedSectionHeadings.length ? page.affectedSectionHeadings.join(', ') : t('wikiMaintain.noChanges') }}</dd>
+            </div>
+            <div class="wiki-panel__meta-item">
+              <dt>{{ t('wikiMaintain.sectionOrder') }}</dt>
+              <dd>{{ resolveSectionOrderLabels(page) }}</dd>
+            </div>
+            <div class="wiki-panel__meta-item">
+              <dt>{{ t('wikiMaintain.manualNotes') }}</dt>
+              <dd>{{ page.hasManualNotes ? t('wikiMaintain.existing') : t('wikiMaintain.createdOnFirstWrite') }}</dd>
+            </div>
+          </dl>
+          <p v-if="page.preview.oldSummary" class="wiki-panel__summary wiki-panel__summary--muted">{{ t('wikiMaintain.oldSummary') }} {{ sanitizeSummaryText(page.preview.oldSummary) }}</p>
           <p v-if="page.preview.conflictReason" class="wiki-panel__conflict">{{ page.preview.conflictReason }}</p>
           <div class="wiki-panel__item-actions">
             <button
@@ -156,7 +173,7 @@
               &times;
             </button>
           </div>
-          <pre class="wiki-detail-dialog__body">{{ stripMetaSection(detailPage.draft.managedMarkdown) }}</pre>
+          <div class="wiki-detail-dialog__body" v-html="renderSimpleMarkdown(stripMetaSection(detailPage.draft.managedMarkdown))" />
         </div>
       </div>
     </Teleport>
@@ -169,6 +186,7 @@ import { computed, ref } from 'vue'
 import type { WikiPreviewState } from '@/composables/use-analytics'
 import { resolveWikiSectionOrderLabels } from '@/composables/use-analytics-wiki'
 import { t } from '@/i18n/ui'
+import { renderSimpleMarkdown } from '@/utils/markdown'
 
 const props = defineProps<{
   wikiEnabled: boolean
@@ -186,12 +204,12 @@ const props = defineProps<{
 const allowOverwriteConflicts = ref(false)
 const detailPage = ref<WikiPreviewState['themePages'][number] | null>(null)
 
-const statusLabelMap = {
+const statusLabelMap = computed(() => ({
   create: t('wikiMaintain.statusCreate'),
   update: t('wikiMaintain.statusUpdate'),
   unchanged: t('wikiMaintain.statusUnchanged'),
   conflict: t('wikiMaintain.statusConflict'),
-} as const
+} as const))
 
 const resultSummary = computed(() => {
   if (!props.preview?.applyResult) {
@@ -259,6 +277,18 @@ function resolveSectionOrderLabels(page: WikiPreviewState['themePages'][number])
   })
 
   return labels.length ? labels.join(', ') : t('wikiMaintain.noChanges')
+}
+
+function sanitizeSummaryText(text: string): string {
+  return text
+    .replace(/<!--[\s\S]*?-->/g, '')
+    .replace(/\(\([^)\s]+\s*"[^"]*"\)\)/g, '')
+    .replace(/\[[^\]]*?\]\(siyuan:\/\/[^)]*\)/g, '')
+    .replace(/#{1,6}\s+/g, '')
+    .replace(/\{:\s[^}]*\}/g, '')
+    .replace(/<[^>]+>/g, '')
+    .replace(/\s+/g, ' ')
+    .trim()
 }
 
 function stripMetaSection(markdown: string): string {
@@ -343,6 +373,19 @@ function stripMetaSection(markdown: string): string {
   gap: 10px;
 }
 
+.wiki-panel__scope-lines {
+  padding: 12px 14px;
+  border-radius: 10px;
+  border: 1px solid color-mix(in srgb, var(--b3-theme-on-background) 10%, transparent);
+  background: color-mix(in srgb, var(--b3-theme-surface) 60%, var(--b3-theme-background));
+}
+
+.wiki-panel__scope-lines p {
+  margin: 2px 0;
+  font-size: 13px;
+  line-height: 1.6;
+}
+
 .wiki-panel__scope-card,
 .wiki-panel__item,
 .wiki-panel__extra,
@@ -358,8 +401,7 @@ function stripMetaSection(markdown: string): string {
   gap: 4px;
 }
 
-.wiki-panel__scope-card span,
-.wiki-panel__meta {
+.wiki-panel__scope-card span {
   font-size: 12px;
   color: color-mix(in srgb, var(--b3-theme-on-background) 58%, transparent);
 }
@@ -401,18 +443,33 @@ function stripMetaSection(markdown: string): string {
 
 .wiki-panel__meta {
   display: flex;
-  flex-wrap: wrap;
-  gap: 12px;
+  flex-direction: column;
+  gap: 2px;
   margin: 10px 0;
+}
+
+.wiki-panel__meta-item {
+  display: flex;
+  gap: 6px;
+  align-items: baseline;
+}
+
+.wiki-panel__meta dt {
+  margin: 0;
+  font-size: 13px;
+  font-weight: 600;
+  color: color-mix(in srgb, var(--b3-theme-on-background) 80%, transparent);
+  flex-shrink: 0;
+}
+
+.wiki-panel__meta dd {
+  margin: 0;
+  font-size: 13px;
+  font-weight: 400;
 }
 
 .wiki-panel__summary {
   margin-top: 8px;
-}
-
-.wiki-panel__summary--primary {
-  font-size: 14px;
-  line-height: 1.7;
 }
 
 .wiki-panel__summary--muted {
@@ -496,10 +553,123 @@ function stripMetaSection(markdown: string): string {
   margin: 0;
   padding: 18px;
   overflow: auto;
-  font-family: var(--b3-font-family);
-  font-size: 13px;
+  font-size: 14px;
   line-height: 1.8;
-  white-space: pre-wrap;
   word-break: break-word;
+}
+
+.wiki-detail-dialog__body :deep(h1),
+.wiki-detail-dialog__body :deep(h2) {
+  margin: 18px 0 8px;
+  font-size: 16px;
+  font-weight: 600;
+}
+
+.wiki-detail-dialog__body :deep(h3),
+.wiki-detail-dialog__body :deep(h4),
+.wiki-detail-dialog__body :deep(h5),
+.wiki-detail-dialog__body :deep(h6) {
+  margin: 14px 0 6px;
+  font-size: 14px;
+  font-weight: 600;
+}
+
+.wiki-detail-dialog__body :deep(p) {
+  margin: 6px 0;
+}
+
+.wiki-detail-dialog__body :deep(ul) {
+  margin: 6px 0;
+  padding-left: 20px;
+}
+
+.wiki-detail-dialog__body :deep(li) {
+  margin: 2px 0;
+}
+
+.wiki-detail-dialog__body :deep(blockquote) {
+  margin: 8px 0;
+  padding: 2px 12px;
+  border-left: 3px solid color-mix(in srgb, var(--b3-theme-primary) 40%, transparent);
+  color: color-mix(in srgb, var(--b3-theme-on-background) 72%, transparent);
+}
+
+.wiki-detail-dialog__body :deep(code) {
+  padding: 1px 5px;
+  border-radius: 4px;
+  font-size: 12px;
+  background: color-mix(in srgb, var(--b3-theme-on-background) 8%, transparent);
+}
+
+.wiki-detail-dialog__body :deep(strong) {
+  font-weight: 600;
+}
+
+.action-button {
+  border: 0;
+  cursor: pointer;
+  font: inherit;
+  line-height: 1.2;
+  white-space: nowrap;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  transition: opacity 0.2s, background-color 0.2s;
+  font-weight: 500;
+  min-width: 108px;
+  padding: 6px 12px;
+  border-radius: 8px;
+  background: var(--b3-theme-primary);
+  color: var(--b3-theme-on-primary, #fff);
+  box-shadow: 0 2px 6px color-mix(in srgb, var(--b3-theme-primary) 30%, transparent);
+}
+
+.action-button:hover:not(:disabled) {
+  opacity: 0.9;
+}
+
+.action-button:disabled {
+  opacity: 0.5;
+  cursor: progress;
+  box-shadow: none;
+}
+
+.ghost-button {
+  border: 1px solid var(--panel-border);
+  background: transparent;
+  color: var(--b3-theme-primary);
+  font-size: 12px;
+  padding: 6px 12px;
+  border-radius: 6px;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  min-width: 108px;
+  transition: background-color 0.2s;
+}
+
+.ghost-button:hover:not(:disabled) {
+  background: color-mix(in srgb, var(--b3-theme-primary) 15%, transparent);
+}
+
+.ghost-button:disabled {
+  cursor: not-allowed;
+  opacity: 0.6;
+}
+
+.spinner {
+  width: 14px;
+  height: 14px;
+  border: 2px solid color-mix(in srgb, currentColor 30%, transparent);
+  border-top-color: currentColor;
+  border-radius: 50%;
+  animation: spin 0.6s linear infinite;
+}
+
+@keyframes spin {
+  to { transform: rotate(360deg); }
 }
 </style>

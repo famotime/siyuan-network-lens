@@ -153,6 +153,15 @@ export async function resolveExistingWikiPage(params: {
   }
 }
 
+const TIME_RANGE_LABEL_MAP: Record<TimeRange, () => string> = {
+  all: () => t('analytics.summaryDetailSource.allTime'),
+  '3d': () => t('analytics.summaryDetailSource.last3Days'),
+  '7d': () => t('analytics.summaryDetailSource.last7Days'),
+  '30d': () => t('analytics.summaryDetailSource.last30Days'),
+  '60d': () => t('analytics.summaryDetailSource.last60Days'),
+  '90d': () => t('analytics.summaryDetailSource.last90Days'),
+}
+
 export function buildWikiScopeDescriptionLines(params: {
   timeRange: TimeRange
   filters: AnalyticsFilters
@@ -161,7 +170,7 @@ export function buildWikiScopeDescriptionLines(params: {
 }) {
   return [
     params.scopeDescriptionLine ?? t('analytics.wiki.scopeSourceCurrentDocSample'),
-    t('analytics.wiki.timeWindowLine', { value: params.timeRange }),
+    t('analytics.wiki.timeWindowLine', { value: TIME_RANGE_LABEL_MAP[params.timeRange]() }),
     t('analytics.wiki.notebookLine', { value: params.filters.notebook ? params.resolveNotebookName(params.filters.notebook) : t('analytics.wiki.allNotebooks') }),
     t('analytics.wiki.tagsLine', { value: params.filters.tags?.length ? params.filters.tags.join(', ') : t('analytics.wiki.allTags') }),
     t('analytics.wiki.topicsLine', { value: params.filters.themeNames?.length ? params.filters.themeNames.join(', ') : t('analytics.wiki.allTopics') }),

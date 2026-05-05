@@ -1986,7 +1986,7 @@ describe('useAnalyticsState', () => {
         summary: {
           sourceDocumentCount: 2,
           generatedSectionCount: 3,
-          referenceCount: 3,
+          referenceCount: 4,
           manualNotesParagraphCount: 0,
         },
         descriptionLines: expect.arrayContaining(['- 范围来源：核心文档《Beta》关联范围（正链 / 反链 / 子文档）']),

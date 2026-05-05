@@ -48,6 +48,7 @@ describe('wiki documents', () => {
     const store = createMemoryWikiStore()
     const themeDraft = renderThemeWikiDraft({
       pageTitle: '主题-AI-索引-llm-wiki',
+      pairedThemeDocumentId: '20260409120000-abcdef0',
       pairedThemeTitle: '主题-AI-索引',
       generatedAt: '2026-04-09T12:00:00.000Z',
       model: 'gpt-4.1-mini',
@@ -124,6 +125,7 @@ describe('wiki documents', () => {
     const store = createMemoryWikiStore()
     const themeDraft = renderThemeWikiDraft({
       pageTitle: '主题-AI-索引-llm-wiki',
+      pairedThemeDocumentId: '20260409120000-abcdef0',
       pairedThemeTitle: '主题-AI-索引',
       generatedAt: '2026-04-09T12:00:00.000Z',
       model: 'gpt-4.1-mini',
@@ -311,6 +313,7 @@ describe('wiki documents', () => {
     })
     const themeDraft = renderThemeWikiDraft({
       pageTitle: '主题-AI-索引-llm-wiki',
+      pairedThemeDocumentId: '20260409120000-abcdef0',
       pairedThemeTitle: '主题-AI-索引',
       generatedAt: '2026-04-09T12:00:00.000Z',
       model: 'gpt-4.1-mini',
@@ -496,7 +499,7 @@ describe('wiki documents', () => {
         },
       },
     })
-    const stableDraft = buildStaticThemeDraft('主题-稳定-llm-wiki', '主题-稳定', '稳定内容')
+    const stableDraft = buildStaticThemeDraft('主题-稳定-llm-wiki', '20260409120000-stable1', '主题-稳定', '稳定内容')
     const unchangedPreview = buildWikiPreview({
       pageType: 'theme',
       pageTitle: '主题-稳定-llm-wiki',
@@ -515,7 +518,7 @@ describe('wiki documents', () => {
         ].join('\n'),
       },
     })
-    const conflictDraft = buildStaticThemeDraft('主题-冲突-llm-wiki', '主题-冲突', '插件新生成内容')
+    const conflictDraft = buildStaticThemeDraft('主题-冲突-llm-wiki', '20260409120000-cnflct', '主题-冲突', '插件新生成内容')
     const conflictPreview = buildWikiPreview({
       pageType: 'theme',
       pageTitle: '主题-冲突-llm-wiki',
@@ -667,7 +670,7 @@ describe('wiki documents', () => {
         },
       },
     })
-    const nextDraft = buildStaticThemeDraft('主题-冲突-llm-wiki', '主题-冲突', '插件新生成内容')
+    const nextDraft = buildStaticThemeDraft('主题-冲突-llm-wiki', '20260409120000-cnflct', '主题-冲突', '插件新生成内容')
     const conflictPreview = buildWikiPreview({
       pageType: 'theme',
       pageTitle: '主题-冲突-llm-wiki',
@@ -765,6 +768,7 @@ describe('wiki documents', () => {
     const store = createMemoryWikiStore()
     const themeDraft = renderZhThemeWikiDraft({
       pageTitle: '主题-AI-索引-llm-wiki',
+      pairedThemeDocumentId: '20260409120000-abcdef0',
       pairedThemeTitle: '主题-AI-索引',
       generatedAt: '2026-04-09T12:00:00.000Z',
       model: 'gpt-4.1-mini',
@@ -829,7 +833,7 @@ describe('wiki documents', () => {
   })
 })
 
-function buildStaticThemeDraft(pageTitle: string, pairedThemeTitle: string, overview: string) {
+function buildStaticThemeDraft(pageTitle: string, pairedThemeDocumentId: string, pairedThemeTitle: string, overview: string) {
   return {
     managedMarkdown: [
       `# ${pageTitle}`,
@@ -860,6 +864,7 @@ function buildStaticThemeDraft(pageTitle: string, pairedThemeTitle: string, over
         markdown: overview,
       },
     ],
+    pairedThemeDocumentId,
     pairedThemeTitle,
   }
 }

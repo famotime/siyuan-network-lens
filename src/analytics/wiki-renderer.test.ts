@@ -97,6 +97,7 @@ describe('wiki renderer', () => {
   it('renders a stable managed markdown region and preserves a manual notes placeholder', () => {
     const rendered = renderThemeWikiDraft({
       pageTitle: '主题-AI-索引-llm-wiki',
+      pairedThemeDocumentId: '20260409120000-abcdef0',
       pairedThemeTitle: '主题-AI-索引',
       generatedAt: '2026-04-09T12:00:00.000Z',
       model: 'gpt-4.1-mini',
@@ -107,6 +108,7 @@ describe('wiki renderer', () => {
       sourceDocumentTitleMap,
     })
 
+    expect(rendered.managedMarkdown).toContain('- Paired topic page: ((20260409120000-abcdef0 "主题-AI-索引"))')
     expect(rendered.sectionMetadata.map(item => item.key)).toEqual([
       'meta',
       'intro',
@@ -127,6 +129,7 @@ describe('wiki renderer', () => {
   it('appends inline superscript source references to body blocks', () => {
     const rendered = renderThemeWikiDraft({
       pageTitle: '主题-AI-索引-llm-wiki',
+      pairedThemeDocumentId: '20260409120000-abcdef0',
       pairedThemeTitle: '主题-AI-索引',
       generatedAt: '2026-04-09T12:00:00.000Z',
       model: 'gpt-4.1-mini',
@@ -147,6 +150,7 @@ describe('wiki renderer', () => {
   it('renders sources section entries as block references with titles', () => {
     const rendered = renderThemeWikiDraft({
       pageTitle: '主题-AI-索引-llm-wiki',
+      pairedThemeDocumentId: '20260409120000-abcdef0',
       pairedThemeTitle: '主题-AI-索引',
       generatedAt: '2026-04-09T12:00:00.000Z',
       model: 'gpt-4.1-mini',
@@ -180,6 +184,7 @@ describe('wiki renderer', () => {
 
     const rendered = renderZhThemeWikiDraft({
       pageTitle: '主题-AI-索引-llm-wiki',
+      pairedThemeDocumentId: '20260409120000-abcdef0',
       pairedThemeTitle: '主题-AI-索引',
       generatedAt: '2026-04-09T12:00:00.000Z',
       model: 'gpt-4.1-mini',

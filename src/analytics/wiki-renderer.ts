@@ -18,6 +18,7 @@ export interface RenderedWikiDraft {
 
 export function renderThemeWikiDraft(params: {
   pageTitle: string
+  pairedThemeDocumentId: string
   pairedThemeTitle: string
   generatedAt: string
   model: string
@@ -35,7 +36,7 @@ export function renderThemeWikiDraft(params: {
       key: 'meta',
       heading: t('analytics.wikiPage.metaHeading'),
       body: [
-        t('wikiMaintain.pairedTopicPageLine', { value: params.pairedThemeTitle }),
+        t('wikiMaintain.pairedTopicPageLine', { value: `((${params.pairedThemeDocumentId} "${params.pairedThemeTitle}"))` }),
         t('wikiMaintain.generatedAtLine', { value: params.generatedAt }),
         t('wikiMaintain.sourceDocsLine', { value: params.sourceDocumentCount }),
         t('wikiMaintain.modelLine', { value: params.model }),

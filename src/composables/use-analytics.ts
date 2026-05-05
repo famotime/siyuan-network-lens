@@ -957,6 +957,7 @@ export function useAnalyticsState(params: UseAnalyticsParams) {
       )
       const draft = renderThemeWikiDraft({
         pageTitle: payload.pageTitle,
+        pairedThemeDocumentId: payload.themeDocumentId,
         pairedThemeTitle: payload.themeDocumentTitle,
         generatedAt,
         model: appliedConfig.value.aiModel?.trim() || 'unknown',
