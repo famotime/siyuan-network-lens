@@ -8,9 +8,8 @@ import type { AiDocumentIndexStore } from '@/analytics/ai-index-store'
 import type { WikiPagePreviewResult } from '@/analytics/wiki-diff'
 import type { WikiApplyBatchResult } from '@/analytics/wiki-documents'
 import { WIKI_SECTION_MARKER_PREFIX } from '@/analytics/wiki-renderer'
-import { findHeadingIndex } from '@/analytics/wiki-page-model'
+import { findHeadingIndex, WIKI_PAGE_HEADINGS } from '@/analytics/wiki-page-model'
 import type { RenderedWikiDraft } from '@/analytics/wiki-renderer'
-import type { WikiScopeSummary } from '@/analytics/wiki-scope'
 import type { WikiPageSnapshotRecord } from '@/analytics/wiki-store'
 import type { WikiPagePlan, WikiTemplateDiagnosis } from '@/analytics/wiki-template-model'
 import { t } from '@/i18n/ui'
@@ -36,10 +35,17 @@ export interface WikiPreviewThemePageItem {
   hasManualNotes: boolean
 }
 
+export interface WikiPreviewSummary {
+  sourceDocumentCount: number
+  generatedSectionCount: number
+  referenceCount: number
+  manualNotesParagraphCount: number
+}
+
 export interface WikiPreviewState {
   generatedAt: string
   scope: {
-    summary: WikiScopeSummary
+    summary: WikiPreviewSummary
     descriptionLines: string[]
   }
   themePages: WikiPreviewThemePageItem[]
@@ -56,6 +62,19 @@ export interface WikiPreviewRequest {
 
 export function deduplicateStrings(values: string[]): string[] {
   return [...new Set(values.map(value => value.trim()).filter(Boolean))]
+}
+
+export function buildWikiPreviewSummary(params: {
+  sourceDocumentCount: number
+  draft: RenderedWikiDraft
+  existingFullMarkdown?: string
+}): WikiPreviewSummary {
+  return {
+    sourceDocumentCount: params.sourceDocumentCount,
+    generatedSectionCount: params.draft.sectionMetadata.filter(section => section.key !== 'meta').length,
+    referenceCount: countDocumentReferences(params.draft.managedMarkdown),
+    manualNotesParagraphCount: countManualNotesParagraphs(params.existingFullMarkdown ?? ''),
+  }
 }
 
 export async function buildWikiSourceProfileMap(params: {
@@ -215,6 +234,66 @@ function extractManagedMarkdown(fullMarkdown: string): string {
     return normalized
   }
   return normalized.slice(0, manualHeadingIndex).trim()
+}
+
+function countDocumentReferences(markdown: string): number {
+  if (!markdown) {
+    return 0
+  }
+
+  const matches = markdown.match(/\(\(([0-9a-z-]{3,})\s+"[^"]*"\)\)/gi)
+  return matches?.length ?? 0
+}
+
+function countManualNotesParagraphs(fullMarkdown: string): number {
+  if (!fullMarkdown) {
+    return 0
+  }
+
+  const normalized = stripIalFromKramdown(fullMarkdown)
+  const lines = normalized.split(/\r?\n/)
+  const manualHeadingCandidates = new Set([
+    `## ${WIKI_PAGE_HEADINGS.manualNotes}`,
+    '## Manual notes',
+    '## 人工备注',
+  ])
+
+  let startIndex = -1
+  for (let index = 0; index < lines.length; index += 1) {
+    if (manualHeadingCandidates.has(lines[index].trim())) {
+      startIndex = index + 1
+      break
+    }
+  }
+
+  if (startIndex < 0) {
+    return 0
+  }
+
+  const contentLines: string[] = []
+  for (let index = startIndex; index < lines.length; index += 1) {
+    const line = lines[index]
+    if (/^##\s+/.test(line.trim())) {
+      break
+    }
+    contentLines.push(line)
+  }
+
+  const paragraphs = contentLines
+    .join('\n')
+    .split(/\n\s*\n+/)
+    .map(value => value.trim())
+    .filter(Boolean)
+    .filter((value) => {
+      const normalized = value.replace(/^>\s*/, '').trim()
+      return !new Set([
+        t('wikiMaintain.manualNotesReserved'),
+        '> Reserved for manual notes. Later automated maintenance will not overwrite this section.',
+        '> 这里保留给人工补充，后续自动维护不会覆盖本区内容。',
+      ].map(item => item.replace(/^>\s*/, '').trim())).has(normalized)
+    })
+
+  return paragraphs.length
 }
 
 function humanizeSectionId(sectionId: string): string {

@@ -1748,7 +1748,11 @@ describe('useAnalyticsState', () => {
     await state.refresh()
     await nextTick()
 
-    await (state as any).prepareWikiPreview()
+    await (state as any).prepareWikiPreview({
+      sourceDocumentIds: ['doc-theme-ai', 'doc-a', 'doc-b', 'doc-orphan', 'doc-orphan-zeta', 'doc-orphan-gamma'],
+      scopeDescriptionLine: '- 范围来源：主题《AI》关联范围（正链 / 反链 / 子文档）',
+      themeDocumentId: 'doc-theme-ai',
+    })
     await nextTick()
 
     expect(diagnoseThemeTemplate).toHaveBeenCalledTimes(1)
@@ -1767,8 +1771,7 @@ describe('useAnalyticsState', () => {
       scope: expect.objectContaining({
         summary: expect.objectContaining({
           sourceDocumentCount: 5,
-          themeGroupCount: 1,
-          excludedWikiDocumentCount: 0,
+          generatedSectionCount: 4,
         }),
       }),
     }))
@@ -1943,8 +1946,9 @@ describe('useAnalyticsState', () => {
     await nextTick()
 
     await (state as any).prepareWikiPreview({
-      sourceDocumentIds: ['doc-a', 'doc-b'],
+      sourceDocumentIds: ['doc-theme-ai', 'doc-a', 'doc-b', 'doc-a'],
       scopeDescriptionLine: '- 范围来源：核心文档《Beta》关联范围（正链 / 反链 / 子文档）',
+      themeDocumentId: 'doc-theme-ai',
     })
     await nextTick()
 
@@ -1962,24 +1966,33 @@ describe('useAnalyticsState', () => {
             sourceUpdatedAt: expect.any(String),
             generatedAt: expect.any(String),
           }),
+          expect.objectContaining({
+            documentId: 'doc-b',
+            title: 'Beta',
+          }),
         ],
-        templateSignals: expect.objectContaining({ propositionCount: 1, sourceDocumentCount: 1 }),
+        templateSignals: expect.objectContaining({ propositionCount: 2, sourceDocumentCount: 2 }),
         analysisSignals: expect.objectContaining({ coreDocumentIds: expect.any(Array), relationshipEvidence: expect.any(Array) }),
       }),
     }))
     expect((state as any).wikiPreview.value).toEqual(expect.objectContaining({
-      scope: expect.objectContaining({
-        summary: expect.objectContaining({
-          sourceDocumentCount: 2,
-        }),
-        descriptionLines: expect.arrayContaining(['- 范围来源：核心文档《Beta》关联范围（正链 / 反链 / 子文档）']),
-      }),
-      unclassifiedDocuments: [
+      themePages: [
         expect.objectContaining({
-          documentId: 'doc-b',
-          title: 'Beta',
+          themeDocumentId: 'doc-theme-ai',
+          sourceDocumentIds: ['doc-a', 'doc-b'],
         }),
       ],
+      scope: expect.objectContaining({
+        summary: {
+          sourceDocumentCount: 2,
+          generatedSectionCount: 3,
+          referenceCount: 3,
+          manualNotesParagraphCount: 0,
+        },
+        descriptionLines: expect.arrayContaining(['- 范围来源：核心文档《Beta》关联范围（正链 / 反链 / 子文档）']),
+      }),
+      unclassifiedDocuments: [],
+      excludedWikiDocuments: [],
     }))
   })
 

@@ -4,39 +4,6 @@ import { describe, expect, it, vi } from 'vitest'
 import { createAppWikiPanelController } from './use-app-wiki-panel'
 
 describe('createAppWikiPanelController', () => {
-  it('opens and closes the document-scope wiki panel with the current filtered documents', async () => {
-    const prepareWikiPreview = vi.fn(async () => undefined)
-    const controller = createAppWikiPanelController({
-      filteredDocuments: computed(() => [
-        { id: 'doc-a' },
-        { id: 'doc-b' },
-      ]),
-      resolveLinkAssociations: () => ({
-        outbound: [],
-        inbound: [],
-        childDocuments: [],
-      }),
-      resolveTitle: documentId => documentId,
-      prepareWikiPreview,
-    })
-
-    await controller.toggleDocumentWikiPanel()
-
-    expect(controller.wikiPanelPlacement.value).toBe('documents')
-    expect(controller.wikiPanelCoreDocumentId.value).toBe('')
-    expect(controller.activeWikiPreviewRequest.value).toEqual({
-      sourceDocumentIds: ['doc-a', 'doc-b'],
-      scopeDescriptionLine: '- Scope source: current doc sample',
-    })
-    expect(prepareWikiPreview).not.toHaveBeenCalled()
-
-    await controller.toggleDocumentWikiPanel()
-
-    expect(controller.wikiPanelPlacement.value).toBe('')
-    expect(controller.wikiPanelCoreDocumentId.value).toBe('')
-    expect(prepareWikiPreview).not.toHaveBeenCalled()
-  })
-
   it('opens the ranking-scope wiki panel with a deduplicated association request', async () => {
     const prepareWikiPreview = vi.fn(async () => undefined)
     const controller = createAppWikiPanelController({

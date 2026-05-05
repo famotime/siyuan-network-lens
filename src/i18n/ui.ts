@@ -1215,21 +1215,33 @@ const UI_TEXT = {
       en_US: 'Enable today suggestions and complete AI settings first',
       zh_CN: '请先启用今日建议并完成 AI 配置',
     },
-    matchedSourceDocs: {
-      en_US: 'Matched source docs',
-      zh_CN: '命中源文档',
+    sourceDocuments: {
+      en_US: 'Source documents',
+      zh_CN: '来源文档',
     },
-    matchedTopics: {
-      en_US: 'Matched topics',
-      zh_CN: '命中主题',
+    sourceDocumentsTooltip: {
+      en_US: 'Deduplicated related documents included in this wiki analysis run',
+      zh_CN: '纳入本次 Wiki 分析的关联去重文档数',
     },
-    excludedWikiPages: {
-      en_US: 'Excluded wiki pages',
-      zh_CN: '排除的 Wiki 页面',
+    generatedSections: {
+      en_US: 'Generated sections',
+      zh_CN: '生成章节',
     },
-    unclassifiedSources: {
-      en_US: 'Unclassified sources',
-      zh_CN: '未归类来源',
+    generatedSectionsTooltip: {
+      en_US: 'Generated content sections in this wiki page, excluding page meta and manual notes',
+      zh_CN: '本次生成的 Wiki 文档章节数，不含页面头信息和人工备注区',
+    },
+    linkedReferences: {
+      en_US: 'Linked references',
+      zh_CN: '关联引用',
+    },
+    linkedReferencesTooltip: {
+      en_US: 'Document reference links included in the generated wiki content',
+      zh_CN: '生成后的 Wiki 内容中包含的笔记引用数量',
+    },
+    manualNotesTooltip: {
+      en_US: 'Preserved manual-note paragraphs kept from the existing wiki page',
+      zh_CN: '当前 Wiki 页中保留下来的人工备注段落数量',
     },
     pairedTopicPage: {
       en_US: 'Paired topic page',
@@ -2213,6 +2225,14 @@ const UI_TEXT = {
       wikiStorageNotInitialized: {
         en_US: 'LLM Wiki storage is not initialized',
         zh_CN: 'LLM Wiki 存储未初始化',
+      },
+      wikiThemeDocumentRequired: {
+        en_US: 'Generate LLM Wiki from a specific theme document only',
+        zh_CN: 'LLM Wiki 预览必须基于一个明确的主题文档生成',
+      },
+      wikiThemeDocumentNotFound: {
+        en_US: 'The requested theme document is missing from the current analysis scope',
+        zh_CN: '当前分析范围内找不到请求的主题文档',
       },
       failedToGenerateWikiPreview: {
         en_US: 'Failed to generate LLM Wiki preview',

@@ -46,21 +46,21 @@
     <template v-else>
       <div v-if="preview" class="wiki-panel__scope">
         <div class="wiki-panel__scope-grid">
-          <div class="wiki-panel__scope-card">
-            <span>{{ t('wikiMaintain.matchedSourceDocs') }}</span>
+          <div class="wiki-panel__scope-card" :title="t('wikiMaintain.sourceDocumentsTooltip')">
+            <span>{{ t('wikiMaintain.sourceDocuments') }}</span>
             <strong>{{ preview.scope.summary.sourceDocumentCount }}</strong>
           </div>
-          <div class="wiki-panel__scope-card">
-            <span>{{ t('wikiMaintain.matchedTopics') }}</span>
-            <strong>{{ preview.scope.summary.themeGroupCount }}</strong>
+          <div class="wiki-panel__scope-card" :title="t('wikiMaintain.generatedSectionsTooltip')">
+            <span>{{ t('wikiMaintain.generatedSections') }}</span>
+            <strong>{{ preview.scope.summary.generatedSectionCount }}</strong>
           </div>
-          <div class="wiki-panel__scope-card">
-            <span>{{ t('wikiMaintain.excludedWikiPages') }}</span>
-            <strong>{{ preview.scope.summary.excludedWikiDocumentCount }}</strong>
+          <div class="wiki-panel__scope-card" :title="t('wikiMaintain.linkedReferencesTooltip')">
+            <span>{{ t('wikiMaintain.linkedReferences') }}</span>
+            <strong>{{ preview.scope.summary.referenceCount }}</strong>
           </div>
-          <div class="wiki-panel__scope-card">
-            <span>{{ t('wikiMaintain.unclassifiedSources') }}</span>
-            <strong>{{ preview.scope.summary.unclassifiedDocumentCount }}</strong>
+          <div class="wiki-panel__scope-card" :title="t('wikiMaintain.manualNotesTooltip')">
+            <span>{{ t('wikiMaintain.manualNotes') }}</span>
+            <strong>{{ preview.scope.summary.manualNotesParagraphCount }}</strong>
           </div>
         </div>
         <div class="wiki-panel__scope-lines">
@@ -108,12 +108,6 @@
       <div v-else-if="preview" class="empty-state">
         {{ t('wikiMaintain.noMaintainablePages') }}
       </div>
-
-      <div v-if="preview?.unclassifiedDocuments.length" class="wiki-panel__extra">
-        <h3>{{ t('wikiMaintain.unclassifiedSources') }}</h3>
-        <p>{{ preview.unclassifiedDocuments.map(item => item.title).join('、') }}</p>
-      </div>
-
       <div v-if="preview?.applyResult" class="wiki-panel__result">
         <p>{{ resultSummary }}</p>
         <div class="wiki-panel__result-actions">
@@ -345,7 +339,7 @@ function stripMetaSection(markdown: string): string {
 
 .wiki-panel__scope-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
+  grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: 10px;
 }
 
@@ -438,6 +432,10 @@ function stripMetaSection(markdown: string): string {
 }
 
 @media (max-width: 720px) {
+  .wiki-panel__scope-grid {
+    grid-template-columns: 1fr;
+  }
+
   .wiki-panel__item-head {
     flex-direction: column;
   }

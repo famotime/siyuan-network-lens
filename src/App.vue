@@ -236,22 +236,6 @@
         :batch-generate-doc-index="batchGenerateDocIndex"
         :batch-delete-doc-index="batchDeleteDocIndex"
       />
-      <div
-        v-if="showWikiFeature && visibleSummaryCards.length && selectedSummaryDetail?.key === 'documents'"
-        class="detail-wiki-stack"
-      >
-        <button
-          class="action-button detail-wiki-action"
-          type="button"
-          @click="toggleDocumentWikiPanel"
-        >
-          {{ wikiPanelPlacement === 'documents' ? t('app.wiki.hide') : t('app.wiki.maintain') }}
-        </button>
-        <WikiMaintainPanel
-          v-if="wikiPanelPlacement === 'documents'"
-          v-bind="wikiPanelProps"
-        />
-      </div>
     </template>
   </div>
 </template>
@@ -398,7 +382,6 @@ const {
   wikiPanelPlacement,
   isCoreDocumentWikiPanelVisible,
   prepareCurrentWikiPreview,
-  toggleDocumentWikiPanel,
   toggleCoreDocumentWikiPanel,
 } = createAppWikiPanelController({
   filteredDocuments,

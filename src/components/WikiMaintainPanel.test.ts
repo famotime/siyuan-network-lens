@@ -33,11 +33,10 @@ describe('WikiMaintainPanel', () => {
           generatedAt: '2026-04-10T08:00:00.000Z',
           scope: {
             summary: {
-              themeDocumentCount: 2,
               sourceDocumentCount: 4,
-              themeGroupCount: 1,
-              excludedWikiDocumentCount: 1,
-              unclassifiedDocumentCount: 1,
+              generatedSectionCount: 3,
+              referenceCount: 5,
+              manualNotesParagraphCount: 2,
             },
             descriptionLines: [
               '- 时间窗口：7d',
@@ -164,12 +163,7 @@ describe('WikiMaintainPanel', () => {
               },
             },
           ],
-          unclassifiedDocuments: [
-            {
-              documentId: 'doc-free',
-              title: '零散记录',
-            },
-          ],
+          unclassifiedDocuments: [],
           applyResult: {
             indexPage: {
               pageId: 'index-1',
@@ -207,7 +201,14 @@ describe('WikiMaintainPanel', () => {
     expect(html).toContain('LLM Wiki maintenance')
     expect(html).toContain('Generate preview')
     expect(html).toContain('Apply changes')
-    expect(html).toContain('Matched source docs')
+    expect(html).toContain('Source documents')
+    expect(html).toContain('Generated sections')
+    expect(html).toContain('Linked references')
+    expect(html).toContain('Manual notes')
+    expect(html).toContain('Deduplicated related documents included in this wiki analysis run')
+    expect(html).toContain('Generated content sections in this wiki page, excluding page meta and manual notes')
+    expect(html).toContain('Document reference links included in the generated wiki content')
+    expect(html).toContain('Preserved manual-note paragraphs kept from the existing wiki page')
     expect(html).toContain('主题-AI-索引-llm-wiki')
     expect(html).toContain('Status: Update')
     expect(html).toContain('Status: Conflict')
@@ -224,7 +225,6 @@ describe('WikiMaintainPanel', () => {
     expect(html).toContain('新摘要')
     expect(html).toContain('Old summary: 旧摘要')
     expect(html).toContain('View details')
-    expect(html).toContain('零散记录')
     expect(html).toContain('Open index page')
     expect(html).toContain('Open log page')
     expect(html).toContain('Open latest updated page')
@@ -243,11 +243,10 @@ describe('WikiMaintainPanel', () => {
           generatedAt: '2026-04-10T08:00:00.000Z',
           scope: {
             summary: {
-              themeDocumentCount: 0,
               sourceDocumentCount: 0,
-              themeGroupCount: 0,
-              excludedWikiDocumentCount: 0,
-              unclassifiedDocumentCount: 0,
+              generatedSectionCount: 0,
+              referenceCount: 0,
+              manualNotesParagraphCount: 0,
             },
             descriptionLines: [],
           },
@@ -293,11 +292,10 @@ describe('WikiMaintainPanel', () => {
           generatedAt: '2026-04-10T08:00:00.000Z',
           scope: {
             summary: {
-              themeDocumentCount: 1,
               sourceDocumentCount: 2,
-              themeGroupCount: 1,
-              excludedWikiDocumentCount: 0,
-              unclassifiedDocumentCount: 0,
+              generatedSectionCount: 2,
+              referenceCount: 3,
+              manualNotesParagraphCount: 1,
             },
             descriptionLines: ['- 时间窗口：7d'],
           },
@@ -367,7 +365,9 @@ describe('WikiMaintainPanel', () => {
     expect(html).toContain('生成预览')
     expect(html).toContain('应用变更')
     expect(html).toContain('允许覆盖冲突页面')
-    expect(html).toContain('命中源文档')
+    expect(html).toContain('来源文档')
+    expect(html).toContain('生成章节')
+    expect(html).toContain('关联引用')
     expect(html).toContain('模板')
     expect(html).toContain('置信度')
     expect(html).toContain('技术主题')

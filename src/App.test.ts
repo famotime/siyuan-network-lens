@@ -29,7 +29,6 @@ describe('App trend detail layout', () => {
     expect(source).toContain("{{ t('app.filter.tags') }}")
     expect(source).toContain("{{ t('app.filter.topics') }}")
     expect(source).toContain("{{ t('app.filter.keyword') }}")
-    expect(source).toContain("{{ wikiPanelPlacement === 'documents' ? t('app.wiki.hide') : t('app.wiki.maintain') }}")
     expect(source).not.toContain('uiText(')
     expect(source).toContain("const pluginTitle = computed(() => props.plugin.i18n?.pluginTitle ?? props.plugin.displayName ?? pickPluginText('pluginTitle'))")
     expect(source).toContain("const pluginEyebrow = computed(() => pickOppositePluginText('pluginEyebrow'))")
@@ -93,9 +92,7 @@ describe('App trend detail layout', () => {
     expect(source).not.toContain('toggleWikiMaintainPanel')
     expect(source).not.toContain('showWikiMaintainPanel')
     expect(source).toContain("import WikiMaintainPanel from '@/components/WikiMaintainPanel.vue'")
-    expect(source).toContain('toggleDocumentWikiPanel')
     expect(source).toContain('toggleCoreDocumentWikiPanel')
-    expect(source).toContain('detail-wiki-stack')
     expect(source).toContain('showWikiFeature')
   })
 

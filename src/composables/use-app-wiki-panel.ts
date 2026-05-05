@@ -16,7 +16,7 @@ export function createAppWikiPanelController(params: {
   resolveTitle: (documentId: string) => string
   prepareWikiPreview: (request?: WikiPreviewRequest) => Promise<void>
 }) {
-  const wikiPanelPlacement = ref<'documents' | 'ranking' | ''>('')
+  const wikiPanelPlacement = ref<'ranking' | ''>('')
   const wikiPanelCoreDocumentId = ref('')
   const activeWikiPreviewRequest = ref<WikiPreviewRequest | null>(null)
 
@@ -26,21 +26,6 @@ export function createAppWikiPanelController(params: {
 
   async function prepareCurrentWikiPreview() {
     await params.prepareWikiPreview(activeWikiPreviewRequest.value ?? undefined)
-  }
-
-  async function toggleDocumentWikiPanel() {
-    if (wikiPanelPlacement.value === 'documents') {
-      wikiPanelPlacement.value = ''
-      wikiPanelCoreDocumentId.value = ''
-      return
-    }
-
-    activeWikiPreviewRequest.value = {
-      sourceDocumentIds: params.filteredDocuments.value.map(document => document.id),
-      scopeDescriptionLine: '- Scope source: current doc sample',
-    }
-    wikiPanelPlacement.value = 'documents'
-    wikiPanelCoreDocumentId.value = ''
   }
 
   async function toggleCoreDocumentWikiPanel(documentId: string) {
@@ -73,7 +58,6 @@ export function createAppWikiPanelController(params: {
     activeWikiPreviewRequest,
     isCoreDocumentWikiPanelVisible,
     prepareCurrentWikiPreview,
-    toggleDocumentWikiPanel,
     toggleCoreDocumentWikiPanel,
   }
 }
