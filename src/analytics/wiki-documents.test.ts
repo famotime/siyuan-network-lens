@@ -827,7 +827,7 @@ describe('wiki documents', () => {
     })
 
     expect(kernel.getDocumentMarkdownByPath('/主题/LLM Wiki/LLM-Wiki-索引')).toContain('### 页面概览')
-    expect(kernel.getDocumentMarkdownByPath('/主题/LLM Wiki/LLM-Wiki-索引')).toContain('- 最近维护时间：2026-04-09T12:05:00.000Z')
+    expect(kernel.getDocumentMarkdownByPath('/主题/LLM Wiki/LLM-Wiki-索引')).toContain(`- 最近维护时间：${new Date('2026-04-09T12:05:00.000Z').toLocaleString()}`)
     expect(kernel.getDocumentMarkdownByPath('/主题/LLM Wiki/LLM-Wiki-维护日志')).toContain('- 新建页面数：1')
     expect(kernel.getDocumentMarkdownByPath('/主题/LLM Wiki/LLM-Wiki-维护日志')).toContain('### 本次触达页面')
   })

@@ -829,8 +829,24 @@ const UI_TEXT = {
         zh_CN: '### Wiki 页面清单',
       },
       markdownWikiPageRow: {
-        en_US: '- {pageLink} | Paired topic page: {themeLink} | Summary: {summary} | Source docs: {count} | Updated at: {updatedAt}',
-        zh_CN: '- {pageLink} | 配对主题页：{themeLink} | 摘要：{summary} | 源文档数：{count} | 最近更新时间：{updatedAt}',
+        en_US: '- {pageLink}',
+        zh_CN: '- {pageLink}',
+      },
+      markdownWikiPageRowTheme: {
+        en_US: '  - Paired topic page: {themeLink}',
+        zh_CN: '  - 配对主题页：{themeLink}',
+      },
+      markdownWikiPageRowSummary: {
+        en_US: '  - Summary: {summary}',
+        zh_CN: '  - 摘要：{summary}',
+      },
+      markdownWikiPageRowCount: {
+        en_US: '  - Source docs: {count}',
+        zh_CN: '  - 源文档数：{count}',
+      },
+      markdownWikiPageRowUpdatedAt: {
+        en_US: '  - Updated at: {updatedAt}',
+        zh_CN: '  - 最近更新时间：{updatedAt}',
       },
       markdownNoTopicWikiPagesYet: {
         en_US: '- No topic wiki pages yet',
@@ -1693,8 +1709,24 @@ const UI_TEXT = {
         zh_CN: '### Wiki 页面清单',
       },
       markdownWikiPageRow: {
-        en_US: '- {pageLink} | Paired topic page: {themeLink} | Summary: {summary} | Source docs: {count} | Updated at: {updatedAt}',
-        zh_CN: '- {pageLink} | 配对主题页：{themeLink} | 摘要：{summary} | 源文档数：{count} | 最近更新时间：{updatedAt}',
+        en_US: '- {pageLink}',
+        zh_CN: '- {pageLink}',
+      },
+      markdownWikiPageRowTheme: {
+        en_US: '  - Paired topic page: {themeLink}',
+        zh_CN: '  - 配对主题页：{themeLink}',
+      },
+      markdownWikiPageRowSummary: {
+        en_US: '  - Summary: {summary}',
+        zh_CN: '  - 摘要：{summary}',
+      },
+      markdownWikiPageRowCount: {
+        en_US: '  - Source docs: {count}',
+        zh_CN: '  - 源文档数：{count}',
+      },
+      markdownWikiPageRowUpdatedAt: {
+        en_US: '  - Updated at: {updatedAt}',
+        zh_CN: '  - 最近更新时间：{updatedAt}',
       },
       markdownNoTopicWikiPagesYet: {
         en_US: '- No topic wiki pages yet',

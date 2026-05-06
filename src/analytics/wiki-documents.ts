@@ -487,7 +487,7 @@ async function buildIndexDraft(params: {
     `## ${WIKI_PAGE_HEADINGS.managedRoot}`,
     '',
     t('analytics.wiki.markdownOverviewHeading'),
-    t('analytics.wiki.markdownUpdatedAt', { value: params.generatedAt }),
+    t('analytics.wiki.markdownUpdatedAt', { value: formatLocalTime(params.generatedAt) }),
     t('analytics.wiki.markdownTopicWikiPages', { count: themeRows.length }),
     t('analytics.wiki.markdownUnclassifiedSources', { count: params.unclassifiedDocuments.length }),
     t('analytics.wiki.markdownMatchedTopicsThisRun', { count: params.scopeSummary.themeGroupCount }),
@@ -499,13 +499,13 @@ async function buildIndexDraft(params: {
           const themeLink = record.themeDocumentId && record.themeDocumentTitle
             ? buildDocLinkMarkdown(record.themeDocumentId, record.themeDocumentTitle)
             : (record.themeDocumentTitle || '-')
-          return t('analytics.wiki.markdownWikiPageRow', {
-            pageLink,
-            themeLink,
-            summary: summary || '-',
-            count: record.sourceDocumentIds.length,
-            updatedAt: record.lastApply?.appliedAt || record.lastGeneratedAt || '-',
-          })
+          return [
+            t('analytics.wiki.markdownWikiPageRow', { pageLink }),
+            t('analytics.wiki.markdownWikiPageRowTheme', { themeLink }),
+            t('analytics.wiki.markdownWikiPageRowSummary', { summary: summary || '-' }),
+            t('analytics.wiki.markdownWikiPageRowCount', { count: record.sourceDocumentIds.length }),
+            t('analytics.wiki.markdownWikiPageRowUpdatedAt', { updatedAt: formatLocalTime(record.lastApply?.appliedAt || record.lastGeneratedAt) }),
+          ].join('\n')
         }).join('\n')
       : t('analytics.wiki.markdownNoTopicWikiPagesYet'),
     '',
@@ -529,7 +529,7 @@ async function buildIndexDraft(params: {
         key: 'meta',
         heading: t('analytics.wiki.overviewHeading'),
         markdown: [
-          t('analytics.wiki.markdownUpdatedAt', { value: params.generatedAt }),
+          t('analytics.wiki.markdownUpdatedAt', { value: formatLocalTime(params.generatedAt) }),
           t('analytics.wiki.markdownTopicWikiPages', { count: themeRows.length }),
           t('analytics.wiki.markdownUnclassifiedSources', { count: params.unclassifiedDocuments.length }),
         ].join('\n'),
@@ -553,7 +553,7 @@ function buildLogEntryMarkdown(params: {
     .join('\n')
 
   return [
-    `## ${params.generatedAt}`,
+    `## ${formatLocalTime(params.generatedAt)}`,
     '',
     ...params.scopeDescriptionLines,
     t('analytics.wiki.logMatchedSourceDocs', { count: params.scopeSummary.sourceDocumentCount }),
@@ -817,7 +817,8 @@ function extractIntroSummary(markdown: string): string {
     return ''
   }
 
-  return introBody
+  return stripIalFromKramdown(introBody)
+    .replace(/<sup>[\s\S]*?<\/sup>/g, '')
     .replace(/^\s*-\s*/gm, '')
     .replace(/\s+/g, ' ')
     .trim()
@@ -825,10 +826,68 @@ function extractIntroSummary(markdown: string): string {
 }
 
 function stripIalFromKramdown(text: string): string {
-  return text
-    .replace(/^( *[-*] )\{:\s[^}]*\}/gm, '$1')
-    .replace(/^\s*\{:\s[^}]*\}\s*$/gm, '')
-    .trim()
+  const lines = text.split('\n')
+  const result: string[] = []
+  let inIalBlock = false
+  let pendingIalPrefix = ''
+
+  for (const line of lines) {
+    if (inIalBlock) {
+      if (line.includes('}')) {
+        inIalBlock = false
+        if (pendingIalPrefix) {
+          result.push(pendingIalPrefix)
+          pendingIalPrefix = ''
+        }
+      }
+      continue
+    }
+
+    const trimmed = line.trim()
+
+    // Multi-line IAL starting inline: text {: \n  ... }
+    const inlineIalStart = line.match(/^(.*?)\{:\s(?!.*\})\s*$/)
+    if (inlineIalStart) {
+      const prefix = inlineIalStart[1].trimEnd()
+      if (prefix) {
+        pendingIalPrefix = prefix
+      }
+      inIalBlock = true
+      continue
+    }
+
+    // Standalone multi-line IAL start: {: \n  ... }
+    if (trimmed.startsWith('{:') && !trimmed.includes('}')) {
+      inIalBlock = true
+      continue
+    }
+
+    // List item with IAL: - content {: ... }
+    const listIalMatch = line.match(/^(\s*[-*]\s+)\{:\s[^}]*\}\s*$/)
+    if (listIalMatch) {
+      result.push(listIalMatch[1].trimEnd())
+      continue
+    }
+
+    // Inline IAL at end of line: text {: ... }
+    const inlineIalMatch = line.match(/^(.*?)\{:\s[^}]*\}\s*$/)
+    if (inlineIalMatch) {
+      const content = inlineIalMatch[1].trimEnd()
+      if (content) {
+        result.push(content)
+      }
+      continue
+    }
+
+    // Standalone IAL on single line: {: ... }
+    if (/^\s*\{:\s[^}]*\}\s*$/.test(line)) {
+      continue
+    }
+
+    result.push(line)
+  }
+
+  return result.join('\n').trim()
 }
 
 function extractManagedMarkdown(fullMarkdown: string): string {
@@ -945,6 +1004,17 @@ function stripManagedHeadingLines(markdown: string): string {
   }
 
   return lines.slice(skipIndex).join('\n').trim()
+}
+
+function formatLocalTime(isoString?: string): string {
+  if (!isoString) {
+    return '-'
+  }
+  try {
+    return new Date(isoString).toLocaleString()
+  } catch {
+    return isoString
+  }
 }
 
 function formatApplyResultLabel(result: WikiApplyResult): string {

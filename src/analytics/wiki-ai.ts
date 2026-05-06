@@ -148,6 +148,7 @@ export function createAiWikiService(deps: {
               'Each block must include text and sourceRefs.',
               'For every block, populate sourceRefs with the documentId values from the provided source documents that best support that block content. Use documentId, never blockId.',
               'For the sources (catalog) section, each block sourceRefs must include all relevant source documentIds so the renderer can produce explicit reference entries.',
+              'For the intro (overview) section, each block text must be a concise self-contained summary sentence. Do not include block IDs, document IDs, or technical identifiers in the visible text.',
             ].join(' '),
           },
           {
