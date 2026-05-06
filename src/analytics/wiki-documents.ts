@@ -260,7 +260,7 @@ export async function applyWikiDocuments(params: {
     getIDsByHPath: params.api.getIDsByHPath,
     getBlockKramdown: params.api.getBlockKramdown,
   })
-  const logWriteResult = await appendLogDocument({
+  const logWriteResult = await prependLogDocument({
     notebook: wikiTarget.notebook,
     hpath: logPath,
     title: params.config.wikiLogTitle,
@@ -420,7 +420,7 @@ async function upsertManagedWikiPage(params: {
   }
 }
 
-async function appendLogDocument(params: {
+async function prependLogDocument(params: {
   notebook: string
   hpath: string
   title: string
@@ -428,7 +428,7 @@ async function appendLogDocument(params: {
   entryMarkdown: string
   api: {
     createDocWithMd: CreateDocWithMdFn
-    appendBlock: BlockOpFn
+    prependBlock: BlockOpFn
   }
 }): Promise<{ pageId: string, result: Extract<WikiApplyResult, 'created' | 'updated'> }> {
   if (!params.pageId) {
@@ -447,7 +447,7 @@ async function appendLogDocument(params: {
     }
   }
 
-  await params.api.appendBlock('markdown', params.entryMarkdown, params.pageId)
+  await params.api.prependBlock('markdown', params.entryMarkdown, params.pageId)
   return {
     pageId: params.pageId,
     result: 'updated',
