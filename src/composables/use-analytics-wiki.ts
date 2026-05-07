@@ -42,6 +42,27 @@ export interface WikiPreviewSummary {
   manualNotesParagraphCount: number
 }
 
+export interface WikiPreviewDeltaStats {
+  isIncremental: boolean
+  newCount: number
+  changedCount: number
+  unchangedCount: number
+  deletedCount: number
+  processingTimeMs: number
+}
+
+export type WikiSourceDocLinkType = 'outbound' | 'inbound' | 'child'
+
+export interface WikiPreviewSourceDocMeta {
+  documentId: string
+  title: string
+  deltaStatus: 'new' | 'changed' | 'unchanged' | 'deleted'
+  linkType: WikiSourceDocLinkType
+  updatedAt: string
+  hasThemeLink?: boolean
+  isWeakAssociation?: boolean
+}
+
 export interface WikiPreviewState {
   generatedAt: string
   scope: {
@@ -52,6 +73,8 @@ export interface WikiPreviewState {
   unclassifiedDocuments: Array<{ documentId: string, title: string }>
   excludedWikiDocuments: Array<{ documentId: string, title: string }>
   applyResult?: WikiApplyBatchResult
+  deltaStats?: WikiPreviewDeltaStats
+  sourceDocMetas?: WikiPreviewSourceDocMeta[]
 }
 
 export interface WikiPreviewRequest {
