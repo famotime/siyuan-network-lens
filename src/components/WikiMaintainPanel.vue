@@ -31,6 +31,11 @@
       <span>{{ t('wikiMaintain.allowOverwriteConflictPages') }}</span>
     </label>
 
+    <label class="wiki-panel__toggle">
+      <input v-model="incrementalEnabled" type="checkbox" class="b3-switch">
+      <span>{{ t('wikiMaintain.incrementalGeneration') }}</span>
+    </label>
+
     <div v-if="error" class="state-banner state-banner--error">
       {{ error }}
     </div>
@@ -68,6 +73,91 @@
         </div>
         <div class="wiki-panel__scope-lines">
           <p v-for="line in preview.scope.descriptionLines" :key="line">{{ line }}</p>
+        </div>
+      </div>
+
+      <div v-if="preview?.deltaStats" class="wiki-panel__delta-stats">
+        <h4>{{ t('wikiMaintain.deltaStatsTitle') }}</h4>
+        <div class="wiki-panel__scope-grid">
+          <div v-if="preview.deltaStats.isIncremental" class="wiki-panel__scope-card">
+            <span>{{ t('wikiMaintain.deltaNewCount') }}</span>
+            <strong class="wiki-panel__stat--new">{{ preview.deltaStats.newCount }}</strong>
+          </div>
+          <div v-if="preview.deltaStats.isIncremental" class="wiki-panel__scope-card">
+            <span>{{ t('wikiMaintain.deltaChangedCount') }}</span>
+            <strong class="wiki-panel__stat--changed">{{ preview.deltaStats.changedCount }}</strong>
+          </div>
+          <div v-if="preview.deltaStats.isIncremental" class="wiki-panel__scope-card">
+            <span>{{ t('wikiMaintain.deltaUnchangedCount') }}</span>
+            <strong>{{ preview.deltaStats.unchangedCount }}</strong>
+          </div>
+          <div v-if="preview.deltaStats.isIncremental" class="wiki-panel__scope-card">
+            <span>{{ t('wikiMaintain.deltaDeletedCount') }}</span>
+            <strong class="wiki-panel__stat--deleted">{{ preview.deltaStats.deletedCount }}</strong>
+          </div>
+          <div v-if="!preview.deltaStats.isIncremental" class="wiki-panel__scope-card">
+            <span>{{ t('wikiMaintain.sourceDocTotalCount') }}</span>
+            <strong>{{ preview.scope.summary.sourceDocumentCount }}</strong>
+          </div>
+          <div class="wiki-panel__scope-card">
+            <span>{{ t('wikiMaintain.processingTime') }}</span>
+            <strong>{{ formatProcessingTime(preview.deltaStats.processingTimeMs) }}</strong>
+          </div>
+        </div>
+      </div>
+
+      <div v-if="preview?.sourceDocMetas?.length" class="wiki-panel__source-cards">
+        <h4>{{ t('wikiMaintain.sourceDocCardsTitle') }}</h4>
+        <div class="wiki-panel__source-card-list">
+          <article
+            v-for="meta in sortedSourceDocMetas"
+            :key="meta.documentId"
+            class="wiki-panel__source-card"
+            :data-delta="meta.deltaStatus"
+          >
+            <div class="wiki-panel__source-card-head">
+              <a
+                class="wiki-panel__source-card-title"
+                href="#"
+                @click.prevent="openSourceDocument(meta.documentId)"
+              >
+                {{ meta.title }}
+              </a>
+              <div class="wiki-panel__source-card-tags">
+                <span class="wiki-panel__delta-tag" :data-status="meta.deltaStatus">
+                  {{ deltaStatusLabel(meta.deltaStatus) }}
+                </span>
+                <span class="wiki-panel__link-type-tag">
+                  {{ linkTypeLabel(meta.linkType) }}
+                </span>
+              </div>
+            </div>
+            <p class="wiki-panel__source-card-updated">
+              {{ meta.updatedAt }}
+            </p>
+            <div class="wiki-panel__source-card-suggestions">
+              <button
+                class="ghost-button ghost-button--sm"
+                type="button"
+                @click="emit('addThemeLink', meta.documentId)"
+              >
+                {{ t('wikiMaintain.addThemeLink') }}
+              </button>
+              <button
+                class="ghost-button ghost-button--sm"
+                type="button"
+                @click="emit('addTag', meta.documentId)"
+              >
+                {{ t('wikiMaintain.addTag') }}
+              </button>
+              <span v-if="meta.isWeakAssociation" class="wiki-panel__weak-warning">
+                {{ t('wikiMaintain.weakAssociationWarning') }}
+              </span>
+              <span v-if="meta.deltaStatus === 'changed'" class="wiki-panel__changed-notice">
+                {{ t('wikiMaintain.contentChangedNotice') }}
+              </span>
+            </div>
+          </article>
         </div>
       </div>
 
@@ -202,11 +292,24 @@ const props = defineProps<{
   prepareWikiPreview: () => void | Promise<void>
   applyWikiChanges: (overwriteConflicts?: boolean) => void | Promise<void>
   openWikiDocument: (documentId: string) => void
+  openSourceDocument: (documentId: string) => void
   formatTimestamp: (timestamp?: string) => string
+  incrementalEnabled?: boolean
+}>()
+
+const emit = defineEmits<{
+  (e: 'update:incrementalEnabled', value: boolean): void
+  (e: 'addThemeLink', documentId: string): void
+  (e: 'addTag', documentId: string): void
 }>()
 
 const allowOverwriteConflicts = ref(false)
 const detailPage = ref<WikiPreviewState['themePages'][number] | null>(null)
+
+const incrementalEnabled = computed({
+  get: () => props.incrementalEnabled ?? true,
+  set: (value: boolean) => emit('update:incrementalEnabled', value),
+})
 
 const statusLabelMap = computed(() => ({
   create: t('wikiMaintain.statusCreate'),
@@ -319,6 +422,36 @@ function stripMetaSection(markdown: string): string {
   }
 
   return markdown
+}
+
+const sortedSourceDocMetas = computed(() => {
+  if (!props.preview?.sourceDocMetas) return []
+  const order = { new: 0, changed: 1, unchanged: 2, deleted: 3 } as const
+  return [...props.preview.sourceDocMetas].sort((a, b) => order[a.deltaStatus] - order[b.deltaStatus])
+})
+
+function deltaStatusLabel(status: string): string {
+  switch (status) {
+    case 'new': return t('wikiMaintain.deltaStatusNew')
+    case 'changed': return t('wikiMaintain.deltaStatusChanged')
+    case 'unchanged': return t('wikiMaintain.deltaStatusUnchanged')
+    case 'deleted': return t('wikiMaintain.deltaStatusDeleted')
+    default: return status
+  }
+}
+
+function linkTypeLabel(linkType: string): string {
+  switch (linkType) {
+    case 'outbound': return t('wikiMaintain.linkTypeOutbound')
+    case 'inbound': return t('wikiMaintain.linkTypeInbound')
+    case 'child': return t('wikiMaintain.linkTypeChild')
+    default: return linkType
+  }
+}
+
+function formatProcessingTime(ms: number): string {
+  if (ms < 1000) return `${ms}ms`
+  return `${(ms / 1000).toFixed(1)}s`
 }
 </script>
 
@@ -681,5 +814,136 @@ function stripMetaSection(markdown: string): string {
 
 @keyframes spin {
   to { transform: rotate(360deg); }
+}
+
+.wiki-panel__delta-stats {
+  display: grid;
+  gap: 10px;
+}
+
+.wiki-panel__delta-stats h4 {
+  margin: 0;
+  font-size: 14px;
+}
+
+.wiki-panel__stat--new {
+  color: var(--b3-theme-success, #4caf50);
+}
+
+.wiki-panel__stat--changed {
+  color: var(--b3-theme-warning, #ff9800);
+}
+
+.wiki-panel__stat--deleted {
+  color: var(--b3-theme-error, #f44336);
+}
+
+.wiki-panel__source-cards {
+  display: grid;
+  gap: 10px;
+}
+
+.wiki-panel__source-cards h4 {
+  margin: 0;
+  font-size: 14px;
+}
+
+.wiki-panel__source-card-list {
+  display: grid;
+  gap: 8px;
+}
+
+.wiki-panel__source-card {
+  padding: 10px 12px;
+  border-radius: 8px;
+  border: 1px solid color-mix(in srgb, var(--b3-theme-on-background) 8%, transparent);
+  background: color-mix(in srgb, var(--b3-theme-surface) 86%, var(--b3-theme-background));
+}
+
+.wiki-panel__source-card-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 8px;
+}
+
+.wiki-panel__source-card-title {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--b3-theme-primary);
+  text-decoration: none;
+}
+
+.wiki-panel__source-card-title:hover {
+  text-decoration: underline;
+}
+
+.wiki-panel__source-card-tags {
+  display: flex;
+  gap: 4px;
+  flex-shrink: 0;
+}
+
+.wiki-panel__delta-tag,
+.wiki-panel__link-type-tag {
+  padding: 2px 8px;
+  border-radius: 999px;
+  font-size: 11px;
+  white-space: nowrap;
+}
+
+.wiki-panel__delta-tag[data-status='new'] {
+  background: color-mix(in srgb, var(--b3-theme-success, #4caf50) 14%, transparent);
+  color: var(--b3-theme-success, #4caf50);
+}
+
+.wiki-panel__delta-tag[data-status='changed'] {
+  background: color-mix(in srgb, var(--b3-theme-warning, #ff9800) 14%, transparent);
+  color: var(--b3-theme-warning, #ff9800);
+}
+
+.wiki-panel__delta-tag[data-status='unchanged'] {
+  background: color-mix(in srgb, var(--b3-theme-on-background) 10%, transparent);
+  color: color-mix(in srgb, var(--b3-theme-on-background) 60%, transparent);
+}
+
+.wiki-panel__delta-tag[data-status='deleted'] {
+  background: color-mix(in srgb, var(--b3-theme-error, #f44336) 14%, transparent);
+  color: var(--b3-theme-error, #f44336);
+}
+
+.wiki-panel__link-type-tag {
+  background: color-mix(in srgb, var(--b3-theme-primary) 10%, transparent);
+  color: var(--b3-theme-primary);
+}
+
+.wiki-panel__source-card-updated {
+  margin: 4px 0 0;
+  font-size: 11px;
+  color: color-mix(in srgb, var(--b3-theme-on-background) 45%, transparent);
+}
+
+.wiki-panel__source-card-suggestions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  align-items: center;
+  margin-top: 6px;
+}
+
+.ghost-button--sm {
+  font-size: 11px;
+  padding: 3px 8px;
+  min-width: auto;
+}
+
+.wiki-panel__weak-warning {
+  font-size: 11px;
+  color: var(--b3-theme-warning, #ff9800);
+}
+
+.wiki-panel__changed-notice {
+  font-size: 11px;
+  color: var(--b3-theme-primary);
 }
 </style>
