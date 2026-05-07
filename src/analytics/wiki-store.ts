@@ -15,6 +15,7 @@ export interface WikiPageSnapshotRecord {
   themeDocumentId?: string
   themeDocumentTitle?: string
   sourceDocumentIds: string[]
+  sourceDocumentTimestamps?: Record<string, string>
   pageFingerprint?: string
   managedFingerprint?: string
   lastGeneratedAt?: string
@@ -121,6 +122,7 @@ function normalizePageRecord(value: unknown): WikiPageSnapshotRecord {
     themeDocumentId: normalizeOptionalString(record.themeDocumentId) || undefined,
     themeDocumentTitle: normalizeOptionalString(record.themeDocumentTitle) || undefined,
     sourceDocumentIds: normalizeStringList(record.sourceDocumentIds),
+    sourceDocumentTimestamps: normalizeTimestampMap(record.sourceDocumentTimestamps),
     pageFingerprint: normalizeOptionalString(record.pageFingerprint) || undefined,
     managedFingerprint: normalizeOptionalString(record.managedFingerprint) || undefined,
     lastGeneratedAt: normalizeOptionalString(record.lastGeneratedAt) || undefined,
@@ -189,6 +191,18 @@ function normalizeStringList(value: unknown): string[] {
     .filter((item): item is string => typeof item === 'string')
     .map(item => item.trim())
     .filter(Boolean)
+}
+
+function normalizeTimestampMap(value: unknown): Record<string, string> | undefined {
+  if (!isRecord(value)) {
+    return undefined
+  }
+
+  const entries = Object.entries(value)
+    .filter(([key, val]) => typeof key === 'string' && typeof val === 'string' && val.trim())
+    .map(([key, val]) => [key.trim(), (val as string).trim()])
+
+  return entries.length > 0 ? Object.fromEntries(entries) : undefined
 }
 
 function normalizeOptionalString(value: unknown): string {

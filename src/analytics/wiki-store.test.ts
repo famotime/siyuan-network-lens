@@ -75,6 +75,7 @@ describe('wiki store', () => {
       themeDocumentId: 'theme-ai',
       themeDocumentTitle: '主题-AI-索引',
       sourceDocumentIds: ['doc-1', 'doc-2'],
+      sourceDocumentTimestamps: undefined,
       pageFingerprint: 'page-hash',
       managedFingerprint: 'managed-hash',
       lastGeneratedAt: '2026-04-09T10:00:00.000Z',
@@ -92,6 +93,36 @@ describe('wiki store', () => {
         pageFingerprint: undefined,
         managedFingerprint: 'apply-managed',
       },
+    })
+  })
+
+  it('saves and reloads sourceDocumentTimestamps in the page record', async () => {
+    const storage = createMemoryStorage()
+    const store = createAiWikiStore(storage)
+
+    await store.savePageRecord({
+      pageType: 'theme',
+      pageTitle: 'test-llm-wiki',
+      themeDocumentId: 'theme-1',
+      themeDocumentTitle: 'Test Theme',
+      sourceDocumentIds: ['doc-1', 'doc-2'],
+      sourceDocumentTimestamps: {
+        'doc-1': '2026-05-07T10:00',
+        'doc-2': '2026-05-06T15:30',
+      },
+      lastGeneratedAt: '2026-05-07T12:00:00.000Z',
+    })
+
+    const pageKey = buildWikiPageStorageKey({
+      pageType: 'theme',
+      pageTitle: 'test-llm-wiki',
+      themeDocumentId: 'theme-1',
+    })
+
+    const record = await store.getPageRecord(pageKey)
+    expect(record?.sourceDocumentTimestamps).toEqual({
+      'doc-1': '2026-05-07T10:00',
+      'doc-2': '2026-05-06T15:30',
     })
   })
 
@@ -121,6 +152,7 @@ describe('wiki store', () => {
           themeDocumentTitle: undefined,
           pageId: undefined,
           sourceDocumentIds: ['doc-1'],
+          sourceDocumentTimestamps: undefined,
           pageFingerprint: undefined,
           managedFingerprint: undefined,
           lastGeneratedAt: undefined,
