@@ -141,6 +141,46 @@ export function createAnalyticsWikiActionsController(params: {
         getBlockKramdown: params.getBlockKramdown,
         generatedAt,
       })
+
+      // --- Incremental diff logic ---
+      const pageTitle = buildThemeWikiPageTitle(themeDocument.title, params.appliedConfig.value.wikiPageSuffix ?? '')
+      const pageKey = buildWikiPageStorageKey({
+        pageType: 'theme',
+        pageTitle,
+        themeDocumentId: themeDocument.documentId,
+      })
+      const storedRecord = await params.aiWikiStore.getPageRecord(pageKey)
+
+      const isIncremental = params.config.wikiIncrementalEnabled !== false
+      const deltaMap = isIncremental
+        ? computeSourceDocumentDeltas(
+          sourceDocuments.map(d => ({ id: d.id, updated: d.updated })),
+          storedRecord?.sourceDocumentTimestamps,
+        )
+        : new Map(sourceDocuments.map(d => [d.id, 'new' as const]))
+
+      const sourceDocumentTimestamps: Record<string, string> = {}
+      for (const doc of sourceDocuments) {
+        sourceDocumentTimestamps[doc.id] = doc.updated
+      }
+
+      let existingWikiContent: string | undefined
+      if (isIncremental && storedRecord) {
+        const existingPage = await resolveExistingWikiPage({
+          notebook: themeDocument.box,
+          pageHPath: buildSiblingDocumentPath(
+            themeDocument.hpath,
+            pageTitle,
+            params.appliedConfig.value.wikiContainerName ?? 'LLM Wiki',
+          ),
+          storedRecord,
+          getIDsByHPath: params.getIDsByHPath,
+          getBlockKramdown: params.getBlockKramdown,
+        })
+        existingWikiContent = existingPage?.managedMarkdown
+      }
+      // --- End incremental diff logic ---
+
       const scopedDocumentMap = new Map(scopedDocuments.map(document => [document.id, document]))
       const payload = buildSingleThemeWikiPayload({
         config: params.appliedConfig.value,
@@ -150,16 +190,19 @@ export function createAnalyticsWikiActionsController(params: {
         trends: params.trends.value,
         documentMap: scopedDocumentMap,
         getDocumentProfile: document => sourceProfileMap.get(document.id) ?? null,
+        deltaMap,
       })
 
       const diagnosis = await params.aiWikiService.diagnoseThemeTemplate({
         config: params.appliedConfig.value,
         payload,
+        existingWikiContent,
       })
       const pagePlan = await params.aiWikiService.planThemePage({
         config: params.appliedConfig.value,
         payload,
         diagnosis,
+        existingWikiContent,
       })
       const sections = await Promise.all(pagePlan.sectionOrder.map(sectionType => params.aiWikiService!.generateThemeSection({
         config: params.appliedConfig.value,
@@ -167,6 +210,7 @@ export function createAnalyticsWikiActionsController(params: {
         diagnosis,
         pagePlan,
         sectionType,
+        existingWikiContent,
       })))
       const sourceDocumentTitleMap = Object.fromEntries(payload.sourceDocuments.map(doc => [doc.documentId, doc.title]))
       const draft = renderThemeWikiDraft({
@@ -181,15 +225,10 @@ export function createAnalyticsWikiActionsController(params: {
         sections,
         sourceDocumentTitleMap,
       })
-      const pageKey = buildWikiPageStorageKey({
-        pageType: 'theme',
-        pageTitle: payload.pageTitle,
-        themeDocumentId: payload.themeDocumentId,
-      })
-      const storedRecord = await params.aiWikiStore.getPageRecord(pageKey)
+
       const existingPage = await resolveExistingWikiPage({
         notebook: themeDocument.box,
-        pageHPath: buildSiblingDocumentPath(themeDocument.hpath, payload.pageTitle, params.appliedConfig.value.wikiContainerName ?? 'LLM Wiki'),
+        pageHPath: buildSiblingDocumentPath(themeDocument.hpath, pageTitle, params.appliedConfig.value.wikiContainerName ?? 'LLM Wiki'),
         storedRecord,
         getIDsByHPath: params.getIDsByHPath,
         getBlockKramdown: params.getBlockKramdown,
@@ -213,6 +252,7 @@ export function createAnalyticsWikiActionsController(params: {
         themeDocumentId: payload.themeDocumentId,
         themeDocumentTitle: payload.themeDocumentTitle,
         sourceDocumentIds: payload.sourceDocuments.map(document => document.documentId),
+        sourceDocumentTimestamps,
         pageFingerprint: preview.pageFingerprint,
         managedFingerprint: preview.managedFingerprint,
         lastGeneratedAt: generatedAt,
@@ -226,6 +266,25 @@ export function createAnalyticsWikiActionsController(params: {
         lastApply: storedRecord?.lastApply,
       }
       await params.aiWikiStore.savePageRecord(nextRecord)
+
+      const deltaStats = {
+        isIncremental: isIncremental && Boolean(storedRecord?.sourceDocumentTimestamps),
+        newCount: [...deltaMap.values()].filter(s => s === 'new').length,
+        changedCount: [...deltaMap.values()].filter(s => s === 'changed').length,
+        unchangedCount: [...deltaMap.values()].filter(s => s === 'unchanged').length,
+        deletedCount: [...deltaMap.values()].filter(s => s === 'deleted').length,
+        processingTimeMs: Date.now() - new Date(generatedAt).getTime(),
+      }
+
+      const sourceDocMetas = sourceDocuments.map(doc => ({
+        documentId: doc.id,
+        title: doc.title || doc.hpath || doc.id,
+        deltaStatus: deltaMap.get(doc.id) ?? 'new',
+        linkType: request?.sourceDocumentLinkTypes?.get(doc.id) ?? 'outbound',
+        updatedAt: doc.updated,
+        hasThemeLink: false,
+        isWeakAssociation: false,
+      }))
 
       const themePage: WikiPreviewThemePageItem = {
         pageTitle: payload.pageTitle,
@@ -260,6 +319,8 @@ export function createAnalyticsWikiActionsController(params: {
         themePages: [themePage],
         unclassifiedDocuments: [],
         excludedWikiDocuments: [],
+        deltaStats,
+        sourceDocMetas,
       }
       params.wikiPreviewCache.value.set(request.themeDocumentId, params.wikiPreview.value)
     } catch (error) {
@@ -365,6 +426,7 @@ function buildSingleThemeWikiPayload(params: {
   trends: TrendReport
   documentMap: ReadonlyMap<string, DocumentRecord>
   getDocumentProfile: (document: DocumentRecord) => DocumentIndexProfile | null
+  deltaMap?: Map<string, 'new' | 'changed' | 'unchanged' | 'deleted'>
 }): WikiThemeBundle {
   const bundleDocuments = params.sourceDocuments.map((document) => {
     const profile = params.getDocumentProfile(document)
@@ -399,6 +461,7 @@ function buildSingleThemeWikiPayload(params: {
         .filter(item => item.blockId.length > 0 && item.text.length > 0),
       sourceUpdatedAt: profile.sourceUpdatedAt,
       generatedAt: profile.generatedAt,
+      deltaStatus: params.deltaMap?.get(document.id) ?? 'new',
     }
   })
 
@@ -456,4 +519,39 @@ function parseJsonArray<T>(value?: string): T[] {
 
 function resolveTitle(document: DocumentRecord | undefined, fallbackId: string): string {
   return document?.title || document?.hpath || document?.path || fallbackId
+}
+
+function computeSourceDocumentDeltas(
+  currentDocuments: Array<{ id: string, updated: string }>,
+  previousTimestamps: Record<string, string> | undefined,
+): Map<string, 'new' | 'changed' | 'unchanged' | 'deleted'> {
+  const deltas = new Map<string, 'new' | 'changed' | 'unchanged' | 'deleted'>()
+
+  if (!previousTimestamps) {
+    for (const doc of currentDocuments) {
+      deltas.set(doc.id, 'new')
+    }
+    return deltas
+  }
+
+  const currentIds = new Set(currentDocuments.map(d => d.id))
+  const previousIds = new Set(Object.keys(previousTimestamps))
+
+  for (const doc of currentDocuments) {
+    if (!previousIds.has(doc.id)) {
+      deltas.set(doc.id, 'new')
+    } else if (previousTimestamps[doc.id] !== doc.updated) {
+      deltas.set(doc.id, 'changed')
+    } else {
+      deltas.set(doc.id, 'unchanged')
+    }
+  }
+
+  for (const previousId of previousIds) {
+    if (!currentIds.has(previousId)) {
+      deltas.set(previousId, 'deleted')
+    }
+  }
+
+  return deltas
 }

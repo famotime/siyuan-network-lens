@@ -44,11 +44,13 @@ export interface AiWikiService {
   diagnoseThemeTemplate: (params: {
     config: AiConfig
     payload: WikiThemeBundle
+    existingWikiContent?: string
   }) => Promise<WikiTemplateDiagnosis>
   planThemePage: (params: {
     config: AiConfig
     payload: WikiThemeBundle
     diagnosis: WikiTemplateDiagnosis
+    existingWikiContent?: string
   }) => Promise<WikiPagePlan>
   generateThemeSection: (params: {
     config: AiConfig
@@ -56,6 +58,7 @@ export interface AiWikiService {
     diagnosis: WikiTemplateDiagnosis
     pagePlan: WikiPagePlan
     sectionType: WikiSectionType
+    existingWikiContent?: string
   }) => Promise<WikiSectionDraft>
 }
 
@@ -89,12 +92,19 @@ export function createAiWikiService(deps: {
           },
           {
             role: 'user',
-            content: [
-              t('analytics.wiki.diagnoseThemeTemplatePrompt', { theme: params.payload.themeName }),
-              t('analytics.wiki.diagnoseThemeTemplateSchemaPrompt'),
-              t('analytics.wiki.conservativeFallbackPrompt'),
-              JSON.stringify({ payload: params.payload }),
-            ].join('\n'),
+            content: (() => {
+              const parts = [
+                t('analytics.wiki.diagnoseThemeTemplatePrompt', { theme: params.payload.themeName }),
+                t('analytics.wiki.diagnoseThemeTemplateSchemaPrompt'),
+                t('analytics.wiki.conservativeFallbackPrompt'),
+              ]
+              if (params.existingWikiContent) {
+                parts.push(t('analytics.wiki.incrementalModePrompt'))
+                parts.push(`Existing wiki page content:\n${params.existingWikiContent}`)
+              }
+              parts.push(JSON.stringify({ payload: params.payload }))
+              return parts.join('\n')
+            })(),
           },
         ],
       })
@@ -119,12 +129,19 @@ export function createAiWikiService(deps: {
           },
           {
             role: 'user',
-            content: [
-              t('analytics.wiki.planThemePagePrompt', { theme: params.payload.themeName }),
-              t('analytics.wiki.planThemePageSchemaPrompt'),
-              t('analytics.wiki.conservativeFallbackPrompt'),
-              JSON.stringify({ payload: params.payload, diagnosis: params.diagnosis }),
-            ].join('\n'),
+            content: (() => {
+              const parts = [
+                t('analytics.wiki.planThemePagePrompt', { theme: params.payload.themeName }),
+                t('analytics.wiki.planThemePageSchemaPrompt'),
+                t('analytics.wiki.conservativeFallbackPrompt'),
+              ]
+              if (params.existingWikiContent) {
+                parts.push(t('analytics.wiki.incrementalModePrompt'))
+                parts.push(`Existing wiki page content:\n${params.existingWikiContent}`)
+              }
+              parts.push(JSON.stringify({ payload: params.payload, diagnosis: params.diagnosis }))
+              return parts.join('\n')
+            })(),
           },
         ],
       })
@@ -159,17 +176,24 @@ export function createAiWikiService(deps: {
           },
           {
             role: 'user',
-            content: [
-              t('analytics.wiki.generateThemeSectionPrompt', { theme: params.payload.themeName, sectionType: params.sectionType }),
-              t('analytics.wiki.generateThemeSectionSchemaPrompt'),
-              t('analytics.wiki.conservativeFallbackPrompt'),
-              JSON.stringify({
+            content: (() => {
+              const parts = [
+                t('analytics.wiki.generateThemeSectionPrompt', { theme: params.payload.themeName, sectionType: params.sectionType }),
+                t('analytics.wiki.generateThemeSectionSchemaPrompt'),
+                t('analytics.wiki.conservativeFallbackPrompt'),
+              ]
+              if (params.existingWikiContent) {
+                parts.push(t('analytics.wiki.incrementalModePrompt'))
+                parts.push(`Existing wiki page content:\n${params.existingWikiContent}`)
+              }
+              parts.push(JSON.stringify({
                 payload: params.payload,
                 diagnosis: params.diagnosis,
                 pagePlan: params.pagePlan,
                 sectionType: params.sectionType,
-              }),
-            ].join('\n'),
+              }))
+              return parts.join('\n')
+            })(),
           },
         ],
       })

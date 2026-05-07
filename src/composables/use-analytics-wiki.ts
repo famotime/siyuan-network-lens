@@ -79,6 +79,7 @@ export interface WikiPreviewState {
 
 export interface WikiPreviewRequest {
   sourceDocumentIds?: string[]
+  sourceDocumentLinkTypes?: Map<string, 'outbound' | 'inbound' | 'child'>
   scopeDescriptionLine?: string
   themeDocumentId?: string
 }
