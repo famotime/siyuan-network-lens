@@ -141,15 +141,21 @@ export function createAiWikiService(deps: {
         messages: [
           {
             role: 'system',
-            content: [
-              BASE_SYSTEM_PROMPT,
-              'Generate exactly one wiki section draft.',
-              'The JSON must include sectionType, title, format, blocks, and sourceRefs.',
-              'Each block must include text and sourceRefs.',
-              'For every block, populate sourceRefs with the documentId values from the provided source documents that best support that block content. Use documentId, never blockId.',
-              'For the sources (catalog) section, each block sourceRefs must include all relevant source documentIds so the renderer can produce explicit reference entries.',
-              'For the intro (overview) section, each block text must be a concise self-contained summary sentence. Do not include block IDs, document IDs, or technical identifiers in the visible text.',
-            ].join(' '),
+            content: (() => {
+              const parts = [
+                BASE_SYSTEM_PROMPT,
+                'Generate exactly one wiki section draft.',
+                'The JSON must include sectionType, title, format, blocks, and sourceRefs.',
+                'Each block must include text and sourceRefs.',
+                'For every block, populate sourceRefs with the documentId values from the provided source documents that best support that block content. Use documentId, never blockId.',
+                'For the sources (catalog) section, each block sourceRefs must include all relevant source documentIds so the renderer can produce explicit reference entries.',
+                'For the intro (overview) section, each block text must be a concise self-contained summary sentence. Do not include block IDs, document IDs, or technical identifiers in the visible text.',
+              ]
+              if (params.sectionType === 'conflict') {
+                parts.push(t('analytics.wiki.conflictSectionPrompt'))
+              }
+              return parts.join(' ')
+            })(),
           },
           {
             role: 'user',
@@ -361,7 +367,7 @@ function normalizeDraftBlocks(value: unknown, sectionType: WikiSectionType, forc
       }))
       .filter(item => item.text.length > 0)
 
-    if (blocks.length > 0) {
+    if (blocks.length > 0 || sectionType === 'conflict') {
       return blocks
     }
   }
@@ -553,7 +559,7 @@ function inferSectionFormat(sectionType: WikiSectionType): WikiSectionFormat {
   if (['faq', 'troubleshooting', 'misunderstandings', 'open_questions'].includes(sectionType)) {
     return 'qa'
   }
-  if (['viewpoints', 'controversies'].includes(sectionType)) {
+  if (['viewpoints', 'controversies', 'conflict'].includes(sectionType)) {
     return 'debate'
   }
   return 'structured'

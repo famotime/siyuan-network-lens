@@ -956,4 +956,64 @@ describe('ai wiki service', () => {
     expect(section.title).toBe('Fallback: Topic overview')
     expect(section.blocks[0]?.text).toBe('Fallback: No clear topic overview yet')
   })
+
+  it('includes conflict-specific instructions when sectionType is conflict', async () => {
+    let capturedPayload: any = null
+
+    const forwardProxy = vi.fn(async (_url: string, _method?: string, payload?: any) => {
+      capturedPayload = JSON.parse(payload)
+      return {
+        body: JSON.stringify({
+          choices: [{
+            message: {
+              content: JSON.stringify({
+                sectionType: 'conflict',
+                title: '冲突内容',
+                format: 'debate',
+                blocks: [],
+                sourceRefs: [],
+              }),
+            },
+          }],
+        }),
+        status: 200,
+      } as any
+    })
+
+    const service = createAiWikiService({ forwardProxy })
+    const section = await service.generateThemeSection({
+      config: buildConfig(),
+      payload: buildPayload(),
+      diagnosis: {
+        templateType: 'tech_topic',
+        confidence: 'high',
+        reason: 'test',
+        enabledModules: ['intro', 'conflict', 'sources'],
+        suppressedModules: [],
+        evidenceSummary: 'test',
+      },
+      pagePlan: {
+        templateType: 'tech_topic',
+        confidence: 'high',
+        coreSections: ['intro', 'sources'],
+        optionalSections: ['conflict'],
+        sectionOrder: ['intro', 'conflict', 'sources'],
+        sectionGoals: {},
+        sectionFormats: { conflict: 'debate' },
+      },
+      sectionType: 'conflict',
+    })
+
+    const systemMessage = capturedPayload.messages[0].content as string
+    // The conflict prompt from i18n should be present
+    expect(systemMessage).toContain('genuine contradictions')
+
+    expect(section).toEqual({
+      sectionType: 'conflict',
+      title: '冲突内容',
+      format: 'debate',
+      blocks: [],
+      sourceRefs: [],
+    })
+  })
 })
