@@ -1,5 +1,6 @@
 import type { RankingItem, TrendReport } from './analysis'
 import type { AiInboxResult } from './ai-inbox'
+import type { WikiIndexPage } from './wiki-index'
 
 export type SummaryCardKey =
   | 'documents'
@@ -14,6 +15,7 @@ export type SummaryCardKey =
   | 'dormant'
   | 'bridges'
   | 'propagation'
+  | 'llmWiki'
 
 export interface SummaryCardItem {
   key: SummaryCardKey
@@ -44,7 +46,7 @@ export interface RankingDetailItem extends RankingItem {
   suggestions?: DetailSuggestion[]
 }
 
-export type ListDetailSectionKey = Exclude<SummaryCardKey, 'ranking' | 'trends' | 'propagation' | 'todaySuggestions'>
+export type ListDetailSectionKey = Exclude<SummaryCardKey, 'ranking' | 'trends' | 'propagation' | 'todaySuggestions' | 'llmWiki'>
 
 export type SummaryDetailSection =
   | {
@@ -81,4 +83,11 @@ export type SummaryDetailSection =
     description: string
     kind: 'aiInbox'
     result: AiInboxResult | null
+  }
+  | {
+    key: 'llmWiki'
+    title: string
+    description: string
+    kind: 'wikiCards'
+    pages: WikiIndexPage[]
   }

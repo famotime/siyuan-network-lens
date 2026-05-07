@@ -34,6 +34,7 @@ export interface PluginConfig {
   showDormant?: boolean
   showBridges?: boolean
   showPropagation?: boolean
+  showLlmWiki?: boolean
   showOrphanBridge?: boolean
   themeNotebookId?: string
   themeDocumentPath: string
@@ -72,6 +73,7 @@ export interface PluginConfig {
 export const DEFAULT_CONFIG: PluginConfig = {
   showSummaryCards: true,
   ...buildSummaryCardVisibilityDefaults(),
+  showLlmWiki: true,
   themeNotebookId: '',
   themeDocumentPath: '',
   themeNamePrefix: '',
