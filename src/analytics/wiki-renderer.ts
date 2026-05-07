@@ -46,7 +46,7 @@ export function renderThemeWikiDraft(params: {
   ].map(section => ({
     key: section.key,
     heading: section.heading,
-    markdown: section.body || t('wikiMaintain.noContentYet'),
+    markdown: section.body === '' ? '' : (section.body || t('wikiMaintain.noContentYet')),
   })) satisfies WikiRenderedSectionMeta[]
 
   const managedMarkdown = [
@@ -54,12 +54,21 @@ export function renderThemeWikiDraft(params: {
     '',
     `## ${WIKI_PAGE_HEADINGS.managedRoot}`,
     '',
-    ...sections.flatMap(section => [
-      buildSectionMarker(section.key),
-      `### ${section.heading}`,
-      section.markdown,
-      '',
-    ]),
+    ...sections.flatMap(section => {
+      if (section.markdown === '') {
+        return [
+          buildSectionMarker(section.key),
+          `### ${section.heading}`,
+          '',
+        ]
+      }
+      return [
+        buildSectionMarker(section.key),
+        `### ${section.heading}`,
+        section.markdown,
+        '',
+      ]
+    }),
   ].join('\n').trim()
 
   const fullMarkdown = [
@@ -130,15 +139,18 @@ function resolveRenderedSections(
 
   return pagePlan.sectionOrder.map((sectionType) => {
     const draft = sectionDraftMap.get(sectionType)
+    const isIntentionallyEmpty = draft && draft.blocks.length === 0
 
     return {
       key: sectionType,
       heading: sectionType === 'sources'
         ? t('analytics.wikiPage.sourcesHeading')
         : resolveSectionHeading(sectionType, draft),
-      body: sectionType === 'sources'
-        ? normalizeSourcesSectionBody(draft, titleMap)
-        : normalizeSectionDraftBody(draft, sourceRefIndexMap),
+      body: isIntentionallyEmpty
+        ? ''
+        : sectionType === 'sources'
+          ? normalizeSourcesSectionBody(draft, titleMap)
+          : normalizeSectionDraftBody(draft, sourceRefIndexMap),
     }
   })
 }

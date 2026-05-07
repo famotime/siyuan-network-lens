@@ -165,6 +165,111 @@ describe('wiki renderer', () => {
     expect(rendered.managedMarkdown).toContain('- ((doc-ai-core "《AI 核心概念》")) - AI 桥接 -> AI 核心 在当前窗口新增 1 条连接。')
   })
 
+  it('skips rendering a conflict section when blocks are empty', () => {
+    const conflictPagePlan: WikiPagePlan = {
+      ...pagePlan,
+      sectionOrder: ['intro', 'conflict', 'sources'],
+      optionalSections: ['conflict'],
+    }
+
+    const conflictSections: WikiSectionDraft[] = [
+      {
+        sectionType: 'intro',
+        title: '主题概览',
+        format: 'overview',
+        blocks: [{ text: '概览内容。', sourceRefs: ['doc-1'] }],
+        sourceRefs: ['doc-1'],
+      },
+      {
+        sectionType: 'conflict',
+        title: '冲突内容',
+        format: 'debate',
+        blocks: [],
+        sourceRefs: [],
+      },
+      {
+        sectionType: 'sources',
+        title: '来源与证据',
+        format: 'catalog',
+        blocks: [],
+        sourceRefs: [],
+      },
+    ]
+
+    const rendered = renderThemeWikiDraft({
+      pageTitle: 'test-llm-wiki',
+      pairedThemeDocumentId: 'theme-1',
+      pairedThemeTitle: 'Test Theme',
+      generatedAt: '2026-05-07T12:00:00.000Z',
+      model: 'test-model',
+      sourceDocumentCount: 1,
+      diagnosis,
+      pagePlan: conflictPagePlan,
+      sections: conflictSections,
+    })
+
+    // Section marker and heading exist (for diff tracking) but no placeholder content rendered
+    expect(rendered.managedMarkdown).toContain('<!-- network-lens-wiki-section:conflict -->')
+    expect(rendered.managedMarkdown).toContain('### 冲突内容')
+    expect(rendered.managedMarkdown).not.toContain('暂无内容')
+    expect(rendered.managedMarkdown).not.toContain('No content yet')
+    expect(rendered.sectionMetadata.find(s => s.key === 'conflict')?.markdown).toBe('')
+  })
+
+  it('renders a conflict section with debate format when blocks are non-empty', () => {
+    const conflictPagePlan: WikiPagePlan = {
+      ...pagePlan,
+      sectionOrder: ['intro', 'conflict', 'sources'],
+      optionalSections: ['conflict'],
+    }
+
+    const conflictSections: WikiSectionDraft[] = [
+      {
+        sectionType: 'intro',
+        title: '主题概览',
+        format: 'overview',
+        blocks: [{ text: '概览内容。', sourceRefs: ['doc-1'] }],
+        sourceRefs: ['doc-1'],
+      },
+      {
+        sectionType: 'conflict',
+        title: '冲突内容',
+        format: 'debate',
+        blocks: [
+          { text: '观点A：应采用 X 方案。', sourceRefs: ['doc-1'] },
+          { text: '观点B：应采用 Y 方案。', sourceRefs: ['doc-2'] },
+        ],
+        sourceRefs: ['doc-1', 'doc-2'],
+      },
+      {
+        sectionType: 'sources',
+        title: '来源与证据',
+        format: 'catalog',
+        blocks: [],
+        sourceRefs: [],
+      },
+    ]
+
+    const rendered = renderThemeWikiDraft({
+      pageTitle: 'test-llm-wiki',
+      pairedThemeDocumentId: 'theme-1',
+      pairedThemeTitle: 'Test Theme',
+      generatedAt: '2026-05-07T12:00:00.000Z',
+      model: 'test-model',
+      sourceDocumentCount: 2,
+      diagnosis,
+      pagePlan: conflictPagePlan,
+      sections: conflictSections,
+      sourceDocumentTitleMap: { 'doc-1': '文档一', 'doc-2': '文档二' },
+    })
+
+    expect(rendered.managedMarkdown).toContain('### 冲突内容')
+    expect(rendered.managedMarkdown).toContain('- 观点A：应采用 X 方案。')
+    expect(rendered.managedMarkdown).toContain('- 观点B：应采用 Y 方案。')
+    expect(rendered.managedMarkdown).toContain('<sup>((doc-1 "1"))</sup>')
+    expect(rendered.managedMarkdown).toContain('<sup>((doc-2 "2"))</sup>')
+  })
+
   it('renders section titles from staged drafts and placeholders when the workspace locale is zh_CN', async () => {
     ;(globalThis as typeof globalThis & {
       siyuan?: {
@@ -211,9 +316,10 @@ describe('wiki renderer', () => {
 
     expect(rendered.managedMarkdown).toContain('## AI 管理区')
     expect(rendered.managedMarkdown).toContain('### 页面头信息')
+    // Empty blocks → heading rendered (for diff tracking) but no placeholder
     expect(rendered.managedMarkdown).toContain('### 自定义引言')
     expect(rendered.managedMarkdown).toContain('### 参考来源')
-    expect(rendered.managedMarkdown).toContain('- 暂无内容')
+    expect(rendered.managedMarkdown).not.toContain('- 暂无内容')
     expect(rendered.fullMarkdown).toContain('## 人工备注')
     expect(rendered.fullMarkdown).toContain('> 这里保留给人工补充')
   })
