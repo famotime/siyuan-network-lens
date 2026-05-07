@@ -49,7 +49,7 @@ function buildMaintenanceSummary(page: WikiIndexPage): string {
   <div class="wiki-cards-section">
     <div class="wiki-cards-section__header">
       <button
-        class="wiki-cards-section__chat-btn"
+        class="action-button"
         @click="openTopicChat"
       >
         {{ t('llmWiki.chat.startChat') }}
@@ -81,13 +81,13 @@ function buildMaintenanceSummary(page: WikiIndexPage): string {
       </div>
       <div class="wiki-card__actions">
         <button
-          class="wiki-card__action-btn"
+          class="ghost-button wiki-card__action-btn"
           @click="openPageChat(page)"
         >
           {{ t('llmWiki.chat.chatWithPage') }}
         </button>
         <button
-          class="wiki-card__action-btn"
+          class="ghost-button wiki-card__action-btn"
           @click="maintainPage(page)"
         >
           {{ t('llmWiki.maintain.button') }}
@@ -104,10 +104,37 @@ function buildMaintenanceSummary(page: WikiIndexPage): string {
 .wiki-cards-section__header {
   margin-bottom: 12px;
 }
-.wiki-cards-section__chat-btn {
-  padding: 6px 16px;
-  border-radius: 4px;
+.action-button,
+.ghost-button {
+  border: 0;
   cursor: pointer;
+  font: inherit;
+  line-height: 1.2;
+  white-space: nowrap;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  transition: opacity 0.2s, background-color 0.2s;
+}
+.action-button {
+  min-width: 108px;
+  padding: 10px 18px;
+  border-radius: 8px;
+  background: var(--b3-theme-primary);
+  color: var(--b3-theme-on-primary, #fff);
+  box-shadow: 0 2px 6px color-mix(in srgb, var(--b3-theme-primary) 30%, transparent);
+}
+.action-button:disabled,
+.ghost-button:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+.ghost-button {
+  min-width: 108px;
+  padding: 6px 12px;
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--b3-theme-primary) 8%, transparent);
+  color: var(--b3-theme-primary);
 }
 .wiki-cards-section__empty {
   color: var(--b3-theme-on-surface-light);
@@ -143,9 +170,8 @@ function buildMaintenanceSummary(page: WikiIndexPage): string {
   gap: 8px;
 }
 .wiki-card__action-btn {
-  padding: 4px 12px;
-  border-radius: 4px;
-  cursor: pointer;
-  font-size: 0.9em;
+  padding: 4px 10px;
+  font-size: 12px;
+  min-width: auto;
 }
 </style>

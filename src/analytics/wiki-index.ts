@@ -1,5 +1,6 @@
 const SIYUAN_BLOCK_URL_PATTERN = /siyuan:\/\/blocks\/([^?\s<>"')\]#]+)/gi
-const BLOCK_REFERENCE_PATTERN = /\(\(\s*([^)\s"']+)(?:\s+(?:"[^"]*"|'[^']*'))?\s*\)\)/g
+const MARKDOWN_LINK_WITH_BLOCK_PATTERN = /\[([^\]]+)\]\(\s*siyuan:\/\/blocks\/([^?\s<>"')\]#]+)(?:\s+"[^"]*")?\s*\)/gi
+const BLOCK_REFERENCE_PATTERN = /\(\(\s*([^)\s"']+)(?:\s+"([^"]*)")?\s*\)\)/g
 
 export interface WikiMaintenanceState {
   status: 'idle' | 'reviewing' | 'suggestions-ready' | 'applying'
@@ -50,26 +51,44 @@ export function parseWikiIndexPages(params: {
   const seen = new Set<string>()
   const pages: WikiIndexPage[] = []
 
-  const extractTargets = (text: string): Array<{ id: string, label: string }> => {
-    const targets: Array<{ id: string, label: string }> = []
-    for (const match of text.matchAll(SIYUAN_BLOCK_URL_PATTERN)) {
-      targets.push({ id: match[1], label: match[0] })
-    }
-    for (const match of text.matchAll(BLOCK_REFERENCE_PATTERN)) {
-      targets.push({ id: match[1], label: match[0] })
-    }
-    return targets
-  }
-
-  for (const target of extractTargets(params.kramdown)) {
-    if (seen.has(target.id)) {
+  for (const match of params.kramdown.matchAll(MARKDOWN_LINK_WITH_BLOCK_PATTERN)) {
+    const id = match[2]
+    const title = match[1].trim()
+    if (seen.has(id)) {
       continue
     }
-    seen.add(target.id)
+    seen.add(id)
     pages.push({
-      documentId: target.id,
-      title: target.label,
-      themeDocumentTitle: resolveThemeDocumentIdFromTitle(target.label, params.wikiPageSuffix),
+      documentId: id,
+      title,
+      themeDocumentTitle: resolveThemeDocumentIdFromTitle(title, params.wikiPageSuffix),
+    })
+  }
+
+  for (const match of params.kramdown.matchAll(BLOCK_REFERENCE_PATTERN)) {
+    const id = match[1]
+    const title = match[2]?.trim() || id
+    if (seen.has(id)) {
+      continue
+    }
+    seen.add(id)
+    pages.push({
+      documentId: id,
+      title,
+      themeDocumentTitle: resolveThemeDocumentIdFromTitle(title, params.wikiPageSuffix),
+    })
+  }
+
+  for (const match of params.kramdown.matchAll(SIYUAN_BLOCK_URL_PATTERN)) {
+    const id = match[1]
+    if (seen.has(id)) {
+      continue
+    }
+    seen.add(id)
+    pages.push({
+      documentId: id,
+      title: id,
+      themeDocumentTitle: resolveThemeDocumentIdFromTitle(id, params.wikiPageSuffix),
     })
   }
 

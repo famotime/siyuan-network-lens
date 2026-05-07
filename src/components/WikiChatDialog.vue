@@ -72,7 +72,16 @@ async function sendQuestion() {
         buildRouteUserPrompt({ question: question.value, pageTitles }),
       )
       const matchedTitle = parseRouteResponse(routeResponse)
-      targetPage = props.wikiPages.find(p => p.title === matchedTitle)
+      const normalizedMatch = matchedTitle.toLowerCase().trim()
+      targetPage = props.wikiPages.find(
+        p => p.title.toLowerCase().trim() === normalizedMatch,
+      )
+      if (!targetPage) {
+        targetPage = props.wikiPages.find(
+          p => p.title.toLowerCase().includes(normalizedMatch)
+            || normalizedMatch.includes(p.title.toLowerCase()),
+        )
+      }
       if (!targetPage) {
         targetPage = props.wikiPages[0]
       }
@@ -142,7 +151,10 @@ function saveResult() {
   <div class="wiki-chat-dialog">
     <div class="wiki-chat-dialog__header">
       <h3>{{ dialogTitle }}</h3>
-      <button @click="emit('close')">
+      <button
+        class="ghost-button"
+        @click="emit('close')"
+      >
         {{ t('llmWiki.chat.close') }}
       </button>
     </div>
@@ -155,6 +167,7 @@ function saveResult() {
           @keyup.enter="sendQuestion"
         >
         <button
+          class="action-button"
           :disabled="loading || !question.trim()"
           @click="sendQuestion"
         >
@@ -186,7 +199,10 @@ function saveResult() {
       v-if="chatResult"
       class="wiki-chat-dialog__footer"
     >
-      <button @click="saveResult">
+      <button
+        class="action-button"
+        @click="saveResult"
+      >
         {{ t('llmWiki.chat.save') }}
       </button>
     </div>
@@ -236,10 +252,9 @@ function saveResult() {
   border: 1px solid var(--b3-border-color);
   border-radius: 4px;
 }
-.wiki-chat-dialog__input-row button {
+.wiki-chat-dialog__input-row .action-button {
+  min-width: auto;
   padding: 8px 16px;
-  border-radius: 4px;
-  cursor: pointer;
 }
 .wiki-chat-dialog__error {
   color: var(--b3-theme-error);
@@ -271,9 +286,36 @@ function saveResult() {
   justify-content: flex-end;
   gap: 8px;
 }
-.wiki-chat-dialog__footer button {
-  padding: 6px 16px;
-  border-radius: 4px;
+.action-button,
+.ghost-button {
+  border: 0;
   cursor: pointer;
+  font: inherit;
+  line-height: 1.2;
+  white-space: nowrap;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  transition: opacity 0.2s, background-color 0.2s;
+}
+.action-button {
+  min-width: 108px;
+  padding: 10px 18px;
+  border-radius: 8px;
+  background: var(--b3-theme-primary);
+  color: var(--b3-theme-on-primary, #fff);
+  box-shadow: 0 2px 6px color-mix(in srgb, var(--b3-theme-primary) 30%, transparent);
+}
+.action-button:disabled,
+.ghost-button:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+.ghost-button {
+  min-width: 108px;
+  padding: 6px 12px;
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--b3-theme-primary) 8%, transparent);
+  color: var(--b3-theme-primary);
 }
 </style>

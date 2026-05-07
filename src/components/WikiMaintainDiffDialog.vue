@@ -43,7 +43,10 @@ const hasSelection = computed(() => selectedIndices.value.size > 0)
   <div class="wiki-maintain-diff-dialog">
     <div class="wiki-maintain-diff-dialog__header">
       <h3>{{ t('llmWiki.maintain.diffTitle') }} — {{ pageTitle }}</h3>
-      <button @click="emit('close')">
+      <button
+        class="ghost-button"
+        @click="emit('close')"
+      >
         {{ t('llmWiki.chat.close') }}
       </button>
     </div>
@@ -85,16 +88,23 @@ const hasSelection = computed(() => selectedIndices.value.size > 0)
       </div>
     </div>
     <div class="wiki-maintain-diff-dialog__footer">
-      <button @click="selectAll">
+      <button
+        class="action-button"
+        @click="selectAll"
+      >
         {{ t('llmWiki.maintain.applyAll') }}
       </button>
       <button
+        class="action-button"
         :disabled="!hasSelection"
         @click="applySelected"
       >
         {{ t('llmWiki.maintain.applySelected') }}
       </button>
-      <button @click="emit('close')">
+      <button
+        class="ghost-button"
+        @click="emit('close')"
+      >
         {{ t('llmWiki.maintain.cancel') }}
       </button>
     </div>
@@ -194,9 +204,36 @@ const hasSelection = computed(() => selectedIndices.value.size > 0)
   justify-content: flex-end;
   gap: 8px;
 }
-.wiki-maintain-diff-dialog__footer button {
-  padding: 6px 16px;
-  border-radius: 4px;
+.action-button,
+.ghost-button {
+  border: 0;
   cursor: pointer;
+  font: inherit;
+  line-height: 1.2;
+  white-space: nowrap;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  transition: opacity 0.2s, background-color 0.2s;
+}
+.action-button {
+  min-width: 108px;
+  padding: 10px 18px;
+  border-radius: 8px;
+  background: var(--b3-theme-primary);
+  color: var(--b3-theme-on-primary, #fff);
+  box-shadow: 0 2px 6px color-mix(in srgb, var(--b3-theme-primary) 30%, transparent);
+}
+.action-button:disabled,
+.ghost-button:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+.ghost-button {
+  min-width: 108px;
+  padding: 6px 12px;
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--b3-theme-primary) 8%, transparent);
+  color: var(--b3-theme-primary);
 }
 </style>
