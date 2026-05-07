@@ -71,94 +71,6 @@
             <strong>{{ preview.scope.summary.manualNotesParagraphCount }}</strong>
           </div>
         </div>
-        <div class="wiki-panel__scope-lines">
-          <p v-for="line in preview.scope.descriptionLines" :key="line">{{ line }}</p>
-        </div>
-      </div>
-
-      <div v-if="preview?.deltaStats" class="wiki-panel__delta-stats">
-        <h4>{{ t('wikiMaintain.deltaStatsTitle') }}</h4>
-        <div class="wiki-panel__scope-grid">
-          <div v-if="preview.deltaStats.isIncremental" class="wiki-panel__scope-card">
-            <span>{{ t('wikiMaintain.deltaNewCount') }}</span>
-            <strong class="wiki-panel__stat--new">{{ preview.deltaStats.newCount }}</strong>
-          </div>
-          <div v-if="preview.deltaStats.isIncremental" class="wiki-panel__scope-card">
-            <span>{{ t('wikiMaintain.deltaChangedCount') }}</span>
-            <strong class="wiki-panel__stat--changed">{{ preview.deltaStats.changedCount }}</strong>
-          </div>
-          <div v-if="preview.deltaStats.isIncremental" class="wiki-panel__scope-card">
-            <span>{{ t('wikiMaintain.deltaUnchangedCount') }}</span>
-            <strong>{{ preview.deltaStats.unchangedCount }}</strong>
-          </div>
-          <div v-if="preview.deltaStats.isIncremental" class="wiki-panel__scope-card">
-            <span>{{ t('wikiMaintain.deltaDeletedCount') }}</span>
-            <strong class="wiki-panel__stat--deleted">{{ preview.deltaStats.deletedCount }}</strong>
-          </div>
-          <div v-if="!preview.deltaStats.isIncremental" class="wiki-panel__scope-card">
-            <span>{{ t('wikiMaintain.sourceDocTotalCount') }}</span>
-            <strong>{{ preview.scope.summary.sourceDocumentCount }}</strong>
-          </div>
-          <div class="wiki-panel__scope-card">
-            <span>{{ t('wikiMaintain.processingTime') }}</span>
-            <strong>{{ formatProcessingTime(preview.deltaStats.processingTimeMs) }}</strong>
-          </div>
-        </div>
-      </div>
-
-      <div v-if="preview?.sourceDocMetas?.length" class="wiki-panel__source-cards">
-        <h4>{{ t('wikiMaintain.sourceDocCardsTitle') }}</h4>
-        <div class="wiki-panel__source-card-list">
-          <article
-            v-for="meta in sortedSourceDocMetas"
-            :key="meta.documentId"
-            class="wiki-panel__source-card"
-            :data-delta="meta.deltaStatus"
-          >
-            <div class="wiki-panel__source-card-head">
-              <a
-                class="wiki-panel__source-card-title"
-                href="#"
-                @click.prevent="openSourceDocument(meta.documentId)"
-              >
-                {{ meta.title }}
-              </a>
-              <div class="wiki-panel__source-card-tags">
-                <span class="wiki-panel__delta-tag" :data-status="meta.deltaStatus">
-                  {{ deltaStatusLabel(meta.deltaStatus) }}
-                </span>
-                <span class="wiki-panel__link-type-tag">
-                  {{ linkTypeLabel(meta.linkType) }}
-                </span>
-              </div>
-            </div>
-            <p class="wiki-panel__source-card-updated">
-              {{ meta.updatedAt }}
-            </p>
-            <div class="wiki-panel__source-card-suggestions">
-              <button
-                class="ghost-button ghost-button--sm"
-                type="button"
-                @click="emit('addThemeLink', meta.documentId)"
-              >
-                {{ t('wikiMaintain.addThemeLink') }}
-              </button>
-              <button
-                class="ghost-button ghost-button--sm"
-                type="button"
-                @click="emit('addTag', meta.documentId)"
-              >
-                {{ t('wikiMaintain.addTag') }}
-              </button>
-              <span v-if="meta.isWeakAssociation" class="wiki-panel__weak-warning">
-                {{ t('wikiMaintain.weakAssociationWarning') }}
-              </span>
-              <span v-if="meta.deltaStatus === 'changed'" class="wiki-panel__changed-notice">
-                {{ t('wikiMaintain.contentChangedNotice') }}
-              </span>
-            </div>
-          </article>
-        </div>
       </div>
 
       <div v-if="preview?.themePages.length" class="wiki-panel__list">
@@ -247,6 +159,100 @@
           </button>
         </div>
       </div>
+
+      <div v-if="preview" class="wiki-panel__scope-lines">
+        <p v-for="line in preview.scope.descriptionLines" :key="line">{{ line }}</p>
+      </div>
+
+      <div v-if="preview?.deltaStats" class="wiki-panel__delta-stats">
+        <h4>{{ t('wikiMaintain.deltaStatsTitle') }}</h4>
+        <div class="wiki-panel__scope-grid">
+          <div v-if="preview.deltaStats.isIncremental" class="wiki-panel__scope-card">
+            <span>{{ t('wikiMaintain.deltaNewCount') }}</span>
+            <strong class="wiki-panel__stat--new">{{ preview.deltaStats.newCount }}</strong>
+          </div>
+          <div v-if="preview.deltaStats.isIncremental" class="wiki-panel__scope-card">
+            <span>{{ t('wikiMaintain.deltaChangedCount') }}</span>
+            <strong class="wiki-panel__stat--changed">{{ preview.deltaStats.changedCount }}</strong>
+          </div>
+          <div v-if="preview.deltaStats.isIncremental" class="wiki-panel__scope-card">
+            <span>{{ t('wikiMaintain.deltaUnchangedCount') }}</span>
+            <strong>{{ preview.deltaStats.unchangedCount }}</strong>
+          </div>
+          <div v-if="preview.deltaStats.isIncremental" class="wiki-panel__scope-card">
+            <span>{{ t('wikiMaintain.deltaDeletedCount') }}</span>
+            <strong class="wiki-panel__stat--deleted">{{ preview.deltaStats.deletedCount }}</strong>
+          </div>
+          <div v-if="!preview.deltaStats.isIncremental" class="wiki-panel__scope-card">
+            <span>{{ t('wikiMaintain.sourceDocTotalCount') }}</span>
+            <strong>{{ preview.scope.summary.sourceDocumentCount }}</strong>
+          </div>
+          <div class="wiki-panel__scope-card">
+            <span>{{ t('wikiMaintain.processingTime') }}</span>
+            <strong>{{ formatProcessingTime(preview.deltaStats.processingTimeMs) }}</strong>
+          </div>
+        </div>
+      </div>
+
+      <div v-if="preview?.sourceDocMetas?.length" class="wiki-panel__source-cards">
+        <h4>{{ t('wikiMaintain.sourceDocCardsTitle') }}</h4>
+        <div class="wiki-panel__source-card-list">
+          <article
+            v-for="meta in sortedSourceDocMetas"
+            :key="meta.documentId"
+            class="wiki-panel__source-card"
+            :data-delta="meta.deltaStatus"
+          >
+            <div class="wiki-panel__source-card-head">
+              <a
+                class="wiki-panel__source-card-title"
+                href="#"
+                @click.prevent="openSourceDocument(meta.documentId)"
+              >
+                {{ meta.title }}
+              </a>
+              <div class="wiki-panel__source-card-tags">
+                <span class="wiki-panel__delta-tag" :data-status="meta.deltaStatus">
+                  {{ deltaStatusLabel(meta.deltaStatus) }}
+                </span>
+                <span class="wiki-panel__link-type-tag">
+                  {{ linkTypeLabel(meta.linkType) }}
+                </span>
+              </div>
+            </div>
+            <p class="wiki-panel__source-card-updated">
+              {{ meta.updatedAt }}
+            </p>
+            <div class="wiki-panel__source-card-suggestions">
+              <div v-if="meta.themeSuggestions?.length" class="wiki-panel__theme-suggestions">
+                <button
+                  v-for="suggestion in meta.themeSuggestions"
+                  :key="suggestion.themeDocumentId"
+                  :class="['wiki-panel__theme-pill', { 'wiki-panel__theme-pill--active': isThemeSuggestionActive?.(meta.documentId, suggestion.themeDocumentId) }]"
+                  :title="t('wikiMaintain.themeSuggestionTooltip', { title: suggestion.themeDocumentTitle, count: suggestion.matchCount })"
+                  @click="emit('toggleThemeLink', meta.documentId, suggestion.themeDocumentId)"
+                >
+                  {{ suggestion.themeName }}
+                </button>
+              </div>
+              <button
+                class="ghost-button ghost-button--sm"
+                type="button"
+                @click="emit('addTag', meta.documentId)"
+              >
+                {{ t('wikiMaintain.addTag') }}
+              </button>
+              <span v-if="meta.isWeakAssociation" class="wiki-panel__weak-warning">
+                {{ t('wikiMaintain.weakAssociationWarning') }}
+              </span>
+              <span v-if="meta.deltaStatus === 'changed'" class="wiki-panel__changed-notice">
+                {{ t('wikiMaintain.contentChangedNotice') }}
+              </span>
+            </div>
+          </article>
+        </div>
+      </div>
+
     </template>
 
     <Teleport to="body">
@@ -295,11 +301,12 @@ const props = defineProps<{
   openSourceDocument: (documentId: string) => void
   formatTimestamp: (timestamp?: string) => string
   incrementalEnabled?: boolean
+  isThemeSuggestionActive?: (documentId: string, themeDocumentId: string) => boolean
 }>()
 
 const emit = defineEmits<{
   (e: 'update:incrementalEnabled', value: boolean): void
-  (e: 'addThemeLink', documentId: string): void
+  (e: 'toggleThemeLink', documentId: string, themeDocumentId: string): void
   (e: 'addTag', documentId: string): void
 }>()
 
@@ -945,5 +952,32 @@ function formatProcessingTime(ms: number): string {
 .wiki-panel__changed-notice {
   font-size: 11px;
   color: var(--b3-theme-primary);
+}
+
+.wiki-panel__theme-suggestions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+}
+
+.wiki-panel__theme-pill {
+  padding: 2px 10px;
+  border: 1px solid color-mix(in srgb, var(--b3-theme-primary) 30%, transparent);
+  border-radius: 999px;
+  background: transparent;
+  color: var(--b3-theme-primary);
+  font-size: 11px;
+  cursor: pointer;
+  transition: background-color 0.15s, color 0.15s;
+}
+
+.wiki-panel__theme-pill:hover {
+  background: color-mix(in srgb, var(--b3-theme-primary) 12%, transparent);
+}
+
+.wiki-panel__theme-pill--active {
+  background: var(--b3-theme-primary);
+  color: var(--b3-theme-on-primary, #fff);
+  border-color: var(--b3-theme-primary);
 }
 </style>
