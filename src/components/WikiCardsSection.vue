@@ -96,3 +96,56 @@ function buildMaintenanceSummary(page: WikiIndexPage): string {
     </div>
   </div>
 </template>
+
+<style scoped>
+.wiki-cards-section {
+  padding: 12px;
+}
+.wiki-cards-section__header {
+  margin-bottom: 12px;
+}
+.wiki-cards-section__chat-btn {
+  padding: 6px 16px;
+  border-radius: 4px;
+  cursor: pointer;
+}
+.wiki-cards-section__empty {
+  color: var(--b3-theme-on-surface-light);
+  padding: 24px;
+  text-align: center;
+}
+.wiki-card {
+  border: 1px solid var(--b3-border-color);
+  border-radius: 6px;
+  padding: 12px;
+  margin-bottom: 8px;
+}
+.wiki-card__header {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+  margin-bottom: 6px;
+}
+.wiki-card__title {
+  font-weight: 600;
+}
+.wiki-card__theme {
+  font-size: 0.85em;
+  color: var(--b3-theme-on-surface-light);
+}
+.wiki-card__maintenance-summary {
+  font-size: 0.85em;
+  color: var(--b3-theme-on-surface-light);
+  margin-bottom: 6px;
+}
+.wiki-card__actions {
+  display: flex;
+  gap: 8px;
+}
+.wiki-card__action-btn {
+  padding: 4px 12px;
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 0.9em;
+}
+</style>
