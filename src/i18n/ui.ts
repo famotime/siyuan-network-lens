@@ -2006,6 +2006,14 @@ const UI_TEXT = {
         en_US: 'High-impact relay nodes on key paths',
         zh_CN: '关键路径上的高影响中继节点',
       },
+      llmWiki: {
+        en_US: 'LLM Wiki',
+        zh_CN: 'LLM Wiki',
+      },
+      llmWikiPagesGenerated: {
+        en_US: '{count} wiki pages generated',
+        zh_CN: '已生成 {count} 个 wiki 页面',
+      },
     },
     summaryCardConfig: {
       readUnreadCard: {
@@ -2103,6 +2111,14 @@ const UI_TEXT = {
       dormantDocsCardDescription: {
         en_US: 'Show docs past the inactivity threshold without valid links',
         zh_CN: '显示超过不活跃阈值且没有有效连接的文档',
+      },
+      llmWikiCard: {
+        en_US: 'LLM Wiki',
+        zh_CN: 'LLM Wiki',
+      },
+      llmWikiCardDescription: {
+        en_US: 'Generated LLM Wiki pages and AI chat',
+        zh_CN: '已生成的 LLM Wiki 页面与 AI 对话',
       },
     },
     summaryDetailSource: {
@@ -2325,6 +2341,10 @@ const UI_TEXT = {
       generatedAiLinkSuggestionsForTitle: {
         en_US: 'Generated AI link suggestions for {title}',
         zh_CN: '已生成 {title} 的 AI 补链建议',
+      },
+      llmWikiDescription: {
+        en_US: 'All generated wiki pages with chat and maintenance tools',
+        zh_CN: '所有已生成的 wiki 页面，提供对话和维护工具',
       },
     },
     docSummary: {

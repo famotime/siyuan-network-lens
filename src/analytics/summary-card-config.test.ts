@@ -24,6 +24,7 @@ describe('summary card config', () => {
       'propagation',
       'bridges',
       'dormant',
+      'llmWiki',
     ])
     expect(SUMMARY_CARD_DEFINITIONS.map(item => item.key)).toEqual(DEFAULT_SUMMARY_CARD_ORDER)
     expect(getSummaryCardDefinition('read')).toEqual(expect.objectContaining({
@@ -65,6 +66,7 @@ describe('summary card config', () => {
       showPropagation: false,
       showBridges: false,
       showDormant: false,
+      showLlmWiki: true,
     })
 
     expect(getSummaryCardVisibilityConfigKey('ranking')).toBe('showRanking')

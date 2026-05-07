@@ -14,6 +14,7 @@ export type SummaryCardVisibilityConfigKey =
   | 'showDormant'
   | 'showBridges'
   | 'showPropagation'
+  | 'showLlmWiki'
 
 type LegacySummaryCardVisibilityConfigKey = 'showOrphanBridge'
 
@@ -116,6 +117,13 @@ export const SUMMARY_CARD_DEFINITIONS: SummaryCardDefinition[] = [
     settingDescription: t('analytics.summaryCardConfig.dormantDocsCardDescription'),
     legacyVisibilityConfigKey: 'showOrphanBridge',
   },
+  {
+    key: 'llmWiki',
+    visibilityConfigKey: 'showLlmWiki',
+    defaultVisible: true,
+    settingLabel: t('analytics.summaryCardConfig.llmWikiCard'),
+    settingDescription: t('analytics.summaryCardConfig.llmWikiCardDescription'),
+  },
 ]
 
 export const DEFAULT_SUMMARY_CARD_ORDER: SummaryCardKey[] = SUMMARY_CARD_DEFINITIONS.map(item => item.key)
@@ -137,11 +145,14 @@ export function buildSummaryCardVisibilityDefaults(): Record<SummaryCardVisibili
 }
 
 export function isSummaryCardVisible(
-  config: Partial<Record<SummaryCardVisibilityConfigKey, boolean>> & { aiEnabled?: boolean },
+  config: Partial<Record<SummaryCardVisibilityConfigKey, boolean>> & { aiEnabled?: boolean, wikiEnabled?: boolean },
   key: SummaryCardKey,
 ): boolean {
   if (key === 'todaySuggestions') {
     return Boolean(config.aiEnabled)
+  }
+  if (key === 'llmWiki') {
+    return Boolean(config.aiEnabled) && Boolean((config as any).wikiEnabled)
   }
   const definition = getSummaryCardDefinition(key)
   return config[definition.visibilityConfigKey] ?? definition.defaultVisible
