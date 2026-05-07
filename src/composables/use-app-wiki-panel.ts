@@ -47,8 +47,20 @@ export function createAppWikiPanelController(params: {
       ...associations.childDocuments.map(item => item.documentId),
     ]
 
+    const sourceDocumentLinkTypes = new Map<string, 'outbound' | 'inbound' | 'child'>()
+    for (const item of associations.outbound) {
+      sourceDocumentLinkTypes.set(item.documentId, 'outbound')
+    }
+    for (const item of associations.inbound) {
+      sourceDocumentLinkTypes.set(item.documentId, 'inbound')
+    }
+    for (const item of associations.childDocuments) {
+      sourceDocumentLinkTypes.set(item.documentId, 'child')
+    }
+
     activeWikiPreviewRequest.value = {
       sourceDocumentIds: [...new Set(sourceDocumentIds)],
+      sourceDocumentLinkTypes,
       scopeDescriptionLine: t('analytics.wiki.scopeSourceRelatedRange', { title: params.resolveTitle(documentId) }),
       themeDocumentId: documentId,
     }

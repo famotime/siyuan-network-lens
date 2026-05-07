@@ -25,6 +25,12 @@ describe('createAppWikiPanelController', () => {
     expect(controller.wikiPanelCoreDocumentId.value).toBe('doc-a')
     expect(controller.activeWikiPreviewRequest.value).toEqual({
       sourceDocumentIds: ['doc-a', 'doc-b', 'doc-c', 'doc-d', 'doc-e'],
+      sourceDocumentLinkTypes: new Map([
+        ['doc-b', 'child'],
+        ['doc-c', 'inbound'],
+        ['doc-d', 'inbound'],
+        ['doc-e', 'child'],
+      ]),
       scopeDescriptionLine: '- Scope source: related range for core doc "Beta" (outbound / inbound / child docs)',
       themeDocumentId: 'doc-a',
     })
