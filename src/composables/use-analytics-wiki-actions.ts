@@ -17,6 +17,7 @@ import { renderThemeWikiDraft } from '@/analytics/wiki-renderer'
 import { buildWikiPageStorageKey, type AiWikiStore, type WikiPageSnapshotRecord } from '@/analytics/wiki-store'
 import type { AnalyticsSnapshot } from '@/analytics/siyuan-data'
 import type { ThemeDocument } from '@/analytics/theme-documents'
+import { countThemeMatchesForDocument } from '@/analytics/theme-documents'
 import {
   buildWikiPreviewSummary,
   buildWikiScopeDescriptionLines,
@@ -286,15 +287,23 @@ export function createAnalyticsWikiActionsController(params: {
         processingTimeMs: Date.now() - new Date(generatedAt).getTime(),
       }
 
-      const sourceDocMetas = sourceDocuments.map(doc => ({
-        documentId: doc.id,
-        title: doc.title || doc.hpath || doc.id,
-        deltaStatus: deltaMap.get(doc.id) ?? 'new',
-        linkType: request?.sourceDocumentLinkTypes?.get(doc.id) ?? 'outbound',
-        updatedAt: doc.updated,
-        hasThemeLink: false,
-        isWeakAssociation: false,
-      }))
+      const sourceDocMetas = sourceDocuments.map(doc => {
+        const themeMatches = countThemeMatchesForDocument({
+          document: doc,
+          themeDocuments: params.themeDocuments.value,
+        })
+
+        return {
+          documentId: doc.id,
+          title: doc.title || doc.hpath || doc.id,
+          deltaStatus: deltaMap.get(doc.id) ?? 'new',
+          linkType: request?.sourceDocumentLinkTypes?.get(doc.id) ?? 'outbound',
+          updatedAt: doc.updated,
+          hasThemeLink: false,
+          isWeakAssociation: themeMatches.length === 0,
+          themeSuggestions: themeMatches,
+        }
+      })
 
       const themePage: WikiPreviewThemePageItem = {
         pageTitle: payload.pageTitle,

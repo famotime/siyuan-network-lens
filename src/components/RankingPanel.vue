@@ -231,7 +231,7 @@
                 v-bind="wikiPanelProps"
                 :open-source-document="wikiPanelProps.openSourceDocument ?? (() => {})"
                 @update:incremental-enabled="(v: boolean) => emit('update:incrementalEnabled', v)"
-                @add-theme-link="(id: string) => emit('addThemeLink', id)"
+                @toggle-theme-link="(docId: string, themeId: string) => emit('toggleThemeLink', docId, themeId)"
                 @add-tag="(id: string) => emit('addTag', id)"
               />
             </div>
@@ -290,8 +290,9 @@ const props = withDefaults(defineProps<{
     incrementalEnabled?: boolean
     openSourceDocument?: (documentId: string) => void
     onUpdateIncrementalEnabled?: (value: boolean) => void
-    onAddThemeLink?: (documentId: string) => void
+    onToggleThemeLink?: (documentId: string, themeDocumentId: string) => void
     onAddTag?: (documentId: string) => void
+    isThemeSuggestionActive?: (documentId: string, themeDocumentId: string) => boolean
   }
   isWikiPanelVisibleForCoreDocument: (documentId: string) => boolean
   toggleCoreDocumentWikiPanel: (documentId: string) => void | Promise<void>
@@ -308,7 +309,7 @@ const props = withDefaults(defineProps<{
 
 const emit = defineEmits<{
   (e: 'update:incrementalEnabled', value: boolean): void
-  (e: 'addThemeLink', documentId: string): void
+  (e: 'toggleThemeLink', documentId: string, themeDocumentId: string): void
   (e: 'addTag', documentId: string): void
 }>()
 

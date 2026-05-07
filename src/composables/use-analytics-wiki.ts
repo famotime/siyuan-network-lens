@@ -4,6 +4,7 @@ import type {
   DocumentRecord,
   TimeRange,
 } from '@/analytics/analysis'
+import type { ThemeDocumentMatch } from '@/analytics/theme-documents'
 import type { AiDocumentIndexStore, DocumentIndexProfile } from '@/analytics/ai-index-store'
 import type { WikiPagePreviewResult } from '@/analytics/wiki-diff'
 import type { WikiApplyBatchResult } from '@/analytics/wiki-documents'
@@ -61,6 +62,7 @@ export interface WikiPreviewSourceDocMeta {
   updatedAt: string
   hasThemeLink?: boolean
   isWeakAssociation?: boolean
+  themeSuggestions?: ThemeDocumentMatch[]
 }
 
 export interface WikiPreviewState {

@@ -236,7 +236,7 @@
         :batch-generate-doc-index="batchGenerateDocIndex"
         :batch-delete-doc-index="batchDeleteDocIndex"
         @update:incremental-enabled="handleIncrementalEnabledChange"
-        @add-theme-link="handleAddThemeLink"
+        @toggle-theme-link="handleToggleThemeLink"
         @add-tag="handleAddTag"
       />
     </template>
@@ -410,18 +410,15 @@ const wikiPanelProps = computed(() => ({
   formatTimestamp,
   incrementalEnabled: props.config.wikiIncrementalEnabled ?? true,
   openSourceDocument: openDocument,
+  isThemeSuggestionActive,
 }))
 
 function handleIncrementalEnabledChange(value: boolean) {
   props.config.wikiIncrementalEnabled = value
 }
 
-function handleAddThemeLink(documentId: string) {
-  const themePage = wikiPreview.value?.themePages?.[0]
-  if (!themePage?.themeDocumentId) {
-    return
-  }
-  toggleOrphanThemeSuggestion(documentId, themePage.themeDocumentId)
+function handleToggleThemeLink(documentId: string, themeDocumentId: string) {
+  toggleOrphanThemeSuggestion(documentId, themeDocumentId)
 }
 
 function handleAddTag(documentId: string) {

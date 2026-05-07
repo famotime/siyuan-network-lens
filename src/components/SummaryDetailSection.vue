@@ -517,7 +517,7 @@
           :collapsed-items="collapsedItems"
           :on-toggle-item-collapse="toggleItemCollapse"
           @update:incremental-enabled="(v: boolean) => emit('update:incrementalEnabled', v)"
-          @add-theme-link="(id: string) => emit('addThemeLink', id)"
+          @toggle-theme-link="(docId: string, themeId: string) => emit('toggleThemeLink', docId, themeId)"
           @add-tag="(id: string) => emit('addTag', id)"
         />
       </template>
@@ -829,8 +829,9 @@ const props = withDefaults(defineProps<{
     incrementalEnabled?: boolean
     openSourceDocument?: (documentId: string) => void
     onUpdateIncrementalEnabled?: (value: boolean) => void
-    onAddThemeLink?: (documentId: string) => void
+    onToggleThemeLink?: (documentId: string, themeDocumentId: string) => void
     onAddTag?: (documentId: string) => void
+    isThemeSuggestionActive?: (documentId: string, themeDocumentId: string) => boolean
   }
   showDocumentIndex?: boolean
   generateDocIndex?: (documentId: string) => Promise<boolean>
@@ -845,7 +846,7 @@ const props = withDefaults(defineProps<{
 
 const emit = defineEmits<{
   (e: 'update:incrementalEnabled', value: boolean): void
-  (e: 'addThemeLink', documentId: string): void
+  (e: 'toggleThemeLink', documentId: string, themeDocumentId: string): void
   (e: 'addTag', documentId: string): void
 }>()
 

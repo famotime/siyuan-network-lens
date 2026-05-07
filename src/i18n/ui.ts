@@ -1515,6 +1515,10 @@ const UI_TEXT = {
       en_US: 'Conflicting viewpoints',
       zh_CN: '冲突内容',
     },
+    themeSuggestionTooltip: {
+      en_US: '{title} - {count} keyword matches, click to toggle theme link',
+      zh_CN: '{title} - {count} 个关键词匹配，点击切换主题链接',
+    },
   },
   aiConfig: {
     tooltipBaseUrl: {
