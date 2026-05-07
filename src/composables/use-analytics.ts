@@ -48,6 +48,8 @@ import {
 import { createAnalyticsAiController } from './use-analytics-ai'
 import { type WikiPreviewRequest, type WikiPreviewState, type WikiPreviewThemePageItem } from './use-analytics-wiki'
 import { createAnalyticsWikiActionsController } from './use-analytics-wiki-actions'
+import { createLlmWikiController } from './use-analytics-llm-wiki'
+import { createLlmWikiChatController } from './use-analytics-llm-wiki-chat'
 import { createAnalyticsDocumentIndexController } from './use-analytics-document-index'
 import { createAiInboxService, isAiConfigComplete, type AiInboxResult, type AiInboxService } from '@/analytics/ai-inbox'
 import {
@@ -433,6 +435,7 @@ export function useAnalyticsState(params: UseAnalyticsParams) {
         metrics: largeDocumentMetrics.value,
       }),
       largeDocumentCardMode: largeDocumentCardMode.value,
+      llmWikiPageCount: llmWiki.wikiPageCount.value,
     })
   })
   const summaryCards = computed<SummaryCardItem[]>(() => sortSummaryCards(rawSummaryCards.value, summaryCardOrder.value))
@@ -462,6 +465,7 @@ export function useAnalyticsState(params: UseAnalyticsParams) {
       largeDocumentMetrics: largeDocumentMetrics.value,
       largeDocumentCardMode: largeDocumentCardMode.value,
       aiInboxResult: selectedAiInboxHistory?.result ?? aiInboxResult.value,
+      llmWikiPages: llmWiki.wikiPages.value,
     })
   })
 
@@ -632,6 +636,15 @@ export function useAnalyticsState(params: UseAnalyticsParams) {
     batchGenerateDocIndex,
     batchDeleteDocIndex,
   } = documentIndexController
+
+  const llmWiki = createLlmWikiController({
+    config: appliedConfig,
+    forwardProxy: params.forwardProxy,
+    getBlockKramdown,
+    updateBlock,
+  })
+
+  const llmWikiChat = createLlmWikiChatController()
 
   watch(pathOptions, (options) => {
     if (options.length === 0) {
@@ -1045,6 +1058,20 @@ export function useAnalyticsState(params: UseAnalyticsParams) {
     isAiLinkSuggestionActive: aiSuggestionActions.isAiLinkSuggestionActive,
     toggleOrphanAiTagSuggestion: aiSuggestionActions.toggleOrphanAiTagSuggestion,
     isAiTagSuggestionActive: aiSuggestionActions.isAiTagSuggestionActive,
+    // LLM Wiki
+    llmWikiPages: llmWiki.wikiPages,
+    llmWikiPageCount: llmWiki.wikiPageCount,
+    loadLlmWikiPages: llmWiki.loadWikiPages,
+    reviewLlmWikiPage: llmWiki.reviewPage,
+    applyLlmWikiMaintenance: llmWiki.applyMaintenance,
+    llmWikiChatDialogVisible: llmWikiChat.chatDialogVisible,
+    llmWikiChatScope: llmWikiChat.chatScope,
+    llmWikiMaintainDiffVisible: llmWikiChat.maintainDiffVisible,
+    llmWikiMaintainTargetPage: llmWikiChat.maintainTargetPage,
+    openLlmWikiChat: llmWikiChat.openChat,
+    closeLlmWikiChat: llmWikiChat.closeChat,
+    openLlmWikiMaintainDiff: llmWikiChat.openMaintainDiff,
+    closeLlmWikiMaintainDiff: llmWikiChat.closeMaintainDiff,
   }
 }
 

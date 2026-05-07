@@ -33,6 +33,7 @@ describe('summary card order', () => {
       'propagation',
       'bridges',
       'dormant',
+      'llmWiki',
     ])
   })
 
@@ -54,6 +55,7 @@ describe('summary card order', () => {
       'propagation',
       'bridges',
       'dormant',
+      'llmWiki',
     ])
   })
 })

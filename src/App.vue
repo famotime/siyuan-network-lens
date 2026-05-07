@@ -238,8 +238,31 @@
         @update:incremental-enabled="handleIncrementalEnabledChange"
         @toggle-theme-link="handleToggleThemeLink"
         @add-tag="handleAddTag"
+        @open-wiki-chat="openLlmWikiChat"
+        @maintain-wiki-page="handleLlmWikiMaintain"
       />
     </template>
+
+    <WikiChatDialog
+      v-if="llmWikiChatDialogVisible && llmWikiChatScope"
+      :scope="llmWikiChatScope"
+      :wiki-pages="llmWikiPages"
+      :forward-proxy="forwardProxy"
+      :get-block-kramdown="getBlockKramdown"
+      :config="props.config"
+      @close="closeLlmWikiChat"
+      @save="handleLlmWikiChatSave"
+    />
+
+    <WikiMaintainDiffDialog
+      v-if="llmWikiMaintainDiffVisible && llmWikiMaintainTargetPage"
+      :page-title="llmWikiMaintainTargetPage.title"
+      :current-markdown="''"
+      :suggestions="llmWikiMaintainTargetPage.maintenanceState?.suggestions ?? []"
+      :revised-markdown="llmWikiMaintainTargetPage.maintenanceState?.diffPreview ?? ''"
+      @close="closeLlmWikiMaintainDiff"
+      @apply="handleLlmWikiMaintainApply"
+    />
   </div>
 </template>
 
@@ -252,7 +275,12 @@ import SummaryCardsGrid from '@/components/SummaryCardsGrid.vue'
 import SummaryDetailSection from '@/components/SummaryDetailSection.vue'
 import ThemeMultiSelect from '@/components/ThemeMultiSelect.vue'
 import WikiMaintainPanel from '@/components/WikiMaintainPanel.vue'
+import WikiChatDialog from '@/components/WikiChatDialog.vue'
+import WikiMaintainDiffDialog from '@/components/WikiMaintainDiffDialog.vue'
 import { isSummaryCardVisible } from '@/analytics/summary-card-config'
+import type { WikiIndexPage } from '@/analytics/wiki-index'
+import type { WikiChatResult } from '@/analytics/llm-wiki-chat-service'
+import { buildChatSaveMarkdown } from '@/composables/use-analytics-llm-wiki-chat'
 import { pickOppositePluginText, pickPluginText } from '@/i18n/plugin'
 import { useAnalyticsState } from '@/composables/use-analytics'
 import { createAppWikiPanelController } from '@/composables/use-app-wiki-panel'
@@ -296,6 +324,7 @@ const analytics = useAnalyticsState({
 const {
   loading,
   errorMessage,
+  snapshot,
   timeRange,
   timeRangeOptions,
   selectedNotebook,
@@ -341,6 +370,19 @@ const {
   wikiApplyLoading,
   wikiError,
   wikiPreview,
+  llmWikiPages,
+  llmWikiPageCount,
+  loadLlmWikiPages,
+  reviewLlmWikiPage,
+  applyLlmWikiMaintenance,
+  llmWikiChatDialogVisible,
+  llmWikiChatScope,
+  llmWikiMaintainDiffVisible,
+  llmWikiMaintainTargetPage,
+  openLlmWikiChat,
+  closeLlmWikiChat,
+  openLlmWikiMaintainDiff,
+  closeLlmWikiMaintainDiff,
   refresh,
   generateAiInbox,
   prepareWikiPreview,
@@ -429,6 +471,47 @@ function handleAddTag(documentId: string) {
   }
   toggleOrphanAiTagSuggestion(documentId, tag)
 }
+
+function handleLlmWikiMaintain(page: WikiIndexPage) {
+  reviewLlmWikiPage(page)
+  openLlmWikiMaintainDiff(page)
+}
+
+async function handleLlmWikiChatSave(result: WikiChatResult & { question: string, usedPage: WikiIndexPage }) {
+  const markdown = buildChatSaveMarkdown({
+    question: result.question,
+    answer: result.answer,
+    usedPageTitle: result.usedPage.title,
+    usedPageId: result.usedPage.documentId,
+    referencedDocumentIds: result.referencedDocumentIds,
+  })
+  const title = result.question.slice(0, 64)
+  const containerName = props.config.wikiContainerName ?? 'LLM Wiki'
+  const chatPath = `/${containerName}/Chat/${title}`
+  const notebooks = snapshot.value?.notebooks ?? []
+  const wikiNotebook = notebooks.find(nb => !nb.closed)
+  if (!wikiNotebook) return
+  try {
+    const chatDocId = await createDocWithMd(wikiNotebook.id, chatPath, markdown)
+    if (chatDocId) {
+      const refLink = `[${title}](siyuan://blocks/${chatDocId})`
+      await appendBlock(result.usedPage.documentId, 'markdown', refLink)
+    }
+  } catch {
+    // silently handle save errors
+  }
+}
+
+function handleLlmWikiMaintainApply(_selectedSuggestions: any[]) {
+  if (llmWikiMaintainTargetPage.value?.maintenanceState?.diffPreview) {
+    applyLlmWikiMaintenance(
+      llmWikiMaintainTargetPage.value,
+      llmWikiMaintainTargetPage.value.maintenanceState.diffPreview,
+    )
+    closeLlmWikiMaintainDiff()
+  }
+}
+
 const showWikiFeature = isAlphaSettingVisible('llm-wiki')
 const {
   visibleSummaryCards,

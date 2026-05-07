@@ -162,6 +162,7 @@ describe('useAnalyticsState', () => {
       'propagation',
       'bridges',
       'dormant',
+      'llmWiki',
     ])
     expect(config.summaryCardOrder).toEqual(state.summaryCards.value.map(card => card.key))
   })
@@ -179,7 +180,7 @@ describe('useAnalyticsState', () => {
       themeDocumentPath: '/专题',
       themeNamePrefix: '主题-',
       themeNameSuffix: '-索引',
-      summaryCardOrder: ['orphans', 'documents', 'largeDocuments', 'read', 'todaySuggestions', 'references', 'ranking', 'trends', 'communities', 'dormant', 'bridges', 'propagation'],
+      summaryCardOrder: ['orphans', 'documents', 'largeDocuments', 'read', 'todaySuggestions', 'references', 'ranking', 'trends', 'communities', 'dormant', 'bridges', 'propagation', 'llmWiki'],
       readTagNames: ['note'],
       readTitlePrefixes: '',
       readTitleSuffixes: '',
@@ -222,6 +223,7 @@ describe('useAnalyticsState', () => {
       'propagation',
       'bridges',
       'dormant',
+      'llmWiki',
     ])
     expect(config.summaryCardOrder).toEqual(state.summaryCards.value.map(card => card.key))
   })

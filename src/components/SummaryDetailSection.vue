@@ -716,6 +716,13 @@
           </section>
         </div>
       </template>
+      <template v-else-if="detail.kind === 'wikiCards'">
+        <WikiCardsSection
+          :pages="detail.pages"
+          @open-chat="(scope: WikiChatScope) => emit('openWikiChat', scope)"
+          @maintain="(page: WikiIndexPage) => emit('maintainWikiPage', page)"
+        />
+      </template>
     </div>
   </section>
 </template>
@@ -728,6 +735,7 @@ import type { AiInboxItemType } from '@/analytics/ai-inbox'
 import type { OrphanAiSuggestionState } from '@/analytics/ai-link-suggestions'
 import type { LinkDirection } from '@/analytics/link-sync'
 import type { DetailSuggestion, SummaryDetailSection as SummaryDetailSectionType } from '@/analytics/summary-details'
+import type { WikiChatScope, WikiIndexPage } from '@/analytics/wiki-index'
 import type { ReadCardMode } from '@/analytics/read-status'
 import type { TodaySuggestionHistoryEntry } from '@/analytics/today-suggestion-history-store'
 import type { ThemeDocument, ThemeDocumentMatch } from '@/analytics/theme-documents'
@@ -745,6 +753,7 @@ import DormantDetailPanel from '@/components/DormantDetailPanel.vue'
 import OrphanDetailPanel from '@/components/OrphanDetailPanel.vue'
 import RankingPanel from '@/components/RankingPanel.vue'
 import SuggestionCallout from '@/components/SuggestionCallout.vue'
+import WikiCardsSection from '@/components/WikiCardsSection.vue'
 
 type DetailItemWithThemeSuggestions = {
   documentId: string
@@ -848,6 +857,8 @@ const emit = defineEmits<{
   (e: 'update:incrementalEnabled', value: boolean): void
   (e: 'toggleThemeLink', documentId: string, themeDocumentId: string): void
   (e: 'addTag', documentId: string): void
+  (e: 'openWikiChat', scope: WikiChatScope): void
+  (e: 'maintainWikiPage', page: WikiIndexPage): void
 }>()
 
 const summaryCountLabel = computed(() => props.detail.kind === 'aiInbox'
