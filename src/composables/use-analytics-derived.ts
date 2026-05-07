@@ -71,6 +71,9 @@ export function countSelectedSummaryItems(detail: SummaryDetailSection | null): 
   if (detail.kind === 'propagation') {
     return detail.items.length
   }
+  if (detail.kind === 'wikiCards') {
+    return detail.pages.length
+  }
   return detail.trends.risingDocuments.length + detail.trends.fallingDocuments.length
 }
 
