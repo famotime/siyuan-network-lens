@@ -41,6 +41,7 @@ describe('wiki template model', () => {
       'reading_order',
       'comparison',
       'misunderstandings',
+      'conflict',
     ])
     expect(WIKI_SECTION_TYPES).toEqual([
       'intro',
@@ -63,6 +64,7 @@ describe('wiki template model', () => {
       'reading_order',
       'comparison',
       'misunderstandings',
+      'conflict',
     ])
   })
 
@@ -87,6 +89,7 @@ describe('wiki template model', () => {
       | 'reading_order'
       | 'comparison'
       | 'misunderstandings'
+      | 'conflict'
     >()
     expectTypeOf<WikiTemplateDiagnosis>().toEqualTypeOf<{
       templateType: 'tech_topic' | 'product_howto' | 'social_topic' | 'media_list'

@@ -27,6 +27,7 @@ export const WIKI_OPTIONAL_SECTION_TYPES = [
   'reading_order',
   'comparison',
   'misunderstandings',
+  'conflict',
 ] as const
 export type WikiOptionalSectionType = typeof WIKI_OPTIONAL_SECTION_TYPES[number]
 
