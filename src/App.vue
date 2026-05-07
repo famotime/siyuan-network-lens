@@ -417,13 +417,20 @@ function handleIncrementalEnabledChange(value: boolean) {
 }
 
 function handleAddThemeLink(documentId: string) {
-  // TODO: implement source doc theme link suggestion
-  void documentId
+  const themePage = wikiPreview.value?.themePages?.[0]
+  if (!themePage?.themeDocumentId) {
+    return
+  }
+  toggleOrphanThemeSuggestion(documentId, themePage.themeDocumentId)
 }
 
 function handleAddTag(documentId: string) {
-  // TODO: implement source doc tag suggestion
-  void documentId
+  const themePage = wikiPreview.value?.themePages?.[0]
+  const tag = themePage?.themeName?.trim()
+  if (!tag) {
+    return
+  }
+  toggleOrphanAiTagSuggestion(documentId, tag)
 }
 const showWikiFeature = isAlphaSettingVisible('llm-wiki')
 const {
