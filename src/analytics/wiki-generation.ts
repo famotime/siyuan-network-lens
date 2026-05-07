@@ -12,6 +12,8 @@ import { buildThemeWikiPageTitle } from './wiki-page-model'
 import type { WikiScopeResult } from './wiki-scope'
 import type { PluginConfig } from '@/types/config'
 
+export type WikiDeltaStatus = 'new' | 'changed' | 'unchanged' | 'deleted'
+
 export interface WikiBundleDocumentItem {
   documentId: string
   title: string
@@ -22,6 +24,7 @@ export interface WikiBundleDocumentItem {
   secondarySourceBlocks: SourceBlockItem[]
   sourceUpdatedAt: string
   generatedAt: string
+  deltaStatus?: WikiDeltaStatus
 }
 
 export interface WikiThemeAnalysisSignals {
