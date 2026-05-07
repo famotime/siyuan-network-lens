@@ -68,6 +68,7 @@ import {
   type OrphanAiSuggestionState,
 } from '@/analytics/ai-link-suggestions'
 import {
+  buildWikiPageStorageKey,
   createAiWikiStoreFromPlugin,
   type AiWikiStore,
 } from '@/analytics/wiki-store'
@@ -645,6 +646,23 @@ export function useAnalyticsState(params: UseAnalyticsParams) {
   })
 
   const llmWikiChat = createLlmWikiChatController()
+
+  // Load wiki index when snapshot is ready and wiki is enabled
+  watch(snapshot, (snap) => {
+    if (!snap) return
+    if (!params.config.wikiEnabled || !params.config.aiEnabled || !aiWikiStore) return
+    const wikiIndexTitle = params.config.wikiIndexTitle ?? 'LLM-Wiki-Index'
+    const pageKey = buildWikiPageStorageKey({ pageType: 'index', pageTitle: wikiIndexTitle })
+    aiWikiStore.getPageRecord(pageKey).then((indexRecord) => {
+      if (indexRecord?.pageId) {
+        getBlockKramdown(indexRecord.pageId).then((result) => {
+          if (result?.kramdown) {
+            llmWiki.loadWikiPages(result.kramdown)
+          }
+        }).catch(() => {})
+      }
+    }).catch(() => {})
+  })
 
   watch(pathOptions, (options) => {
     if (options.length === 0) {
