@@ -26,6 +26,7 @@ import {
   resolveDocumentTitle as resolveTitle,
 } from './document-utils'
 import type { AiInboxResult } from './ai-inbox'
+import type { WikiIndexPage } from './wiki-index'
 import type {
   DetailSuggestion,
   SummaryCardKey,
@@ -64,6 +65,7 @@ export function buildSummaryDetailSections(params: {
   largeDocumentMetrics?: ReadonlyMap<string, LargeDocumentMetric>
   largeDocumentCardMode?: LargeDocumentCardMode
   aiInboxResult?: AiInboxResult | null
+  llmWikiPages?: WikiIndexPage[]
 }): Record<SummaryCardKey, SummaryDetailSection> {
   const filteredDocuments = filterDocumentsByTimeRange({
     documents: params.documents,
@@ -310,6 +312,13 @@ export function buildSummaryDetailSections(params: {
         isThemeDocument: themeDocumentIdSet.has(item.documentId),
         suggestions: [buildPropagationSuggestion(item)],
       })),
+    },
+    llmWiki: {
+      key: 'llmWiki',
+      title: t('analytics.summaryCards.llmWiki'),
+      description: t('analytics.summaryDetailSource.llmWikiDescription'),
+      kind: 'wikiCards',
+      pages: params.llmWikiPages ?? [],
     },
   }
 }

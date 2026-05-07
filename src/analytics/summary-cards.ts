@@ -17,6 +17,7 @@ export function buildSummaryCards(params: {
   trends?: TrendReport | null
   largeDocumentSummary?: LargeDocumentSummary
   largeDocumentCardMode?: LargeDocumentCardMode
+  llmWikiPageCount?: number
 }): SummaryCardItem[] {
   const trendCount = params.trends
     ? params.trends.risingDocuments.length + params.trends.fallingDocuments.length
@@ -108,6 +109,12 @@ export function buildSummaryCards(params: {
       label: t('analytics.summaryCards.propagationNodes'),
       value: params.report.summary.propagationCount.toString(),
       hint: t('analytics.summaryCards.highImpactRelayNodes'),
+    },
+    {
+      key: 'llmWiki',
+      label: t('analytics.summaryCards.llmWiki'),
+      value: (params.llmWikiPageCount ?? 0).toString(),
+      hint: t('analytics.summaryCards.llmWikiPagesGenerated', { count: params.llmWikiPageCount ?? 0 }),
     },
   ]
 }

@@ -551,6 +551,7 @@ describe('buildSummaryCards', () => {
       'dormant',
       'bridges',
       'propagation',
+      'llmWiki',
     ])
   })
 
