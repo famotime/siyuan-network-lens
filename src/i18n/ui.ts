@@ -1431,6 +1431,90 @@ const UI_TEXT = {
       en_US: 'This apply run: created {created} / updated {updated} / unchanged {skipped} / conflict {conflict}',
       zh_CN: '本次写回：新建 {created} / 更新 {updated} / 无变化 {skipped} / 冲突 {conflict}',
     },
+    incrementalGeneration: {
+      en_US: 'Incremental generation',
+      zh_CN: '增量生成',
+    },
+    deltaStatsTitle: {
+      en_US: 'Processing statistics',
+      zh_CN: '本次处理统计',
+    },
+    deltaNewCount: {
+      en_US: 'New documents',
+      zh_CN: '新增文档',
+    },
+    deltaChangedCount: {
+      en_US: 'Changed documents',
+      zh_CN: '变化文档',
+    },
+    deltaUnchangedCount: {
+      en_US: 'Unchanged documents',
+      zh_CN: '无变化文档',
+    },
+    deltaDeletedCount: {
+      en_US: 'Removed documents',
+      zh_CN: '已移除文档',
+    },
+    processingTime: {
+      en_US: 'Processing time',
+      zh_CN: '处理耗时',
+    },
+    sourceDocTotalCount: {
+      en_US: 'Total source documents',
+      zh_CN: '源文档总数',
+    },
+    sourceDocCardsTitle: {
+      en_US: 'Source documents',
+      zh_CN: '原始资料文档',
+    },
+    deltaStatusNew: {
+      en_US: 'New',
+      zh_CN: '新增',
+    },
+    deltaStatusChanged: {
+      en_US: 'Changed',
+      zh_CN: '变化',
+    },
+    deltaStatusUnchanged: {
+      en_US: 'Unchanged',
+      zh_CN: '无变化',
+    },
+    deltaStatusDeleted: {
+      en_US: 'Removed',
+      zh_CN: '已移除',
+    },
+    linkTypeOutbound: {
+      en_US: 'Forward link',
+      zh_CN: '正链',
+    },
+    linkTypeInbound: {
+      en_US: 'Backlink',
+      zh_CN: '反链',
+    },
+    linkTypeChild: {
+      en_US: 'Child doc',
+      zh_CN: '子文档',
+    },
+    addThemeLink: {
+      en_US: 'Add theme link',
+      zh_CN: '加主题链接',
+    },
+    addTag: {
+      en_US: 'Add tag',
+      zh_CN: '加标签',
+    },
+    weakAssociationWarning: {
+      en_US: 'Weak association with current theme',
+      zh_CN: '与当前主题关联较弱',
+    },
+    contentChangedNotice: {
+      en_US: 'Content changed, summary updated',
+      zh_CN: '内容已变更，本次总结已更新',
+    },
+    conflictSectionTitle: {
+      en_US: 'Conflicting viewpoints',
+      zh_CN: '冲突内容',
+    },
   },
   aiConfig: {
     tooltipBaseUrl: {
@@ -1791,6 +1875,14 @@ const UI_TEXT = {
       resultConflict: {
         en_US: 'conflict',
         zh_CN: '冲突',
+      },
+      conflictSectionPrompt: {
+        en_US: 'When sectionType is "conflict": Identify genuine contradictions: opposing conclusions, mutually exclusive claims, or directly conflicting recommendations on the same topic across different source documents. Do NOT classify complementary perspectives, different angles, or progressive elaboration as conflicts. Each conflict entry MUST cite at least one sourceRef. Opposing sides of the same conflict MUST reference different source documents. Use the existing sourceRefs mechanism for citation (documentId + sequential number). If no genuine conflicts exist among the source documents, return an empty blocks array.',
+        zh_CN: '当 sectionType 为 "conflict" 时：识别真正的矛盾——同一主题下不同源文档中的对立结论、互斥主张或直接冲突的建议。不要将互补视角、不同角度或递进阐述误判为冲突。每个冲突条目必须引用至少一个 sourceRef。同一冲突的对立双方必须引用不同的源文档。使用现有 sourceRefs 机制进行引用（documentId + 序号）。如果源文档间不存在真正的冲突，返回空的 blocks 数组。',
+      },
+      incrementalModePrompt: {
+        en_US: 'You are in incremental update mode. The existing wiki page content is provided as context. Preserve parts unaffected by changed documents. Update or supplement parts affected by new/changed documents. Remove references to deleted documents. Output complete updated sections (not fragments).',
+        zh_CN: '你正处于增量更新模式。现有 wiki 页面内容作为上下文提供。保留未受变化文档影响的部分。更新或补充受新增/变化文档影响的部分。移除已删除文档相关的引用和内容。输出完整的更新后章节（非片段）。',
       },
     },
     summaryCards: {
