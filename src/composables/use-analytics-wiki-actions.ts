@@ -159,6 +159,16 @@ export function createAnalyticsWikiActionsController(params: {
         )
         : new Map(sourceDocuments.map(d => [d.id, 'new' as const]))
 
+      const hasChanges = [...deltaMap.values()].some(s => s !== 'unchanged')
+      if (isIncremental && storedRecord?.sourceDocumentTimestamps && !hasChanges) {
+        const cached = params.wikiPreviewCache.value.get(request.themeDocumentId)
+        if (cached) {
+          params.wikiPreview.value = cached
+          params.notify(t('analytics.wiki.noSourceChangesUseCache'), 3000, 'info')
+          return
+        }
+      }
+
       const sourceDocumentTimestamps: Record<string, string> = {}
       for (const doc of sourceDocuments) {
         sourceDocumentTimestamps[doc.id] = doc.updated
