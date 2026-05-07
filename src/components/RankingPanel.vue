@@ -229,6 +229,10 @@
               <WikiMaintainPanel
                 v-if="isWikiPanelVisibleForCoreDocument(item.documentId)"
                 v-bind="wikiPanelProps"
+                :open-source-document="wikiPanelProps.openSourceDocument ?? (() => {})"
+                @update:incremental-enabled="(v: boolean) => emit('update:incrementalEnabled', v)"
+                @add-theme-link="(id: string) => emit('addThemeLink', id)"
+                @add-tag="(id: string) => emit('addTag', id)"
               />
             </div>
             </div>
@@ -283,6 +287,11 @@ const props = withDefaults(defineProps<{
     applyWikiChanges: (overwriteConflicts?: boolean) => void | Promise<void>
     openWikiDocument: (documentId: string) => void
     formatTimestamp: (timestamp?: string) => string
+    incrementalEnabled?: boolean
+    openSourceDocument?: (documentId: string) => void
+    onUpdateIncrementalEnabled?: (value: boolean) => void
+    onAddThemeLink?: (documentId: string) => void
+    onAddTag?: (documentId: string) => void
   }
   isWikiPanelVisibleForCoreDocument: (documentId: string) => boolean
   toggleCoreDocumentWikiPanel: (documentId: string) => void | Promise<void>
@@ -296,6 +305,12 @@ const props = withDefaults(defineProps<{
   collapsedItems: () => ({}),
   onToggleItemCollapse: undefined,
 })
+
+const emit = defineEmits<{
+  (e: 'update:incrementalEnabled', value: boolean): void
+  (e: 'addThemeLink', documentId: string): void
+  (e: 'addTag', documentId: string): void
+}>()
 
 function resolveAssociations(documentId: string): LinkAssociations {
   const associations = props.resolveLinkAssociations(documentId)

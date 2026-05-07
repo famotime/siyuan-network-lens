@@ -235,6 +235,9 @@
         :open-doc-index="openDocIndex"
         :batch-generate-doc-index="batchGenerateDocIndex"
         :batch-delete-doc-index="batchDeleteDocIndex"
+        @update:incremental-enabled="handleIncrementalEnabledChange"
+        @add-theme-link="handleAddThemeLink"
+        @add-tag="handleAddTag"
       />
     </template>
   </div>
@@ -405,7 +408,23 @@ const wikiPanelProps = computed(() => ({
   applyWikiChanges,
   openWikiDocument,
   formatTimestamp,
+  incrementalEnabled: props.config.wikiIncrementalEnabled ?? true,
+  openSourceDocument: openDocument,
 }))
+
+function handleIncrementalEnabledChange(value: boolean) {
+  props.config.wikiIncrementalEnabled = value
+}
+
+function handleAddThemeLink(documentId: string) {
+  // TODO: implement source doc theme link suggestion
+  void documentId
+}
+
+function handleAddTag(documentId: string) {
+  // TODO: implement source doc tag suggestion
+  void documentId
+}
 const showWikiFeature = isAlphaSettingVisible('llm-wiki')
 const {
   visibleSummaryCards,

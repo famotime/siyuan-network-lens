@@ -516,6 +516,9 @@
           :show-wiki-panel-actions="showWikiPanelActions"
           :collapsed-items="collapsedItems"
           :on-toggle-item-collapse="toggleItemCollapse"
+          @update:incremental-enabled="(v: boolean) => emit('update:incrementalEnabled', v)"
+          @add-theme-link="(id: string) => emit('addThemeLink', id)"
+          @add-tag="(id: string) => emit('addTag', id)"
         />
       </template>
       <template v-else-if="detail.kind === 'trends'">
@@ -823,6 +826,11 @@ const props = withDefaults(defineProps<{
     applyWikiChanges: (overwriteConflicts?: boolean) => void | Promise<void>
     openWikiDocument: (documentId: string) => void
     formatTimestamp: (timestamp?: string) => string
+    incrementalEnabled?: boolean
+    openSourceDocument?: (documentId: string) => void
+    onUpdateIncrementalEnabled?: (value: boolean) => void
+    onAddThemeLink?: (documentId: string) => void
+    onAddTag?: (documentId: string) => void
   }
   showDocumentIndex?: boolean
   generateDocIndex?: (documentId: string) => Promise<boolean>
@@ -834,6 +842,12 @@ const props = withDefaults(defineProps<{
   showWikiPanelActions: true,
   showDocumentIndex: false,
 })
+
+const emit = defineEmits<{
+  (e: 'update:incrementalEnabled', value: boolean): void
+  (e: 'addThemeLink', documentId: string): void
+  (e: 'addTag', documentId: string): void
+}>()
 
 const summaryCountLabel = computed(() => props.detail.kind === 'aiInbox'
   ? t('summaryDetail.counts.suggestions', { count: props.selectedSummaryCount })
