@@ -2946,6 +2946,124 @@ const UI_TEXT = {
       },
     },
   },
+  llmWiki: {
+    chat: {
+      startChat: {
+        en_US: 'Start chat',
+        zh_CN: '开始对话',
+      },
+      chatWithPage: {
+        en_US: 'Chat',
+        zh_CN: '对话',
+      },
+      topicMode: {
+        en_US: 'Open topic — all wiki pages',
+        zh_CN: '不限主题 — 所有 wiki 页面',
+      },
+      documentMode: {
+        en_US: 'Based on: {title}',
+        zh_CN: '基于：{title}',
+      },
+      scopeIndicator: {
+        en_US: 'Answer based on wiki page: {title}',
+        zh_CN: '基于 Wiki 页面「{title}」的回答',
+      },
+      scopeWithReferences: {
+        en_US: 'Answer based on wiki page: {title}, referencing {count} source document(s)',
+        zh_CN: '基于 Wiki 页面「{title}」的回答，参考了 {count} 篇原始文档',
+      },
+      inputPlaceholder: {
+        en_US: 'Ask a question...',
+        zh_CN: '输入问题...',
+      },
+      send: {
+        en_US: 'Send',
+        zh_CN: '发送',
+      },
+      save: {
+        en_US: 'Save Q&A',
+        zh_CN: '保存问答',
+      },
+      saved: {
+        en_US: 'Saved',
+        zh_CN: '已保存',
+      },
+      close: {
+        en_US: 'Close',
+        zh_CN: '关闭',
+      },
+      routing: {
+        en_US: 'Finding relevant wiki page...',
+        zh_CN: '正在匹配相关 Wiki 页面...',
+      },
+      thinking: {
+        en_US: 'Thinking...',
+        zh_CN: '思考中...',
+      },
+      noWikiPages: {
+        en_US: 'No wiki pages found. Generate wiki pages first.',
+        zh_CN: '未找到 Wiki 页面，请先生成 Wiki 页面。',
+      },
+    },
+    maintain: {
+      button: {
+        en_US: 'Maintain',
+        zh_CN: '维护',
+      },
+      reviewing: {
+        en_US: 'Reviewing...',
+        zh_CN: '评审中...',
+      },
+      viewDetails: {
+        en_US: 'View details',
+        zh_CN: '查看详情',
+      },
+      brokenLink: {
+        en_US: 'broken link(s)',
+        zh_CN: '失效链接',
+      },
+      outdatedSection: {
+        en_US: 'outdated section(s)',
+        zh_CN: '过时段落',
+      },
+      missingReference: {
+        en_US: 'missing reference(s)',
+        zh_CN: '缺失引用',
+      },
+      diffTitle: {
+        en_US: 'Maintenance diff preview',
+        zh_CN: '维护变更预览',
+      },
+      currentContent: {
+        en_US: 'Current content',
+        zh_CN: '当前内容',
+      },
+      suggestedContent: {
+        en_US: 'Suggested content',
+        zh_CN: '建议内容',
+      },
+      applyAll: {
+        en_US: 'Apply all',
+        zh_CN: '全部采纳',
+      },
+      applySelected: {
+        en_US: 'Apply selected',
+        zh_CN: '采纳所选',
+      },
+      cancel: {
+        en_US: 'Cancel',
+        zh_CN: '取消',
+      },
+      noSuggestions: {
+        en_US: 'No maintenance suggestions. Page is up to date.',
+        zh_CN: '无维护建议，页面内容已是最新。',
+      },
+      applied: {
+        en_US: 'Changes applied',
+        zh_CN: '变更已执行',
+      },
+    },
+  },
 } as const
 
 type DotJoin<Prefix extends string, Key extends string> = Prefix extends '' ? Key : `${Prefix}.${Key}`
