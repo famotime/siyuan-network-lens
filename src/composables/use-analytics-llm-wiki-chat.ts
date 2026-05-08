@@ -1,14 +1,6 @@
 import { ref } from 'vue'
 import type { WikiChatScope, WikiIndexPage } from '@/analytics/wiki-index'
 
-export interface WikiChatSavePayload {
-  question: string
-  answer: string
-  usedPageTitle: string
-  usedPageId: string
-  referencedDocumentIds: string[]
-}
-
 export interface LlmWikiChatController {
   chatDialogVisible: Ref<boolean>
   chatScope: Ref<WikiChatScope | null>
@@ -56,19 +48,4 @@ export function createLlmWikiChatController(): LlmWikiChatController {
     openMaintainDiff,
     closeMaintainDiff,
   }
-}
-
-export function buildChatSaveMarkdown(payload: WikiChatSavePayload): string {
-  const parts = [
-    `# ${payload.question}`,
-    '',
-    `> 基于 Wiki 页面：[${payload.usedPageTitle}](siyuan://blocks/${payload.usedPageId})`,
-  ]
-  if (payload.referencedDocumentIds.length > 0) {
-    parts.push(`> 参考原始文档：${payload.referencedDocumentIds.map(id => `[${id}](siyuan://blocks/${id})`).join('、')}`)
-  }
-  parts.push(`> 对话时间：${new Date().toLocaleString()}`)
-  parts.push('')
-  parts.push(payload.answer)
-  return parts.join('\n')
 }
