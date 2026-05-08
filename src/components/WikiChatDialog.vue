@@ -1,14 +1,7 @@
 <script setup lang="ts">
-import { ref, computed } from 'vue'
+import { ref, watch, nextTick } from 'vue'
 import type { WikiChatScope, WikiIndexPage } from '@/analytics/wiki-index'
-import { parseRouteResponse, parseChatResponse } from '@/analytics/llm-wiki-chat-service'
-import {
-  buildRouteSystemPrompt,
-  buildRouteUserPrompt,
-  buildChatSystemPrompt,
-  buildChatUserPrompt,
-} from '@/analytics/llm-wiki-chat-service'
-import type { WikiChatResult } from '@/analytics/llm-wiki-chat-service'
+import { createWikiChatSession } from '@/composables/use-wiki-chat-session'
 import { t } from '@/i18n/ui'
 
 const props = defineProps<{
@@ -23,134 +16,86 @@ const props = defineProps<{
     aiRequestTimeoutSeconds: number
     aiMaxTokens: number
     aiTemperature: number
+    aiMaxContextMessages?: number
   }
 }>()
 
 const emit = defineEmits<{
   close: []
-  save: [result: WikiChatResult & { question: string, usedPage: WikiIndexPage }]
+  save: [markdown: string]
 }>()
 
-const question = ref('')
-const loading = ref(false)
-const error = ref('')
-const chatResult = ref<(WikiChatResult & { question: string, usedPage: WikiIndexPage }) | null>(null)
-
-const dialogTitle = computed(() => {
-  if (props.scope.mode === 'topic') {
-    return t('llmWiki.chat.topicMode')
-  }
-  return t('llmWiki.chat.documentMode', { title: props.scope.targetPage?.title ?? '' })
+const {
+  session,
+  inputText,
+  mentionPopupVisible,
+  filteredPages,
+  sendMessage,
+  switchSource,
+  buildSaveMarkdown,
+} = createWikiChatSession({
+  scope: ref(props.scope),
+  wikiPages: ref(props.wikiPages),
+  forwardProxy: props.forwardProxy,
+  getBlockKramdown: props.getBlockKramdown,
+  config: ref(props.config),
 })
 
-const scopeIndicator = computed(() => {
-  if (!chatResult.value) return ''
-  const page = chatResult.value.usedPage
-  if (chatResult.value.referencedDocumentIds.length > 0) {
-    return t('llmWiki.chat.scopeWithReferences', {
-      title: page.title,
-      count: chatResult.value.referencedDocumentIds.length,
-    })
+const messagesRef = ref<HTMLElement>()
+const inputRef = ref<HTMLTextAreaElement>()
+
+// Auto-scroll to bottom on new messages
+watch(() => session.value.messages.length, async () => {
+  await nextTick()
+  if (messagesRef.value) {
+    messagesRef.value.scrollTop = messagesRef.value.scrollHeight
   }
-  return t('llmWiki.chat.scopeIndicator', { title: page.title })
 })
 
-async function sendQuestion() {
-  if (!question.value.trim() || loading.value) return
-
-  loading.value = true
-  error.value = ''
-  chatResult.value = null
-
-  try {
-    let targetPage: WikiIndexPage | undefined
-
-    if (props.scope.mode === 'topic') {
-      const pageTitles = props.wikiPages.map(p => p.title)
-      const routeResponse = await callAi(
-        buildRouteSystemPrompt(),
-        buildRouteUserPrompt({ question: question.value, pageTitles }),
-      )
-      const matchedTitle = parseRouteResponse(routeResponse)
-      const normalizedMatch = matchedTitle.toLowerCase().trim()
-      targetPage = props.wikiPages.find(
-        p => p.title.toLowerCase().trim() === normalizedMatch,
-      )
-      if (!targetPage) {
-        targetPage = props.wikiPages.find(
-          p => p.title.toLowerCase().includes(normalizedMatch)
-            || normalizedMatch.includes(p.title.toLowerCase()),
-        )
-      }
-      if (!targetPage) {
-        targetPage = props.wikiPages[0]
-      }
-    } else {
-      targetPage = props.scope.targetPage
-    }
-
-    if (!targetPage) {
-      error.value = t('llmWiki.chat.noWikiPages')
-      return
-    }
-
-    const wikiBlock = await props.getBlockKramdown(targetPage.documentId)
-    const chatResponse = await callAi(
-      buildChatSystemPrompt(),
-      buildChatUserPrompt({
-        question: question.value,
-        wikiPageTitle: targetPage.title,
-        wikiPageMarkdown: wikiBlock.kramdown,
-      }),
-    )
-    const parsed = parseChatResponse(chatResponse)
-
-    chatResult.value = {
-      ...parsed,
-      usedPageTitle: targetPage.title,
-      question: question.value,
-      usedPage: targetPage,
-    }
-  } catch (e: any) {
-    error.value = e.message ?? String(e)
-  } finally {
-    loading.value = false
+// @ mention detection on input
+function handleInput() {
+  const textarea = inputRef.value
+  if (!textarea) return
+  const cursorPos = textarea.selectionStart ?? inputText.value.length
+  const beforeCursor = inputText.value.slice(0, cursorPos)
+  const atMatch = beforeCursor.match(/@([^@\s]*)$/)
+  if (atMatch) {
+    mentionPopupVisible.value = true
+  } else {
+    mentionPopupVisible.value = false
   }
 }
 
-async function callAi(systemPrompt: string, userPrompt: string): Promise<string> {
-  const endpoint = `${props.config.aiBaseUrl.replace(/\/+$/, '')}/chat/completions`
-  const response = await props.forwardProxy(
-    endpoint,
-    'POST',
-    {
-      model: props.config.aiModel,
-      messages: [
-        { role: 'system', content: systemPrompt },
-        { role: 'user', content: userPrompt },
-      ],
-      max_tokens: props.config.aiMaxTokens,
-      temperature: props.config.aiTemperature,
-    },
-    [['Authorization', `Bearer ${props.config.aiApiKey}`]],
-    props.config.aiRequestTimeoutSeconds * 1000,
-    'application/json',
-  )
-  const body = typeof response.body === 'string' ? JSON.parse(response.body) : response.body
-  return body.choices?.[0]?.message?.content ?? ''
+function handleKeydown(e: KeyboardEvent) {
+  if (e.key === 'Enter' && !e.shiftKey) {
+    e.preventDefault()
+    sendMessage()
+  }
 }
 
-function saveResult() {
-  if (chatResult.value) {
-    emit('save', chatResult.value)
+function selectMention(page: WikiIndexPage) {
+  switchSource(page)
+  inputRef.value?.focus()
+}
+
+function handleSave() {
+  const md = buildSaveMarkdown()
+  if (md) {
+    emit('save', md)
   }
+}
+
+function formatTime(ts: number): string {
+  const d = new Date(ts)
+  return `${d.getHours().toString().padStart(2, '0')}:${d.getMinutes().toString().padStart(2, '0')}`
 }
 </script>
 
 <template>
   <div class="wiki-chat-dialog">
+    <!-- Header -->
     <div class="wiki-chat-dialog__header">
-      <h3>{{ dialogTitle }}</h3>
+      <h3>{{ t('llmWiki.chat.chatTitle') }}</h3>
       <button
         class="ghost-button"
         @click="emit('close')"
@@ -158,52 +103,142 @@ function saveResult() {
         {{ t('llmWiki.chat.close') }}
       </button>
     </div>
-    <div class="wiki-chat-dialog__body">
-      <div class="wiki-chat-dialog__input-row">
-        <input
-          v-model="question"
-          :placeholder="t('llmWiki.chat.inputPlaceholder')"
-          :disabled="loading"
-          @keyup.enter="sendQuestion"
-        >
-        <button
-          class="action-button"
-          :disabled="loading || !question.trim()"
-          @click="sendQuestion"
-        >
-          {{ loading ? t('llmWiki.chat.thinking') : t('llmWiki.chat.send') }}
-        </button>
-      </div>
+
+    <!-- Source Bar -->
+    <div class="wiki-chat-dialog__source-bar">
+      <span class="wiki-chat-dialog__source-tag">
+        {{ t('llmWiki.chat.sourceLabel') }}
+      </span>
+      <span class="wiki-chat-dialog__source-title">
+        {{ session.currentSourcePage?.title ?? t('llmWiki.chat.autoMatching') }}
+      </span>
+    </div>
+
+    <!-- Messages -->
+    <div
+      ref="messagesRef"
+      class="wiki-chat-dialog__messages"
+    >
       <div
-        v-if="error"
+        v-for="msg in session.messages"
+        :key="msg.id"
+      >
+        <!-- System hint -->
+        <div
+          v-if="msg.role === 'system'"
+          class="wiki-chat-dialog__system-hint"
+        >
+          {{ msg.content }}
+        </div>
+
+        <!-- User bubble -->
+        <div
+          v-else-if="msg.role === 'user'"
+          class="wiki-chat-dialog__bubble wiki-chat-dialog__bubble--user"
+        >
+          <div class="wiki-chat-dialog__avatar wiki-chat-dialog__avatar--user">
+            &#x1f464;
+          </div>
+          <div class="wiki-chat-dialog__bubble-body">
+            <div class="wiki-chat-dialog__bubble-content wiki-chat-dialog__bubble-content--user">
+              {{ msg.content }}
+            </div>
+            <div class="wiki-chat-dialog__bubble-time">
+              {{ formatTime(msg.timestamp) }}
+            </div>
+          </div>
+        </div>
+
+        <!-- Assistant bubble -->
+        <div
+          v-else
+          class="wiki-chat-dialog__bubble wiki-chat-dialog__bubble--assistant"
+        >
+          <div class="wiki-chat-dialog__avatar wiki-chat-dialog__avatar--assistant">
+            &#x1f916;
+          </div>
+          <div class="wiki-chat-dialog__bubble-body">
+            <div class="wiki-chat-dialog__bubble-content wiki-chat-dialog__bubble-content--assistant">
+              {{ msg.content }}
+            </div>
+            <div class="wiki-chat-dialog__bubble-meta">
+              <span>{{ formatTime(msg.timestamp) }}</span>
+              <span
+                v-if="msg.sourcePage"
+                class="wiki-chat-dialog__source-badge"
+              >
+                &#x1f4c4; {{ msg.sourcePage.title }}
+              </span>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Loading indicator -->
+      <div
+        v-if="session.isLoading"
+        class="wiki-chat-dialog__system-hint"
+      >
+        {{ t('llmWiki.chat.thinking') }}
+      </div>
+
+      <!-- Error -->
+      <div
+        v-if="session.error"
         class="wiki-chat-dialog__error"
       >
-        {{ error }}
-      </div>
-      <div
-        v-if="chatResult"
-        class="wiki-chat-dialog__result"
-      >
-        <div class="wiki-chat-dialog__scope">
-          {{ scopeIndicator }}
-        </div>
-        <div class="wiki-chat-dialog__question">
-          {{ chatResult.question }}
-        </div>
-        <div class="wiki-chat-dialog__answer">
-          {{ chatResult.answer }}
-        </div>
+        {{ session.error }}
       </div>
     </div>
+
+    <!-- @ Mention Popup -->
     <div
-      v-if="chatResult"
+      v-if="mentionPopupVisible && filteredPages.length > 0"
+      class="wiki-chat-dialog__mention-popup"
+    >
+      <div class="wiki-chat-dialog__mention-header">
+        {{ t('llmWiki.chat.mentionPlaceholder') }}
+      </div>
+      <div
+        v-for="page in filteredPages"
+        :key="page.documentId"
+        class="wiki-chat-dialog__mention-item"
+        @mousedown.prevent="selectMention(page)"
+      >
+        &#x1f4c4; {{ page.title }}
+      </div>
+    </div>
+
+    <!-- Input Area -->
+    <div class="wiki-chat-dialog__input-area">
+      <textarea
+        ref="inputRef"
+        v-model="inputText"
+        :placeholder="t('llmWiki.chat.inputWithMentionHint')"
+        :disabled="session.isLoading"
+        rows="1"
+        @input="handleInput"
+        @keydown="handleKeydown"
+      />
+      <button
+        class="wiki-chat-dialog__send-btn"
+        :disabled="session.isLoading || !inputText.trim()"
+        @click="sendMessage"
+      >
+        &#x27a4;
+      </button>
+    </div>
+
+    <!-- Footer -->
+    <div
+      v-if="session.messages.some(m => m.role === 'assistant')"
       class="wiki-chat-dialog__footer"
     >
       <button
         class="action-button"
-        @click="saveResult"
+        @click="handleSave"
       >
-        {{ t('llmWiki.chat.save') }}
+        {{ t('llmWiki.chat.saveConversation') }}
       </button>
     </div>
   </div>
@@ -215,70 +250,234 @@ function saveResult() {
   top: 50%;
   left: 50%;
   transform: translate(-50%, -50%);
-  width: 560px;
+  width: 520px;
   max-height: 80vh;
   background: var(--b3-theme-surface);
   border: 1px solid var(--b3-border-color);
-  border-radius: 8px;
+  border-radius: 12px;
   box-shadow: 0 4px 24px rgba(0, 0, 0, 0.15);
   display: flex;
   flex-direction: column;
   z-index: 1000;
+  overflow: hidden;
 }
+
+/* Header */
 .wiki-chat-dialog__header {
   display: flex;
   justify-content: space-between;
   align-items: center;
   padding: 12px 16px;
+  background: var(--b3-theme-background);
   border-bottom: 1px solid var(--b3-border-color);
 }
 .wiki-chat-dialog__header h3 {
   margin: 0;
   font-size: 1em;
 }
-.wiki-chat-dialog__body {
+
+/* Source Bar */
+.wiki-chat-dialog__source-bar {
+  padding: 6px 16px;
+  background: var(--b3-theme-surface-light);
+  border-bottom: 1px solid var(--b3-border-color);
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 12px;
+}
+.wiki-chat-dialog__source-tag {
+  background: var(--b3-theme-primary);
+  color: var(--b3-theme-on-primary, #fff);
+  padding: 2px 8px;
+  border-radius: 10px;
+  font-size: 11px;
+  font-weight: 500;
+}
+.wiki-chat-dialog__source-title {
+  color: var(--b3-theme-on-surface-light);
+  font-weight: 500;
+}
+
+/* Messages */
+.wiki-chat-dialog__messages {
   flex: 1;
   overflow-y: auto;
   padding: 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  min-height: 200px;
 }
-.wiki-chat-dialog__input-row {
+
+/* System hint */
+.wiki-chat-dialog__system-hint {
+  text-align: center;
+  font-size: 11px;
+  color: var(--b3-theme-on-surface-light);
+  padding: 4px 0;
+}
+
+/* Bubble base */
+.wiki-chat-dialog__bubble {
   display: flex;
   gap: 8px;
-  margin-bottom: 12px;
 }
-.wiki-chat-dialog__input-row input {
-  flex: 1;
-  padding: 8px;
-  border: 1px solid var(--b3-border-color);
-  border-radius: 4px;
+.wiki-chat-dialog__bubble--user {
+  flex-direction: row-reverse;
 }
-.wiki-chat-dialog__input-row .action-button {
-  min-width: auto;
-  padding: 8px 16px;
+
+/* Avatar */
+.wiki-chat-dialog__avatar {
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 14px;
+  flex-shrink: 0;
 }
+.wiki-chat-dialog__avatar--user {
+  background: var(--b3-theme-primary);
+  color: var(--b3-theme-on-primary, #fff);
+}
+.wiki-chat-dialog__avatar--assistant {
+  background: var(--b3-theme-success);
+  color: var(--b3-theme-on-primary, #fff);
+}
+
+/* Bubble body */
+.wiki-chat-dialog__bubble-body {
+  max-width: 75%;
+}
+.wiki-chat-dialog__bubble--user .wiki-chat-dialog__bubble-body {
+  text-align: right;
+}
+
+/* Bubble content */
+.wiki-chat-dialog__bubble-content {
+  padding: 10px 14px;
+  border-radius: 16px;
+  font-size: 13px;
+  line-height: 1.6;
+  display: inline-block;
+  text-align: left;
+  word-break: break-word;
+}
+.wiki-chat-dialog__bubble-content--user {
+  background: var(--b3-theme-primary-lightest);
+  color: var(--b3-theme-on-surface);
+  border-radius: 16px 16px 4px 16px;
+}
+.wiki-chat-dialog__bubble-content--assistant {
+  background: var(--b3-theme-surface-light);
+  color: var(--b3-theme-on-surface);
+  border-radius: 16px 16px 16px 4px;
+}
+
+/* Bubble meta */
+.wiki-chat-dialog__bubble-time {
+  font-size: 10px;
+  color: var(--b3-theme-on-surface-light);
+  margin-top: 4px;
+}
+.wiki-chat-dialog__bubble-meta {
+  font-size: 10px;
+  color: var(--b3-theme-on-surface-light);
+  margin-top: 4px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.wiki-chat-dialog__source-badge {
+  background: var(--b3-theme-success);
+  color: var(--b3-theme-on-primary, #fff);
+  padding: 1px 6px;
+  border-radius: 6px;
+  font-size: 10px;
+}
+
+/* Error */
 .wiki-chat-dialog__error {
   color: var(--b3-theme-error);
+  text-align: center;
+  font-size: 12px;
   padding: 8px;
-  margin-bottom: 8px;
 }
-.wiki-chat-dialog__result {
-  margin-top: 8px;
+
+/* Mention Popup */
+.wiki-chat-dialog__mention-popup {
+  margin: 0 16px;
+  background: var(--b3-theme-surface);
+  border: 1px solid var(--b3-border-color);
+  border-radius: 8px;
+  overflow: hidden;
+  font-size: 12px;
 }
-.wiki-chat-dialog__scope {
-  font-size: 0.85em;
+.wiki-chat-dialog__mention-header {
+  padding: 6px 12px;
   color: var(--b3-theme-on-surface-light);
-  padding: 6px 8px;
+  font-size: 11px;
+  border-bottom: 1px solid var(--b3-border-color);
+}
+.wiki-chat-dialog__mention-item {
+  padding: 8px 12px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.wiki-chat-dialog__mention-item:hover {
   background: var(--b3-theme-surface-light);
-  border-radius: 4px;
-  margin-bottom: 8px;
 }
-.wiki-chat-dialog__question {
-  font-weight: 600;
-  margin-bottom: 8px;
+
+/* Input Area */
+.wiki-chat-dialog__input-area {
+  padding: 12px 16px;
+  background: var(--b3-theme-background);
+  border-top: 1px solid var(--b3-border-color);
+  display: flex;
+  gap: 8px;
+  align-items: flex-end;
 }
-.wiki-chat-dialog__answer {
-  line-height: 1.6;
+.wiki-chat-dialog__input-area textarea {
+  flex: 1;
+  background: var(--b3-theme-surface-light);
+  border: 1px solid var(--b3-border-color);
+  border-radius: 20px;
+  padding: 10px 16px;
+  font-size: 13px;
+  color: var(--b3-theme-on-surface);
+  resize: none;
+  font-family: inherit;
+  line-height: 1.4;
+  min-height: 20px;
+  max-height: 100px;
 }
+.wiki-chat-dialog__input-area textarea::placeholder {
+  color: var(--b3-theme-on-surface-light);
+}
+.wiki-chat-dialog__send-btn {
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  background: var(--b3-theme-primary);
+  color: var(--b3-theme-on-primary, #fff);
+  border: 0;
+  cursor: pointer;
+  font-size: 16px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+.wiki-chat-dialog__send-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+/* Footer */
 .wiki-chat-dialog__footer {
   padding: 12px 16px;
   border-top: 1px solid var(--b3-border-color);
@@ -306,13 +505,8 @@ function saveResult() {
   color: var(--b3-theme-on-primary, #fff);
   box-shadow: 0 2px 6px color-mix(in srgb, var(--b3-theme-primary) 30%, transparent);
 }
-.action-button:disabled,
-.ghost-button:disabled {
-  opacity: 0.5;
-  cursor: not-allowed;
-}
 .ghost-button {
-  min-width: 108px;
+  min-width: auto;
   padding: 6px 12px;
   border-radius: 999px;
   background: color-mix(in srgb, var(--b3-theme-primary) 8%, transparent);
