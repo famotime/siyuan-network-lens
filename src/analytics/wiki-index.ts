@@ -20,6 +20,11 @@ export interface WikiIndexPage {
   themeDocumentTitle?: string
   summary?: string
   maintenanceState?: WikiMaintenanceState
+  inboundReferences?: number
+  outboundReferences?: number
+  childDocumentCount?: number
+  createdAt?: string
+  updatedAt?: string
 }
 
 export interface WikiChatScope {
@@ -57,6 +62,9 @@ export function parseWikiIndexPages(params: {
     if (seen.has(id)) {
       continue
     }
+    if (params.wikiPageSuffix && !title.endsWith(params.wikiPageSuffix)) {
+      continue
+    }
     seen.add(id)
     pages.push({
       documentId: id,
@@ -71,6 +79,9 @@ export function parseWikiIndexPages(params: {
     if (seen.has(id)) {
       continue
     }
+    if (params.wikiPageSuffix && !title.endsWith(params.wikiPageSuffix)) {
+      continue
+    }
     seen.add(id)
     pages.push({
       documentId: id,
@@ -82,6 +93,9 @@ export function parseWikiIndexPages(params: {
   for (const match of params.kramdown.matchAll(SIYUAN_BLOCK_URL_PATTERN)) {
     const id = match[1]
     if (seen.has(id)) {
+      continue
+    }
+    if (params.wikiPageSuffix && !id.endsWith(params.wikiPageSuffix)) {
       continue
     }
     seen.add(id)

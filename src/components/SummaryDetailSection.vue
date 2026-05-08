@@ -719,6 +719,8 @@
       <template v-else-if="detail.kind === 'wikiCards'">
         <WikiCardsSection
           :pages="detail.pages"
+          :open-document="openDocument"
+          :format-timestamp="formatTimestamp"
           @open-chat="(scope: WikiChatScope) => emit('openWikiChat', scope)"
           @maintain="(page: WikiIndexPage) => emit('maintainWikiPage', page)"
         />

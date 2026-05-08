@@ -129,6 +129,10 @@ const UI_TEXT = {
       en_US: 'Topic doc',
       zh_CN: '主题文档',
     },
+    llmWikiDoc: {
+      en_US: 'LLM Wiki',
+      zh_CN: 'LLM Wiki',
+    },
     dormantThreshold: {
       en_US: 'Dormant threshold',
       zh_CN: '沉没阈值',

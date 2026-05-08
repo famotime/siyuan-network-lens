@@ -25,6 +25,7 @@ import {
   normalizeTags,
   resolveDocumentTitle as resolveTitle,
 } from './document-utils'
+import { isChildPath } from './analysis-context'
 import type { AiInboxResult } from './ai-inbox'
 import type { WikiIndexPage } from './wiki-index'
 import type {
@@ -318,7 +319,7 @@ export function buildSummaryDetailSections(params: {
       title: t('analytics.summaryCards.llmWiki'),
       description: t('analytics.summaryDetailSource.llmWikiDescription'),
       kind: 'wikiCards',
-      pages: params.llmWikiPages ?? [],
+      pages: buildEnrichedWikiPages(params.llmWikiPages ?? [], filteredDocuments, params.references, documentMap),
     },
   }
 }
@@ -482,6 +483,57 @@ function buildActiveDocumentCounts(references: ReferenceRecord[]): Map<string, {
     counts.set(documentId, existing)
   }
 
+  return counts
+}
+
+function buildEnrichedWikiPages(
+  pages: WikiIndexPage[],
+  documents: DocumentRecord[],
+  references: ReferenceRecord[],
+  documentMap: Map<string, DocumentRecord>,
+): WikiIndexPage[] {
+  const wikiIdSet = new Set(pages.map(page => page.documentId))
+
+  const inboundCounts = new Map<string, number>()
+  const outboundCounts = new Map<string, number>()
+  for (const ref of references) {
+    if (wikiIdSet.has(ref.targetDocumentId)) {
+      inboundCounts.set(ref.targetDocumentId, (inboundCounts.get(ref.targetDocumentId) ?? 0) + 1)
+    }
+    if (wikiIdSet.has(ref.sourceDocumentId)) {
+      outboundCounts.set(ref.sourceDocumentId, (outboundCounts.get(ref.sourceDocumentId) ?? 0) + 1)
+    }
+  }
+
+  const childCounts = buildChildCountMapForWiki(pages, documents)
+
+  return pages.map(page => ({
+    ...page,
+    inboundReferences: inboundCounts.get(page.documentId) ?? 0,
+    outboundReferences: outboundCounts.get(page.documentId) ?? 0,
+    childDocumentCount: childCounts.get(page.documentId) ?? 0,
+    createdAt: documentMap.get(page.documentId)?.created ?? '',
+    updatedAt: documentMap.get(page.documentId)?.updated ?? '',
+  }))
+}
+
+function buildChildCountMapForWiki(
+  pages: WikiIndexPage[],
+  documents: DocumentRecord[],
+): Map<string, number> {
+  const docMap = new Map(documents.map(doc => [doc.id, doc]))
+  const counts = new Map<string, number>()
+  for (const page of pages) {
+    const parent = docMap.get(page.documentId)
+    if (!parent?.path) continue
+    let count = 0
+    for (const doc of documents) {
+      if (doc.id === parent.id) continue
+      if (doc.box !== parent.box) continue
+      if (isChildPath(parent.path, doc.path)) count++
+    }
+    counts.set(page.documentId, count)
+  }
   return counts
 }
 

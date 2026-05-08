@@ -8,7 +8,13 @@
       {{ title }}
     </button>
     <span
-      v-if="isThemeDocument"
+      v-if="marker"
+      class="document-title__marker"
+    >
+      {{ marker }}
+    </span>
+    <span
+      v-else-if="isThemeDocument"
       class="document-title__marker"
     >
       {{ t('shared.topicDoc') }}
@@ -26,9 +32,11 @@ const props = withDefaults(defineProps<{
   openDocument: (documentId: string) => void
   isThemeDocument?: boolean
   variant?: 'default' | 'compact'
+  marker?: string
 }>(), {
   isThemeDocument: false,
   variant: 'default',
+  marker: '',
 })
 
 const buttonClass = computed(() => {

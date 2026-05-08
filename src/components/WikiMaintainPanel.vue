@@ -195,8 +195,24 @@
       </div>
 
       <div v-if="preview?.sourceDocMetas?.length" class="wiki-panel__source-cards">
-        <h4>{{ t('wikiMaintain.sourceDocCardsTitle') }}</h4>
-        <div class="wiki-panel__source-card-list">
+        <div class="wiki-panel__source-cards-header">
+          <h4>{{ t('wikiMaintain.sourceDocCardsTitle') }}</h4>
+          <button
+            :class="['wiki-panel__collapse-toggle', { 'wiki-panel__collapse-toggle--expanded': !sourceCardsCollapsed }]"
+            type="button"
+            :aria-expanded="!sourceCardsCollapsed"
+            @click="sourceCardsCollapsed = !sourceCardsCollapsed"
+          >
+            <span
+              class="wiki-panel__collapse-caret"
+              aria-hidden="true"
+            />
+          </button>
+        </div>
+        <div
+          v-show="!sourceCardsCollapsed"
+          class="wiki-panel__source-card-list"
+        >
           <article
             v-for="meta in sortedSourceDocMetas"
             :key="meta.documentId"
@@ -312,6 +328,7 @@ const emit = defineEmits<{
 
 const allowOverwriteConflicts = ref(false)
 const detailPage = ref<WikiPreviewState['themePages'][number] | null>(null)
+const sourceCardsCollapsed = ref(true)
 
 const incrementalEnabled = computed({
   get: () => props.incrementalEnabled ?? true,
@@ -850,9 +867,48 @@ function formatProcessingTime(ms: number): string {
   gap: 10px;
 }
 
-.wiki-panel__source-cards h4 {
+.wiki-panel__source-cards-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.wiki-panel__source-cards-header h4 {
   margin: 0;
   font-size: 14px;
+}
+
+.wiki-panel__collapse-toggle {
+  width: 28px;
+  height: 28px;
+  border: 0;
+  border-radius: 999px;
+  background: transparent;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0;
+  flex-shrink: 0;
+  transition: background-color 0.2s;
+}
+
+.wiki-panel__collapse-toggle:hover {
+  background: color-mix(in srgb, var(--b3-theme-on-background) 8%, transparent);
+}
+
+.wiki-panel__collapse-caret {
+  width: 6px;
+  height: 6px;
+  border-right: 1.5px solid color-mix(in srgb, var(--b3-theme-on-background) 60%, transparent);
+  border-bottom: 1.5px solid color-mix(in srgb, var(--b3-theme-on-background) 60%, transparent);
+  transform: rotate(-45deg);
+  transition: transform 0.2s ease;
+}
+
+.wiki-panel__collapse-toggle--expanded .wiki-panel__collapse-caret {
+  transform: rotate(45deg);
 }
 
 .wiki-panel__source-card-list {
