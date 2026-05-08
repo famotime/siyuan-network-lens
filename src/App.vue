@@ -257,6 +257,7 @@
         aiMaxTokens: props.config.aiMaxTokens ?? 4096,
         aiTemperature: props.config.aiTemperature ?? 0.7,
         aiMaxContextMessages: props.config.aiMaxContextMessages ?? 1,
+        enableConsoleLogging: props.config.enableConsoleLogging ?? false,
       }"
       @close="closeLlmWikiChat"
       @save="handleLlmWikiChatSave"

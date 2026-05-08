@@ -10,6 +10,7 @@ import {
   parseChatResponse,
 } from '@/analytics/llm-wiki-chat-service'
 import { t } from '@/i18n/ui'
+import type { PluginLogger } from '@/utils/plugin-logger'
 
 export interface ChatMessage {
   id: string
@@ -46,6 +47,7 @@ export interface WikiChatSessionOptions {
     aiTemperature: number
     aiMaxContextMessages?: number
   }>
+  logger?: PluginLogger
 }
 
 export interface WikiChatSessionController {
@@ -66,7 +68,7 @@ function nextMessageId(): string {
 }
 
 export function createWikiChatSession(options: WikiChatSessionOptions): WikiChatSessionController {
-  const { scope, wikiPages, forwardProxy, getBlockKramdown, config } = options
+  const { scope, wikiPages, forwardProxy, getBlockKramdown, config, logger } = options
 
   const initialSourcePage = scope.value.mode === 'document' ? scope.value.targetPage ?? null : null
 
@@ -146,6 +148,13 @@ export function createWikiChatSession(options: WikiChatSessionOptions): WikiChat
     inputText.value = ''
     session.value.error = null
 
+    const currentSource = session.value.currentSourcePage
+    logger?.log('[WikiChat] sendMessage', {
+      message: cleanText.slice(0, 100),
+      currentSource: currentSource?.title ?? null,
+      needRouting: !currentSource,
+    })
+
     try {
       // 3. Route if needed (first message in topic mode)
       if (!session.value.currentSourcePage) {
@@ -160,10 +169,12 @@ export function createWikiChatSession(options: WikiChatSessionOptions): WikiChat
         session.value.isRouting = true
 
         const pageTitles = wikiPages.value.map(p => p.title)
+        logger?.log('[WikiChat] routing: calling AI', { question: cleanText, pageTitles })
         const routeResponse = await callAiEndpoint(
           buildRouteSystemPrompt(),
           buildRouteUserPrompt({ question: cleanText, pageTitles }),
         )
+        logger?.log('[WikiChat] routing: AI returned', { raw: routeResponse.slice(0, 200) })
         const matchedTitle = parseRouteResponse(routeResponse)
         const normalizedMatch = matchedTitle.toLowerCase().trim()
         let targetPage = wikiPages.value.find(
@@ -181,6 +192,7 @@ export function createWikiChatSession(options: WikiChatSessionOptions): WikiChat
 
         session.value.currentSourcePage = targetPage ?? null
         session.value.isRouting = false
+        logger?.log('[WikiChat] routing: matched page', { title: targetPage?.title ?? 'none' })
 
         // Update routing message to confirmed
         const routingMsg = session.value.messages.find(m => m.id === routingMsgId)
@@ -197,6 +209,10 @@ export function createWikiChatSession(options: WikiChatSessionOptions): WikiChat
 
       // 4. Fetch wiki page content
       const wikiBlock = await getBlockKramdown(session.value.currentSourcePage.documentId)
+      logger?.log('[WikiChat] wiki content fetched', {
+        docId: session.value.currentSourcePage.documentId,
+        kramdownLength: wikiBlock.kramdown?.length ?? 0,
+      })
 
       // 5. Build context messages
       const maxContext = config.value.aiMaxContextMessages ?? 1
@@ -217,6 +233,11 @@ export function createWikiChatSession(options: WikiChatSessionOptions): WikiChat
       // 6. Call AI
       session.value.isLoading = true
       const endpoint = `${config.value.aiBaseUrl.replace(/\/+$/, '')}/chat/completions`
+      logger?.log('[WikiChat] chat: calling AI', {
+        endpoint,
+        model: config.value.aiModel,
+        messageCount: contextMessages.length,
+      })
       const response = await forwardProxy(
         endpoint,
         'POST',
@@ -230,11 +251,22 @@ export function createWikiChatSession(options: WikiChatSessionOptions): WikiChat
         config.value.aiRequestTimeoutSeconds * 1000,
         'application/json',
       )
+      logger?.log('[WikiChat] chat: response received', {
+        bodyType: typeof response?.body,
+        bodyPreview: typeof response?.body === 'string'
+          ? response.body.slice(0, 200)
+          : JSON.stringify(response?.body).slice(0, 200),
+      })
       const body = typeof response.body === 'string' ? JSON.parse(response.body) : response.body
       const aiContent = body.choices?.[0]?.message?.content ?? ''
+      logger?.log('[WikiChat] chat: AI content', { content: aiContent.slice(0, 200) })
 
       // 7. Parse and push assistant message
       const parsed = parseChatResponse(aiContent)
+      logger?.log('[WikiChat] chat: parsed answer', {
+        answer: parsed.answer.slice(0, 100),
+        refCount: parsed.referencedDocumentIds.length,
+      })
       session.value.messages.push({
         id: nextMessageId(),
         role: 'assistant',
@@ -244,6 +276,7 @@ export function createWikiChatSession(options: WikiChatSessionOptions): WikiChat
         referencedDocumentIds: parsed.referencedDocumentIds,
       })
     } catch (e: any) {
+      logger?.error('[WikiChat] sendMessage error:', e.message ?? String(e))
       session.value.error = e.message ?? String(e)
     } finally {
       session.value.isLoading = false
@@ -252,6 +285,7 @@ export function createWikiChatSession(options: WikiChatSessionOptions): WikiChat
 
   async function callAiEndpoint(systemPrompt: string, userPrompt: string): Promise<string> {
     const endpoint = `${config.value.aiBaseUrl.replace(/\/+$/, '')}/chat/completions`
+    logger?.log('[WikiChat] callAiEndpoint', { url: endpoint, model: config.value.aiModel })
     const response = await forwardProxy(
       endpoint,
       'POST',
@@ -268,8 +302,21 @@ export function createWikiChatSession(options: WikiChatSessionOptions): WikiChat
       config.value.aiRequestTimeoutSeconds * 1000,
       'application/json',
     )
+    logger?.log('[WikiChat] callAiEndpoint response', {
+      bodyType: typeof response?.body,
+      bodyPreview: typeof response?.body === 'string'
+        ? response.body.slice(0, 200)
+        : JSON.stringify(response?.body).slice(0, 200),
+    })
     const body = typeof response.body === 'string' ? JSON.parse(response.body) : response.body
-    return body.choices?.[0]?.message?.content ?? ''
+    if (body.error) {
+      const errMsg = body.error.message ?? JSON.stringify(body.error)
+      logger?.error('[WikiChat] callAiEndpoint API error:', errMsg)
+      throw new Error(`AI API Error: ${errMsg}`)
+    }
+    const content = body.choices?.[0]?.message?.content ?? ''
+    logger?.log('[WikiChat] callAiEndpoint content', { content: content.slice(0, 200) })
+    return content
   }
 
   function resetSession() {

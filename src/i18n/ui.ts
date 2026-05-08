@@ -3020,6 +3020,10 @@ const UI_TEXT = {
         en_US: 'Matching best wiki page...',
         zh_CN: '正在匹配最佳 Wiki 页面...',
       },
+      sourcePending: {
+        en_US: 'Send a message to start',
+        zh_CN: '发送消息后自动匹配',
+      },
       sourceConfirmed: {
         en_US: 'Source: {title}',
         zh_CN: '答复来源: {title}',

@@ -2,6 +2,7 @@
 import { ref, watch, nextTick } from 'vue'
 import type { WikiChatScope, WikiIndexPage } from '@/analytics/wiki-index'
 import { createWikiChatSession } from '@/composables/use-wiki-chat-session'
+import { createPluginLogger } from '@/utils/plugin-logger'
 import { t } from '@/i18n/ui'
 
 const props = defineProps<{
@@ -17,6 +18,7 @@ const props = defineProps<{
     aiMaxTokens: number
     aiTemperature: number
     aiMaxContextMessages?: number
+    enableConsoleLogging?: boolean
   }
 }>()
 
@@ -24,6 +26,8 @@ const emit = defineEmits<{
   close: []
   save: [markdown: string]
 }>()
+
+const logger = createPluginLogger(() => props.config.enableConsoleLogging === true)
 
 const {
   session,
@@ -39,10 +43,12 @@ const {
   forwardProxy: props.forwardProxy,
   getBlockKramdown: props.getBlockKramdown,
   config: ref(props.config),
+  logger,
 })
 
 const messagesRef = ref<HTMLElement>()
 const inputRef = ref<HTMLTextAreaElement>()
+const mentionSelectedIndex = ref(0)
 
 // Auto-scroll to bottom on new messages
 watch(() => session.value.messages.length, async () => {
@@ -50,6 +56,11 @@ watch(() => session.value.messages.length, async () => {
   if (messagesRef.value) {
     messagesRef.value.scrollTop = messagesRef.value.scrollHeight
   }
+})
+
+// Reset mention selection when filter changes
+watch(() => filteredPages.value.length, () => {
+  mentionSelectedIndex.value = 0
 })
 
 // @ mention detection on input
@@ -67,6 +78,26 @@ function handleInput() {
 }
 
 function handleKeydown(e: KeyboardEvent) {
+  if (mentionPopupVisible.value && filteredPages.value.length > 0) {
+    if (e.key === 'ArrowDown') {
+      e.preventDefault()
+      mentionSelectedIndex.value = Math.min(filteredPages.value.length - 1, mentionSelectedIndex.value + 1)
+      return
+    }
+    if (e.key === 'ArrowUp') {
+      e.preventDefault()
+      mentionSelectedIndex.value = Math.max(0, mentionSelectedIndex.value - 1)
+      return
+    }
+    if (e.key === 'Enter') {
+      e.preventDefault()
+      const page = filteredPages.value[mentionSelectedIndex.value]
+      if (page) {
+        selectMention(page)
+      }
+      return
+    }
+  }
   if (e.key === 'Enter' && !e.shiftKey) {
     e.preventDefault()
     sendMessage()
@@ -75,6 +106,7 @@ function handleKeydown(e: KeyboardEvent) {
 
 function selectMention(page: WikiIndexPage) {
   switchSource(page)
+  mentionSelectedIndex.value = 0
   inputRef.value?.focus()
 }
 
@@ -110,7 +142,7 @@ function formatTime(ts: number): string {
         {{ t('llmWiki.chat.sourceLabel') }}
       </span>
       <span class="wiki-chat-dialog__source-title">
-        {{ session.currentSourcePage?.title ?? t('llmWiki.chat.autoMatching') }}
+        {{ session.currentSourcePage?.title ?? t('llmWiki.chat.sourcePending') }}
       </span>
     </div>
 
@@ -200,9 +232,10 @@ function formatTime(ts: number): string {
         {{ t('llmWiki.chat.mentionPlaceholder') }}
       </div>
       <div
-        v-for="page in filteredPages"
+        v-for="(page, index) in filteredPages"
         :key="page.documentId"
         class="wiki-chat-dialog__mention-item"
+        :class="{ 'wiki-chat-dialog__mention-item--active': index === mentionSelectedIndex }"
         @mousedown.prevent="selectMention(page)"
       >
         &#x1f4c4; {{ page.title }}
@@ -430,6 +463,9 @@ function formatTime(ts: number): string {
 }
 .wiki-chat-dialog__mention-item:hover {
   background: var(--b3-theme-surface-light);
+}
+.wiki-chat-dialog__mention-item--active {
+  background: var(--b3-theme-primary-lightest);
 }
 
 /* Input Area */
