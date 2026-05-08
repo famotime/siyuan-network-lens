@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref, watch, nextTick } from 'vue'
+import { ref, watch, nextTick, onMounted, onBeforeUnmount } from 'vue'
 import type { WikiChatScope, WikiIndexPage } from '@/analytics/wiki-index'
 import { createWikiChatSession } from '@/composables/use-wiki-chat-session'
 import { createPluginLogger } from '@/utils/plugin-logger'
@@ -121,12 +121,119 @@ function formatTime(ts: number): string {
   const d = new Date(ts)
   return `${d.getHours().toString().padStart(2, '0')}:${d.getMinutes().toString().padStart(2, '0')}`
 }
+
+// --- Drag-to-move & Resize ---
+const DIALOG_MIN_WIDTH = 360
+const DIALOG_MIN_HEIGHT = 300
+const DIALOG_DEFAULT_WIDTH = 520
+
+const dialogWidth = ref(DIALOG_DEFAULT_WIDTH)
+const dialogHeight = ref(0)
+const dialogTop = ref(0)
+const dialogLeft = ref(0)
+const isPositioned = ref(false)
+
+function centerDialog() {
+  dialogWidth.value = DIALOG_DEFAULT_WIDTH
+  dialogHeight.value = 0
+  dialogLeft.value = Math.max(0, (window.innerWidth - DIALOG_DEFAULT_WIDTH) / 2)
+  dialogTop.value = Math.max(0, (window.innerHeight - 600) / 2)
+  isPositioned.value = true
+}
+
+onMounted(centerDialog)
+
+// Drag state
+let dragStartX = 0
+let dragStartY = 0
+let dragStartTop = 0
+let dragStartLeft = 0
+
+function onDragStart(e: MouseEvent) {
+  if ((e.target as HTMLElement).closest('.ghost-button')) return
+  e.preventDefault()
+  dragStartX = e.clientX
+  dragStartY = e.clientY
+  dragStartTop = dialogTop.value
+  dragStartLeft = dialogLeft.value
+  document.addEventListener('mousemove', onDragMove)
+  document.addEventListener('mouseup', onDragEnd)
+  document.body.style.userSelect = 'none'
+}
+
+function onDragMove(e: MouseEvent) {
+  const dx = e.clientX - dragStartX
+  const dy = e.clientY - dragStartY
+  dialogLeft.value = Math.max(0, Math.min(window.innerWidth - 100, dragStartLeft + dx))
+  dialogTop.value = Math.max(0, Math.min(window.innerHeight - 60, dragStartTop + dy))
+}
+
+function onDragEnd() {
+  document.removeEventListener('mousemove', onDragMove)
+  document.removeEventListener('mouseup', onDragEnd)
+  document.body.style.userSelect = ''
+}
+
+// Resize state
+let resizeStartX = 0
+let resizeStartY = 0
+let resizeStartWidth = 0
+let resizeStartHeight = 0
+
+function onResizeStart(e: MouseEvent) {
+  e.preventDefault()
+  e.stopPropagation()
+  resizeStartX = e.clientX
+  resizeStartY = e.clientY
+  resizeStartWidth = dialogWidth.value
+  resizeStartHeight = (rootRef.value?.offsetHeight ?? 600)
+  document.addEventListener('mousemove', onResizeMove)
+  document.addEventListener('mouseup', onResizeEnd)
+  document.body.style.userSelect = 'none'
+}
+
+function onResizeMove(e: MouseEvent) {
+  const dx = e.clientX - resizeStartX
+  const dy = e.clientY - resizeStartY
+  dialogWidth.value = Math.max(DIALOG_MIN_WIDTH, Math.min(window.innerWidth - dialogLeft.value - 20, resizeStartWidth + dx))
+  const newHeight = Math.max(DIALOG_MIN_HEIGHT, Math.min(window.innerHeight - dialogTop.value - 20, resizeStartHeight + dy))
+  dialogHeight.value = newHeight
+}
+
+function onResizeEnd() {
+  document.removeEventListener('mousemove', onResizeMove)
+  document.removeEventListener('mouseup', onResizeEnd)
+  document.body.style.userSelect = ''
+}
+
+onBeforeUnmount(() => {
+  document.removeEventListener('mousemove', onDragMove)
+  document.removeEventListener('mouseup', onDragEnd)
+  document.removeEventListener('mousemove', onResizeMove)
+  document.removeEventListener('mouseup', onResizeEnd)
+  document.body.style.userSelect = ''
+})
+
+const rootRef = ref<HTMLElement>()
 </script>
 
 <template>
-  <div class="wiki-chat-dialog">
+  <div
+    ref="rootRef"
+    class="wiki-chat-dialog"
+    :class="{ 'wiki-chat-dialog--positioned': isPositioned }"
+    :style="{
+      width: dialogWidth + 'px',
+      top: dialogTop + 'px',
+      left: dialogLeft + 'px',
+      height: dialogHeight ? dialogHeight + 'px' : undefined,
+    }"
+  >
     <!-- Header -->
-    <div class="wiki-chat-dialog__header">
+    <div
+      class="wiki-chat-dialog__header"
+      @mousedown="onDragStart"
+    >
       <h3>{{ t('llmWiki.chat.chatTitle') }}</h3>
       <button
         class="ghost-button"
@@ -274,16 +381,18 @@ function formatTime(ts: number): string {
         {{ t('llmWiki.chat.saveConversation') }}
       </button>
     </div>
+
+    <!-- Resize Handle -->
+    <div
+      class="wiki-chat-dialog__resize-handle"
+      @mousedown="onResizeStart"
+    />
   </div>
 </template>
 
 <style scoped>
 .wiki-chat-dialog {
   position: fixed;
-  top: 50%;
-  left: 50%;
-  transform: translate(-50%, -50%);
-  width: 520px;
   max-height: 80vh;
   background: var(--b3-theme-surface);
   border: 1px solid var(--b3-border-color);
@@ -294,6 +403,9 @@ function formatTime(ts: number): string {
   z-index: 1000;
   overflow: hidden;
 }
+.wiki-chat-dialog--positioned {
+  /* positioned via inline style */
+}
 
 /* Header */
 .wiki-chat-dialog__header {
@@ -303,6 +415,8 @@ function formatTime(ts: number): string {
   padding: 12px 16px;
   background: var(--b3-theme-background);
   border-bottom: 1px solid var(--b3-border-color);
+  cursor: move;
+  user-select: none;
 }
 .wiki-chat-dialog__header h3 {
   margin: 0;
@@ -547,5 +661,25 @@ function formatTime(ts: number): string {
   border-radius: 999px;
   background: color-mix(in srgb, var(--b3-theme-primary) 8%, transparent);
   color: var(--b3-theme-primary);
+}
+
+/* Resize Handle */
+.wiki-chat-dialog__resize-handle {
+  position: absolute;
+  bottom: 0;
+  right: 0;
+  width: 16px;
+  height: 16px;
+  cursor: nwse-resize;
+}
+.wiki-chat-dialog__resize-handle::after {
+  content: '';
+  position: absolute;
+  bottom: 3px;
+  right: 3px;
+  width: 8px;
+  height: 8px;
+  border-right: 2px solid var(--b3-border-color);
+  border-bottom: 2px solid var(--b3-border-color);
 }
 </style>
