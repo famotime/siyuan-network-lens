@@ -18,7 +18,7 @@ export {
 export const DEFAULT_WIKI_PAGE_SUFFIX = '-llm-wiki'
 export const DEFAULT_WIKI_INDEX_TITLE = 'LLM-Wiki-Index'
 export const DEFAULT_WIKI_LOG_TITLE = 'LLM-Wiki-Maintenance-Log'
-export const DEFAULT_WIKI_CONTAINER_NAME = 'LLM Wiki'
+export const DEFAULT_WIKI_CONTAINER_PATH = '/知识库/LLM Wiki'
 
 export interface PluginConfig {
   showSummaryCards: boolean
@@ -65,7 +65,7 @@ export interface PluginConfig {
   wikiPageSuffix?: string
   wikiIndexTitle?: string
   wikiLogTitle?: string
-  wikiContainerName?: string
+  wikiContainerPath?: string
   wikiIncrementalEnabled?: boolean
   summaryCardOrder?: string[]
 }
@@ -103,7 +103,7 @@ export const DEFAULT_CONFIG: PluginConfig = {
   wikiPageSuffix: DEFAULT_WIKI_PAGE_SUFFIX,
   wikiIndexTitle: DEFAULT_WIKI_INDEX_TITLE,
   wikiLogTitle: DEFAULT_WIKI_LOG_TITLE,
-  wikiContainerName: DEFAULT_WIKI_CONTAINER_NAME,
+  wikiContainerPath: DEFAULT_WIKI_CONTAINER_PATH,
   wikiIncrementalEnabled: true,
   summaryCardOrder: undefined,
 }
@@ -222,9 +222,13 @@ export function ensureConfigDefaults(config: PluginConfig) {
     config.wikiLogTitle,
     DEFAULT_WIKI_LOG_TITLE,
   )
-  config.wikiContainerName = normalizeNonEmptyString(
-    config.wikiContainerName,
-    DEFAULT_WIKI_CONTAINER_NAME,
+  // 旧版本使用 wikiContainerName（纯目录名），迁移到 wikiContainerPath（完整路径）
+  if ('wikiContainerName' in config) {
+    delete (config as Record<string, unknown>).wikiContainerName
+  }
+  config.wikiContainerPath = normalizeNonEmptyString(
+    config.wikiContainerPath,
+    DEFAULT_WIKI_CONTAINER_PATH,
   )
   if (typeof config.wikiIncrementalEnabled !== 'boolean') {
     config.wikiIncrementalEnabled = true

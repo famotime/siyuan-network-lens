@@ -79,7 +79,7 @@ export async function applyWikiDocuments(params: {
     wikiIndexTitle: string
     wikiLogTitle: string
     wikiPageSuffix: string
-    wikiContainerName: string
+    wikiContainerPath: string
   }
   notebooks?: NotebookPathOption[]
   generatedAt: string
@@ -120,9 +120,9 @@ export async function applyWikiDocuments(params: {
       themeDocumentId: page.themeDocumentId,
     })
     const storedRecord = await params.store.getPageRecord(pageKey)
-    const pageHPath = buildSiblingDocumentPath(page.themeDocumentHPath, page.pageTitle, params.config.wikiContainerName)
+    const pageHPath = joinDocumentPath(wikiTarget.containerPath, page.pageTitle)
     const existingPageId = await resolveExistingPageId({
-      notebook: page.themeDocumentBox,
+      notebook: wikiTarget.notebook,
       hpath: pageHPath,
       storedPageId: storedRecord?.pageId,
       getIDsByHPath: params.api.getIDsByHPath,
@@ -156,7 +156,7 @@ export async function applyWikiDocuments(params: {
     }
 
     const writeResult = await upsertManagedWikiPage({
-      notebook: page.themeDocumentBox,
+      notebook: wikiTarget.notebook,
       hpath: pageHPath,
       pageType: 'theme',
       pageId: existingPageId,
@@ -309,30 +309,17 @@ export async function applyWikiDocuments(params: {
 
 function resolveWikiTarget(
   config: {
-    themeNotebookId?: string
-    themeDocumentPath: string
-    wikiContainerName: string
+    wikiContainerPath: string
   },
   notebooks?: NotebookPathOption[],
 ) {
-  const target = resolveScopedPathTarget(config.themeDocumentPath, notebooks)
-  if (target) {
-    return {
-      ...target,
-      containerPath: joinDocumentPath(target.path, config.wikiContainerName),
-    }
-  }
-
-  const legacyNotebookId = config.themeNotebookId?.trim() ?? ''
-  const normalizedPath = normalizeDocumentPath(config.themeDocumentPath)
-  if (!legacyNotebookId || normalizedPath === '/') {
+  const target = resolveScopedPathTarget(config.wikiContainerPath, notebooks)
+  if (!target) {
     return null
   }
-
   return {
-    notebook: legacyNotebookId,
-    path: normalizedPath,
-    containerPath: joinDocumentPath(normalizedPath, config.wikiContainerName),
+    notebook: target.notebook,
+    containerPath: normalizeDocumentPath(target.path),
   }
 }
 
@@ -778,14 +765,6 @@ function collectUniqueSourceDocumentIds(
     ...themePages.flatMap(page => page.sourceDocumentIds),
     ...unclassifiedDocuments.map(document => document.documentId),
   ])]
-}
-
-export function buildSiblingDocumentPath(themeDocumentHPath: string, pageTitle: string, containerName?: string): string {
-  const normalizedPath = normalizeDocumentPath(themeDocumentHPath)
-  const lastSlashIndex = normalizedPath.lastIndexOf('/')
-  const parentPath = lastSlashIndex <= 0 ? '' : normalizedPath.slice(0, lastSlashIndex)
-  const containerSegment = containerName ? `/${containerName}` : ''
-  return `${parentPath}${containerSegment}/${pageTitle}`
 }
 
 function joinDocumentPath(basePath: string, title: string): string {

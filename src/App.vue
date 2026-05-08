@@ -295,7 +295,8 @@ import { createAppFilterController } from '@/composables/use-app-filters'
 import { appendBlock, createDocWithMd, deleteBlock, forwardProxy, getBlockAttrs, getBlockKramdown, getChildBlocks, getIDsByHPath, prependBlock, setBlockAttrs, updateBlock } from '@/api'
 import { isAlphaSettingVisible, isAlphaSummaryCardVisible } from '@/plugin/alpha-feature-config'
 import { t } from '@/i18n/ui'
-import { ensureConfigDefaults, type PluginConfig } from '@/types/config'
+import { DEFAULT_WIKI_CONTAINER_PATH, ensureConfigDefaults, type PluginConfig } from '@/types/config'
+import { resolveScopedPathTarget } from '@/analytics/document-paths'
 import pluginIconUrl from '../icon.png'
 
 const props = defineProps<{
@@ -487,13 +488,12 @@ function handleLlmWikiMaintain(page: WikiIndexPage) {
 async function handleLlmWikiChatSave(markdown: string) {
   const firstLine = markdown.split('\n').find(l => l.startsWith('## Q1:'))?.slice(6) ?? 'Wiki AI Chat'
   const title = firstLine.slice(0, 30)
-  const containerName = props.config.wikiContainerName ?? 'LLM Wiki'
-  const chatPath = `/${containerName}/Chat/${title}`
   const notebooks = snapshot.value?.notebooks ?? []
-  const wikiNotebook = notebooks.find(nb => !nb.closed)
-  if (!wikiNotebook) return
+  const wikiTarget = resolveScopedPathTarget(props.config.wikiContainerPath ?? DEFAULT_WIKI_CONTAINER_PATH, notebooks)
+  if (!wikiTarget) return
+  const chatPath = `${wikiTarget.path}/Chat/${title}`
   try {
-    const chatDocId = await createDocWithMd(wikiNotebook.id, chatPath, markdown)
+    const chatDocId = await createDocWithMd(wikiTarget.notebook, chatPath, markdown)
     if (chatDocId) {
       // Find the first assistant message's source page for back-link
       const firstAssistant = llmWikiChatScope.value?.mode === 'document'

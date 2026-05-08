@@ -352,9 +352,9 @@ const UI_TEXT = {
         en_US: 'Log page title',
         zh_CN: '日志页标题',
       },
-      containerName: {
-        en_US: 'Wiki container name',
-        zh_CN: 'Wiki 容器名称',
+      containerPath: {
+        en_US: 'LLM Wiki path',
+        zh_CN: 'LLM Wiki 路径',
       },
       provider: {
         en_US: 'AI provider',

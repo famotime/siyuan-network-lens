@@ -89,10 +89,10 @@
           <input type="checkbox" v-model="config.wikiEnabled" class="b3-switch">
         </label>
         <label v-if="showWikiSettings" class="setting-field">
-          <span>{{ t('settings.ai.containerName') }}</span>
+          <span>{{ t('settings.ai.containerPath') }}</span>
           <input
-            v-model.trim="config.wikiContainerName"
-            placeholder="LLM Wiki"
+            v-model.trim="config.wikiContainerPath"
+            placeholder="/知识库/LLM Wiki"
             type="text"
           >
         </label>

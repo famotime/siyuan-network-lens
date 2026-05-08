@@ -3,7 +3,6 @@ import { describe, expect, it, vi } from 'vitest'
 
 vi.mock('@/analytics/wiki-documents', () => ({
   applyWikiDocuments: vi.fn(),
-  buildSiblingDocumentPath: vi.fn((hpath: string, pageTitle: string) => `${hpath}/${pageTitle}`),
 }))
 
 import { applyWikiDocuments } from '@/analytics/wiki-documents'
@@ -37,7 +36,7 @@ describe('createAnalyticsWikiActionsController', () => {
         wikiIndexTitle: 'LLM-Wiki-Index',
         wikiLogTitle: 'LLM-Wiki-Maintenance-Log',
         wikiPageSuffix: '-llm-wiki',
-        wikiContainerName: 'LLM Wiki',
+        wikiContainerPath: '/box-1/LLM Wiki',
       } as any)),
       snapshot: ref(null),
       report: computed(() => null),
@@ -120,7 +119,7 @@ describe('createAnalyticsWikiActionsController', () => {
         wikiIndexTitle: 'LLM-Wiki-Index',
         wikiLogTitle: 'LLM-Wiki-Maintenance-Log',
         wikiPageSuffix: '-llm-wiki',
-        wikiContainerName: 'LLM Wiki',
+        wikiContainerPath: '/box-1/LLM Wiki',
       } as any)),
       snapshot: ref({ notebooks: [{ id: 'box-1', name: 'Notebook 1' }] } as any),
       report: computed(() => null),

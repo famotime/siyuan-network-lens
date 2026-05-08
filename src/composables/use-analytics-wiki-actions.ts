@@ -10,7 +10,8 @@ import type {
 import type { AiDocumentIndexStore, DocumentIndexProfile } from '@/analytics/ai-index-store'
 import type { AiWikiService } from '@/analytics/wiki-ai'
 import { buildWikiPreview } from '@/analytics/wiki-diff'
-import { applyWikiDocuments, buildSiblingDocumentPath } from '@/analytics/wiki-documents'
+import { applyWikiDocuments } from '@/analytics/wiki-documents'
+import { resolveScopedPathTarget } from '@/analytics/document-paths'
 import type { WikiThemeBundle } from '@/analytics/wiki-generation'
 import { buildThemeWikiPageTitle } from '@/analytics/wiki-page-model'
 import { renderThemeWikiDraft } from '@/analytics/wiki-renderer'
@@ -30,7 +31,7 @@ import {
   type WikiPreviewThemePageItem,
 } from './use-analytics-wiki'
 import { t } from '@/i18n/ui'
-import type { PluginConfig } from '@/types/config'
+import { DEFAULT_WIKI_CONTAINER_PATH, type PluginConfig } from '@/types/config'
 
 type ShowMessageFn = (text: string, timeout?: number, type?: 'info' | 'error') => void
 type BlockWriteFn = (dataType: 'markdown' | 'dom', data: string, parentID: string) => Promise<any>
@@ -143,6 +144,9 @@ export function createAnalyticsWikiActionsController(params: {
         generatedAt,
       })
 
+      const wikiTarget = resolveScopedPathTarget(params.appliedConfig.value.wikiContainerPath ?? '', params.snapshot.value?.notebooks)
+      const wikiContainerPath = wikiTarget?.path ?? ''
+
       // --- Incremental diff logic ---
       const pageTitle = buildThemeWikiPageTitle(themeDocument.title, params.appliedConfig.value.wikiPageSuffix ?? '')
       const pageKey = buildWikiPageStorageKey({
@@ -177,13 +181,10 @@ export function createAnalyticsWikiActionsController(params: {
 
       let existingWikiContent: string | undefined
       if (isIncremental && storedRecord) {
+        const pageHPath = wikiContainerPath ? `${wikiContainerPath}/${pageTitle}` : `${themeDocument.hpath}/${pageTitle}`
         const existingPage = await resolveExistingWikiPage({
-          notebook: themeDocument.box,
-          pageHPath: buildSiblingDocumentPath(
-            themeDocument.hpath,
-            pageTitle,
-            params.appliedConfig.value.wikiContainerName ?? 'LLM Wiki',
-          ),
+          notebook: wikiTarget?.notebook ?? themeDocument.box,
+          pageHPath,
           storedRecord,
           getIDsByHPath: params.getIDsByHPath,
           getBlockKramdown: params.getBlockKramdown,
@@ -238,8 +239,8 @@ export function createAnalyticsWikiActionsController(params: {
       })
 
       const existingPage = await resolveExistingWikiPage({
-        notebook: themeDocument.box,
-        pageHPath: buildSiblingDocumentPath(themeDocument.hpath, pageTitle, params.appliedConfig.value.wikiContainerName ?? 'LLM Wiki'),
+        notebook: wikiTarget?.notebook ?? themeDocument.box,
+        pageHPath: wikiContainerPath ? `${wikiContainerPath}/${pageTitle}` : `${themeDocument.hpath}/${pageTitle}`,
         storedRecord,
         getIDsByHPath: params.getIDsByHPath,
         getBlockKramdown: params.getBlockKramdown,
@@ -374,7 +375,7 @@ export function createAnalyticsWikiActionsController(params: {
           wikiIndexTitle: params.appliedConfig.value.wikiIndexTitle ?? 'LLM-Wiki-Index',
           wikiLogTitle: params.appliedConfig.value.wikiLogTitle ?? 'LLM-Wiki-Maintenance-Log',
           wikiPageSuffix: params.appliedConfig.value.wikiPageSuffix ?? '-llm-wiki',
-          wikiContainerName: params.appliedConfig.value.wikiContainerName ?? 'LLM Wiki',
+          wikiContainerPath: params.appliedConfig.value.wikiContainerPath ?? DEFAULT_WIKI_CONTAINER_PATH,
         },
         notebooks: params.snapshot.value?.notebooks,
         generatedAt: new Date().toISOString(),

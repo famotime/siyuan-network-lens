@@ -76,7 +76,7 @@ describe('wiki documents', () => {
         wikiIndexTitle: 'LLM-Wiki-索引',
         wikiLogTitle: 'LLM-Wiki-维护日志',
         wikiPageSuffix: '-llm-wiki',
-        wikiContainerName: 'LLM Wiki',
+        wikiContainerPath: '/知识库/LLM Wiki',
       },
       notebooks: [
         { id: 'notebook-theme', name: '知识库' },
@@ -110,12 +110,12 @@ describe('wiki documents', () => {
 
     expect(kernel.api.createDocWithMd).toHaveBeenCalledWith(
       'notebook-theme',
-      '/专题/LLM Wiki/LLM-Wiki-索引',
+      '/LLM Wiki/LLM-Wiki-索引',
       expect.any(String),
     )
     expect(kernel.api.createDocWithMd).toHaveBeenCalledWith(
       'notebook-theme',
-      '/专题/LLM Wiki/LLM-Wiki-维护日志',
+      '/LLM Wiki/LLM-Wiki-维护日志',
       expect.any(String),
     )
   })
@@ -154,8 +154,11 @@ describe('wiki documents', () => {
         wikiIndexTitle: 'LLM-Wiki-索引',
         wikiLogTitle: 'LLM-Wiki-维护日志',
         wikiPageSuffix: '-llm-wiki',
-        wikiContainerName: 'LLM Wiki',
+        wikiContainerPath: '/知识库/LLM Wiki',
       },
+      notebooks: [
+        { id: 'notebook-theme', name: '知识库' },
+      ],
       generatedAt: '2026-04-09T12:05:00.000Z',
       scopeSummary: {
         sourceDocumentCount: 2,
@@ -217,15 +220,15 @@ describe('wiki documents', () => {
 
     expect(kernel.api.createDocWithMd).toHaveBeenCalledWith(
       'notebook-theme',
-      '/主题/LLM Wiki/主题-AI-索引-llm-wiki',
+      '/LLM Wiki/主题-AI-索引-llm-wiki',
       themeDraft.fullMarkdown,
     )
-    expect(kernel.getDocumentMarkdownByPath('/主题/LLM Wiki/LLM-Wiki-索引')).toContain(buildDocLinkMarkdown('doc-1', '主题-AI-索引-llm-wiki'))
-    expect(kernel.getDocumentMarkdownByPath('/主题/LLM Wiki/LLM-Wiki-索引')).toContain(buildDocLinkMarkdown('doc-theme-ai', '主题-AI-索引'))
-    expect(kernel.getDocumentMarkdownByPath('/主题/LLM Wiki/LLM-Wiki-索引')).toContain('当前主题聚焦 AI 索引编排。')
-    expect(kernel.getDocumentMarkdownByPath('/主题/LLM Wiki/LLM-Wiki-索引')).toContain('零散记录')
-    expect(kernel.getDocumentMarkdownByPath('/主题/LLM Wiki/LLM-Wiki-维护日志')).toContain('- Created pages: 1')
-    expect(kernel.getDocumentMarkdownByPath('/主题/LLM Wiki/LLM-Wiki-维护日志')).toContain('主题-AI-索引-llm-wiki')
+    expect(kernel.getDocumentMarkdownByPath('/LLM Wiki/LLM-Wiki-索引')).toContain(buildDocLinkMarkdown('doc-1', '主题-AI-索引-llm-wiki'))
+    expect(kernel.getDocumentMarkdownByPath('/LLM Wiki/LLM-Wiki-索引')).toContain(buildDocLinkMarkdown('doc-theme-ai', '主题-AI-索引'))
+    expect(kernel.getDocumentMarkdownByPath('/LLM Wiki/LLM-Wiki-索引')).toContain('当前主题聚焦 AI 索引编排。')
+    expect(kernel.getDocumentMarkdownByPath('/LLM Wiki/LLM-Wiki-索引')).toContain('零散记录')
+    expect(kernel.getDocumentMarkdownByPath('/LLM Wiki/LLM-Wiki-维护日志')).toContain('- Created pages: 1')
+    expect(kernel.getDocumentMarkdownByPath('/LLM Wiki/LLM-Wiki-维护日志')).toContain('主题-AI-索引-llm-wiki')
 
     const snapshot = await store.loadSnapshot()
     const themeRecord = snapshot.pages[buildWikiPageStorageKey({
@@ -264,7 +267,7 @@ describe('wiki documents', () => {
       {
         id: 'wiki-theme-ai',
         notebook: 'notebook-theme',
-        hpath: '/主题/LLM Wiki/主题-AI-索引-llm-wiki',
+        hpath: '/LLM Wiki/主题-AI-索引-llm-wiki',
         markdown: existingMarkdown,
       },
     ])
@@ -360,8 +363,11 @@ describe('wiki documents', () => {
         wikiIndexTitle: 'LLM-Wiki-索引',
         wikiLogTitle: 'LLM-Wiki-维护日志',
         wikiPageSuffix: '-llm-wiki',
-        wikiContainerName: 'LLM Wiki',
+        wikiContainerPath: '/知识库/LLM Wiki',
       },
+      notebooks: [
+        { id: 'notebook-theme', name: '知识库' },
+      ],
       generatedAt: '2026-04-09T12:05:00.000Z',
       scopeSummary: {
         sourceDocumentCount: 1,
@@ -399,9 +405,9 @@ describe('wiki documents', () => {
       expect.not.stringContaining('# 主题-AI-索引-llm-wiki'),
       'wiki-theme-ai::managed',
     )
-    expect(kernel.getDocumentMarkdownByPath('/主题/LLM Wiki/主题-AI-索引-llm-wiki')).toContain('新的概览')
-    expect(kernel.getDocumentMarkdownByPath('/主题/LLM Wiki/主题-AI-索引-llm-wiki')).toContain('- 保留这段人工补充')
-    expect(kernel.getDocumentMarkdownByPath('/主题/LLM Wiki/主题-AI-索引-llm-wiki')).not.toContain('旧概览')
+    expect(kernel.getDocumentMarkdownByPath('/LLM Wiki/主题-AI-索引-llm-wiki')).toContain('新的概览')
+    expect(kernel.getDocumentMarkdownByPath('/LLM Wiki/主题-AI-索引-llm-wiki')).toContain('- 保留这段人工补充')
+    expect(kernel.getDocumentMarkdownByPath('/LLM Wiki/主题-AI-索引-llm-wiki')).not.toContain('旧概览')
   })
 
   it('skips unchanged and conflicting pages by default while still recording batch results', async () => {
@@ -433,13 +439,13 @@ describe('wiki documents', () => {
       {
         id: 'wiki-stable',
         notebook: 'notebook-theme',
-        hpath: '/主题/LLM Wiki/主题-稳定-llm-wiki',
+        hpath: '/LLM Wiki/主题-稳定-llm-wiki',
         markdown: unchangedMarkdown,
       },
       {
         id: 'wiki-conflict',
         notebook: 'notebook-theme',
-        hpath: '/主题/LLM Wiki/主题-冲突-llm-wiki',
+        hpath: '/LLM Wiki/主题-冲突-llm-wiki',
         markdown: conflictMarkdown,
       },
     ])
@@ -550,8 +556,11 @@ describe('wiki documents', () => {
         wikiIndexTitle: 'LLM-Wiki-索引',
         wikiLogTitle: 'LLM-Wiki-维护日志',
         wikiPageSuffix: '-llm-wiki',
-        wikiContainerName: 'LLM Wiki',
+        wikiContainerPath: '/知识库/LLM Wiki',
       },
+      notebooks: [
+        { id: 'notebook-theme', name: '知识库' },
+      ],
       generatedAt: '2026-04-09T12:05:00.000Z',
       scopeSummary: {
         sourceDocumentCount: 2,
@@ -609,9 +618,9 @@ describe('wiki documents', () => {
       conflict: 1,
     })
     expect(kernel.api.updateBlock).not.toHaveBeenCalledWith('markdown', conflictDraft.managedMarkdown, 'wiki-conflict::managed')
-    expect(kernel.getDocumentMarkdownByPath('/主题/LLM Wiki/主题-冲突-llm-wiki')).toContain('外部修改后的内容')
-    expect(kernel.getDocumentMarkdownByPath('/主题/LLM Wiki/LLM-Wiki-维护日志')).toContain('- Unchanged pages: 1')
-    expect(kernel.getDocumentMarkdownByPath('/主题/LLM Wiki/LLM-Wiki-维护日志')).toContain('- Conflict pages: 1')
+    expect(kernel.getDocumentMarkdownByPath('/LLM Wiki/主题-冲突-llm-wiki')).toContain('外部修改后的内容')
+    expect(kernel.getDocumentMarkdownByPath('/LLM Wiki/LLM-Wiki-维护日志')).toContain('- Unchanged pages: 1')
+    expect(kernel.getDocumentMarkdownByPath('/LLM Wiki/LLM-Wiki-维护日志')).toContain('- Conflict pages: 1')
 
     const snapshot = await store.loadSnapshot()
     expect(snapshot.pages[buildWikiPageStorageKey({
@@ -643,7 +652,7 @@ describe('wiki documents', () => {
       {
         id: 'wiki-conflict',
         notebook: 'notebook-theme',
-        hpath: '/主题/LLM Wiki/主题-冲突-llm-wiki',
+        hpath: '/LLM Wiki/主题-冲突-llm-wiki',
         markdown: existingMarkdown,
       },
     ])
@@ -701,8 +710,11 @@ describe('wiki documents', () => {
         wikiIndexTitle: 'LLM-Wiki-索引',
         wikiLogTitle: 'LLM-Wiki-维护日志',
         wikiPageSuffix: '-llm-wiki',
-        wikiContainerName: 'LLM Wiki',
+        wikiContainerPath: '/知识库/LLM Wiki',
       },
+      notebooks: [
+        { id: 'notebook-theme', name: '知识库' },
+      ],
       generatedAt: '2026-04-09T12:05:00.000Z',
       scopeSummary: {
         sourceDocumentCount: 1,
@@ -742,8 +754,8 @@ describe('wiki documents', () => {
       expect.not.stringContaining('# 主题-冲突-llm-wiki'),
       'wiki-conflict::managed',
     )
-    expect(kernel.getDocumentMarkdownByPath('/主题/LLM Wiki/主题-冲突-llm-wiki')).toContain('插件新生成内容')
-    expect(kernel.getDocumentMarkdownByPath('/主题/LLM Wiki/主题-冲突-llm-wiki')).toContain('- 冲突备注')
+    expect(kernel.getDocumentMarkdownByPath('/LLM Wiki/主题-冲突-llm-wiki')).toContain('插件新生成内容')
+    expect(kernel.getDocumentMarkdownByPath('/LLM Wiki/主题-冲突-llm-wiki')).toContain('- 冲突备注')
   })
 
   it('writes Chinese index and log content when the workspace locale is zh_CN', async () => {
@@ -797,8 +809,11 @@ describe('wiki documents', () => {
         wikiIndexTitle: 'LLM-Wiki-索引',
         wikiLogTitle: 'LLM-Wiki-维护日志',
         wikiPageSuffix: '-llm-wiki',
-        wikiContainerName: 'LLM Wiki',
+        wikiContainerPath: '/知识库/LLM Wiki',
       },
+      notebooks: [
+        { id: 'notebook-theme', name: '知识库' },
+      ],
       generatedAt: '2026-04-09T12:05:00.000Z',
       scopeSummary: {
         sourceDocumentCount: 1,
@@ -826,10 +841,10 @@ describe('wiki documents', () => {
       api: kernel.api,
     })
 
-    expect(kernel.getDocumentMarkdownByPath('/主题/LLM Wiki/LLM-Wiki-索引')).toContain('### 页面概览')
-    expect(kernel.getDocumentMarkdownByPath('/主题/LLM Wiki/LLM-Wiki-索引')).toContain(`- 最近维护时间：${new Date('2026-04-09T12:05:00.000Z').toLocaleString()}`)
-    expect(kernel.getDocumentMarkdownByPath('/主题/LLM Wiki/LLM-Wiki-维护日志')).toContain('- 新建页面数：1')
-    expect(kernel.getDocumentMarkdownByPath('/主题/LLM Wiki/LLM-Wiki-维护日志')).toContain('### 本次触达页面')
+    expect(kernel.getDocumentMarkdownByPath('/LLM Wiki/LLM-Wiki-索引')).toContain('### 页面概览')
+    expect(kernel.getDocumentMarkdownByPath('/LLM Wiki/LLM-Wiki-索引')).toContain(`- 最近维护时间：${new Date('2026-04-09T12:05:00.000Z').toLocaleString()}`)
+    expect(kernel.getDocumentMarkdownByPath('/LLM Wiki/LLM-Wiki-维护日志')).toContain('- 新建页面数：1')
+    expect(kernel.getDocumentMarkdownByPath('/LLM Wiki/LLM-Wiki-维护日志')).toContain('### 本次触达页面')
   })
 })
 
