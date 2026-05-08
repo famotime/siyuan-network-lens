@@ -1,0 +1,112 @@
+<h2>设计第 5 节：文件变更清单</h2>
+<p class="subtitle">新增、修改、影响范围</p>
+
+<div class="section">
+<h3>新增文件</h3>
+<table style="width: 100%; border-collapse: collapse; font-size: 13px;">
+  <thead>
+    <tr style="border-bottom: 2px solid #3a3a5a;">
+      <th style="text-align: left; padding: 8px; color: #6acfa0;">文件路径</th>
+      <th style="text-align: left; padding: 8px; color: #6acfa0;">职责</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr style="border-bottom: 1px solid #2a2a3a;">
+      <td style="padding: 8px;"><code>src/composables/use-wiki-chat-session.ts</code></td>
+      <td style="padding: 8px; color: #ccc;">会话状态管理：消息历史、路由判断、@ 检测、上下文构建、保存 Markdown 生成</td>
+    </tr>
+  </tbody>
+</table>
+</div>
+
+<div class="section">
+<h3>修改文件</h3>
+<table style="width: 100%; border-collapse: collapse; font-size: 13px;">
+  <thead>
+    <tr style="border-bottom: 2px solid #3a3a5a;">
+      <th style="text-align: left; padding: 8px; color: #8ac;">文件路径</th>
+      <th style="text-align: left; padding: 8px; color: #8ac;">变更内容</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr style="border-bottom: 1px solid #2a2a3a;">
+      <td style="padding: 8px;"><code>src/components/WikiChatDialog.vue</code></td>
+      <td style="padding: 8px; color: #ccc;">
+        <strong>重写模板和逻辑</strong><br>
+        &#x2022; 模板：单次结果 → 气泡消息列表 + 来源栏 + @ 弹窗 + 底部输入<br>
+        &#x2022; 脚本：所有状态和方法委托给 <code>useWikiChatSession()</code><br>
+        &#x2022; 样式：全量使用 <code>var(--b3-theme-*)</code> 变量
+      </td>
+    </tr>
+    <tr style="border-bottom: 1px solid #2a2a3a;">
+      <td style="padding: 8px;"><code>src/analytics/llm-wiki-chat-service.ts</code></td>
+      <td style="padding: 8px; color: #ccc;">
+        <strong>扩展上下文构建</strong><br>
+        &#x2022; 新增 <code>buildWikiContextMessage()</code> — 将 Wiki 页面内容包装为 system message<br>
+        &#x2022; 保留现有 <code>buildRouteSystemPrompt</code> / <code>buildChatSystemPrompt</code> 等不变<br>
+        &#x2022; <code>parseChatResponse</code> 不变
+      </td>
+    </tr>
+    <tr style="border-bottom: 1px solid #2a2a3a;">
+      <td style="padding: 8px;"><code>src/composables/use-analytics-llm-wiki-chat.ts</code></td>
+      <td style="padding: 8px; color: #ccc;">
+        <strong>简化控制器</strong><br>
+        &#x2022; 移除 <code>buildChatSaveMarkdown()</code>（迁移到 session composable）<br>
+        &#x2022; 保留 <code>openChat</code> / <code>closeChat</code> / <code>chatDialogVisible</code> / <code>chatScope</code><br>
+        &#x2022; 新增 <code>chatSession</code> ref（由 session composable 管理）
+      </td>
+    </tr>
+    <tr style="border-bottom: 1px solid #2a2a3a;">
+      <td style="padding: 8px;"><code>src/App.vue</code></td>
+      <td style="padding: 8px; color: #ccc;">
+        <strong>适配新 props</strong><br>
+        &#x2022; <code>WikiChatDialog</code> 组件的 props 调整（新增 <code>aiMaxContextMessages</code>）<br>
+        &#x2022; <code>handleLlmWikiChatSave</code> 适配新的保存格式（对话级保存）
+      </td>
+    </tr>
+    <tr style="border-bottom: 1px solid #2a2a3a;">
+      <td style="padding: 8px;"><code>src/i18n/ui.ts</code></td>
+      <td style="padding: 8px; color: #ccc;">
+        <strong>新增 i18n 键</strong><br>
+        &#x2022; 聊天气泡、来源栏、@弹窗、路由提示、保存按钮等文本
+      </td>
+    </tr>
+  </tbody>
+</table>
+</div>
+
+<div class="section">
+<h3>不变的文件</h3>
+<div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px; font-size: 12px;">
+  <div style="background: #1e2a3a; padding: 10px; border-radius: 6px; color: #8a8aaa;">
+    <code>src/analytics/wiki-index.ts</code> — WikiIndexPage 类型不变
+  </div>
+  <div style="background: #1e2a3a; padding: 10px; border-radius: 6px; color: #8a8aaa;">
+    <code>src/types/config.ts</code> — aiMaxContextMessages 已存在
+  </div>
+  <div style="background: #1e2a3a; padding: 10px; border-radius: 6px; color: #8a8aaa;">
+    <code>src/analytics/siyuan-data.ts</code> — 数据获取不变
+  </div>
+  <div style="background: #1e2a3a; padding: 10px; border-radius: 6px; color: #8a8aaa;">
+    <code>src/components/WikiCardsSection.vue</code> — 触发方式不变
+  </div>
+</div>
+</div>
+
+<div class="section">
+<h3>变更规模估算</h3>
+<div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; text-align: center;">
+  <div style="background: #1e2a3a; padding: 16px; border-radius: 8px;">
+    <div style="font-size: 28px; font-weight: 700; color: #6acfa0;">~150 行</div>
+    <div style="font-size: 11px; color: #8a8aaa; margin-top: 4px;">新增 composable</div>
+  </div>
+  <div style="background: #1e2a3a; padding: 16px; border-radius: 8px;">
+    <div style="font-size: 28px; font-weight: 700; color: #8ac;">~250 行</div>
+    <div style="font-size: 11px; color: #8a8aaa; margin-top: 4px;">重写 Dialog 组件</div>
+  </div>
+  <div style="background: #1e2a3a; padding: 16px; border-radius: 8px;">
+    <div style="font-size: 28px; font-weight: 700; color: #e77b45;">~50 行</div>
+    <div style="font-size: 11px; color: #8a8aaa; margin-top: 4px;">其他文件适配</div>
+  </div>
+</div>
+</div>

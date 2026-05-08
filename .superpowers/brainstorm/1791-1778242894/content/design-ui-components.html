@@ -1,0 +1,150 @@
+<h2>设计第 3 节：UI 组件结构</h2>
+<p class="subtitle">WikiChatDialog.vue 重构为纯 UI 壳层</p>
+
+<div class="section">
+<h3>组件职责划分</h3>
+<div style="display: grid; grid-template-columns: 1fr 1fr; gap: 16px;">
+
+  <div style="background: #1e2a3a; padding: 14px; border-radius: 8px;">
+    <strong style="color: #6acfa0;">WikiChatDialog.vue（UI 壳层）</strong>
+    <ul style="font-size: 12px; margin-top: 8px; color: #ccc; padding-left: 16px;">
+      <li>模板渲染：消息气泡列表、输入区、来源栏、@弹窗</li>
+      <li>事件绑定：发送、@选中、关闭、保存</li>
+      <li>滚动管理：新消息自动滚到底部</li>
+      <li>模板引用：textarea ref 用于 @ 检测光标位置</li>
+    </ul>
+  </div>
+
+  <div style="background: #1e2a3a; padding: 14px; border-radius: 8px;">
+    <strong style="color: #8ac;">use-wiki-chat-session.ts（逻辑层）</strong>
+    <ul style="font-size: 12px; margin-top: 8px; color: #ccc; padding-left: 16px;">
+      <li>消息历史管理（push、filter）</li>
+      <li>路由判断与 AI 调用</li>
+      <li>@ 检测与来源切换</li>
+      <li>上下文窗口构建</li>
+      <li>保存 Markdown 生成</li>
+    </ul>
+  </div>
+
+</div>
+</div>
+
+<div class="section">
+<h3>模板结构概览</h3>
+<pre style="background: #1a1a2e; padding: 14px; border-radius: 8px; font-size: 12px; line-height: 1.7; overflow-x: auto;">
+<span style="color: #82aaff;">&lt;template&gt;</span>
+  <span style="color: #6a6a8a;">&lt;!-- 对话框外壳 --&gt;</span>
+  <span style="color: #82aaff;">&lt;div</span> class=<span style="color: #c3e88d;">"wiki-chat-dialog"</span><span style="color: #82aaff;">&gt;</span>
+
+    <span style="color: #6a6a8a;">&lt;!-- 1. Header: 标题 + 关闭按钮 --&gt;</span>
+    <span style="color: #82aaff;">&lt;header&gt;</span>...<span style="color: #82aaff;">&lt;/header&gt;</span>
+
+    <span style="color: #6a6a8a;">&lt;!-- 2. SourceIndicator: 当前来源栏 --&gt;</span>
+    <span style="color: #82aaff;">&lt;div</span> class=<span style="color: #c3e88d;">"source-bar"</span><span style="color: #82aaff;">&gt;</span>
+      <span style="color: #82aaff;">&lt;span</span> class=<span style="color: #c3e88d;">"source-tag"</span><span style="color: #82aaff;">&gt;</span>&#x1f4c4; 来源<span style="color: #82aaff;">&lt;/span&gt;</span>
+      <span style="color: #82aaff;">&lt;span&gt;</span>{{ currentSourcePage?.title ?? '自动匹配中...' }}<span style="color: #82aaff;">&lt;/span&gt;</span>
+    <span style="color: #82aaff;">&lt;/div&gt;</span>
+
+    <span style="color: #6a6a8a;">&lt;!-- 3. Messages: 消息列表 --&gt;</span>
+    <span style="color: #82aaff;">&lt;div</span> class=<span style="color: #c3e88d;">"messages-area"</span> ref=<span style="color: #c3e88d;">"messagesRef"</span><span style="color: #82aaff;">&gt;</span>
+      <span style="color: #82aaff;">&lt;template</span> v-for=<span style="color: #c3e88d;">"msg in session.messages"</span><span style="color: #82aaff;">&gt;</span>
+
+        <span style="color: #6a6a8a;">&lt;!-- 系统消息（路由/切换提示） --&gt;</span>
+        <span style="color: #82aaff;">&lt;div</span> v-if=<span style="color: #c3e88d;">"msg.role === 'system'"</span> class=<span style="color: #c3e88d;">"system-hint"</span><span style="color: #82aaff;">&gt;</span>
+          {{ msg.content }}
+        <span style="color: #82aaff;">&lt;/div&gt;</span>
+
+        <span style="color: #6a6a8a;">&lt;!-- 用户消息气泡 --&gt;</span>
+        <span style="color: #82aaff;">&lt;div</span> v-else-if=<span style="color: #c3e88d;">"msg.role === 'user'"</span> class=<span style="color: #c3e88d;">"bubble-user"</span><span style="color: #82aaff;">&gt;</span>
+          <span style="color: #82aaff;">&lt;div</span> class=<span style="color: #c3e88d;">"avatar"</span><span style="color: #82aaff;">&gt;</span>&#x1f464;<span style="color: #82aaff;">&lt;/div&gt;</span>
+          <span style="color: #82aaff;">&lt;div</span> class=<span style="color: #c3e88d;">"bubble-content"</span><span style="color: #82aaff;">&gt;</span>{{ msg.content }}<span style="color: #82aaff;">&lt;/div&gt;</span>
+          <span style="color: #82aaff;">&lt;span</span> class=<span style="color: #c3e88d;">"timestamp"</span><span style="color: #82aaff;">&gt;</span>{{ formatTime(msg.timestamp) }}<span style="color: #82aaff;">&lt;/span&gt;</span>
+        <span style="color: #82aaff;">&lt;/div&gt;</span>
+
+        <span style="color: #6a6a8a;">&lt;!-- AI 消息气泡 --&gt;</span>
+        <span style="color: #82aaff;">&lt;div</span> v-else class=<span style="color: #c3e88d;">"bubble-assistant"</span><span style="color: #82aaff;">&gt;</span>
+          <span style="color: #82aaff;">&lt;div</span> class=<span style="color: #c3e88d;">"avatar"</span><span style="color: #82aaff;">&gt;</span>&#x1f916;<span style="color: #82aaff;">&lt;/div&gt;</span>
+          <span style="color: #82aaff;">&lt;div</span> class=<span style="color: #c3e88d;">"bubble-content"</span><span style="color: #82aaff;">&gt;</span>{{ msg.content }}<span style="color: #82aaff;">&lt;/div&gt;</span>
+          <span style="color: #82aaff;">&lt;div</span> class=<span style="color: #c3e88d;">"bubble-meta"</span><span style="color: #82aaff;">&gt;</span>
+            <span style="color: #82aaff;">&lt;span&gt;</span>{{ formatTime(msg.timestamp) }}<span style="color: #82aaff;">&lt;/span&gt;</span>
+            <span style="color: #82aaff;">&lt;span</span> class=<span style="color: #c3e88d;">"source-badge"</span><span style="color: #82aaff;">&gt;</span>
+              &#x1f4c4; {{ msg.sourcePage?.title }}
+            <span style="color: #82aaff;">&lt;/span&gt;</span>
+          <span style="color: #82aaff;">&lt;/div&gt;</span>
+        <span style="color: #82aaff;">&lt;/div&gt;</span>
+
+      <span style="color: #82aaff;">&lt;/template&gt;</span>
+    <span style="color: #82aaff;">&lt;/div&gt;</span>
+
+    <span style="color: #6a6a8a;">&lt;!-- 4. MentionPopup: @ 候选列表 --&gt;</span>
+    <span style="color: #82aaff;">&lt;div</span> v-if=<span style="color: #c3e88d;">"mentionPopupVisible"</span> class=<span style="color: #c3e88d;">"mention-popup"</span><span style="color: #82aaff;">&gt;</span>
+      <span style="color: #82aaff;">&lt;div</span> v-for=<span style="color: #c3e88d;">"page in filteredPages"</span>
+           @click=<span style="color: #c3e88d;">"switchSource(page)"</span><span style="color: #82aaff;">&gt;</span>
+        &#x1f4c4; {{ page.title }}
+      <span style="color: #82aaff;">&lt;/div&gt;</span>
+    <span style="color: #82aaff;">&lt;/div&gt;</span>
+
+    <span style="color: #6a6a8a;">&lt;!-- 5. InputArea: 输入框 + 发送按钮 --&gt;</span>
+    <span style="color: #82aaff;">&lt;div</span> class=<span style="color: #c3e88d;">"input-area"</span><span style="color: #82aaff;">&gt;</span>
+      <span style="color: #82aaff;">&lt;textarea</span>
+        ref=<span style="color: #c3e88d;">"inputRef"</span>
+        v-model=<span style="color: #c3e88d;">"inputText"</span>
+        @keydown.enter.prevent=<span style="color: #c3e88d;">"sendMessage"</span>
+        placeholder=<span style="color: #c3e88d;">"输入问题... 使用 @ 切换来源"</span>
+      <span style="color: #82aaff;">/&gt;</span>
+      <span style="color: #82aaff;">&lt;button</span> @click=<span style="color: #c3e88d;">"sendMessage"</span><span style="color: #82aaff;">&gt;</span>&#x27a4;<span style="color: #82aaff;">&lt;/button&gt;</span>
+    <span style="color: #82aaff;">&lt;/div&gt;</span>
+
+    <span style="color: #6a6a8a;">&lt;!-- 6. Footer: 保存整个对话按钮 --&gt;</span>
+    <span style="color: #82aaff;">&lt;footer</span> v-if=<span style="color: #c3e88d;">"session.messages.length > 0"</span><span style="color: #82aaff;">&gt;</span>
+      <span style="color: #82aaff;">&lt;button</span> @click=<span style="color: #c3e88d;">"$emit('save', buildSaveMarkdown())"</span><span style="color: #82aaff;">&gt;</span>
+        保存对话
+      <span style="color: #82aaff;">&lt;/button&gt;</span>
+    <span style="color: #82aaff;">&lt;/footer&gt;</span>
+
+  <span style="color: #82aaff;">&lt;/div&gt;</span>
+<span style="color: #82aaff;">&lt;/template&gt;</span>
+</pre>
+</div>
+
+<div class="section">
+<h3>样式策略</h3>
+<div style="background: #1e2a3a; padding: 14px; border-radius: 8px; font-size: 12px; line-height: 1.7;">
+  <p><strong style="color: #8ac;">全部使用 SiYuan CSS 变量，零硬编码颜色：</strong></p>
+  <pre style="margin: 8px 0 0 0; overflow-x: auto;">
+<span style="color: #c792ea;">.wiki-chat-dialog</span> {
+  <span style="color: #82aaff;">background</span>: <span style="color: #c3e88d;">var(--b3-theme-surface)</span>;
+  <span style="color: #82aaff;">border</span>: 1px solid <span style="color: #c3e88d;">var(--b3-border-color)</span>;
+  <span style="color: #82aaff;">color</span>: <span style="color: #c3e88d;">var(--b3-theme-on-surface)</span>;
+}
+<span style="color: #c792ea;">.bubble-user .bubble-content</span> {
+  <span style="color: #82aaff;">background</span>: <span style="color: #c3e88d;">var(--b3-theme-primary-lightest)</span>;
+  <span style="color: #82aaff;">color</span>: <span style="color: #c3e88d;">var(--b3-theme-on-surface)</span>;
+}
+<span style="color: #c792ea;">.bubble-assistant .bubble-content</span> {
+  <span style="color: #82aaff;">background</span>: <span style="color: #c3e88d;">var(--b3-theme-surface-light)</span>;
+  <span style="color: #82aaff;">color</span>: <span style="color: #c3e88d;">var(--b3-theme-on-surface)</span>;
+}
+<span style="color: #c792ea;">.source-tag</span> {
+  <span style="color: #82aaff;">background</span>: <span style="color: #c3e88d;">var(--b3-theme-primary)</span>;
+  <span style="color: #82aaff;">color</span>: <span style="color: #c3e88d;">var(--b3-theme-on-primary, #fff)</span>;
+}
+<span style="color: #c792ea;">.source-badge</span> {
+  <span style="color: #82aaff;">background</span>: <span style="color: #c3e88d;">var(--b3-theme-success)</span>;
+  <span style="color: #82aaff;">color</span>: <span style="color: #c3e88d;">var(--b3-theme-on-primary, #fff)</span>;
+}
+<span style="color: #c792ea;">.system-hint</span> {
+  <span style="color: #82aaff;">color</span>: <span style="color: #c3e88d;">var(--b3-theme-on-surface-light)</span>;
+}
+<span style="color: #c792ea;">.mention-popup</span> {
+  <span style="color: #82aaff;">background</span>: <span style="color: #c3e88d;">var(--b3-theme-surface)</span>;
+  <span style="color: #82aaff;">border</span>: 1px solid <span style="color: #c3e88d;">var(--b3-border-color)</span>;
+}
+<span style="color: #c792ea;">.input-area textarea</span> {
+  <span style="color: #82aaff;">background</span>: <span style="color: #c3e88d;">var(--b3-theme-surface-light)</span>;
+  <span style="color: #82aaff;">border</span>: 1px solid <span style="color: #c3e88d;">var(--b3-border-color)</span>;
+  <span style="color: #82aaff;">color</span>: <span style="color: #c3e88d;">var(--b3-theme-on-surface)</span>;
+}
+  </pre>
+</div>
+</div>

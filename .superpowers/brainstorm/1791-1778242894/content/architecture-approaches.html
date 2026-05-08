@@ -1,0 +1,56 @@
+<h2>架构方案对比</h2>
+<p class="subtitle">三种实现路径，各有侧重</p>
+
+<div class="options">
+  <div class="option" data-choice="a" onclick="toggleSelect(this)">
+    <div class="letter">A</div>
+    <div class="content">
+      <h3>Composable + 重构 Dialog（推荐）</h3>
+      <p>新建 <code>use-wiki-chat-session.ts</code> 管理消息历史、来源追踪、路由状态、上下文构建。WikiChatDialog.vue 作为 UI 壳层负责渲染和交互。</p>
+      <div style="margin-top: 12px; font-size: 12px;">
+        <div style="color: #6acfa0;">&#x2714; 符合项目现有模式（composable 管逻辑，组件管 UI）</div>
+        <div style="color: #6acfa0;">&#x2714; 逻辑可独立测试</div>
+        <div style="color: #6acfa0;">&#x2714; 组件职责清晰，不会膨胀</div>
+        <div style="color: #e77b45;">&#x26a0; 新增 1 个 composable 文件</div>
+      </div>
+    </div>
+  </div>
+
+  <div class="option" data-choice="b" onclick="toggleSelect(this)">
+    <div class="letter">B</div>
+    <div class="content">
+      <h3>全部内联到 Dialog</h3>
+      <p>在 WikiChatDialog.vue 内部完成所有改造：消息数组、路由逻辑、@ 检测、上下文构建。不新建文件。</p>
+      <div style="margin-top: 12px; font-size: 12px;">
+        <div style="color: #6acfa0;">&#x2714; 文件数量最少</div>
+        <div style="color: #6acfa0;">&#x2714; 改动集中，容易追踪</div>
+        <div style="color: #e77b45;">&#x26a0; 组件将膨胀到 400+ 行，混合 UI 和业务逻辑</div>
+        <div style="color: #e77b45;">&#x26a0; 难以单独测试路由和上下文逻辑</div>
+      </div>
+    </div>
+  </div>
+
+  <div class="option" data-choice="c" onclick="toggleSelect(this)">
+    <div class="letter">C</div>
+    <div class="content">
+      <h3>通用 ChatWindow 组件 + Wiki 适配层</h3>
+      <p>新建通用 <code>ChatWindow.vue</code>（气泡、输入、@提及、头像），WikiChatDialog 通过 props/events 适配 Wiki 特有逻辑（路由、来源管理）。</p>
+      <div style="margin-top: 12px; font-size: 12px;">
+        <div style="color: #6acfa0;">&#x2714; UI 组件可复用</div>
+        <div style="color: #6acfa0;">&#x2714; 职责分离最彻底</div>
+               <div style="color: #e77b45;">&#x26a0; 当前项目无其他聊天场景，可能过度抽象</div>
+        <div style="color: #e77b45;">&#x26a0; 抽象层较多，调试链路变长</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div style="margin-top: 20px; padding: 14px; background: #1e2a3a; border-radius: 8px; border-left: 3px solid #4a6fa5;">
+  <strong style="color: #8ac;">推荐方案 A</strong>
+  <p style="font-size: 13px; margin-top: 6px; color: #ccc;">
+    项目已有的 <code>use-analytics-llm-wiki-chat.ts</code> 正是 composable 管理状态的模式。
+    方案 A 自然延续这一风格：<code>use-wiki-chat-session.ts</code> 管理消息历史和路由，
+    <code>WikiChatDialog.vue</code> 只负责 UI 渲染和用户交互。
+    逻辑可测试、组件不膨胀、改动范围可控。
+  </p>
+</div>

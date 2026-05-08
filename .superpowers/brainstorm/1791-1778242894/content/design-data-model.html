@@ -1,0 +1,55 @@
+<h2>设计第 1 节：数据模型</h2>
+<p class="subtitle">消息类型与会话状态定义</p>
+
+<div class="section">
+<h3>ChatMessage — 单条消息</h3>
+<pre style="background: #1a1a2e; padding: 14px; border-radius: 8px; font-size: 12px; line-height: 1.6; overflow-x: auto;">
+<span style="color: #c792ea;">interface</span> <span style="color: #82aaff;">ChatMessage</span> {
+  <span style="color: #c792ea;">id</span>: <span style="color: #82aaff;">string</span>                    <span style="color: #6a6a8a;">// uuid，用于列表 key</span>
+  <span style="color: #c792ea;">role</span>: <span style="color: #c792ea;">'user'</span> | <span style="color: #c792ea;">'assistant'</span> | <span style="color: #c792ea;">'system'</span>
+  <span style="color: #c792ea;">content</span>: <span style="color: #82aaff;">string</span>                <span style="color: #6a6a8a;">// 消息文本</span>
+  <span style="color: #c792ea;">timestamp</span>: <span style="color: #82aaff;">number</span>              <span style="color: #6a6a8a;">// Date.now()</span>
+  <span style="color: #c792ea;">sourcePage</span>?: <span style="color: #82aaff;">WikiIndexPage</span>     <span style="color: #6a6a8a;">// 该消息使用的 Wiki 来源（assistant 消息必有）</span>
+  <span style="color: #c792ea;">referencedDocumentIds</span>?: <span style="color: #82aaff;">string</span>[] <span style="color: #6a6a8a;">// AI 引用的文档 ID（assistant 消息）</span>
+  <span style="color: #c792ea;">isRouting</span>?: <span style="color: #82aaff;">boolean</span>            <span style="color: #6a6a8a;">// 标记"正在路由"的过渡消息</span>
+  <span style="color: #c792ea;">sourceSwitched</span>?: <span style="color: #82aaff;">boolean</span>       <span style="color: #6a6a8a;">// 标记来源切换的系统提示</span>
+  <span style="color: #c792ea;">switchFrom</span>?: <span style="color: #82aaff;">string</span>            <span style="color: #6a6a8a;">// 切换前的来源标题</span>
+  <span style="color: #c792ea;">switchTo</span>?: <span style="color: #82aaff;">string</span>              <span style="color: #6a6a8a;">// 切换后的来源标题</span>
+}
+</pre>
+</div>
+
+<div class="section">
+<h3>WikiChatSession — 会话状态</h3>
+<pre style="background: #1a1a2e; padding: 14px; border-radius: 8px; font-size: 12px; line-height: 1.6; overflow-x: auto;">
+<span style="color: #c792ea;">interface</span> <span style="color: #82aaff;">WikiChatSession</span> {
+  <span style="color: #c792ea;">messages</span>: <span style="color: #82aaff;">ChatMessage</span>[]         <span style="color: #6a6a8a;">// 完整消息历史</span>
+  <span style="color: #c792ea;">currentSourcePage</span>: <span style="color: #82aaff;">WikiIndexPage</span> | <span style="color: #c792ea;">null</span>  <span style="color: #6a6a8a;">// 当前 Wiki 来源</span>
+  <span style="color: #c792ea;">isRouting</span>: <span style="color: #82aaff;">boolean</span>             <span style="color: #6a6a8a;">// 正在执行路由匹配</span>
+  <span style="color: #c792ea;">isLoading</span>: <span style="color: #82aaff;">boolean</span>             <span style="color: #6a6a8a;">// 正在等待 AI 回复</span>
+  <span style="color: #c792ea;">error</span>: <span style="color: #82aaff;">string</span> | <span style="color: #c792ea;">null</span>           <span style="color: #6a6a8a;">// 错误信息</span>
+}
+</pre>
+</div>
+
+<div class="section">
+<h3>与现有类型的关系</h3>
+<div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-top: 8px;">
+  <div style="background: #1e2a3a; padding: 12px; border-radius: 8px;">
+    <strong style="color: #e77b45;">&#x2717; 替换</strong>
+    <p style="font-size: 12px; margin-top: 4px; color: #aaa;"><code>WikiChatResult</code> — 当前单次结果类型，被 <code>ChatMessage[]</code> 取代</p>
+  </div>
+  <div style="background: #1e2a3a; padding: 12px; border-radius: 8px;">
+    <strong style="color: #6acfa0;">&#x2713; 保留</strong>
+    <p style="font-size: 12px; margin-top: 4px; color: #aaa;"><code>WikiChatScope</code> — 仍用于初始打开时的模式判断（topic / document）</p>
+  </div>
+  <div style="background: #1e2a3a; padding: 12px; border-radius: 8px;">
+    <strong style="color: #6acfa0;">&#x2713; 保留</strong>
+    <p style="font-size: 12px; margin-top: 4px; color: #aaa;"><code>WikiIndexPage</code> — 来源页面类型不变，ChatMessage 引用它</p>
+  </div>
+  <div style="background: #1e2a3a; padding: 12px; border-radius: 8px;">
+    <strong style="color: #8ac;">&#x27a8; 扩展</strong>
+    <p style="font-size: 12px; margin-top: 4px; color: #aaa;"><code>llm-wiki-chat-service.ts</code> — 新增多轮上下文构建函数</p>
+  </div>
+</div>
+</div>

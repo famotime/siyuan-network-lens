@@ -1,0 +1,134 @@
+<h2>设计第 2 节：Composable 层</h2>
+<p class="subtitle">use-wiki-chat-session.ts — 会话状态管理与消息流控制</p>
+
+<div class="section">
+<h3>接口定义</h3>
+<pre style="background: #1a1a2e; padding: 14px; border-radius: 8px; font-size: 12px; line-height: 1.6; overflow-x: auto;">
+<span style="color: #c792ea;">interface</span> <span style="color: #82aaff;">WikiChatSessionController</span> {
+  <span style="color: #6a6a8a;">// --- 响应式状态 ---</span>
+  <span style="color: #c792ea;">session</span>: <span style="color: #82aaff;">Ref</span>&lt;<span style="color: #82aaff;">WikiChatSession</span>&gt;
+  <span style="color: #c792ea;">inputText</span>: <span style="color: #82aaff;">Ref</span>&lt;<span style="color: #82aaff;">string</span>&gt;            <span style="color: #6a6a8a;">// 输入框文本</span>
+  <span style="color: #c792ea;">mentionPopupVisible</span>: <span style="color: #82aaff;">Ref</span>&lt;<span style="color: #82aaff;">boolean</span>&gt;  <span style="color: #6a6a8a;">// @ 候选列表是否可见</span>
+  <span style="color: #c792ea;">mentionFilter</span>: <span style="color: #82aaff;">Ref</span>&lt;<span style="color: #82aaff;">string</span>&gt;         <span style="color: #6a6a8a;">// @ 后的过滤文本</span>
+  <span style="color: #c792ea;">filteredPages</span>: <span style="color: #82aaff;">ComputedRef</span>&lt;...&gt;    <span style="color: #6a6a8a;">// 根据 mentionFilter 过滤的候选页面</span>
+
+  <span style="color: #6a6a8a;">// --- 操作方法 ---</span>
+  <span style="color: #c792ea;">sendMessage</span>(): <span style="color: #82aaff;">Promise</span>&lt;<span style="color: #82aaff;">void</span>&gt;         <span style="color: #6a6a8a;">// 发送当前输入</span>
+  <span style="color: #c792ea;">switchSource</span>(page: <span style="color: #82aaff;">WikiIndexPage</span>): <span style="color: #82aaff;">void</span>  <span style="color: #6a6a8a;">// @ 选中后切换来源</span>
+  <span style="color: #c792ea;">resetSession</span>(): <span style="color: #82aaff;">void</span>              <span style="color: #6a6a8a;">// 重置会话</span>
+  <span style="color: #c792ea;">buildSaveMarkdown</span>(): <span style="color: #82aaff;">string</span>       <span style="color: #6a6a8a;">// 生成保存用 Markdown</span>
+}
+</pre>
+</div>
+
+<div class="section">
+<h3>sendMessage 核心流程</h3>
+<div style="background: #1a1a2e; padding: 16px; border-radius: 8px; font-size: 12px; line-height: 1.8;">
+<pre style="margin: 0; overflow-x: auto;">
+sendMessage():
+  1. 解析输入文本，检测是否包含 @ 切换指令
+     ├─ 有 @xxx → switchSource(匹配页面)，从文本中移除 @xxx
+     └─ 无 @ → 保持当前来源
+
+  2. 创建 user ChatMessage，push 到 session.messages
+
+  3. 判断是否需要路由（两步路由）
+     ├─ currentSourcePage 已有值（document 模式 / 已路由 / 已 @ 切换）
+     │   → 跳过路由，直接进入步骤 4
+     └─ currentSourcePage 为 null（topic 模式首次消息）
+       → 插入 isRouting=true 的系统消息
+       → 调用 AI 路由：buildRouteSystemPrompt + buildRouteUserPrompt
+       → 匹配返回的标题 → 更新 currentSourcePage
+       → 更新系统消息为"来源已确定: xxx"
+
+  4. 获取 currentSourcePage 的 kramdown 内容
+
+  5. 构建多轮上下文消息数组
+     ├─ system message: buildChatSystemPrompt()
+     ├─ wiki context: buildWikiContextMessage(pageTitle, kramdown)
+     ├─ 历史消息: 取最近 N 条（N = config.aiMaxContextMessages × 2）
+     │   └─ 包含来源切换后的所有消息（保留历史）
+     └─ 当前 user message
+
+  6. 调用 AI chat endpoint（POST /chat/completions）
+
+  7. 解析响应 → 创建 assistant ChatMessage
+     ├─ 填充 sourcePage = currentSourcePage
+     ├─ 填充 referencedDocumentIds
+     └─ push 到 session.messages
+
+  8. 清空 inputText
+</pre>
+</div>
+</div>
+
+<div class="section">
+<h3>@ 提及检测逻辑</h3>
+<div style="background: #1a1a2e; padding: 16px; border-radius: 8px; font-size: 12px; line-height: 1.8;">
+<pre style="margin: 0; overflow-x: auto;">
+watch(inputText, (text) => {
+  // 检测 @ 触发：光标前的文本以 @ 开头
+  const cursorPos = textareaRef.value?.selectionStart ?? text.length
+  const beforeCursor = text.slice(0, cursorPos)
+  const atMatch = beforeCursor.match(/@([^@\s]*)$/)
+
+  if (atMatch) {
+    mentionFilter.value = atMatch[1]    // @ 后的过滤文本
+    mentionPopupVisible.value = true
+  } else {
+    mentionPopupVisible.value = false
+  }
+})
+
+// filteredPages = computed:
+//   wikiPages.filter(p =>
+//     p.title.toLowerCase().includes(mentionFilter.value.toLowerCase())
+//   ).slice(0, 8)  // 最多显示 8 条
+
+switchSource(page):
+  // 1. 从输入文本中移除 @xxx
+  inputText.value = inputText.value.replace(/@[^@\s]*\s?/, '')
+  // 2. 关闭弹窗
+  mentionPopupVisible.value = false
+  // 3. 更新来源（不立即发消息，等用户输入完再发）
+  session.value.currentSourcePage = page
+  // 4. 插入来源切换提示消息
+  messages.push({
+    role: 'system',
+    content: `来源已切换: ${oldTitle} → ${page.title}`,
+    sourceSwitched: true,
+    switchFrom: oldTitle,
+    switchTo: page.title
+  })
+</pre>
+</div>
+</div>
+
+<div class="section">
+<h3>上下文窗口构建</h3>
+<div style="background: #1e2a3a; padding: 14px; border-radius: 8px; font-size: 12px; line-height: 1.7;">
+<pre style="margin: 0; overflow-x: auto;">
+buildContextMessages(systemPrompt, wikiContext, history, currentMsg):
+  maxContext = config.aiMaxContextMessages ?? 1
+  // maxContext = 1 → 取最近 1 轮（user + assistant 共 2 条）
+  // maxContext = 3 → 取最近 3 轮（6 条）
+
+  recentHistory = history.slice(-(maxContext * 2))
+    .filter(m => m.role === 'user' || m.role === 'assistant')
+
+  return [
+    { role: 'system', content: systemPrompt },
+    { role: 'system', content: wikiContext },  // Wiki 页面内容
+    ...recentHistory.map(m => ({               // 历史对话
+      role: m.role,
+      content: m.content
+    })),
+    { role: 'user', content: currentMsg }      // 当前问题
+  ]
+</pre>
+</div>
+<p style="font-size: 12px; color: #aaa; margin-top: 8px;">
+  Wiki 页面内容作为独立的 system message 发送，每次请求都包含最新的页面内容。
+  历史消息中跳过 system 类型（路由提示、切换提示），只保留 user/assistant 对话。
+</p>
+</div>

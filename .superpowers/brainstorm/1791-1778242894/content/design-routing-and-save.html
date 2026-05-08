@@ -1,0 +1,134 @@
+<h2>设计第 4 节：两步路由流程与保存逻辑</h2>
+<p class="subtitle">首次消息路由、后续追问、@切换、对话保存的完整流程</p>
+
+<div class="section">
+<h3>消息生命周期流程图</h3>
+<pre style="background: #1a1a2e; padding: 16px; border-radius: 8px; font-size: 12px; line-height: 1.8; overflow-x: auto;">
+用户发送消息
+    │
+    ▼
+┌─────────────────────────┐
+│ 解析输入，检测 @ 指令     │
+│ ├─ 有 @xxx → switchSource│
+│ └─ 无 @ → 保持当前来源    │
+└─────────┬───────────────┘
+          │
+          ▼
+┌─────────────────────────┐     ┌──────────────────────┐
+│ currentSourcePage 有值？ │──── │ YES → 跳过路由        │
+│ (已路由/已@切换/document) │     │ 直接进入 AI 问答      │
+└─────────┬───────────────┘     └──────────┬───────────┘
+          │ NO (topic 模式首次)             │
+          ▼                                │
+┌─────────────────────────┐                │
+│ 步骤 1: AI 路由匹配       │                │
+│ ┌─────────────────────┐ │                │
+│ │ 插入系统消息:         │ │                │
+│ │ "🔍 正在匹配最佳      │ │                │
+│ │  Wiki 页面..."       │ │                │
+│ └─────────────────────┘ │                │
+│                         │                │
+│ 调用 AI:                 │                │
+│ system: route prompt    │                │
+│ user: 问题 + 页面列表    │                │
+│                         │                │
+│ 返回标题 → 模糊匹配页面  │                │
+│                         │                │
+│ 更新 currentSourcePage  │                │
+│ 更新系统消息:            │                │
+│ "✅ 答复来源: xxx"       │                │
+└─────────┬───────────────┘                │
+          │                                │
+          ▼                                ▼
+┌─────────────────────────────────────────────┐
+│ 步骤 2: AI 问答                              │
+│                                             │
+│ 构建上下文消息数组:                           │
+│ ┌─────────────────────────────────────────┐ │
+│ │ [0] system: chat system prompt          │ │
+│ │ [1] system: wiki 页面 kramdown 内容      │ │
+│ │ [2..N] 最近 N 轮历史 (user + assistant)  │ │
+│ │ [N+1] user: 当前问题                    │ │
+│ └─────────────────────────────────────────┘ │
+│                                             │
+│ 调用 AI → 解析响应                           │
+│                                             │
+│ 创建 assistant ChatMessage:                  │
+│ ├─ content: AI 回答文本                     │
+│ ├─ sourcePage: currentSourcePage            │
+│ └─ referencedDocumentIds: [...]             │
+│                                             │
+│ push 到 session.messages                     │
+│ 自动滚动到底部                               │
+└─────────────────────────────────────────────┘
+</pre>
+</div>
+
+<div class="section">
+<h3>@ 切换来源时序</h3>
+<pre style="background: #1a1a2e; padding: 16px; border-radius: 8px; font-size: 12px; line-height: 1.8; overflow-x: auto;">
+用户输入: "@神经网络架构 这个和CNN有什么关系？"
+    │
+    ▼
+watch 检测到 @，弹出候选列表
+用户选择 "神经网络架构-llm-wiki"
+    │
+    ▼
+switchSource():
+  1. inputText → "这个和CNN有什么关系？"  (移除 @xxx)
+  2. 关闭弹窗
+  3. currentSourcePage → 神经网络架构页面
+  4. 插入系统消息:
+     "🔄 来源已切换: 深度学习基础 → 神经网络架构-llm-wiki"
+    │
+    ▼
+用户点击发送（或按 Enter）
+    │
+    ▼
+sendMessage():
+  currentSourcePage 已有值 → 跳过路由 → 直接 AI 问答
+  使用新来源（神经网络架构）的 kramdown 内容
+  历史消息保留（包含之前基于深度学习基础的对话）
+</pre>
+</div>
+
+<div class="section">
+<h3>对话保存</h3>
+<pre style="background: #1a1a2e; padding: 16px; border-radius: 8px; font-size: 12px; line-height: 1.7; overflow-x: auto;">
+buildSaveMarkdown():
+  输出格式:
+
+  # Wiki AI 对话记录
+  > 对话时间: 2026-05-08 14:32
+  > 初始来源: 深度学习基础-llm-wiki
+
+  ---
+
+  ## Q1: 什么是反向传播？
+
+  > 📄 来源: [深度学习基础-llm-wiki](siyuan://blocks/xxx)
+
+  反向传播是深度学习的核心算法...
+
+  > 📄 来源: [神经网络架构-llm-wiki](siyuan://blocks/yyy)
+
+  ---
+
+  ## Q2: 这个和CNN有什么关系？（来源已切换）
+
+  > 📄 来源: [神经网络架构-llm-wiki](siyuan://blocks/yyy)
+
+  CNN 是一种特殊的神经网络架构...
+</pre>
+
+<div style="margin-top: 12px; background: #1e2a3a; padding: 12px; border-radius: 8px; font-size: 12px;">
+  <strong style="color: #8ac;">保存位置：</strong>
+  <span style="color: #ccc;">/{wikiContainerName}/Chat/{对话标题}.md</span>
+  <br>
+  <strong style="color: #8ac;">反向链接：</strong>
+  <span style="color: #ccc;">在每个引用的 Wiki 页面末尾追加引用块（与现有行为一致）</span>
+  <br>
+  <strong style="color: #8ac;">对话标题：</strong>
+  <span style="color: #ccc;">取第一条用户消息（截取前 30 字符）</span>
+</div>
+</div>

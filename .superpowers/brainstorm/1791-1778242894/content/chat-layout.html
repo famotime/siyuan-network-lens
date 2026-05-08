@@ -1,0 +1,269 @@
+<h2>Wiki 聊天窗口 — 整体布局</h2>
+<p class="subtitle">标准 AI 聊天界面：气泡消息、来源标识、@切换、输入区在底部</p>
+
+<div class="mockup">
+  <div class="mockup-header">Wiki Chat Dialog — 完整界面示意</div>
+  <div class="mockup-body" style="padding: 0; overflow: hidden;">
+
+    <!-- Chat Window -->
+    <div style="
+      width: 480px;
+      margin: 0 auto;
+      border: 1px solid #3a3a4a;
+      border-radius: 12px;
+      overflow: hidden;
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+      background: #1a1a2e;
+      color: #e0e0e0;
+      display: flex;
+      flex-direction: column;
+      height: 560px;
+    ">
+
+      <!-- Header -->
+      <div style="
+        padding: 12px 16px;
+        background: #16162a;
+        border-bottom: 1px solid #3a3a4a;
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+      ">
+        <div style="display: flex; align-items: center; gap: 8px;">
+          <span style="font-size: 18px;">&#x1f4ac;</span>
+          <span style="font-weight: 600; font-size: 14px;">Wiki AI 对话</span>
+        </div>
+        <span style="cursor: pointer; font-size: 18px; opacity: 0.6;">&#x2715;</span>
+      </div>
+
+      <!-- Source Indicator Bar -->
+      <div style="
+        padding: 8px 16px;
+        background: #1e1e3a;
+        border-bottom: 1px solid #2a2a4a;
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        font-size: 12px;
+      ">
+        <span style="
+          background: #4a6fa5;
+          color: white;
+          padding: 2px 8px;
+          border-radius: 10px;
+          font-size: 11px;
+          font-weight: 500;
+        ">&#x1f4c4; 答复来源</span>
+        <span style="color: #8a8aaa; font-weight: 500;">深度学习基础-llm-wiki</span>
+        <span style="
+          margin-left: auto;
+          color: #6a8cba;
+          cursor: pointer;
+          font-size: 11px;
+          text-decoration: underline;
+        ">切换来源</span>
+      </div>
+
+      <!-- Messages Area -->
+      <div style="
+        flex: 1;
+        overflow-y: auto;
+        padding: 16px;
+        display: flex;
+        flex-direction: column;
+        gap: 16px;
+      ">
+
+        <!-- Routing indicator (initial) -->
+        <div style="
+          text-align: center;
+          font-size: 11px;
+          color: #6a6a8a;
+          padding: 4px 0;
+        ">
+          <span style="
+            background: #2a2a4a;
+            padding: 3px 12px;
+            border-radius: 10px;
+          ">&#x1f50d; AI 正在匹配最佳 Wiki 页面...</span>
+        </div>
+
+        <!-- User Message -->
+        <div style="display: flex; gap: 8px; flex-direction: row-reverse;">
+          <div style="
+            width: 32px; height: 32px;
+            border-radius: 50%;
+            background: #4a6fa5;
+            display: flex; align-items: center; justify-content: center;
+            font-size: 14px; flex-shrink: 0;
+          ">&#x1f464;</div>
+          <div style="max-width: 75%; text-align: right;">
+            <div style="
+              background: #2a4a7a;
+              padding: 10px 14px;
+              border-radius: 16px 16px 4px 16px;
+              font-size: 13px;
+              line-height: 1.5;
+              display: inline-block;
+              text-align: left;
+            ">什么是反向传播算法？它在深度学习中起什么作用？</div>
+            <div style="font-size: 10px; color: #6a6a8a; margin-top: 4px;">14:32</div>
+          </div>
+        </div>
+
+        <!-- AI Message -->
+        <div style="display: flex; gap: 8px;">
+          <div style="
+            width: 32px; height: 32px;
+            border-radius: 50%;
+            background: #2a5a3a;
+            display: flex; align-items: center; justify-content: center;
+            font-size: 14px; flex-shrink: 0;
+          ">&#x1f916;</div>
+          <div style="max-width: 75%;">
+            <div style="
+              background: #2a2a3e;
+              padding: 10px 14px;
+              border-radius: 16px 16px 16px 4px;
+              font-size: 13px;
+              line-height: 1.6;
+            ">
+              反向传播（Backpropagation）是深度学习中的核心算法，用于计算损失函数相对于网络权重的梯度。
+              <br><br>
+              它通过链式法则，从输出层向输入层逐层传播误差信号，从而高效地计算每个参数的更新量。
+            </div>
+            <div style="font-size: 10px; color: #6a6a8a; margin-top: 4px; display: flex; align-items: center; gap: 8px;">
+              <span>14:32</span>
+              <span style="
+                background: #1e3a2e;
+                color: #6acfa0;
+                padding: 1px 6px;
+                border-radius: 6px;
+                font-size: 10px;
+              ">&#x1f4c4; 深度学习基础-llm-wiki</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- User follow-up with @ -->
+        <div style="display: flex; gap: 8px; flex-direction: row-reverse;">
+          <div style="
+            width: 32px; height: 32px;
+            border-radius: 50%;
+            background: #4a6fa5;
+            display: flex; align-items: center; justify-content: center;
+            font-size: 14px; flex-shrink: 0;
+          ">&#x1f464;</div>
+          <div style="max-width: 75%; text-align: right;">
+            <div style="
+              background: #2a4a7a;
+              padding: 10px 14px;
+              border-radius: 16px 16px 4px 16px;
+              font-size: 13px;
+              line-height: 1.5;
+              display: inline-block;
+              text-align: left;
+            ">@神经网络架构 这个和卷积神经网络有什么关系？</div>
+            <div style="font-size: 10px; color: #6a6a8a; margin-top: 4px;">14:33</div>
+          </div>
+        </div>
+
+        <!-- Source switch indicator -->
+        <div style="
+          text-align: center;
+          font-size: 11px;
+          color: #6a6a8a;
+          padding: 4px 0;
+        ">
+          <span style="
+            background: #2a2a4a;
+            padding: 3px 12px;
+            border-radius: 10px;
+          ">&#x1f504; 来源已切换: 深度学习基础 &rarr; 神经网络架构-llm-wiki</span>
+        </div>
+
+      </div>
+
+      <!-- @ Autocomplete Popup -->
+      <div style="
+        margin: 0 16px;
+        background: #22223a;
+        border: 1px solid #3a3a5a;
+        border-radius: 8px;
+        overflow: hidden;
+        font-size: 12px;
+      ">
+        <div style="padding: 6px 12px; color: #6a6a8a; font-size: 11px; border-bottom: 1px solid #2a2a4a;">选择 Wiki 来源页面</div>
+        <div style="padding: 8px 12px; background: #2a2a4a; cursor: pointer; display: flex; align-items: center; gap: 8px;">
+          <span>&#x1f4c4;</span>
+          <span style="font-weight: 500;">神经网络架构-llm-wiki</span>
+          <span style="color: #6a6a8a; margin-left: auto; font-size: 11px;">CNN, RNN, Transformer...</span>
+        </div>
+        <div style="padding: 8px 12px; cursor: pointer; display: flex; align-items: center; gap: 8px;">
+          <span>&#x1f4c4;</span>
+          <span>自然语言处理-llm-wiki</span>
+          <span style="color: #6a6a8a; margin-left: auto; font-size: 11px;">NLP 基础与应用</span>
+        </div>
+        <div style="padding: 8px 12px; cursor: pointer; display: flex; align-items: center; gap: 8px;">
+          <span>&#x1f4c4;</span>
+          <span>强化学习入门-llm-wiki</span>
+          <span style="color: #6a6a8a; margin-left: auto; font-size: 11px;">Q-learning, Policy Gradient</span>
+        </div>
+      </div>
+
+      <!-- Input Area -->
+      <div style="
+        padding: 12px 16px;
+        background: #16162a;
+        border-top: 1px solid #3a3a4a;
+        display: flex;
+        gap: 8px;
+        align-items: flex-end;
+      ">
+        <div style="
+          flex: 1;
+          background: #22223a;
+          border: 1px solid #3a3a5a;
+          border-radius: 20px;
+          padding: 10px 16px;
+          font-size: 13px;
+          color: #8a8aaa;
+          display: flex;
+          align-items: center;
+        ">
+          <span>输入问题... 使用 @ 切换 Wiki 来源</span>
+        </div>
+        <div style="
+          width: 36px; height: 36px;
+          border-radius: 50%;
+          background: #4a6fa5;
+          display: flex; align-items: center; justify-content: center;
+          cursor: pointer;
+          font-size: 16px;
+          flex-shrink: 0;
+        ">&#x27a4;</div>
+      </div>
+
+    </div>
+  </div>
+</div>
+
+<h3 style="margin-top: 24px;">核心交互元素</h3>
+<div style="display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-top: 12px;">
+  <div style="background: #22223a; padding: 16px; border-radius: 8px;">
+    <strong style="color: #8ac;">&#x1f4ac; 气泡消息</strong>
+    <p style="font-size: 13px; margin-top: 8px; color: #aaa;">用户消息靠右蓝色气泡，AI 消息靠左深色气泡，带头像和时间戳</p>
+  </div>
+  <div style="background: #22223a; padding: 16px; border-radius: 8px;">
+    <strong style="color: #8ac;">&#x1f4c4; 来源标识</strong>
+    <p style="font-size: 13px; margin-top: 8px; color: #aaa;">顶部常驻来源栏 + 每条 AI 回复底部标注当前使用的 Wiki 页面</p>
+  </div>
+  <div style="background: #22223a; padding: 16px; border-radius: 8px;">
+    <strong style="color: #8ac;">&#x1f504; @ 切换</strong>
+    <p style="font-size: 13px; margin-top: 8px; color: #aaa;">输入 @ 弹出候选列表，可搜索过滤，选中后自动切换来源并显示切换提示</p>
+  </div>
+  <div style="background: #22223a; padding: 16px; border-radius: 8px;">
+    <strong style="color: #8ac;">&#x1f50d; 路由指示</strong>
+    <p style="font-size: 13px; margin-top: 8px; color: #aaa;">无指定来源时，显示 "AI 正在匹配" 的过渡状态，匹配完成后自动更新来源栏</p>
+  </div>
+</div>
