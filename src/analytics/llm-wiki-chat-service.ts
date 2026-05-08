@@ -81,3 +81,25 @@ export function buildChatUserPrompt(params: {
   parts.push('', `User question: ${params.question}`)
   return parts.join('\n')
 }
+
+export function buildWikiContextMessage(params: {
+  wikiPageTitle: string
+  wikiPageMarkdown: string
+  sourceDocuments?: Array<{ id: string, title: string, markdown: string }>
+}): string {
+  const parts = [
+    `Wiki page: ${params.wikiPageTitle}`,
+    '',
+    'Wiki page content:',
+    params.wikiPageMarkdown,
+  ]
+  if (params.sourceDocuments?.length) {
+    parts.push('', 'Referenced source documents:')
+    for (const doc of params.sourceDocuments) {
+      parts.push(`--- Document: ${doc.title} (ID: ${doc.id}) ---`)
+      parts.push(doc.markdown.slice(0, 3000))
+      parts.push('')
+    }
+  }
+  return parts.join('\n')
+}
