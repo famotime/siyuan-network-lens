@@ -3008,6 +3008,42 @@ const UI_TEXT = {
         en_US: 'No wiki pages found. Generate wiki pages first.',
         zh_CN: '未找到 Wiki 页面，请先生成 Wiki 页面。',
       },
+      sourceLabel: {
+        en_US: 'Source',
+        zh_CN: '来源',
+      },
+      switchSource: {
+        en_US: 'Switch',
+        zh_CN: '切换',
+      },
+      autoMatching: {
+        en_US: 'Matching best wiki page...',
+        zh_CN: '正在匹配最佳 Wiki 页面...',
+      },
+      sourceConfirmed: {
+        en_US: 'Source: {title}',
+        zh_CN: '答复来源: {title}',
+      },
+      sourceSwitched: {
+        en_US: 'Source switched: {from} → {to}',
+        zh_CN: '来源已切换: {from} → {to}',
+      },
+      mentionPlaceholder: {
+        en_US: 'Select wiki source page',
+        zh_CN: '选择 Wiki 来源页面',
+      },
+      inputWithMentionHint: {
+        en_US: 'Ask a question... Use @ to switch source',
+        zh_CN: '输入问题... 使用 @ 切换来源',
+      },
+      saveConversation: {
+        en_US: 'Save conversation',
+        zh_CN: '保存对话',
+      },
+      chatTitle: {
+        en_US: 'Wiki AI Chat',
+        zh_CN: 'Wiki AI 对话',
+      },
     },
     maintain: {
       button: {
