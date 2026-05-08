@@ -241,13 +241,16 @@ export function createWikiChatSession(options: WikiChatSessionOptions): WikiChat
       const response = await forwardProxy(
         endpoint,
         'POST',
-        {
+        JSON.stringify({
           model: config.value.aiModel,
           messages: contextMessages,
           max_tokens: config.value.aiMaxTokens,
           temperature: config.value.aiTemperature,
-        },
-        [['Authorization', `Bearer ${config.value.aiApiKey}`]],
+        }),
+        [
+          { Authorization: `Bearer ${config.value.aiApiKey}` },
+          { Accept: 'application/json' },
+        ],
         config.value.aiRequestTimeoutSeconds * 1000,
         'application/json',
       )
@@ -289,7 +292,7 @@ export function createWikiChatSession(options: WikiChatSessionOptions): WikiChat
     const response = await forwardProxy(
       endpoint,
       'POST',
-      {
+      JSON.stringify({
         model: config.value.aiModel,
         messages: [
           { role: 'system', content: systemPrompt },
@@ -297,8 +300,11 @@ export function createWikiChatSession(options: WikiChatSessionOptions): WikiChat
         ],
         max_tokens: config.value.aiMaxTokens,
         temperature: config.value.aiTemperature,
-      },
-      [['Authorization', `Bearer ${config.value.aiApiKey}`]],
+      }),
+      [
+        { Authorization: `Bearer ${config.value.aiApiKey}` },
+        { Accept: 'application/json' },
+      ],
       config.value.aiRequestTimeoutSeconds * 1000,
       'application/json',
     )
