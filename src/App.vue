@@ -249,7 +249,15 @@
       :wiki-pages="llmWikiPages"
       :forward-proxy="forwardProxy"
       :get-block-kramdown="getBlockKramdown"
-      :config="props.config"
+      :config="{
+        aiBaseUrl: props.config.aiBaseUrl ?? '',
+        aiApiKey: props.config.aiApiKey ?? '',
+        aiModel: props.config.aiModel ?? '',
+        aiRequestTimeoutSeconds: props.config.aiRequestTimeoutSeconds ?? 60,
+        aiMaxTokens: props.config.aiMaxTokens ?? 4096,
+        aiTemperature: props.config.aiTemperature ?? 0.7,
+        aiMaxContextMessages: props.config.aiMaxContextMessages ?? 1,
+      }"
       @close="closeLlmWikiChat"
       @save="handleLlmWikiChatSave"
     />
@@ -279,8 +287,6 @@ import WikiChatDialog from '@/components/WikiChatDialog.vue'
 import WikiMaintainDiffDialog from '@/components/WikiMaintainDiffDialog.vue'
 import { isSummaryCardVisible } from '@/analytics/summary-card-config'
 import type { WikiIndexPage } from '@/analytics/wiki-index'
-import type { WikiChatResult } from '@/analytics/llm-wiki-chat-service'
-import { buildChatSaveMarkdown } from '@/composables/use-analytics-llm-wiki-chat'
 import { pickOppositePluginText, pickPluginText } from '@/i18n/plugin'
 import { useAnalyticsState } from '@/composables/use-analytics'
 import { createAppWikiPanelController } from '@/composables/use-app-wiki-panel'
@@ -477,15 +483,9 @@ function handleLlmWikiMaintain(page: WikiIndexPage) {
   openLlmWikiMaintainDiff(page)
 }
 
-async function handleLlmWikiChatSave(result: WikiChatResult & { question: string, usedPage: WikiIndexPage }) {
-  const markdown = buildChatSaveMarkdown({
-    question: result.question,
-    answer: result.answer,
-    usedPageTitle: result.usedPage.title,
-    usedPageId: result.usedPage.documentId,
-    referencedDocumentIds: result.referencedDocumentIds,
-  })
-  const title = result.question.slice(0, 64)
+async function handleLlmWikiChatSave(markdown: string) {
+  const firstLine = markdown.split('\n').find(l => l.startsWith('## Q1:'))?.slice(6) ?? 'Wiki AI Chat'
+  const title = firstLine.slice(0, 30)
   const containerName = props.config.wikiContainerName ?? 'LLM Wiki'
   const chatPath = `/${containerName}/Chat/${title}`
   const notebooks = snapshot.value?.notebooks ?? []
@@ -494,8 +494,14 @@ async function handleLlmWikiChatSave(result: WikiChatResult & { question: string
   try {
     const chatDocId = await createDocWithMd(wikiNotebook.id, chatPath, markdown)
     if (chatDocId) {
-      const refLink = `[${title}](siyuan://blocks/${chatDocId})`
-      await appendBlock(result.usedPage.documentId, 'markdown', refLink)
+      // Find the first assistant message's source page for back-link
+      const firstAssistant = llmWikiChatScope.value?.mode === 'document'
+        ? llmWikiChatScope.value.targetPage
+        : null
+      if (firstAssistant) {
+        const refLink = `[${title}](siyuan://blocks/${chatDocId})`
+        await appendBlock(firstAssistant.documentId, 'markdown', refLink)
+      }
     }
   } catch {
     // silently handle save errors
