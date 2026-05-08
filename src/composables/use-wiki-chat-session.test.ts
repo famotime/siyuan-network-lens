@@ -178,3 +178,59 @@ describe('sendMessage', () => {
     expect(session.session.value.messages).toEqual([])
   })
 })
+
+describe('buildSaveMarkdown', () => {
+  it('生成包含所有问答的 Markdown', () => {
+    const targetPage = makePage('doc1', '深度学习基础-llm-wiki')
+    const session = createWikiChatSession({
+      scope: ref({ mode: 'document', targetPage } as WikiChatScope),
+      wikiPages: ref([targetPage]),
+      forwardProxy: vi.fn(),
+      getBlockKramdown: vi.fn(),
+      config: ref({
+        aiBaseUrl: 'http://localhost',
+        aiApiKey: 'key',
+        aiModel: 'model',
+        aiRequestTimeoutSeconds: 60,
+        aiMaxTokens: 4096,
+        aiTemperature: 0.7,
+        aiMaxContextMessages: 1,
+      }),
+    })
+
+    // Simulate a conversation
+    session.session.value.messages = [
+      { id: '1', role: 'user', content: '什么是反向传播？', timestamp: 1000 },
+      { id: '2', role: 'assistant', content: '反向传播是...', timestamp: 2000, sourcePage: targetPage, referencedDocumentIds: [] },
+      { id: '3', role: 'user', content: '它和CNN的关系？', timestamp: 3000 },
+      { id: '4', role: 'assistant', content: 'CNN使用反向传播...', timestamp: 4000, sourcePage: targetPage, referencedDocumentIds: [] },
+    ]
+
+    const md = session.buildSaveMarkdown()
+    expect(md).toContain('Wiki AI Chat')
+    expect(md).toContain('什么是反向传播？')
+    expect(md).toContain('反向传播是...')
+    expect(md).toContain('它和CNN的关系？')
+    expect(md).toContain('CNN使用反向传播...')
+    expect(md).toContain('siyuan://blocks/doc1')
+  })
+
+  it('空会话返回空字符串', () => {
+    const session = createWikiChatSession({
+      scope: ref({ mode: 'topic' } as WikiChatScope),
+      wikiPages: ref([]),
+      forwardProxy: vi.fn(),
+      getBlockKramdown: vi.fn(),
+      config: ref({
+        aiBaseUrl: 'http://localhost',
+        aiApiKey: 'key',
+        aiModel: 'model',
+        aiRequestTimeoutSeconds: 60,
+        aiMaxTokens: 4096,
+        aiTemperature: 0.7,
+        aiMaxContextMessages: 1,
+      }),
+    })
+    expect(session.buildSaveMarkdown()).toBe('')
+  })
+})

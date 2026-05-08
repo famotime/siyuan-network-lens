@@ -286,8 +286,39 @@ export function createWikiChatSession(options: WikiChatSessionOptions): WikiChat
   }
 
   function buildSaveMarkdown(): string {
-    // stub — will be completed in Task 5
-    return ''
+    const msgs = session.value.messages
+    const userMsgs = msgs.filter(m => m.role === 'user')
+    if (userMsgs.length === 0) return ''
+
+    const initialSource = session.value.currentSourcePage?.title ?? ''
+    const now = new Date().toLocaleString()
+    const lines: string[] = [
+      `# ${t('llmWiki.chat.chatTitle')}`,
+      `> ${t('llmWiki.chat.sourceLabel')}: ${initialSource}`,
+      `> ${now}`,
+      '',
+      '---',
+    ]
+
+    let qIndex = 0
+    for (const msg of msgs) {
+      if (msg.role === 'user') {
+        qIndex++
+        lines.push('')
+        lines.push(`## Q${qIndex}: ${msg.content}`)
+      } else if (msg.role === 'assistant') {
+        if (msg.sourcePage) {
+          lines.push('')
+          lines.push(`> 📄 ${t('llmWiki.chat.sourceLabel')}: [${msg.sourcePage.title}](siyuan://blocks/${msg.sourcePage.documentId})`)
+        }
+        lines.push('')
+        lines.push(msg.content)
+        lines.push('')
+        lines.push('---')
+      }
+    }
+
+    return lines.join('\n')
   }
 
   return {
