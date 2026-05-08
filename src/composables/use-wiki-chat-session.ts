@@ -66,7 +66,7 @@ function nextMessageId(): string {
 }
 
 export function createWikiChatSession(options: WikiChatSessionOptions): WikiChatSessionController {
-  const { scope, wikiPages } = options
+  const { scope, wikiPages, forwardProxy, getBlockKramdown, config } = options
 
   const initialSourcePage = scope.value.mode === 'document' ? scope.value.targetPage ?? null : null
 
@@ -118,7 +118,158 @@ export function createWikiChatSession(options: WikiChatSessionOptions): WikiChat
   }
 
   async function sendMessage(): Promise<void> {
-    // stub — will be completed in Task 4
+    const text = inputText.value.trim()
+    if (!text || session.value.isLoading) return
+
+    // 1. Check for @ mention in input
+    const atMatch = text.match(/@([^\s@]+)/)
+    if (atMatch) {
+      const mentionText = atMatch[1]
+      const matchedPage = wikiPages.value.find(
+        p => p.title.toLowerCase().includes(mentionText.toLowerCase()),
+      )
+      if (matchedPage) {
+        switchSource(matchedPage)
+      }
+    }
+
+    const cleanText = inputText.value.replace(/@[^\s@]+\s?/, '').trim()
+    if (!cleanText) return
+
+    // 2. Push user message
+    session.value.messages.push({
+      id: nextMessageId(),
+      role: 'user',
+      content: cleanText,
+      timestamp: Date.now(),
+    })
+    inputText.value = ''
+    session.value.error = null
+
+    try {
+      // 3. Route if needed (first message in topic mode)
+      if (!session.value.currentSourcePage) {
+        const routingMsgId = nextMessageId()
+        session.value.messages.push({
+          id: routingMsgId,
+          role: 'system',
+          content: t('llmWiki.chat.autoMatching'),
+          timestamp: Date.now(),
+          isRouting: true,
+        })
+        session.value.isRouting = true
+
+        const pageTitles = wikiPages.value.map(p => p.title)
+        const routeResponse = await callAiEndpoint(
+          buildRouteSystemPrompt(),
+          buildRouteUserPrompt({ question: cleanText, pageTitles }),
+        )
+        const matchedTitle = parseRouteResponse(routeResponse)
+        const normalizedMatch = matchedTitle.toLowerCase().trim()
+        let targetPage = wikiPages.value.find(
+          p => p.title.toLowerCase().trim() === normalizedMatch,
+        )
+        if (!targetPage) {
+          targetPage = wikiPages.value.find(
+            p => p.title.toLowerCase().includes(normalizedMatch)
+              || normalizedMatch.includes(p.title.toLowerCase()),
+          )
+        }
+        if (!targetPage) {
+          targetPage = wikiPages.value[0]
+        }
+
+        session.value.currentSourcePage = targetPage ?? null
+        session.value.isRouting = false
+
+        // Update routing message to confirmed
+        const routingMsg = session.value.messages.find(m => m.id === routingMsgId)
+        if (routingMsg && targetPage) {
+          routingMsg.content = t('llmWiki.chat.sourceConfirmed', { title: targetPage.title })
+          routingMsg.isRouting = false
+        }
+      }
+
+      if (!session.value.currentSourcePage) {
+        session.value.error = t('llmWiki.chat.noWikiPages')
+        return
+      }
+
+      // 4. Fetch wiki page content
+      const wikiBlock = await getBlockKramdown(session.value.currentSourcePage.documentId)
+
+      // 5. Build context messages
+      const maxContext = config.value.aiMaxContextMessages ?? 1
+      const recentHistory = session.value.messages
+        .filter(m => m.role === 'user' || m.role === 'assistant')
+        .slice(-(maxContext * 2))
+
+      const contextMessages = [
+        { role: 'system' as const, content: buildChatSystemPrompt() },
+        { role: 'system' as const, content: buildWikiContextMessage({
+          wikiPageTitle: session.value.currentSourcePage.title,
+          wikiPageMarkdown: wikiBlock.kramdown,
+        }) },
+        ...recentHistory.map(m => ({ role: m.role as 'user' | 'assistant', content: m.content })),
+        { role: 'user' as const, content: cleanText },
+      ]
+
+      // 6. Call AI
+      session.value.isLoading = true
+      const endpoint = `${config.value.aiBaseUrl.replace(/\/+$/, '')}/chat/completions`
+      const response = await forwardProxy(
+        endpoint,
+        'POST',
+        {
+          model: config.value.aiModel,
+          messages: contextMessages,
+          max_tokens: config.value.aiMaxTokens,
+          temperature: config.value.aiTemperature,
+        },
+        [['Authorization', `Bearer ${config.value.aiApiKey}`]],
+        config.value.aiRequestTimeoutSeconds * 1000,
+        'application/json',
+      )
+      const body = typeof response.body === 'string' ? JSON.parse(response.body) : response.body
+      const aiContent = body.choices?.[0]?.message?.content ?? ''
+
+      // 7. Parse and push assistant message
+      const parsed = parseChatResponse(aiContent)
+      session.value.messages.push({
+        id: nextMessageId(),
+        role: 'assistant',
+        content: parsed.answer,
+        timestamp: Date.now(),
+        sourcePage: session.value.currentSourcePage,
+        referencedDocumentIds: parsed.referencedDocumentIds,
+      })
+    } catch (e: any) {
+      session.value.error = e.message ?? String(e)
+    } finally {
+      session.value.isLoading = false
+    }
+  }
+
+  async function callAiEndpoint(systemPrompt: string, userPrompt: string): Promise<string> {
+    const endpoint = `${config.value.aiBaseUrl.replace(/\/+$/, '')}/chat/completions`
+    const response = await forwardProxy(
+      endpoint,
+      'POST',
+      {
+        model: config.value.aiModel,
+        messages: [
+          { role: 'system', content: systemPrompt },
+          { role: 'user', content: userPrompt },
+        ],
+        max_tokens: config.value.aiMaxTokens,
+        temperature: config.value.aiTemperature,
+      },
+      [['Authorization', `Bearer ${config.value.aiApiKey}`]],
+      config.value.aiRequestTimeoutSeconds * 1000,
+      'application/json',
+    )
+    const body = typeof response.body === 'string' ? JSON.parse(response.body) : response.body
+    return body.choices?.[0]?.message?.content ?? ''
   }
 
   function resetSession() {
