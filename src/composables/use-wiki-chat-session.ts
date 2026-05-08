@@ -8,6 +8,7 @@ import {
   buildWikiContextMessage,
   parseRouteResponse,
   parseChatResponse,
+  extractFirstSectionAfterHeader,
 } from '@/analytics/llm-wiki-chat-service'
 import { t } from '@/i18n/ui'
 import type { PluginLogger } from '@/utils/plugin-logger'
@@ -169,10 +170,22 @@ export function createWikiChatSession(options: WikiChatSessionOptions): WikiChat
         session.value.isRouting = true
 
         const pageTitles = wikiPages.value.map(p => p.title)
-        logger?.log('[WikiChat] routing: calling AI', { question: cleanText, pageTitles })
+
+        // Fetch all wiki page contents in parallel to extract summaries
+        const pageSummaries = await Promise.all(
+          wikiPages.value.map(async (p) => {
+            try {
+              const block = await getBlockKramdown(p.documentId)
+              return extractFirstSectionAfterHeader(block.kramdown, '页面头信息')
+            } catch {
+              return ''
+            }
+          }),
+        )
+        logger?.log('[WikiChat] routing: calling AI', { question: cleanText, pageTitles, summaries: pageSummaries.map(s => s.slice(0, 80)) })
         const routeResponse = await callAiEndpoint(
           buildRouteSystemPrompt(),
-          buildRouteUserPrompt({ question: cleanText, pageTitles }),
+          buildRouteUserPrompt({ question: cleanText, pageTitles, pageSummaries }),
         )
         logger?.log('[WikiChat] routing: AI returned', { raw: routeResponse.slice(0, 200) })
         const matchedTitle = parseRouteResponse(routeResponse)

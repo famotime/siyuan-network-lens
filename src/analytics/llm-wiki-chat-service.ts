@@ -37,15 +37,54 @@ export function buildRouteSystemPrompt(): string {
 export function buildRouteUserPrompt(params: {
   question: string
   pageTitles: string[]
+  pageSummaries?: string[]
 }): string {
-  return [
+  const lines = [
     `User question: ${params.question}`,
     '',
     'Available wiki pages:',
-    ...params.pageTitles.map((title, i) => `${i + 1}. ${title}`),
-    '',
-    'Return the single most relevant page title:',
-  ].join('\n')
+  ]
+  for (let i = 0; i < params.pageTitles.length; i++) {
+    const summary = params.pageSummaries?.[i]
+    if (summary) {
+      lines.push(`${i + 1}. ${params.pageTitles[i]}`)
+      lines.push(`   Summary: ${summary}`)
+    } else {
+      lines.push(`${i + 1}. ${params.pageTitles[i]}`)
+    }
+  }
+  lines.push('', 'Return the single most relevant page title:')
+  return lines.join('\n')
+}
+
+export function extractFirstSectionAfterHeader(kramdown: string, headerText: string): string {
+  if (!kramdown) return ''
+  const lines = kramdown.split('\n')
+  let foundHeader = false
+  let headerLevel = 0
+  const sectionLines: string[] = []
+
+  for (const line of lines) {
+    const headingMatch = line.match(/^(#{1,6})\s+(.+)/)
+    if (headingMatch) {
+      const level = headingMatch[1].length
+      const text = headingMatch[2].trim()
+      if (!foundHeader) {
+        if (text.includes(headerText)) {
+          foundHeader = true
+          headerLevel = level
+        }
+      } else {
+        // Next heading at same or higher level → end of section
+        if (level <= headerLevel) break
+        sectionLines.push(line)
+      }
+    } else if (foundHeader) {
+      sectionLines.push(line)
+    }
+  }
+
+  return sectionLines.join('\n').trim().slice(0, 500)
 }
 
 export function buildChatSystemPrompt(): string {
