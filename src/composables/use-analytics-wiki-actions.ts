@@ -16,6 +16,7 @@ import type { WikiThemeBundle } from '@/analytics/wiki-generation'
 import { buildThemeWikiPageTitle } from '@/analytics/wiki-page-model'
 import { renderThemeWikiDraft } from '@/analytics/wiki-renderer'
 import { buildWikiPageStorageKey, type AiWikiStore, type WikiPageSnapshotRecord } from '@/analytics/wiki-store'
+import type { WikiPreviewCacheStore } from '@/analytics/wiki-preview-store'
 import type { AnalyticsSnapshot } from '@/analytics/siyuan-data'
 import type { ThemeDocument } from '@/analytics/theme-documents'
 import { countThemeMatchesForDocument } from '@/analytics/theme-documents'
@@ -69,6 +70,7 @@ export function createAnalyticsWikiActionsController(params: {
   wikiError: Ref<string>
   wikiPreview: Ref<WikiPreviewState | null>
   wikiPreviewCache: Ref<Map<string, WikiPreviewState>>
+  wikiPreviewCacheStore?: WikiPreviewCacheStore | null
   aiIndexStore: AiDocumentIndexStore | null
   aiWikiStore: AiWikiStore | null
   aiWikiService: AiWikiService | null
@@ -86,10 +88,25 @@ export function createAnalyticsWikiActionsController(params: {
   resolveNotebookName: (notebookId: string) => string
   notify: ShowMessageFn
 }) {
-  function restoreCachedWikiPreview(themeDocumentId: string) {
+  async function restoreCachedWikiPreview(themeDocumentId: string) {
     params.wikiError.value = ''
     const cached = params.wikiPreviewCache.value.get(themeDocumentId)
-    params.wikiPreview.value = cached ?? null
+    if (cached) {
+      params.wikiPreview.value = cached
+      return
+    }
+
+    if (params.wikiPreviewCacheStore) {
+      const persisted = await params.wikiPreviewCacheStore.getPreview(themeDocumentId)
+      if (persisted) {
+        persisted.isCachedPreview = true
+        params.wikiPreviewCache.value.set(themeDocumentId, persisted)
+        params.wikiPreview.value = persisted
+        return
+      }
+    }
+
+    params.wikiPreview.value = null
   }
 
   async function prepareWikiPreview(request?: WikiPreviewRequest) {
@@ -341,8 +358,13 @@ export function createAnalyticsWikiActionsController(params: {
         excludedWikiDocuments: [],
         deltaStats,
         sourceDocMetas,
+        isCachedPreview: false,
       }
       params.wikiPreviewCache.value.set(request.themeDocumentId, params.wikiPreview.value)
+
+      if (params.wikiPreviewCacheStore) {
+        await params.wikiPreviewCacheStore.savePreview(request.themeDocumentId, params.wikiPreview.value)
+      }
 
       const hasNewPages = themePage.preview.status === 'create'
       if (hasNewPages) {

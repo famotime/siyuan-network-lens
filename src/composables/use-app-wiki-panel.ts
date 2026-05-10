@@ -16,7 +16,7 @@ export function createAppWikiPanelController(params: {
   resolveLinkAssociations: (documentId: string) => LinkAssociations
   resolveTitle: (documentId: string) => string
   prepareWikiPreview: (request?: WikiPreviewRequest) => Promise<void>
-  onSwitchDocument: (themeDocumentId: string) => void
+  onSwitchDocument: (themeDocumentId: string) => void | Promise<void>
 }) {
   const wikiPanelPlacement = ref<'ranking' | ''>('')
   const wikiPanelCoreDocumentId = ref('')
@@ -37,7 +37,7 @@ export function createAppWikiPanelController(params: {
       return
     }
 
-    params.onSwitchDocument(documentId)
+    await params.onSwitchDocument(documentId)
 
     const associations = params.resolveLinkAssociations(documentId)
     const sourceDocumentIds = [

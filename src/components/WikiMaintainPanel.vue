@@ -52,6 +52,7 @@
       <div v-if="preview" class="wiki-panel__scope">
         <p class="wiki-panel__generated-at">
           {{ t('wikiMaintain.generatedAt') }}: {{ formatTimestamp(preview.generatedAt) }}
+          <span v-if="preview.isCachedPreview" class="wiki-panel__cached-badge">{{ t('wikiMaintain.cachedPreview') }}</span>
         </p>
         <div class="wiki-panel__scope-grid">
           <div class="wiki-panel__scope-card" :title="t('wikiMaintain.sourceDocumentsTooltip')">
@@ -530,8 +531,21 @@ function formatProcessingTime(ms: number): string {
 
 .wiki-panel__generated-at {
   margin: 0;
-  font-size: 12px;
-  color: color-mix(in srgb, var(--b3-theme-on-background) 55%, transparent);
+  font-size: 13px;
+  font-weight: 500;
+  color: color-mix(in srgb, var(--b3-theme-on-background) 75%, transparent);
+}
+
+.wiki-panel__cached-badge {
+  display: inline-block;
+  margin-left: 8px;
+  padding: 1px 8px;
+  border-radius: 999px;
+  font-size: 11px;
+  font-weight: 500;
+  background: color-mix(in srgb, var(--b3-theme-primary) 14%, transparent);
+  color: var(--b3-theme-primary);
+  vertical-align: 1px;
 }
 
 .wiki-panel__scope-grid {

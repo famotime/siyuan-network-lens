@@ -77,6 +77,7 @@ export interface WikiPreviewState {
   applyResult?: WikiApplyBatchResult
   deltaStats?: WikiPreviewDeltaStats
   sourceDocMetas?: WikiPreviewSourceDocMeta[]
+  isCachedPreview?: boolean
 }
 
 export interface WikiPreviewRequest {

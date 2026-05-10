@@ -1223,6 +1223,10 @@ const UI_TEXT = {
       en_US: 'Generated at',
       zh_CN: '生成于',
     },
+    cachedPreview: {
+      en_US: 'Cached',
+      zh_CN: '缓存预览',
+    },
     generating: {
       en_US: 'Generating...',
       zh_CN: '生成中...',

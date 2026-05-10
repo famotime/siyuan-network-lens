@@ -67,6 +67,7 @@ import {
   type AiLinkSuggestionService,
   type OrphanAiSuggestionState,
 } from '@/analytics/ai-link-suggestions'
+import { createWikiPreviewCacheStoreFromPlugin, type WikiPreviewCacheStore } from '@/analytics/wiki-preview-store'
 import {
   buildWikiPageStorageKey,
   createAiWikiStoreFromPlugin,
@@ -205,6 +206,7 @@ export function useAnalyticsState(params: UseAnalyticsParams) {
   const aiIndexStore = params.aiIndexStore ?? createAiDocumentIndexStoreFromPlugin(params.plugin)
   const aiLinkRepairStore: AiLinkRepairStore | null = createAiLinkRepairStoreFromPlugin(params.plugin)
   const aiWikiStore = params.aiWikiStore ?? createAiWikiStoreFromPlugin(params.plugin)
+  const wikiPreviewCacheStore: WikiPreviewCacheStore | null = createWikiPreviewCacheStoreFromPlugin(params.plugin)
   const todaySuggestionHistoryStore = params.todaySuggestionHistoryStore ?? createTodaySuggestionHistoryStoreFromPlugin(params.plugin)
 
   const loading = ref(false)
@@ -596,6 +598,7 @@ export function useAnalyticsState(params: UseAnalyticsParams) {
     wikiError,
     wikiPreview,
     wikiPreviewCache,
+    wikiPreviewCacheStore,
     aiIndexStore,
     aiWikiStore,
     aiWikiService,
