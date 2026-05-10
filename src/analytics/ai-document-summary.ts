@@ -32,6 +32,40 @@ type AiConfig = Pick<
   | 'aiMaxContextMessages'
 >
 
+export type DocumentIndexGenerationErrorCode =
+  | 'ai_empty_response'
+  | 'ai_truncated_response'
+  | 'ai_invalid_json_response'
+
+export class DocumentIndexGenerationError extends Error {
+  readonly code: DocumentIndexGenerationErrorCode
+  readonly documentId: string
+  readonly documentTitle: string
+  readonly shortReason: string
+  readonly retryable: boolean
+
+  constructor(params: {
+    code: DocumentIndexGenerationErrorCode
+    message: string
+    documentId: string
+    documentTitle: string
+    shortReason: string
+    retryable?: boolean
+  }) {
+    super(params.message)
+    this.name = 'DocumentIndexGenerationError'
+    this.code = params.code
+    this.documentId = params.documentId
+    this.documentTitle = params.documentTitle
+    this.shortReason = params.shortReason
+    this.retryable = params.retryable ?? true
+  }
+}
+
+export function isDocumentIndexGenerationError(error: unknown): error is DocumentIndexGenerationError {
+  return error instanceof DocumentIndexGenerationError
+}
+
 export interface EvidenceCompilationResult {
   positioning: string
   propositions: Array<{ text: string, sourceBlockIds: string[] }>
@@ -246,7 +280,13 @@ async function requestEvidenceCompilation(params: {
     throw new Error(t('analytics.docSummary.aiRequestFailed', { status: String(response?.status ?? 'unknown') }))
   }
 
-  const payload = JSON.parse(response.body)
+  let payload: any
+  try {
+    payload = JSON.parse(response.body)
+  } catch {
+    throw createDocumentIndexGenerationError(params.sourceDocument, 'ai_invalid_json_response')
+  }
+
   const aiContent: string = payload?.choices?.[0]?.message?.content ?? ''
   const finishReason = payload?.choices?.[0]?.finish_reason ?? 'unknown'
 
@@ -256,10 +296,28 @@ async function requestEvidenceCompilation(params: {
     contentPreview: aiContent.slice(0, 200),
   })
 
-  return parseEvidenceCompilationResponse(aiContent, allBlocks.map(b => b.blockId))
+  if (!aiContent.trim()) {
+    throw createDocumentIndexGenerationError(
+      params.sourceDocument,
+      finishReason === 'length' ? 'ai_truncated_response' : 'ai_empty_response',
+    )
+  }
+
+  return parseEvidenceCompilationResponse({
+    raw: aiContent,
+    finishReason,
+    sourceDocument: params.sourceDocument,
+    validBlockIds: allBlocks.map(b => b.blockId),
+  })
 }
 
-function parseEvidenceCompilationResponse(raw: string, validBlockIds: string[]): EvidenceCompilationResult {
+function parseEvidenceCompilationResponse(params: {
+  raw: string
+  finishReason: string
+  sourceDocument: DocumentRecord
+  validBlockIds: string[]
+}): EvidenceCompilationResult {
+  const { raw, finishReason, sourceDocument, validBlockIds } = params
   const cleaned = stripCodeFences(raw)
   const parsed = tryParseJson(cleaned)
 
@@ -269,7 +327,10 @@ function parseEvidenceCompilationResponse(raw: string, validBlockIds: string[]):
       rawPreview: raw.slice(0, 300),
       rawTail: raw.slice(-100),
     })
-    throw new Error(t('analytics.docSummary.invalidAiResponse'))
+    throw createDocumentIndexGenerationError(
+      sourceDocument,
+      finishReason === 'length' ? 'ai_truncated_response' : 'ai_invalid_json_response',
+    )
   }
 
   const validIdSet = new Set(validBlockIds)
@@ -304,10 +365,44 @@ function parseEvidenceCompilationResponse(raw: string, validBlockIds: string[]):
     console.warn(TAG, 'AI response had neither positioning nor propositions', {
       rawPreview: raw.slice(0, 200),
     })
-    throw new Error(t('analytics.docSummary.invalidAiResponse'))
+    throw createDocumentIndexGenerationError(sourceDocument, 'ai_invalid_json_response')
   }
 
   return { positioning, propositions, keywords }
+}
+
+function createDocumentIndexGenerationError(
+  sourceDocument: Pick<DocumentRecord, 'id' | 'title' | 'content' | 'hpath' | 'path'>,
+  code: DocumentIndexGenerationErrorCode,
+): DocumentIndexGenerationError {
+  const documentTitle = resolveDocumentTitle(sourceDocument) || sourceDocument.id || 'Unknown document'
+
+  switch (code) {
+    case 'ai_empty_response':
+      return new DocumentIndexGenerationError({
+        code,
+        documentId: sourceDocument.id,
+        documentTitle,
+        shortReason: t('analytics.docSummary.aiEmptyResponseReason'),
+        message: t('analytics.docSummary.aiEmptyResponse', { title: documentTitle }),
+      })
+    case 'ai_truncated_response':
+      return new DocumentIndexGenerationError({
+        code,
+        documentId: sourceDocument.id,
+        documentTitle,
+        shortReason: t('analytics.docSummary.aiTruncatedResponseReason'),
+        message: t('analytics.docSummary.aiTruncatedResponse', { title: documentTitle }),
+      })
+    default:
+      return new DocumentIndexGenerationError({
+        code,
+        documentId: sourceDocument.id,
+        documentTitle,
+        shortReason: t('analytics.docSummary.aiInvalidJsonResponseReason'),
+        message: t('analytics.docSummary.aiInvalidJsonResponse', { title: documentTitle }),
+      })
+  }
 }
 
 function stripCodeFences(text: string): string {

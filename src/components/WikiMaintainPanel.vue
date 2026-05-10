@@ -87,8 +87,27 @@
         >
           <div class="wiki-panel__item-head">
             <div>
-              <h3>{{ page.pageTitle }}</h3>
-              <p>{{ t('wikiMaintain.pairedTopicPage') }}: {{ page.themeDocumentTitle }}</p>
+              <h3>
+                <button
+                  v-if="resolveThemeWikiDocumentId(page)"
+                  class="wiki-panel__title-link"
+                  type="button"
+                  @click="openWikiDocument(resolveThemeWikiDocumentId(page)!)"
+                >
+                  {{ page.pageTitle }}
+                </button>
+                <span v-else>{{ page.pageTitle }}</span>
+              </h3>
+              <p>
+                {{ t('wikiMaintain.pairedTopicPage') }}:
+                <button
+                  class="wiki-panel__inline-link"
+                  type="button"
+                  @click="openSourceDocument(page.themeDocumentId)"
+                >
+                  {{ page.themeDocumentTitle }}
+                </button>
+              </p>
             </div>
             <span class="wiki-panel__status">{{ t('wikiMaintain.status') }}: {{ statusLabelMap[page.preview.status] }}</span>
           </div>
@@ -154,28 +173,11 @@
           >
             {{ t('wikiMaintain.openLogPage') }}
           </button>
-          <button
-            v-if="latestUpdatedThemePageId"
-            class="ghost-button"
-            type="button"
-            @click="openWikiDocument(latestUpdatedThemePageId)"
-          >
-            {{ t('wikiMaintain.openLatestUpdatedPage') }}
-          </button>
         </div>
       </div>
 
-      <div v-if="scopeDescriptionItems.length" class="wiki-panel__scope-lines">
-        <ul class="wiki-panel__scope-list">
-          <li
-            v-for="item in scopeDescriptionItems"
-            :key="`${item.depth}-${item.text}`"
-            :class="['wiki-panel__scope-line', { 'wiki-panel__scope-line--child': item.depth > 0 }]"
-          >
-            <span class="wiki-panel__scope-bullet" aria-hidden="true">{{ item.depth > 0 ? '↳' : '•' }}</span>
-            <span class="wiki-panel__scope-text" v-html="renderScopeLine(item.text)" />
-          </li>
-        </ul>
+      <div v-if="previewNoticeText" class="wiki-panel__notice">
+        {{ previewNoticeText }}
       </div>
 
       <div v-if="preview?.deltaStats" class="wiki-panel__delta-stats">
@@ -313,7 +315,7 @@
 import { computed, ref } from 'vue'
 
 import type { WikiPreviewState } from '@/composables/use-analytics'
-import { parseWikiScopeDescriptionLines, resolveWikiSectionOrderLabels } from '@/composables/use-analytics-wiki'
+import { resolveWikiSectionOrderLabels } from '@/composables/use-analytics-wiki'
 import { t } from '@/i18n/ui'
 import { renderSimpleMarkdown } from '@/utils/markdown'
 
@@ -380,16 +382,16 @@ const canApply = computed(() => {
   })
 })
 
-const latestUpdatedThemePageId = computed(() => {
-  const latestPage = [...(props.preview?.applyResult?.themePages ?? [])]
-    .reverse()
-    .find(page => page.pageId && (page.result === 'updated' || page.result === 'created'))
-
-  return latestPage?.pageId ?? ''
-})
-
-const scopeDescriptionItems = computed(() => parseWikiScopeDescriptionLines(props.preview?.scope.descriptionLines ?? []))
 const generatedPreviewAt = computed(() => props.formatWikiPreviewTimestamp(props.preview?.generatedAt))
+const previewNoticeText = computed(() => {
+  const lines = props.preview?.scope.descriptionLines ?? []
+  const skippedDocumentLine = lines.find(line => line.includes('跳过') || line.includes('Skipped '))?.trim()
+  const incompleteLine = lines.find(line => line.includes('不完整') || line.includes('incomplete'))?.trim()
+
+  return [incompleteLine, skippedDocumentLine]
+    .filter(Boolean)
+    .join(' ')
+})
 
 function resolveTemplateLabel(templateType: string) {
   switch (templateType) {
@@ -496,29 +498,13 @@ function formatProcessingTime(ms: number): string {
   return `${(ms / 1000).toFixed(1)}s`
 }
 
-function escapeHtml(text: string): string {
-  return text
-    .replace(/&/g, '&amp;')
-    .replace(/</g, '&lt;')
-    .replace(/>/g, '&gt;')
-    .replace(/"/g, '&quot;')
-}
-
-function renderScopeLine(text: string): string {
-  const linkPattern = /\[([^\]]+)\]\(siyuan:\/\/blocks\/([^\s)]+)\)/g
-  const parts: string[] = []
-  let lastIndex = 0
-  let match: RegExpExecArray | null = linkPattern.exec(text)
-
-  while (match) {
-    parts.push(escapeHtml(text.slice(lastIndex, match.index)))
-    parts.push(`<a href="siyuan://blocks/${match[2]}" class="wiki-panel__scope-link">${escapeHtml(match[1])}</a>`)
-    lastIndex = match.index + match[0].length
-    match = linkPattern.exec(text)
+function resolveThemeWikiDocumentId(page: WikiPreviewState['themePages'][number]): string {
+  if (page.pageId) {
+    return page.pageId
   }
 
-  parts.push(escapeHtml(text.slice(lastIndex)))
-  return parts.join('')
+  const appliedPage = props.preview?.applyResult?.themePages.find(item => item.pageTitle === page.pageTitle)
+  return appliedPage?.pageId ?? ''
 }
 </script>
 
@@ -543,7 +529,6 @@ function renderScopeLine(text: string): string {
 }
 
 .wiki-panel__description,
-.wiki-panel__scope-lines p,
 .wiki-panel__item-head p,
 .wiki-panel__summary,
 .wiki-panel__result,
@@ -629,60 +614,14 @@ function renderScopeLine(text: string): string {
   gap: 8px;
 }
 
-.wiki-panel__scope-lines {
+.wiki-panel__notice {
   padding: 12px 14px;
   border-radius: 10px;
-  border: 1px solid color-mix(in srgb, var(--b3-theme-on-background) 10%, transparent);
-  background: color-mix(in srgb, var(--b3-theme-surface) 60%, var(--b3-theme-background));
-}
-
-.wiki-panel__scope-lines p {
-  margin: 2px 0;
+  border: 1px solid color-mix(in srgb, var(--b3-theme-primary) 16%, transparent);
+  background: color-mix(in srgb, var(--b3-theme-primary) 7%, var(--b3-theme-background));
   font-size: 13px;
   line-height: 1.6;
-}
-
-.wiki-panel__scope-list {
-  margin: 0;
-  padding: 0;
-  list-style: none;
-  display: grid;
-  gap: 4px;
-}
-
-.wiki-panel__scope-line {
-  display: flex;
-  align-items: flex-start;
-  gap: 8px;
-  font-size: 13px;
-  line-height: 1.6;
-}
-
-.wiki-panel__scope-line--child {
-  padding-left: 18px;
-}
-
-.wiki-panel__scope-bullet {
-  width: 12px;
-  color: color-mix(in srgb, var(--b3-theme-on-background) 42%, transparent);
-  text-align: center;
-  flex-shrink: 0;
-}
-
-.wiki-panel__scope-text {
-  min-width: 0;
-  color: color-mix(in srgb, var(--b3-theme-on-background) 68%, transparent);
-}
-
-.wiki-panel__scope-text :deep(a),
-.wiki-panel__scope-link {
-  color: var(--b3-theme-primary);
-  text-decoration: none;
-}
-
-.wiki-panel__scope-text :deep(a:hover),
-.wiki-panel__scope-link:hover {
-  text-decoration: underline;
+  color: color-mix(in srgb, var(--b3-theme-on-background) 78%, transparent);
 }
 
 .wiki-panel__scope-card,
@@ -725,6 +664,27 @@ function renderScopeLine(text: string): string {
 .wiki-panel__item-head h3,
 .wiki-panel__extra h3 {
   margin: 0;
+}
+
+.wiki-panel__title-link,
+.wiki-panel__inline-link {
+  border: 0;
+  padding: 0;
+  background: transparent;
+  font: inherit;
+  color: var(--b3-theme-primary);
+  cursor: pointer;
+  text-align: left;
+}
+
+.wiki-panel__title-link {
+  font-size: inherit;
+  font-weight: 600;
+}
+
+.wiki-panel__title-link:hover,
+.wiki-panel__inline-link:hover {
+  text-decoration: underline;
 }
 
 .wiki-panel__status {

@@ -21,6 +21,7 @@ type GetBlockKramdownFn = (id: string) => Promise<{ id: string, kramdown: string
 type GetChildBlocksFn = (id: string) => Promise<Array<{ id: string, type?: string, subtype?: string }>>
 
 export interface WikiPreviewThemePageItem {
+  pageId?: string
   pageTitle: string
   themeName: string
   themeDocumentId: string
@@ -74,10 +75,17 @@ export interface WikiPreviewState {
   themePages: WikiPreviewThemePageItem[]
   unclassifiedDocuments: Array<{ documentId: string, title: string }>
   excludedWikiDocuments: Array<{ documentId: string, title: string }>
+  skippedSourceDocuments?: Array<{ documentId: string, title: string, reason: string }>
   applyResult?: WikiApplyBatchResult
   deltaStats?: WikiPreviewDeltaStats
   sourceDocMetas?: WikiPreviewSourceDocMeta[]
   isCachedPreview?: boolean
+}
+
+export interface SkippedWikiSourceDocument {
+  documentId: string
+  title: string
+  reason: string
 }
 
 export interface WikiPreviewRequest {
@@ -118,29 +126,65 @@ export async function buildWikiSourceProfileMap(params: {
   }
 
   const entries: Array<readonly [string, DocumentIndexProfile]> = []
+  const effectiveDocuments: DocumentRecord[] = []
+  const skippedDocuments: SkippedWikiSourceDocument[] = []
   for (const document of params.sourceDocuments) {
-    await ensureDocumentIndex({
-      config: params.config,
-      sourceDocument: document,
-      indexStore: params.aiIndexStore,
-      forwardProxy: params.forwardProxy,
-      getChildBlocks: params.getChildBlocks,
-      getBlockKramdown: params.getBlockKramdown,
-      updatedAt: params.generatedAt,
-    })
+    let ensured = false
+
+    for (let attempt = 0; attempt < 2; attempt += 1) {
+      try {
+        await ensureDocumentIndex({
+          config: params.config,
+          sourceDocument: document,
+          indexStore: params.aiIndexStore,
+          forwardProxy: params.forwardProxy,
+          getChildBlocks: params.getChildBlocks,
+          getBlockKramdown: params.getBlockKramdown,
+          updatedAt: params.generatedAt,
+          force: attempt > 0,
+        })
+        ensured = true
+        break
+      } catch (error) {
+        if (attempt === 0) {
+          continue
+        }
+
+        skippedDocuments.push({
+          documentId: document.id,
+          title: document.title || document.hpath || document.path || document.id,
+          reason: error instanceof Error ? error.message : 'Unknown document index error',
+        })
+        break
+      }
+    }
+
+    if (!ensured) {
+      continue
+    }
 
     const profile = document.updated
       ? await params.aiIndexStore.getFreshDocumentProfile(document.id, document.updated)
       : await params.aiIndexStore.getDocumentProfile(document.id)
 
     if (!profile) {
-      throw new Error(`Missing fresh document index profile after ensuring wiki source document: ${document.id}`)
+      skippedDocuments.push({
+        documentId: document.id,
+        title: document.title || document.hpath || document.path || document.id,
+        reason: `Missing fresh document index profile after ensuring wiki source document: ${document.id}`,
+      })
+      continue
     }
 
     entries.push([document.id, profile])
+    effectiveDocuments.push(document)
   }
 
-  return new Map(entries)
+  return {
+    profileMap: new Map(entries),
+    effectiveDocuments,
+    skippedDocuments,
+  }
 }
 
 export async function resolveExistingWikiPage(params: {

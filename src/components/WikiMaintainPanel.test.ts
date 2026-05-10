@@ -4,8 +4,6 @@ import { renderToString } from '@vue/server-renderer'
 import { readFile } from 'node:fs/promises'
 
 import WikiMaintainPanel from './WikiMaintainPanel.vue'
-import { buildSiyuanBlockLinkMarkdown } from '@/analytics/link-sync'
-
 afterEach(() => {
   delete (globalThis as typeof globalThis & { siyuan?: unknown }).siyuan
   vi.resetModules()
@@ -39,15 +37,11 @@ describe('WikiMaintainPanel', () => {
               referenceCount: 5,
               manualNotesParagraphCount: 2,
             },
-            descriptionLines: [
-              `- 范围来源：核心文档 ${buildSiyuanBlockLinkMarkdown('doc-beta', 'Beta')} 关联范围（正链 / 反链 / 子文档）`,
-              '  - 时间窗口：7d',
-              '  - 标签：AI',
-              '  - 关键词：bridge',
-            ],
+            descriptionLines: [],
           },
           themePages: [
             {
+              pageId: 'wiki-ai',
               pageTitle: '主题-AI-索引-llm-wiki',
               themeName: 'AI',
               themeDocumentId: 'theme-ai',
@@ -110,6 +104,7 @@ describe('WikiMaintainPanel', () => {
               },
             },
             {
+              pageId: 'wiki-ml',
               pageTitle: '主题-ML-索引-llm-wiki',
               themeName: '机器学习',
               themeDocumentId: 'theme-ml',
@@ -237,15 +232,16 @@ describe('WikiMaintainPanel', () => {
     expect(html).toContain('View details')
     expect(html).toContain('Open index page')
     expect(html).toContain('Open log page')
-    expect(html).toContain('Open latest updated page')
     expect(html).toContain('2026-04-10')
     expect(html).toContain('08:00:00')
     expect(html).toContain('wiki-panel__generated-value')
     expect(html).toContain('wiki-panel__generated-time')
-    expect(html).toContain('href="siyuan://blocks/doc-beta"')
-    expect(html).toContain('时间窗口：7d')
-    expect(html).toContain('标签：AI')
-    expect(html).toContain('关键词：bridge')
+    expect(html).toContain('wiki-panel__title-link')
+    expect(html).toContain('wiki-panel__inline-link')
+    expect(html).not.toContain('Open latest updated page')
+    expect(html).not.toContain('时间窗口：7d')
+    expect(html).not.toContain('标签：AI')
+    expect(html).not.toContain('关键词：bridge')
   })
 
   it('renders disabled states for missing configuration', async () => {
@@ -322,10 +318,11 @@ describe('WikiMaintainPanel', () => {
               referenceCount: 3,
               manualNotesParagraphCount: 1,
             },
-            descriptionLines: ['- 时间窗口：7d'],
+            descriptionLines: [],
           },
           themePages: [
             {
+              pageId: 'theme-ai-wiki',
               pageTitle: '主题-AI-索引-llm-wiki',
               themeName: 'AI',
               themeDocumentId: 'theme-ai',
@@ -450,5 +447,58 @@ describe('WikiMaintainPanel', () => {
     expect(html).toContain('2026-05-06')
     expect(html).toContain('00:07:08')
     expect(html).toContain('title="2026-05-06 00:07:08"')
+  })
+
+  it('renders skipped-source warnings inside scope description when preview is incomplete', async () => {
+    const app = createSSRApp({
+      render: () => h(WikiMaintainPanel, {
+        wikiEnabled: true,
+        aiEnabled: true,
+        aiConfigReady: true,
+        previewLoading: false,
+        applyLoading: false,
+        error: '',
+        preview: {
+          generatedAt: '2026-05-10T05:27:57.283Z',
+          scope: {
+            summary: {
+              sourceDocumentCount: 1,
+              generatedSectionCount: 3,
+              referenceCount: 3,
+              manualNotesParagraphCount: 0,
+            },
+            descriptionLines: [
+              '- 本次 LLM Wiki 预览不是完整结果：部分来源文档在重复生成 AI 索引失败后已被跳过。',
+              '  - 有 1 篇来源文档在重试 1 次后仍无法生成 AI 索引，已跳过：Beta',
+            ],
+          },
+          skippedSourceDocuments: [
+            {
+              documentId: 'doc-b',
+              title: 'Beta',
+              reason: 'AI 响应被截断',
+            },
+          ],
+          themePages: [],
+          unclassifiedDocuments: [],
+          excludedWikiDocuments: [],
+        },
+        prepareWikiPreview: () => undefined,
+        applyWikiChanges: () => undefined,
+        openWikiDocument: () => undefined,
+        openSourceDocument: () => undefined,
+        formatTimestamp: (ts?: string) => ts ?? '',
+        formatWikiPreviewTimestamp: () => ({
+          dateText: '2026-05-10',
+          timeText: '13:27:57',
+          fullText: '2026-05-10 13:27:57',
+        }),
+      }),
+    })
+
+    const html = await renderToString(app)
+
+    expect(html).toContain('本次 LLM Wiki 预览不是完整结果')
+    expect(html).toContain('wiki-panel__notice')
   })
 })

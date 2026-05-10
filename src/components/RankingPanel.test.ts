@@ -22,7 +22,7 @@ const wikiPanelProps = {
         excludedWikiDocumentCount: 0,
         unclassifiedDocumentCount: 0,
       },
-      descriptionLines: ['- 范围来源：核心文档《Alpha》关联范围（正链 / 反链 / 子文档）'],
+      descriptionLines: [],
     },
     themePages: [],
     unclassifiedDocuments: [],
@@ -108,7 +108,7 @@ describe('RankingPanel', () => {
     expect(html).toContain('Hide LLM Wiki')
     expect(html).not.toContain('Maintain LLM Wiki')
     expect((html.match(/ghost-button ghost-button--filled/g) ?? []).length).toBeGreaterThanOrEqual(2)
-    expect(html).toContain('范围来源：核心文档《Alpha》关联范围')
+    expect(html).not.toContain('范围来源：核心文档《Alpha》关联范围')
     expect((html.match(/wiki-panel panel/g) ?? [])).toHaveLength(1)
   })
 

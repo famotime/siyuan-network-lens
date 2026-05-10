@@ -2372,6 +2372,30 @@ const UI_TEXT = {
         en_US: 'AI returned an invalid response. Please try again.',
         zh_CN: 'AI 返回了无效响应，请重试。',
       },
+      aiEmptyResponse: {
+        en_US: 'AI returned empty content while generating the document index for "{title}".',
+        zh_CN: '为文档《{title}》生成索引时，AI 返回了空内容。',
+      },
+      aiTruncatedResponse: {
+        en_US: 'AI response was truncated while generating the document index for "{title}".',
+        zh_CN: '为文档《{title}》生成索引时，AI 响应被截断了。',
+      },
+      aiInvalidJsonResponse: {
+        en_US: 'AI returned unreadable structured content while generating the document index for "{title}".',
+        zh_CN: '为文档《{title}》生成索引时，AI 返回了无法解析的结构化内容。',
+      },
+      aiEmptyResponseReason: {
+        en_US: 'AI returned empty content',
+        zh_CN: 'AI 返回空内容',
+      },
+      aiTruncatedResponseReason: {
+        en_US: 'AI response was truncated',
+        zh_CN: 'AI 响应被截断',
+      },
+      aiInvalidJsonResponseReason: {
+        en_US: 'AI returned invalid structured content',
+        zh_CN: 'AI 返回了无效结构化内容',
+      },
     },
     controller: {
       trendCompareLastDays: {
@@ -2417,6 +2441,18 @@ const UI_TEXT = {
       failedToGenerateWikiPreview: {
         en_US: 'Failed to generate LLM Wiki preview',
         zh_CN: '生成 LLM Wiki 预览失败',
+      },
+      wikiPreviewSkippedDocuments: {
+        en_US: 'Skipped {count} source document(s) whose AI index still failed after one retry: {titles}',
+        zh_CN: '有 {count} 篇来源文档在重试 1 次后仍无法生成 AI 索引，已跳过：{titles}',
+      },
+      wikiPreviewIncompleteDueToSkippedDocuments: {
+        en_US: 'The current LLM Wiki preview is incomplete because some source documents were skipped after repeated AI index failures.',
+        zh_CN: '本次 LLM Wiki 预览不是完整结果：部分来源文档在重复生成 AI 索引失败后已被跳过。',
+      },
+      wikiPreviewNoUsableSourceDocuments: {
+        en_US: 'Failed to generate the LLM Wiki preview because every source document still failed to build its AI index after one retry: {titles}',
+        zh_CN: '生成 LLM Wiki 预览失败：所有来源文档在重试 1 次后仍无法生成 AI 索引：{titles}',
       },
       noWikiPreviewAvailable: {
         en_US: 'No LLM Wiki preview is available yet',

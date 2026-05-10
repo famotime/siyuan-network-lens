@@ -151,7 +151,7 @@ export function createAnalyticsWikiActionsController(params: {
         resolveNotebookName: params.resolveNotebookName,
         scopeDescriptionLine: request.scopeDescriptionLine,
       })
-      const sourceProfileMap = await buildWikiSourceProfileMap({
+      const sourceProfileResult = await buildWikiSourceProfileMap({
         sourceDocuments,
         config: params.appliedConfig.value,
         aiIndexStore: params.aiIndexStore,
@@ -160,6 +160,24 @@ export function createAnalyticsWikiActionsController(params: {
         getBlockKramdown: params.getBlockKramdown,
         generatedAt,
       })
+      const sourceProfileMap = sourceProfileResult.profileMap
+      const effectiveSourceDocuments = sourceProfileResult.effectiveDocuments
+      const skippedSourceDocuments = sourceProfileResult.skippedDocuments
+
+      if (!effectiveSourceDocuments.length) {
+        throw new Error(t('analytics.controller.wikiPreviewNoUsableSourceDocuments', {
+          titles: skippedSourceDocuments.map(item => item.title).join('、') || t('shared.noOptionsAvailable'),
+        }))
+      }
+
+      if (skippedSourceDocuments.length) {
+        const skippedTitles = skippedSourceDocuments.map(item => item.title).join('、')
+        scopeDescriptionLines.push(`- ${t('analytics.controller.wikiPreviewIncompleteDueToSkippedDocuments')}`)
+        scopeDescriptionLines.push(`  - ${t('analytics.controller.wikiPreviewSkippedDocuments', {
+          count: skippedSourceDocuments.length,
+          titles: skippedTitles,
+        })}`)
+      }
 
       const wikiTarget = resolveScopedPathTarget(params.appliedConfig.value.wikiContainerPath ?? '', params.snapshot.value?.notebooks)
       const wikiContainerPath = wikiTarget?.path ?? ''
@@ -176,10 +194,10 @@ export function createAnalyticsWikiActionsController(params: {
       const isIncremental = params.config.wikiIncrementalEnabled !== false
       const deltaMap = isIncremental
         ? computeSourceDocumentDeltas(
-          sourceDocuments.map(d => ({ id: d.id, updated: d.updated })),
+          effectiveSourceDocuments.map(d => ({ id: d.id, updated: d.updated })),
           storedRecord?.sourceDocumentTimestamps,
         )
-        : new Map(sourceDocuments.map(d => [d.id, 'new' as const]))
+        : new Map(effectiveSourceDocuments.map(d => [d.id, 'new' as const]))
 
       const hasChanges = [...deltaMap.values()].some(s => s !== 'unchanged')
       if (isIncremental && storedRecord?.sourceDocumentTimestamps && !hasChanges) {
@@ -192,7 +210,7 @@ export function createAnalyticsWikiActionsController(params: {
       }
 
       const sourceDocumentTimestamps: Record<string, string> = {}
-      for (const doc of sourceDocuments) {
+      for (const doc of effectiveSourceDocuments) {
         sourceDocumentTimestamps[doc.id] = doc.updated
       }
 
@@ -214,7 +232,7 @@ export function createAnalyticsWikiActionsController(params: {
       const payload = buildSingleThemeWikiPayload({
         config: params.appliedConfig.value,
         themeDocument,
-        sourceDocuments,
+        sourceDocuments: effectiveSourceDocuments,
         report: params.report.value,
         trends: params.trends.value,
         documentMap: scopedDocumentMap,
@@ -305,7 +323,7 @@ export function createAnalyticsWikiActionsController(params: {
         processingTimeMs: Date.now() - new Date(generatedAt).getTime(),
       }
 
-      const sourceDocMetas = sourceDocuments.map(doc => {
+      const sourceDocMetas = effectiveSourceDocuments.map(doc => {
         const themeMatches = countThemeMatchesForDocument({
           document: doc,
           themeDocuments: params.themeDocuments.value,
@@ -324,6 +342,7 @@ export function createAnalyticsWikiActionsController(params: {
       })
 
       const themePage: WikiPreviewThemePageItem = {
+        pageId: existingPage?.pageId ?? storedRecord?.pageId,
         pageTitle: payload.pageTitle,
         themeName: payload.themeName,
         themeDocumentId: payload.themeDocumentId,
@@ -347,7 +366,7 @@ export function createAnalyticsWikiActionsController(params: {
         generatedAt,
         scope: {
           summary: buildWikiPreviewSummary({
-            sourceDocumentCount: sourceDocuments.length,
+            sourceDocumentCount: effectiveSourceDocuments.length,
             draft,
             existingFullMarkdown: existingPage?.fullMarkdown,
           }),
@@ -356,6 +375,7 @@ export function createAnalyticsWikiActionsController(params: {
         themePages: [themePage],
         unclassifiedDocuments: [],
         excludedWikiDocuments: [],
+        skippedSourceDocuments,
         deltaStats,
         sourceDocMetas,
         isCachedPreview: false,
@@ -364,6 +384,13 @@ export function createAnalyticsWikiActionsController(params: {
 
       if (params.wikiPreviewCacheStore) {
         await params.wikiPreviewCacheStore.savePreview(request.themeDocumentId, params.wikiPreview.value)
+      }
+
+      if (skippedSourceDocuments.length) {
+        params.notify(t('analytics.controller.wikiPreviewSkippedDocuments', {
+          count: skippedSourceDocuments.length,
+          titles: skippedSourceDocuments.map(item => item.title).join('、'),
+        }), 5000, 'info')
       }
 
       const hasNewPages = themePage.preview.status === 'create'

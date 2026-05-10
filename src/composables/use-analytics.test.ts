@@ -2050,6 +2050,199 @@ describe('useAnalyticsState', () => {
     }))
   })
 
+  it('retries a failed source document index once and skips that document if it still fails', async () => {
+    const diagnoseThemeTemplate = vi.fn(async () => ({
+      templateType: 'tech_topic',
+      confidence: 'high',
+      reason: '测试诊断',
+      enabledModules: ['intro', 'highlights', 'sources'],
+      suppressedModules: [],
+      evidenceSummary: '测试证据',
+    }))
+    const planThemePage = vi.fn(async () => ({
+      templateType: 'tech_topic',
+      confidence: 'high',
+      coreSections: ['intro', 'highlights', 'sources'],
+      optionalSections: [],
+      sectionOrder: ['intro', 'highlights', 'sources'],
+      sectionGoals: { intro: '主题概览' },
+      sectionFormats: {
+        intro: 'overview',
+        highlights: 'structured',
+        sources: 'catalog',
+      },
+    }))
+    const generateThemeSection = vi.fn(async ({ payload, sectionType }: any) => {
+      if (sectionType === 'intro') {
+        return {
+          sectionType,
+          title: '主题概览',
+          format: 'overview',
+          blocks: [{ text: `当前纳入 ${payload.sourceDocuments.length} 篇来源文档`, sourceRefs: payload.sourceDocuments.map((item: any) => item.documentId) }],
+          sourceRefs: payload.sourceDocuments.map((item: any) => item.documentId),
+        }
+      }
+      if (sectionType === 'highlights') {
+        return {
+          sectionType,
+          title: '关键文档',
+          format: 'structured',
+          blocks: payload.sourceDocuments.map((item: any) => ({ text: item.title, sourceRefs: [item.documentId] })),
+          sourceRefs: payload.sourceDocuments.map((item: any) => item.documentId),
+        }
+      }
+      return {
+        sectionType,
+        title: '关系证据',
+        format: 'catalog',
+        blocks: [{ text: '暂无证据', sourceRefs: [] }],
+        sourceRefs: [],
+      }
+    })
+    const notify = vi.fn()
+    const storedProfiles = new Map<string, any>()
+    const attempts = new Map<string, number>()
+
+    const state = useAnalyticsState({
+      plugin: {
+        eventBus: { on: () => {}, off: () => {} },
+        app: {},
+      } as any,
+      config: {
+        showSummaryCards: true,
+        showRanking: true,
+        showCommunities: true,
+        showOrphanBridge: true,
+        showTrends: true,
+        showPropagation: true,
+        themeNotebookId: 'box-1',
+        themeDocumentPath: '/专题',
+        themeNamePrefix: '主题-',
+        themeNameSuffix: '-索引',
+        aiEnabled: true,
+        aiBaseUrl: 'https://api.example.com/v1',
+        aiApiKey: 'sk-test',
+        aiModel: 'gpt-4.1-mini',
+        wikiEnabled: true,
+        wikiPageSuffix: '-llm-wiki',
+        wikiIndexTitle: 'LLM-Wiki-索引',
+        wikiLogTitle: 'LLM-Wiki-维护日志',
+      },
+      loadSnapshot: async () => ({
+        ...snapshot,
+        notebooks: [{ id: 'box-1', name: 'Notebook 1' }],
+      }) as any,
+      nowProvider: () => now,
+      createActiveDocumentSync: () => () => {},
+      showMessage: notify,
+      openTab: () => {},
+      appendBlock: async () => [],
+      prependBlock: async () => [],
+      deleteBlock: async () => [],
+      updateBlock: async () => [],
+      createDocWithMd: async () => 'wiki-skip-test',
+      getIDsByHPath: async () => [],
+      getChildBlocks: async () => [],
+      getBlockKramdown: async () => ({ id: '', kramdown: '' }),
+      getBlockAttrs: async () => ({}),
+      setBlockAttrs: async () => null,
+      forwardProxy: async (url: string, _method?: string, payload?: any) => {
+        const body = JSON.parse(payload)
+        const userMessage = String(body.messages?.[1]?.content ?? '')
+        const titleMatch = userMessage.match(/^Document:\s*(.+)$/m)
+        const title = titleMatch?.[1] ?? ''
+        const nextAttempt = (attempts.get(title) ?? 0) + 1
+        attempts.set(title, nextAttempt)
+
+        if (title === 'Beta') {
+          return {
+            body: JSON.stringify({
+              choices: [{ finish_reason: 'length', message: { content: '' } }],
+            }),
+            contentType: 'application/json',
+            elapsed: 1,
+            headers: {},
+            status: 200,
+            url,
+          }
+        }
+
+        return {
+          body: JSON.stringify({
+            choices: [{ message: { content: JSON.stringify({ positioning: `${title} 的定位`, propositions: [{ text: `${title} 的命题`, sourceBlockIds: [] }], keywords: [title] }) } }],
+          }),
+          contentType: 'application/json',
+          elapsed: 1,
+          headers: {},
+          status: 200,
+          url,
+        }
+      },
+      createAiWikiService: () => ({
+        diagnoseThemeTemplate,
+        planThemePage,
+        generateThemeSection,
+      }),
+      aiIndexStore: {
+        getFreshDocumentSummary: vi.fn(async () => null),
+        getFreshDocumentProfile: vi.fn(async (documentId: string, sourceUpdatedAt: string) => {
+          const profile = storedProfiles.get(documentId) ?? null
+          return profile?.sourceUpdatedAt === sourceUpdatedAt ? profile : null
+        }),
+        getDocumentProfile: vi.fn(async (documentId: string) => storedProfiles.get(documentId) ?? null),
+        saveDocumentIndex: vi.fn(async (params: any) => {
+          storedProfiles.set(params.sourceDocument.id, {
+            documentId: params.sourceDocument.id,
+            sourceUpdatedAt: params.sourceDocument.updated ?? '',
+            sourceHash: `h-${params.sourceDocument.id}`,
+            title: params.sourceDocument.title,
+            path: params.sourceDocument.path ?? '',
+            hpath: params.sourceDocument.hpath ?? '',
+            tagsJson: JSON.stringify(params.sourceDocument.tags ?? []),
+            positioning: params.positioning,
+            propositionsJson: JSON.stringify(params.propositions),
+            keywordsJson: JSON.stringify(params.keywords),
+            primarySourceBlocksJson: JSON.stringify(params.primarySourceBlocks),
+            secondarySourceBlocksJson: JSON.stringify(params.secondarySourceBlocks),
+            generatedAt: params.generatedAt,
+          })
+        }),
+      } as any,
+      aiWikiStore: {
+        loadSnapshot: vi.fn(async () => ({ schemaVersion: 1, pages: {} })),
+        saveSnapshot: vi.fn(async () => undefined),
+        getPageRecord: vi.fn(async () => null),
+        savePageRecord: vi.fn(async () => undefined),
+      } as any,
+    } as any)
+
+    await state.refresh()
+    await nextTick()
+
+    await (state as any).prepareWikiPreview({
+      sourceDocumentIds: ['doc-theme-ai', 'doc-a', 'doc-b'],
+      scopeDescriptionLine: '- 范围来源：核心文档《Beta》关联范围（正链 / 反链 / 子文档）',
+      themeDocumentId: 'doc-theme-ai',
+    })
+    await nextTick()
+
+    expect(attempts.get('Beta')).toBe(2)
+    expect((state as any).wikiError.value).toBe('')
+    expect((state as any).wikiPreview.value?.skippedSourceDocuments).toEqual([
+      expect.objectContaining({
+        documentId: 'doc-b',
+        title: 'Beta',
+      }),
+    ])
+    expect((state as any).wikiPreview.value?.themePages[0]?.sourceDocumentIds).toEqual(['doc-a'])
+    expect((state as any).wikiPreview.value?.scope.summary.sourceDocumentCount).toBe(1)
+    expect((state as any).wikiPreview.value?.scope.descriptionLines).toEqual(expect.arrayContaining([
+      expect.stringContaining('incomplete'),
+      expect.stringContaining('Beta'),
+    ]))
+    expect(notify).toHaveBeenCalledWith(expect.stringContaining('Beta'), 5000, 'info')
+  })
+
   it('surfaces a friendly wiki error when LLM Wiki or AI config is unavailable', async () => {
     const diagnoseThemeTemplate = vi.fn()
     const planThemePage = vi.fn()

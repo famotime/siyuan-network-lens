@@ -1,6 +1,10 @@
 import { afterEach, describe, expect, it, vi } from 'vitest'
 
-import { ensureDocumentIndex, ensureDocumentSummary } from './ai-document-summary'
+import {
+  ensureDocumentIndex,
+  ensureDocumentSummary,
+  isDocumentIndexGenerationError,
+} from './ai-document-summary'
 import type { DocumentRecord } from './analysis'
 
 const sourceDocument: DocumentRecord = {
@@ -128,6 +132,54 @@ describe('ensureDocumentIndex', () => {
       getBlockKramdown: async (id) => ({ id, kramdown: '' }),
       force: true,
     })).rejects.toThrow()
+  })
+
+  it('throws a retryable empty-response error when AI returns no content', async () => {
+    await expect(ensureDocumentIndex({
+      config: {
+        aiBaseUrl: 'https://api.example.com/v1',
+        aiApiKey: 'sk-test',
+        aiModel: 'gpt-test',
+      },
+      sourceDocument,
+      indexStore: { getFreshDocumentProfile: vi.fn(async () => null), saveDocumentIndex: vi.fn() },
+      forwardProxy: makeForwardProxy(JSON.stringify({
+        choices: [{ finish_reason: 'stop', message: { content: '' } }],
+      })),
+      getChildBlocks: async () => baseChildBlocks,
+      getBlockKramdown: async (id) => ({ id, kramdown: baseBlockKramdownMap[id] || '' }),
+      force: true,
+    })).rejects.toSatisfy((error: unknown) => {
+      expect(isDocumentIndexGenerationError(error)).toBe(true)
+      expect((error as any).code).toBe('ai_empty_response')
+      expect((error as any).retryable).toBe(true)
+      expect((error as Error).message).toContain('AI 索引实践')
+      return true
+    })
+  })
+
+  it('throws a retryable truncated-response error when finish reason is length with empty content', async () => {
+    await expect(ensureDocumentIndex({
+      config: {
+        aiBaseUrl: 'https://api.example.com/v1',
+        aiApiKey: 'sk-test',
+        aiModel: 'gpt-test',
+      },
+      sourceDocument,
+      indexStore: { getFreshDocumentProfile: vi.fn(async () => null), saveDocumentIndex: vi.fn() },
+      forwardProxy: makeForwardProxy(JSON.stringify({
+        choices: [{ finish_reason: 'length', message: { content: '' } }],
+      })),
+      getChildBlocks: async () => baseChildBlocks,
+      getBlockKramdown: async (id) => ({ id, kramdown: baseBlockKramdownMap[id] || '' }),
+      force: true,
+    })).rejects.toSatisfy((error: unknown) => {
+      expect(isDocumentIndexGenerationError(error)).toBe(true)
+      expect((error as any).code).toBe('ai_truncated_response')
+      expect((error as any).retryable).toBe(true)
+      expect((error as Error).message).toContain('AI 索引实践')
+      return true
+    })
   })
 })
 
