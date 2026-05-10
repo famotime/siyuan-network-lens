@@ -56,6 +56,7 @@ export interface WikiChatSessionController {
   mentionPopupVisible: Ref<boolean>
   mentionFilter: Ref<string>
   filteredPages: ComputedRef<WikiIndexPage[]>
+  syncMentionState: (cursorPos: number) => void
   sendMessage: () => Promise<void>
   switchSource: (page: WikiIndexPage) => void
   resetSession: () => void
@@ -86,27 +87,28 @@ export function createWikiChatSession(options: WikiChatSessionOptions): WikiChat
 
   const filteredPages = computed(() => {
     const filter = mentionFilter.value.toLowerCase()
-    return wikiPages.value
-      .filter(p => p.title.toLowerCase().includes(filter))
-      .slice(0, 8)
+    return wikiPages.value.filter(page => page.title.toLowerCase().includes(filter))
   })
 
-  function checkMention(cursorPos: number) {
-    const text = inputText.value
-    const beforeCursor = text.slice(0, cursorPos)
+  function syncMentionState(cursorPos: number) {
+    const beforeCursor = inputText.value.slice(0, cursorPos)
     const atMatch = beforeCursor.match(/@([^@\s]*)$/)
-    if (atMatch) {
-      mentionFilter.value = atMatch[1]
-      mentionPopupVisible.value = true
-    } else {
+
+    if (!atMatch) {
+      mentionFilter.value = ''
       mentionPopupVisible.value = false
+      return
     }
+
+    mentionFilter.value = atMatch[1]
+    mentionPopupVisible.value = filteredPages.value.length > 0
   }
 
   function switchSource(page: WikiIndexPage) {
     const oldTitle = session.value.currentSourcePage?.title ?? ''
     inputText.value = inputText.value.replace(/@[^@\s]*\s?/, '')
     mentionPopupVisible.value = false
+    mentionFilter.value = ''
     session.value.currentSourcePage = page
     session.value.messages.push({
       id: nextMessageId(),
@@ -381,6 +383,7 @@ export function createWikiChatSession(options: WikiChatSessionOptions): WikiChat
     mentionPopupVisible,
     mentionFilter,
     filteredPages,
+    syncMentionState,
     sendMessage,
     switchSource,
     resetSession,

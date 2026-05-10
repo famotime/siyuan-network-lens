@@ -270,3 +270,89 @@ describe('buildSaveMarkdown', () => {
     expect(session.buildSaveMarkdown()).toBe('')
   })
 })
+
+
+describe('mention filtering', () => {
+  function createMentionSession() {
+    return createWikiChatSession({
+      scope: ref({ mode: 'topic' } as WikiChatScope),
+      wikiPages: ref([
+        makePage('doc-1', '机器学习-llm-wiki'),
+        makePage('doc-2', '深度学习-llm-wiki'),
+        makePage('doc-3', '机器翻译-llm-wiki'),
+        { ...makePage('doc-4', '强化学习-llm-wiki'), summary: '机器' },
+      ]),
+      forwardProxy: vi.fn(),
+      getBlockKramdown: vi.fn(),
+      config: ref({
+        aiBaseUrl: 'http://localhost',
+        aiApiKey: 'key',
+        aiModel: 'model',
+        aiRequestTimeoutSeconds: 60,
+        aiMaxTokens: 4096,
+        aiTemperature: 0.7,
+        aiMaxContextMessages: 1,
+      }),
+    })
+  }
+
+  it('shows all wiki pages when the user only typed @', () => {
+    const session = createMentionSession()
+
+    session.inputText.value = '@'
+    session.syncMentionState(1)
+
+    expect(session.mentionPopupVisible.value).toBe(true)
+    expect(session.mentionFilter.value).toBe('')
+    expect(session.filteredPages.value.map(page => page.title)).toEqual([
+      '机器学习-llm-wiki',
+      '深度学习-llm-wiki',
+      '机器翻译-llm-wiki',
+      '强化学习-llm-wiki',
+    ])
+  })
+
+  it('filters by title substring only and ignores summary matches', () => {
+    const session = createMentionSession()
+
+    session.inputText.value = '@机器'
+    session.syncMentionState(3)
+
+    expect(session.mentionPopupVisible.value).toBe(true)
+    expect(session.mentionFilter.value).toBe('机器')
+    expect(session.filteredPages.value.map(page => page.title)).toEqual([
+      '机器学习-llm-wiki',
+      '机器翻译-llm-wiki',
+    ])
+  })
+
+  it('matches titles case-insensitively', () => {
+    const session = createMentionSession()
+
+    session.inputText.value = '@LLM'
+    session.syncMentionState(4)
+
+    expect(session.filteredPages.value).toHaveLength(4)
+  })
+
+  it('hides the popup when the mention has no title matches', () => {
+    const session = createMentionSession()
+
+    session.inputText.value = '@不存在'
+    session.syncMentionState(4)
+
+    expect(session.mentionFilter.value).toBe('不存在')
+    expect(session.filteredPages.value).toEqual([])
+    expect(session.mentionPopupVisible.value).toBe(false)
+  })
+
+  it('hides the popup and clears the filter when the cursor is not in an active mention', () => {
+    const session = createMentionSession()
+
+    session.inputText.value = '普通问题'
+    session.syncMentionState(session.inputText.value.length)
+
+    expect(session.mentionPopupVisible.value).toBe(false)
+    expect(session.mentionFilter.value).toBe('')
+  })
+})
