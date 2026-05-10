@@ -253,7 +253,9 @@ export async function applyWikiDocuments(params: {
     generatedAt: params.generatedAt,
     scopeSummary: params.scopeSummary,
     scopeDescriptionLines: params.scopeDescriptionLines,
+    themePages: params.themePages,
     themeResults,
+    unclassifiedDocuments: params.unclassifiedDocuments,
   })
   const logPath = joinDocumentPath(wikiTarget.containerPath, params.config.wikiLogTitle)
   const existingLogPageRecord = await params.store.getPageRecord(buildWikiPageStorageKey({
@@ -548,30 +550,117 @@ function buildLogEntryMarkdown(params: {
   generatedAt: string
   scopeSummary: WikiApplyScopeSummary
   scopeDescriptionLines: string[]
+  themePages: WikiThemePageApplyInput[]
   themeResults: WikiApplyBatchResult['themePages']
+  unclassifiedDocuments: Array<{
+    documentId: string
+    title: string
+  }>
 }): string {
-  const counts = buildThemeResultCounts(params.themeResults)
-  const touchedPages = params.themeResults
-    .map(item => t('analytics.wiki.logTouchedPageRow', {
-      result: formatApplyResultLabel(item.result),
-      page: item.pageId ? buildDocLinkMarkdown(item.pageId, item.pageTitle) : item.pageTitle,
-    }))
-    .join('\n')
+  const resultRows = params.themeResults.map((item, index) => ({
+    ...item,
+    themePage: params.themePages[index],
+  }))
+
+  const createdRows = resultRows.filter(item => item.result === 'created')
+  const updatedRows = resultRows.filter(item => item.result === 'updated')
+  const unchangedRows = resultRows.filter(item => item.themePage.preview.status === 'unchanged')
+  const conflictRows = resultRows.filter(item => item.themePage.preview.status === 'conflict')
+
+  const sourceDocumentTitleMap = new Map<string, string>()
+  for (const page of params.themePages) {
+    for (const entry of page.sourceDocumentEntries ?? []) {
+      if (!sourceDocumentTitleMap.has(entry.documentId)) {
+        sourceDocumentTitleMap.set(entry.documentId, entry.title)
+      }
+    }
+  }
+  for (const document of params.unclassifiedDocuments) {
+    if (!sourceDocumentTitleMap.has(document.documentId)) {
+      sourceDocumentTitleMap.set(document.documentId, document.title)
+    }
+  }
+
+  const sourceDocumentLinks = deduplicateLogLinks([
+    ...params.themePages.flatMap(page => page.sourceDocumentIds.map(documentId => ({
+      id: documentId,
+      title: sourceDocumentTitleMap.get(documentId) ?? documentId,
+    }))),
+    ...params.unclassifiedDocuments.map(document => ({
+      id: document.documentId,
+      title: document.title,
+    })),
+  ])
+
+  const topicLinks = deduplicateLogLinks(
+    params.themePages.map(page => ({
+      id: page.themeDocumentId,
+      title: page.themeDocumentTitle,
+    })),
+  )
 
   return [
     `## ${formatLocalTime(params.generatedAt)}`,
     '',
+    ...buildLogStatLines(t('analytics.wiki.logCreatedPages', { count: createdRows.length }), createdRows.map(item => ({
+      id: item.pageId,
+      title: item.pageTitle,
+    }))),
+    ...buildLogStatLines(t('analytics.wiki.logUpdatedPages', { count: updatedRows.length }), updatedRows.map(item => ({
+      id: item.pageId,
+      title: item.pageTitle,
+    }))),
+    ...buildLogStatLines(t('analytics.wiki.logUnchangedPages', { count: unchangedRows.length }), unchangedRows.map(item => ({
+      id: item.pageId,
+      title: item.pageTitle,
+    }))),
+    ...buildLogStatLines(t('analytics.wiki.logConflictPages', { count: conflictRows.length }), conflictRows.map(item => ({
+      id: item.pageId,
+      title: item.pageTitle,
+    }))),
     ...params.scopeDescriptionLines,
-    t('analytics.wiki.logMatchedSourceDocs', { count: params.scopeSummary.sourceDocumentCount }),
-    t('analytics.wiki.logMatchedTopics', { count: params.scopeSummary.themeGroupCount }),
-    t('analytics.wiki.logCreatedPages', { count: counts.created }),
-    t('analytics.wiki.logUpdatedPages', { count: counts.updated }),
-    t('analytics.wiki.logUnchangedPages', { count: counts.skipped }),
-    t('analytics.wiki.logConflictPages', { count: counts.conflict }),
-    '',
-    t('analytics.wiki.logTouchedPagesHeading'),
-    touchedPages || t('analytics.wiki.markdownNone'),
+    ...buildLogStatLines(t('analytics.wiki.logMatchedSourceDocs', { count: params.scopeSummary.sourceDocumentCount }), sourceDocumentLinks),
+    ...buildLogStatLines(t('analytics.wiki.logMatchedTopics', { count: params.scopeSummary.themeGroupCount }), topicLinks),
   ].join('\n')
+}
+
+function buildLogStatLines(
+  summaryLine: string,
+  links: Array<{ id?: string, title: string }>,
+): string[] {
+  const result = [summaryLine]
+  const effectiveLinks = deduplicateLogLinks(links)
+
+  if (!effectiveLinks.length) {
+    return result
+  }
+
+  result.push(...effectiveLinks.map(link => `  - ${link.id ? buildDocLinkMarkdown(link.id, link.title) : link.title}`))
+  return result
+}
+
+function deduplicateLogLinks(items: Array<{ id?: string, title: string }>): Array<{ id?: string, title: string }> {
+  const result: Array<{ id?: string, title: string }> = []
+  const seen = new Set<string>()
+
+  for (const item of items) {
+    const normalizedTitle = item.title.trim()
+    const normalizedId = item.id?.trim()
+    if (!normalizedTitle) {
+      continue
+    }
+    const key = normalizedId || normalizedTitle
+    if (seen.has(key)) {
+      continue
+    }
+    seen.add(key)
+    result.push({
+      id: normalizedId,
+      title: normalizedTitle,
+    })
+  }
+
+  return result
 }
 
 function buildThemeResultCounts(themeResults: WikiApplyBatchResult['themePages']) {

@@ -239,8 +239,14 @@ describe('wiki documents', () => {
     expect(kernel.getDocumentMarkdownByPath('/LLM Wiki/LLM-Wiki-索引')).toContain(`    - ${buildDocLinkMarkdown('doc-ai-child', 'AI 子文档')}`)
     expect(kernel.getDocumentMarkdownByPath('/LLM Wiki/LLM-Wiki-索引')).not.toContain(`    - ${buildDocLinkMarkdown('doc-ai-core', 'AI 核心')}\n  - 子文档：\n    - ${buildDocLinkMarkdown('doc-ai-core', 'AI 核心')}`)
     expect(kernel.getDocumentMarkdownByPath('/LLM Wiki/LLM-Wiki-索引')).toContain('零散记录')
-    expect(kernel.getDocumentMarkdownByPath('/LLM Wiki/LLM-Wiki-维护日志')).toContain('- Created pages: 1')
-    expect(kernel.getDocumentMarkdownByPath('/LLM Wiki/LLM-Wiki-维护日志')).toContain('主题-AI-索引-llm-wiki')
+    const logMarkdown = kernel.getDocumentMarkdownByPath('/LLM Wiki/LLM-Wiki-维护日志')
+    expect(logMarkdown).toContain('- Created Wiki pages: 1')
+    expect(logMarkdown).toContain(`  - ${buildDocLinkMarkdown('doc-1', '主题-AI-索引-llm-wiki')}`)
+    expect(logMarkdown).toContain('- Matched source docs: 2')
+    expect(logMarkdown).toContain(`  - ${buildDocLinkMarkdown('doc-ai-core', 'AI 核心')}`)
+    expect(logMarkdown).toContain(`  - ${buildDocLinkMarkdown('doc-ai-bridge', 'AI 桥接页')}`)
+    expect(logMarkdown).toContain('- Matched topics: 1')
+    expect(logMarkdown).toContain(`  - ${buildDocLinkMarkdown('doc-theme-ai', '主题-AI-索引')}`)
 
     const snapshot = await store.loadSnapshot()
     const themeRecord = snapshot.pages[buildWikiPageStorageKey({
@@ -641,8 +647,11 @@ describe('wiki documents', () => {
     })
     expect(kernel.api.updateBlock).not.toHaveBeenCalledWith('markdown', conflictDraft.managedMarkdown, 'wiki-conflict::managed')
     expect(kernel.getDocumentMarkdownByPath('/LLM Wiki/主题-冲突-llm-wiki')).toContain('外部修改后的内容')
-    expect(kernel.getDocumentMarkdownByPath('/LLM Wiki/LLM-Wiki-维护日志')).toContain('- Unchanged pages: 1')
-    expect(kernel.getDocumentMarkdownByPath('/LLM Wiki/LLM-Wiki-维护日志')).toContain('- Conflict pages: 1')
+    const logMarkdown = kernel.getDocumentMarkdownByPath('/LLM Wiki/LLM-Wiki-维护日志')
+    expect(logMarkdown).toContain('- Unchanged Wiki pages: 1')
+    expect(logMarkdown).toContain(`  - ${buildDocLinkMarkdown('wiki-stable', '主题-稳定-llm-wiki')}`)
+    expect(logMarkdown).toContain('- Conflict Wiki pages: 1')
+    expect(logMarkdown).toContain(`  - ${buildDocLinkMarkdown('wiki-conflict', '主题-冲突-llm-wiki')}`)
 
     const snapshot = await store.loadSnapshot()
     expect(snapshot.pages[buildWikiPageStorageKey({
@@ -780,6 +789,219 @@ describe('wiki documents', () => {
     expect(kernel.getDocumentMarkdownByPath('/LLM Wiki/主题-冲突-llm-wiki')).toContain('- 冲突备注')
   })
 
+  it('keeps unchanged and conflict wiki page counts in the log even when a conflict is overwritten', async () => {
+    const unchangedMarkdown = [
+      '# 主题-稳定-llm-wiki',
+      '',
+      '## AI 管理区',
+      '',
+      '<!-- network-lens-wiki-section:intro -->',
+      '### 主题概览',
+      '稳定内容',
+      '',
+      '## 人工备注',
+      '',
+      '- 稳定备注',
+    ].join('\n')
+    const conflictMarkdown = [
+      '# 主题-冲突-llm-wiki',
+      '',
+      '## AI 管理区',
+      '',
+      '### 主题概览',
+      '外部修改后的内容',
+      '',
+      '## 人工备注',
+      '',
+      '- 冲突备注',
+    ].join('\n')
+    const kernel = createFakeWikiKernel([
+      {
+        id: 'wiki-stable',
+        notebook: 'notebook-theme',
+        hpath: '/LLM Wiki/主题-稳定-llm-wiki',
+        markdown: unchangedMarkdown,
+      },
+      {
+        id: 'wiki-conflict',
+        notebook: 'notebook-theme',
+        hpath: '/LLM Wiki/主题-冲突-llm-wiki',
+        markdown: conflictMarkdown,
+      },
+    ])
+    const store = createMemoryWikiStore({
+      pages: {
+        [buildWikiPageStorageKey({
+          pageType: 'theme',
+          pageTitle: '主题-稳定-llm-wiki',
+          themeDocumentId: 'doc-theme-stable',
+        })]: {
+          pageType: 'theme',
+          pageTitle: '主题-稳定-llm-wiki',
+          pageId: 'wiki-stable',
+          themeDocumentId: 'doc-theme-stable',
+          themeDocumentTitle: '主题-稳定',
+          sourceDocumentIds: ['doc-stable'],
+          managedFingerprint: fingerprintWikiContent([
+            '# 主题-稳定-llm-wiki',
+            '',
+            '## AI 管理区',
+            '',
+            '<!-- network-lens-wiki-section:intro -->',
+            '### 主题概览',
+            '稳定内容',
+          ].join('\n')),
+          lastApply: {
+            appliedAt: '2026-04-09T11:00:00.000Z',
+            result: 'updated',
+            sourceDocumentIds: ['doc-stable'],
+            managedFingerprint: fingerprintWikiContent([
+              '# 主题-稳定-llm-wiki',
+              '',
+              '## AI 管理区',
+              '',
+              '<!-- network-lens-wiki-section:intro -->',
+              '### 主题概览',
+              '稳定内容',
+            ].join('\n')),
+          },
+        },
+        [buildWikiPageStorageKey({
+          pageType: 'theme',
+          pageTitle: '主题-冲突-llm-wiki',
+          themeDocumentId: 'doc-theme-conflict',
+        })]: {
+          pageType: 'theme',
+          pageTitle: '主题-冲突-llm-wiki',
+          pageId: 'wiki-conflict',
+          themeDocumentId: 'doc-theme-conflict',
+          themeDocumentTitle: '主题-冲突',
+          sourceDocumentIds: ['doc-conflict'],
+          managedFingerprint: fingerprintWikiContent('old-managed'),
+          lastApply: {
+            appliedAt: '2026-04-09T11:00:00.000Z',
+            result: 'updated',
+            sourceDocumentIds: ['doc-conflict'],
+            managedFingerprint: fingerprintWikiContent('old-managed'),
+          },
+        },
+      },
+    })
+
+    const unchangedDraft = buildStaticThemeDraft('主题-稳定-llm-wiki', '20260409120000-stable1', '主题-稳定', '稳定内容')
+    const unchangedPreview = buildWikiPreview({
+      pageType: 'theme',
+      pageTitle: '主题-稳定-llm-wiki',
+      sourceDocumentIds: ['doc-stable'],
+      generatedAt: '2026-04-09T12:00:00.000Z',
+      nextDraft: unchangedDraft,
+      existingPage: {
+        managedMarkdown: [
+          '# 主题-稳定-llm-wiki',
+          '',
+          '## AI 管理区',
+          '',
+          '<!-- network-lens-wiki-section:intro -->',
+          '### 主题概览',
+          '稳定内容',
+        ].join('\n'),
+      },
+    })
+
+    const conflictDraft = buildStaticThemeDraft('主题-冲突-llm-wiki', '20260409120000-cnflct', '主题-冲突', '插件新生成内容')
+    const conflictPreview = buildWikiPreview({
+      pageType: 'theme',
+      pageTitle: '主题-冲突-llm-wiki',
+      sourceDocumentIds: ['doc-conflict'],
+      generatedAt: '2026-04-09T12:00:00.000Z',
+      nextDraft: conflictDraft,
+      existingPage: {
+        managedMarkdown: [
+          '# 主题-冲突-llm-wiki',
+          '',
+          '## AI 管理区',
+          '',
+          '### 主题概览',
+          '外部修改后的内容',
+        ].join('\n'),
+      },
+      storedRecord: (await store.getPageRecord(buildWikiPageStorageKey({
+        pageType: 'theme',
+        pageTitle: '主题-冲突-llm-wiki',
+        themeDocumentId: 'doc-theme-conflict',
+      }))) ?? undefined,
+    })
+
+    const result = await applyWikiDocuments({
+      config: {
+        themeNotebookId: 'notebook-theme',
+        themeDocumentPath: '/主题',
+        wikiIndexTitle: 'LLM-Wiki-索引',
+        wikiLogTitle: 'LLM-Wiki-维护日志',
+        wikiPageSuffix: '-llm-wiki',
+        wikiContainerPath: '/知识库/LLM Wiki',
+      },
+      notebooks: [
+        { id: 'notebook-theme', name: '知识库' },
+      ],
+      generatedAt: '2026-04-09T12:05:00.000Z',
+      scopeSummary: {
+        sourceDocumentCount: 2,
+        themeGroupCount: 2,
+        unclassifiedDocumentCount: 0,
+        excludedWikiDocumentCount: 0,
+      },
+      scopeDescriptionLines: ['- 时间窗口：7d'],
+      themePages: [
+        {
+          pageTitle: '主题-稳定-llm-wiki',
+          themeName: '稳定',
+          themeDocumentId: 'doc-theme-stable',
+          themeDocumentTitle: '主题-稳定',
+          themeDocumentBox: 'notebook-theme',
+          themeDocumentHPath: '/主题/主题-稳定',
+          sourceDocumentIds: ['doc-stable'],
+          preview: unchangedPreview,
+          draft: unchangedDraft,
+        },
+        {
+          pageTitle: '主题-冲突-llm-wiki',
+          themeName: '冲突',
+          themeDocumentId: 'doc-theme-conflict',
+          themeDocumentTitle: '主题-冲突',
+          themeDocumentBox: 'notebook-theme',
+          themeDocumentHPath: '/主题/主题-冲突',
+          sourceDocumentIds: ['doc-conflict'],
+          preview: conflictPreview,
+          draft: conflictDraft,
+        },
+      ],
+      unclassifiedDocuments: [],
+      overwriteConflicts: true,
+      store,
+      api: kernel.api,
+    })
+
+    expect(result.themePages).toEqual([
+      {
+        pageTitle: '主题-稳定-llm-wiki',
+        pageId: 'wiki-stable',
+        result: 'skipped',
+      },
+      {
+        pageTitle: '主题-冲突-llm-wiki',
+        pageId: 'wiki-conflict',
+        result: 'updated',
+      },
+    ])
+
+    const logMarkdown = kernel.getDocumentMarkdownByPath('/LLM Wiki/LLM-Wiki-维护日志')
+    expect(logMarkdown).toContain('- Unchanged Wiki pages: 1')
+    expect(logMarkdown).toContain(`  - ${buildDocLinkMarkdown('wiki-stable', '主题-稳定-llm-wiki')}`)
+    expect(logMarkdown).toContain('- Conflict Wiki pages: 1')
+    expect(logMarkdown).toContain(`  - ${buildDocLinkMarkdown('wiki-conflict', '主题-冲突-llm-wiki')}`)
+  })
+
   it('writes Chinese index and log content when the workspace locale is zh_CN', async () => {
     ;(globalThis as typeof globalThis & {
       siyuan?: {
@@ -873,8 +1095,14 @@ describe('wiki documents', () => {
     expect(kernel.getDocumentMarkdownByPath('/LLM Wiki/LLM-Wiki-索引')).toContain('  - 入链:')
     expect(kernel.getDocumentMarkdownByPath('/LLM Wiki/LLM-Wiki-索引')).toContain('  - 出链:')
     expect(kernel.getDocumentMarkdownByPath('/LLM Wiki/LLM-Wiki-索引')).toContain('  - 子文档:')
-    expect(kernel.getDocumentMarkdownByPath('/LLM Wiki/LLM-Wiki-维护日志')).toContain('- 新建页面数：1')
-    expect(kernel.getDocumentMarkdownByPath('/LLM Wiki/LLM-Wiki-维护日志')).toContain('### 本次触达页面')
+    const logMarkdown = kernel.getDocumentMarkdownByPath('/LLM Wiki/LLM-Wiki-维护日志')
+    expect(logMarkdown).toContain('- 新建 Wiki 页面数：1')
+    expect(logMarkdown).toContain(`  - ${buildDocLinkMarkdown('doc-1', '主题-AI-索引-llm-wiki')}`)
+    expect(logMarkdown).toContain('- 命中源文档数：1')
+    expect(logMarkdown).toContain(`  - ${buildDocLinkMarkdown('doc-ai-core', 'AI 核心')}`)
+    expect(logMarkdown).toContain('- 命中主题数：1')
+    expect(logMarkdown).toContain(`  - ${buildDocLinkMarkdown('doc-theme-ai', '主题-AI-索引')}`)
+    expect(logMarkdown).not.toContain('### 本次触达页面')
   })
 
   it('writes layered scope source details in the log and keeps core document links clickable', async () => {
@@ -935,7 +1163,7 @@ describe('wiki documents', () => {
       ],
       generatedAt: '2026-04-09T12:05:00.000Z',
       scopeSummary: {
-        sourceDocumentCount: 1,
+        sourceDocumentCount: 2,
         themeGroupCount: 1,
         unclassifiedDocumentCount: 0,
         excludedWikiDocumentCount: 0,
@@ -972,10 +1200,16 @@ describe('wiki documents', () => {
 
     const logMarkdown = kernel.getDocumentMarkdownByPath('/LLM Wiki/LLM-Wiki-维护日志')
 
+    expect(logMarkdown).toContain('- 新建 Wiki 页面数：1')
+    expect(logMarkdown).toContain(`  - ${buildDocLinkMarkdown('doc-1', '主题-AI-索引-llm-wiki')}`)
     expect(logMarkdown).toContain(`- 范围来源：核心文档 ${buildSiyuanBlockLinkMarkdown('doc-core-beta', 'Beta')} 关联范围（正链 / 反链 / 子文档）`)
     expect(logMarkdown).toContain('  - 时间窗口：近 7 天')
     expect(logMarkdown).toContain('  - 标签：AI, 笔记')
     expect(logMarkdown).toContain('  - 关键词：bridge')
+    expect(logMarkdown).toContain('- 命中源文档数：2')
+    expect(logMarkdown).toContain(`  - ${buildDocLinkMarkdown('doc-ai-core', 'AI 核心')}`)
+    expect(logMarkdown).toContain('- 命中主题数：1')
+    expect(logMarkdown).toContain(`  - ${buildDocLinkMarkdown('doc-theme-ai', '主题-AI-索引')}`)
   })
 })
 

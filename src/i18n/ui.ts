@@ -880,10 +880,6 @@ const UI_TEXT = {
         en_US: 'Overview',
         zh_CN: '页面概览',
       },
-      logTouchedPagesHeading: {
-        en_US: '### Touched pages this run',
-        zh_CN: '### 本次触达页面',
-      },
       logMatchedSourceDocs: {
         en_US: '- Matched source docs: {count}',
         zh_CN: '- 命中源文档数：{count}',
@@ -893,24 +889,20 @@ const UI_TEXT = {
         zh_CN: '- 命中主题数：{count}',
       },
       logCreatedPages: {
-        en_US: '- Created pages: {count}',
-        zh_CN: '- 新建页面数：{count}',
+        en_US: '- Created Wiki pages: {count}',
+        zh_CN: '- 新建 Wiki 页面数：{count}',
       },
       logUpdatedPages: {
-        en_US: '- Updated pages: {count}',
-        zh_CN: '- 更新页面数：{count}',
+        en_US: '- Updated Wiki pages: {count}',
+        zh_CN: '- 更新 Wiki 页面数：{count}',
       },
       logUnchangedPages: {
-        en_US: '- Unchanged pages: {count}',
-        zh_CN: '- 无变化页面数：{count}',
+        en_US: '- Unchanged Wiki pages: {count}',
+        zh_CN: '- 无变化 Wiki 页面数：{count}',
       },
       logConflictPages: {
-        en_US: '- Conflict pages: {count}',
-        zh_CN: '- 冲突页面数：{count}',
-      },
-      logTouchedPageRow: {
-        en_US: '- {result}: {page}',
-        zh_CN: '- {result}：{page}',
+        en_US: '- Conflict Wiki pages: {count}',
+        zh_CN: '- 冲突 Wiki 页面数：{count}',
       },
       resultCreated: {
         en_US: 'created',
@@ -1868,10 +1860,6 @@ const UI_TEXT = {
         en_US: 'Overview',
         zh_CN: '页面概览',
       },
-      logTouchedPagesHeading: {
-        en_US: '### Touched pages this run',
-        zh_CN: '### 本次触达页面',
-      },
       logMatchedSourceDocs: {
         en_US: '- Matched source docs: {count}',
         zh_CN: '- 命中源文档数：{count}',
@@ -1881,24 +1869,20 @@ const UI_TEXT = {
         zh_CN: '- 命中主题数：{count}',
       },
       logCreatedPages: {
-        en_US: '- Created pages: {count}',
-        zh_CN: '- 新建页面数：{count}',
+        en_US: '- Created Wiki pages: {count}',
+        zh_CN: '- 新建 Wiki 页面数：{count}',
       },
       logUpdatedPages: {
-        en_US: '- Updated pages: {count}',
-        zh_CN: '- 更新页面数：{count}',
+        en_US: '- Updated Wiki pages: {count}',
+        zh_CN: '- 更新 Wiki 页面数：{count}',
       },
       logUnchangedPages: {
-        en_US: '- Unchanged pages: {count}',
-        zh_CN: '- 无变化页面数：{count}',
+        en_US: '- Unchanged Wiki pages: {count}',
+        zh_CN: '- 无变化 Wiki 页面数：{count}',
       },
       logConflictPages: {
-        en_US: '- Conflict pages: {count}',
-        zh_CN: '- 冲突页面数：{count}',
-      },
-      logTouchedPageRow: {
-        en_US: '- {result}: {page}',
-        zh_CN: '- {result}：{page}',
+        en_US: '- Conflict Wiki pages: {count}',
+        zh_CN: '- 冲突 Wiki 页面数：{count}',
       },
       resultCreated: {
         en_US: 'created',
