@@ -3,6 +3,7 @@ import { ref, watch, nextTick, onMounted, onBeforeUnmount } from 'vue'
 import type { WikiChatScope, WikiIndexPage } from '@/analytics/wiki-index'
 import { createWikiChatSession } from '@/composables/use-wiki-chat-session'
 import { createPluginLogger } from '@/utils/plugin-logger'
+import { renderSimpleMarkdown } from '@/utils/markdown'
 import { t } from '@/i18n/ui'
 
 const props = defineProps<{
@@ -307,9 +308,10 @@ const rootRef = ref<HTMLElement>()
             <svg viewBox="0 0 24 24" width="14" height="14" fill="currentColor"><path d="M20 9V7c0-1.1-.9-2-2-2h-3c0-1.66-1.34-3-3-3S9 3.34 9 5H6c-1.1 0-2 .9-2 2v2c-1.66 0-3 1.34-3 3s1.34 3 3 3v4c0 1.1.9 2 2 2h12c1.1 0 2-.9 2-2v-4c1.66 0 3-1.34 3-3s-1.34-3-3-3zM7.5 11.5c0-.83.67-1.5 1.5-1.5s1.5.67 1.5 1.5S9.83 13 9 13s-1.5-.67-1.5-1.5zM16 17H8v-2h8v2zm-1-4c-.83 0-1.5-.67-1.5-1.5S14.17 10 15 10s1.5.67 1.5 1.5S15.83 13 15 13z"/></svg>
           </div>
           <div class="wiki-chat-dialog__bubble-body">
-            <div class="wiki-chat-dialog__bubble-content wiki-chat-dialog__bubble-content--assistant">
-              {{ msg.content }}
-            </div>
+            <div
+              class="wiki-chat-dialog__bubble-content wiki-chat-dialog__bubble-content--assistant"
+              v-html="renderSimpleMarkdown(msg.content)"
+            />
             <div class="wiki-chat-dialog__bubble-meta">
               <span>{{ formatTime(msg.timestamp) }}</span>
               <span
@@ -452,7 +454,7 @@ const rootRef = ref<HTMLElement>()
   font-weight: 500;
 }
 .wiki-chat-dialog__source-title {
-  color: var(--b3-theme-on-surface-light);
+  color: color-mix(in srgb, var(--b3-theme-on-background) 78%, transparent);
   font-weight: 500;
 }
 
@@ -461,6 +463,9 @@ const rootRef = ref<HTMLElement>()
   flex: 1;
   overflow-y: auto;
   padding: 16px;
+  background:
+    radial-gradient(circle at top, color-mix(in srgb, var(--b3-theme-primary) 10%, transparent), transparent 42%),
+    color-mix(in srgb, var(--b3-theme-background) 90%, var(--b3-theme-surface));
   display: flex;
   flex-direction: column;
   gap: 12px;
@@ -471,7 +476,7 @@ const rootRef = ref<HTMLElement>()
 .wiki-chat-dialog__system-hint {
   text-align: center;
   font-size: 11px;
-  color: var(--b3-theme-on-surface-light);
+  color: color-mix(in srgb, var(--b3-theme-on-background) 72%, transparent);
   padding: 4px 0;
 }
 
@@ -517,42 +522,46 @@ const rootRef = ref<HTMLElement>()
   padding: 10px 14px;
   border-radius: 16px;
   font-size: 13px;
-  line-height: 1.6;
-  display: inline-block;
+  line-height: 1.72;
+  display: block;
   text-align: left;
   word-break: break-word;
+  box-shadow: 0 10px 24px color-mix(in srgb, var(--b3-theme-background) 24%, transparent);
 }
 .wiki-chat-dialog__bubble-content--user {
-  background: var(--b3-theme-primary-lightest);
-  color: var(--b3-theme-on-surface);
+  background: color-mix(in srgb, var(--b3-theme-primary) 20%, var(--b3-theme-surface));
+  color: color-mix(in srgb, var(--b3-theme-on-background) 94%, white 6%);
   border-radius: 16px 16px 4px 16px;
 }
 .wiki-chat-dialog__bubble-content--assistant {
-  background: var(--b3-theme-surface-light);
-  color: var(--b3-theme-on-surface);
+  background: color-mix(in srgb, var(--b3-theme-surface-light) 88%, var(--b3-theme-background));
+  color: color-mix(in srgb, var(--b3-theme-on-background) 94%, white 6%);
+  border: 1px solid color-mix(in srgb, var(--b3-theme-on-background) 10%, transparent);
   border-radius: 16px 16px 16px 4px;
 }
 
 /* Bubble meta */
 .wiki-chat-dialog__bubble-time {
   font-size: 10px;
-  color: var(--b3-theme-on-surface-light);
+  color: color-mix(in srgb, var(--b3-theme-on-background) 72%, transparent);
   margin-top: 4px;
 }
 .wiki-chat-dialog__bubble-meta {
   font-size: 10px;
-  color: var(--b3-theme-on-surface-light);
+  color: color-mix(in srgb, var(--b3-theme-on-background) 72%, transparent);
   margin-top: 4px;
   display: flex;
   align-items: center;
+  flex-wrap: wrap;
   gap: 8px;
 }
 .wiki-chat-dialog__source-badge {
-  background: var(--b3-theme-success);
-  color: var(--b3-theme-on-primary, #fff);
-  padding: 1px 6px;
-  border-radius: 6px;
+  background: color-mix(in srgb, var(--b3-theme-success) 22%, var(--b3-theme-background));
+  color: color-mix(in srgb, var(--b3-theme-success) 68%, white 32%);
+  padding: 2px 7px;
+  border-radius: 999px;
   font-size: 10px;
+  border: 1px solid color-mix(in srgb, var(--b3-theme-success) 22%, transparent);
 }
 
 /* Error */
@@ -603,12 +612,12 @@ const rootRef = ref<HTMLElement>()
 }
 .wiki-chat-dialog__input-area textarea {
   flex: 1;
-  background: var(--b3-theme-surface-light);
+  background: color-mix(in srgb, var(--b3-theme-surface-light) 82%, var(--b3-theme-background));
   border: 1px solid var(--b3-border-color);
   border-radius: 20px;
   padding: 10px 16px;
   font-size: 13px;
-  color: var(--b3-theme-on-surface);
+  color: color-mix(in srgb, var(--b3-theme-on-background) 94%, white 6%);
   resize: none;
   font-family: inherit;
   line-height: 1.4;
@@ -616,7 +625,7 @@ const rootRef = ref<HTMLElement>()
   max-height: 100px;
 }
 .wiki-chat-dialog__input-area textarea::placeholder {
-  color: var(--b3-theme-on-surface-light);
+  color: color-mix(in srgb, var(--b3-theme-on-background) 56%, transparent);
 }
 .wiki-chat-dialog__send-btn {
   width: 36px;
@@ -697,5 +706,66 @@ const rootRef = ref<HTMLElement>()
 .wiki-chat-dialog__inline-icon {
   vertical-align: -2px;
   flex-shrink: 0;
+}
+
+.wiki-chat-dialog__bubble-content--assistant :deep(h1),
+.wiki-chat-dialog__bubble-content--assistant :deep(h2) {
+  margin: 0 0 10px;
+  font-size: 15px;
+  line-height: 1.35;
+}
+
+.wiki-chat-dialog__bubble-content--assistant :deep(h3),
+.wiki-chat-dialog__bubble-content--assistant :deep(h4),
+.wiki-chat-dialog__bubble-content--assistant :deep(h5),
+.wiki-chat-dialog__bubble-content--assistant :deep(h6) {
+  margin: 0 0 8px;
+  font-size: 14px;
+  line-height: 1.4;
+}
+
+.wiki-chat-dialog__bubble-content--assistant :deep(p) {
+  margin: 0;
+}
+
+.wiki-chat-dialog__bubble-content--assistant :deep(p + p),
+.wiki-chat-dialog__bubble-content--assistant :deep(p + ul),
+.wiki-chat-dialog__bubble-content--assistant :deep(p + ol),
+.wiki-chat-dialog__bubble-content--assistant :deep(p + blockquote),
+.wiki-chat-dialog__bubble-content--assistant :deep(ul + p),
+.wiki-chat-dialog__bubble-content--assistant :deep(ol + p),
+.wiki-chat-dialog__bubble-content--assistant :deep(blockquote + p),
+.wiki-chat-dialog__bubble-content--assistant :deep(ul + blockquote),
+.wiki-chat-dialog__bubble-content--assistant :deep(ol + blockquote) {
+  margin-top: 8px;
+}
+
+.wiki-chat-dialog__bubble-content--assistant :deep(ul),
+.wiki-chat-dialog__bubble-content--assistant :deep(ol) {
+  margin: 8px 0 0;
+  padding-left: 20px;
+}
+
+.wiki-chat-dialog__bubble-content--assistant :deep(li + li) {
+  margin-top: 4px;
+}
+
+.wiki-chat-dialog__bubble-content--assistant :deep(blockquote) {
+  margin: 8px 0 0;
+  padding: 2px 0 2px 12px;
+  border-left: 3px solid color-mix(in srgb, var(--b3-theme-primary) 42%, transparent);
+  color: color-mix(in srgb, var(--b3-theme-on-background) 82%, transparent);
+}
+
+.wiki-chat-dialog__bubble-content--assistant :deep(code) {
+  padding: 1px 5px;
+  border-radius: 4px;
+  font-size: 12px;
+  background: color-mix(in srgb, var(--b3-theme-on-background) 10%, transparent);
+}
+
+.wiki-chat-dialog__bubble-content--assistant :deep(strong) {
+  color: color-mix(in srgb, var(--b3-theme-on-background) 100%, white 10%);
+  font-weight: 700;
 }
 </style>

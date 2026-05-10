@@ -648,8 +648,8 @@ describe('wiki documents', () => {
     expect(kernel.api.updateBlock).not.toHaveBeenCalledWith('markdown', conflictDraft.managedMarkdown, 'wiki-conflict::managed')
     expect(kernel.getDocumentMarkdownByPath('/LLM Wiki/主题-冲突-llm-wiki')).toContain('外部修改后的内容')
     const logMarkdown = kernel.getDocumentMarkdownByPath('/LLM Wiki/LLM-Wiki-维护日志')
-    expect(logMarkdown).toContain('- Unchanged Wiki pages: 1')
-    expect(logMarkdown).toContain(`  - ${buildDocLinkMarkdown('wiki-stable', '主题-稳定-llm-wiki')}`)
+    expect(logMarkdown).not.toContain('- Unchanged Wiki pages: 1')
+    expect(logMarkdown).not.toContain(`  - ${buildDocLinkMarkdown('wiki-stable', '主题-稳定-llm-wiki')}`)
     expect(logMarkdown).toContain('- Conflict Wiki pages: 1')
     expect(logMarkdown).toContain(`  - ${buildDocLinkMarkdown('wiki-conflict', '主题-冲突-llm-wiki')}`)
 
@@ -996,8 +996,8 @@ describe('wiki documents', () => {
     ])
 
     const logMarkdown = kernel.getDocumentMarkdownByPath('/LLM Wiki/LLM-Wiki-维护日志')
-    expect(logMarkdown).toContain('- Unchanged Wiki pages: 1')
-    expect(logMarkdown).toContain(`  - ${buildDocLinkMarkdown('wiki-stable', '主题-稳定-llm-wiki')}`)
+    expect(logMarkdown).not.toContain('- Unchanged Wiki pages: 1')
+    expect(logMarkdown).not.toContain(`  - ${buildDocLinkMarkdown('wiki-stable', '主题-稳定-llm-wiki')}`)
     expect(logMarkdown).toContain('- Conflict Wiki pages: 1')
     expect(logMarkdown).toContain(`  - ${buildDocLinkMarkdown('wiki-conflict', '主题-冲突-llm-wiki')}`)
   })

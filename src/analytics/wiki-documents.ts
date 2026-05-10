@@ -564,7 +564,6 @@ function buildLogEntryMarkdown(params: {
 
   const createdRows = resultRows.filter(item => item.result === 'created')
   const updatedRows = resultRows.filter(item => item.result === 'updated')
-  const unchangedRows = resultRows.filter(item => item.themePage.preview.status === 'unchanged')
   const conflictRows = resultRows.filter(item => item.themePage.preview.status === 'conflict')
 
   const sourceDocumentTitleMap = new Map<string, string>()
@@ -607,10 +606,6 @@ function buildLogEntryMarkdown(params: {
       title: item.pageTitle,
     }))),
     ...buildLogStatLines(t('analytics.wiki.logUpdatedPages', { count: updatedRows.length }), updatedRows.map(item => ({
-      id: item.pageId,
-      title: item.pageTitle,
-    }))),
-    ...buildLogStatLines(t('analytics.wiki.logUnchangedPages', { count: unchangedRows.length }), unchangedRows.map(item => ({
       id: item.pageId,
       title: item.pageTitle,
     }))),

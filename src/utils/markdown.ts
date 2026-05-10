@@ -1,6 +1,6 @@
 /**
  * Lightweight markdown → HTML converter for wiki preview detail dialog.
- * Handles headings, lists, blockquotes, bold, italic, inline code, and paragraphs.
+ * Handles headings, ordered/unordered lists, blockquotes, bold, italic, inline code, and paragraphs.
  * Strips SiYuan-specific artifacts (block references, siyuan:// links, IAL attrs, HTML comments).
  */
 
@@ -23,7 +23,27 @@ function formatInline(text: string): string {
 export function renderSimpleMarkdown(source: string): string {
   const lines = source.split(/\r?\n/)
   const out: string[] = []
-  let inList = false
+
+  let listTag: 'ul' | 'ol' | null = null
+
+  function closeList() {
+    if (!listTag) {
+      return
+    }
+
+    out.push(`</${listTag}>`)
+    listTag = null
+  }
+
+  function openList(nextTag: 'ul' | 'ol') {
+    if (listTag === nextTag) {
+      return
+    }
+
+    closeList()
+    out.push(`<${nextTag}>`)
+    listTag = nextTag
+  }
 
   for (const rawLine of lines) {
     const line = rawLine
@@ -34,53 +54,42 @@ export function renderSimpleMarkdown(source: string): string {
       .trim()
 
     if (!line) {
-      if (inList) {
-        out.push('</ul>')
-        inList = false
-      }
+      closeList()
       continue
     }
 
     const headingMatch = line.match(/^(#{1,6})\s+(.+)$/)
     if (headingMatch) {
-      if (inList) {
-        out.push('</ul>')
-        inList = false
-      }
+      closeList()
       const level = headingMatch[1].length
       out.push(`<h${level}>${formatInline(headingMatch[2])}</h${level}>`)
       continue
     }
 
     if (line.startsWith('> ')) {
-      if (inList) {
-        out.push('</ul>')
-        inList = false
-      }
+      closeList()
       out.push(`<blockquote>${formatInline(line.slice(2))}</blockquote>`)
       continue
     }
 
     if (/^[-*]\s+/.test(line)) {
-      if (!inList) {
-        out.push('<ul>')
-        inList = true
-      }
+      openList('ul')
       out.push(`<li>${formatInline(line.replace(/^[-*]\s+/, ''))}</li>`)
       continue
     }
 
-    if (inList) {
-      out.push('</ul>')
-      inList = false
+    if (/^\d+\.\s+/.test(line)) {
+      openList('ol')
+      out.push(`<li>${formatInline(line.replace(/^\d+\.\s+/, ''))}</li>`)
+      continue
     }
+
+    closeList()
 
     out.push(`<p>${formatInline(line)}</p>`)
   }
 
-  if (inList) {
-    out.push('</ul>')
-  }
+  closeList()
 
   return out.join('\n')
 }
