@@ -75,6 +75,7 @@ describe('wiki store', () => {
       themeDocumentId: 'theme-ai',
       themeDocumentTitle: '主题-AI-索引',
       sourceDocumentIds: ['doc-1', 'doc-2'],
+      sourceDocumentEntries: [],
       sourceDocumentTimestamps: undefined,
       pageFingerprint: 'page-hash',
       managedFingerprint: 'managed-hash',
@@ -124,6 +125,35 @@ describe('wiki store', () => {
       'doc-1': '2026-05-07T10:00',
       'doc-2': '2026-05-06T15:30',
     })
+    expect(record?.sourceDocumentEntries).toEqual([])
+  })
+
+  it('saves and reloads sourceDocumentEntries with normalized link types', async () => {
+    const storage = createMemoryStorage()
+    const store = createAiWikiStore(storage)
+
+    await store.savePageRecord({
+      pageType: 'theme',
+      pageTitle: '主题-AI-索引-llm-wiki',
+      themeDocumentId: 'theme-ai',
+      sourceDocumentIds: ['doc-1', 'doc-2'],
+      sourceDocumentEntries: [
+        { documentId: 'doc-1', title: 'Alpha', linkTypes: ['inbound', 'outbound', 'inbound'] },
+        { documentId: 'doc-2', title: 'Beta', linkTypes: ['child'] },
+      ],
+    })
+
+    const pageKey = buildWikiPageStorageKey({
+      pageType: 'theme',
+      pageTitle: '主题-AI-索引-llm-wiki',
+      themeDocumentId: 'theme-ai',
+    })
+
+    const record = await store.getPageRecord(pageKey)
+    expect(record?.sourceDocumentEntries).toEqual([
+      { documentId: 'doc-1', title: 'Alpha', linkTypes: ['inbound', 'outbound'] },
+      { documentId: 'doc-2', title: 'Beta', linkTypes: ['child'] },
+    ])
   })
 
   it('normalizes malformed stored data into a safe snapshot shape', async () => {
@@ -152,6 +182,7 @@ describe('wiki store', () => {
           themeDocumentTitle: undefined,
           pageId: undefined,
           sourceDocumentIds: ['doc-1'],
+          sourceDocumentEntries: [],
           sourceDocumentTimestamps: undefined,
           pageFingerprint: undefined,
           managedFingerprint: undefined,

@@ -27,10 +27,10 @@ describe('createAppWikiPanelController', () => {
     expect(controller.activeWikiPreviewRequest.value).toEqual({
       sourceDocumentIds: ['doc-a', 'doc-b', 'doc-c', 'doc-d', 'doc-e'],
       sourceDocumentLinkTypes: new Map([
-        ['doc-b', 'child'],
-        ['doc-c', 'inbound'],
-        ['doc-d', 'inbound'],
-        ['doc-e', 'child'],
+        ['doc-b', ['outbound', 'child']],
+        ['doc-c', ['inbound', 'outbound']],
+        ['doc-d', ['inbound']],
+        ['doc-e', ['child']],
       ]),
       scopeDescriptionLine: `- Scope source: related range for core doc ${buildSiyuanBlockLinkMarkdown('doc-a', 'Beta')} (outbound / inbound / child docs)`,
       themeDocumentId: 'doc-a',

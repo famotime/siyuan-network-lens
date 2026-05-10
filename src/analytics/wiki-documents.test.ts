@@ -179,6 +179,11 @@ describe('wiki documents', () => {
           themeDocumentBox: 'notebook-theme',
           themeDocumentHPath: '/主题/主题-AI-索引',
           sourceDocumentIds: ['doc-ai-core', 'doc-ai-bridge'],
+          sourceDocumentEntries: [
+            { documentId: 'doc-ai-core', title: 'AI 核心', linkTypes: ['inbound', 'outbound'] },
+            { documentId: 'doc-ai-bridge', title: 'AI 桥接页', linkTypes: ['outbound', 'child'] },
+            { documentId: 'doc-ai-child', title: 'AI 子文档', linkTypes: ['child'] },
+          ],
           preview,
           draft: themeDraft,
         },
@@ -226,6 +231,13 @@ describe('wiki documents', () => {
     expect(kernel.getDocumentMarkdownByPath('/LLM Wiki/LLM-Wiki-索引')).toContain(buildDocLinkMarkdown('doc-1', '主题-AI-索引-llm-wiki'))
     expect(kernel.getDocumentMarkdownByPath('/LLM Wiki/LLM-Wiki-索引')).toContain(buildDocLinkMarkdown('doc-theme-ai', '主题-AI-索引'))
     expect(kernel.getDocumentMarkdownByPath('/LLM Wiki/LLM-Wiki-索引')).toContain('当前主题聚焦 AI 索引编排。')
+    expect(kernel.getDocumentMarkdownByPath('/LLM Wiki/LLM-Wiki-索引')).toContain('  - Inbound:')
+    expect(kernel.getDocumentMarkdownByPath('/LLM Wiki/LLM-Wiki-索引')).toContain(`    - ${buildDocLinkMarkdown('doc-ai-core', 'AI 核心')}`)
+    expect(kernel.getDocumentMarkdownByPath('/LLM Wiki/LLM-Wiki-索引')).toContain('  - Outbound:')
+    expect(kernel.getDocumentMarkdownByPath('/LLM Wiki/LLM-Wiki-索引')).toContain(`    - ${buildDocLinkMarkdown('doc-ai-bridge', 'AI 桥接页')}`)
+    expect(kernel.getDocumentMarkdownByPath('/LLM Wiki/LLM-Wiki-索引')).toContain('  - Child docs:')
+    expect(kernel.getDocumentMarkdownByPath('/LLM Wiki/LLM-Wiki-索引')).toContain(`    - ${buildDocLinkMarkdown('doc-ai-child', 'AI 子文档')}`)
+    expect(kernel.getDocumentMarkdownByPath('/LLM Wiki/LLM-Wiki-索引')).not.toContain(`    - ${buildDocLinkMarkdown('doc-ai-core', 'AI 核心')}\n  - 子文档：\n    - ${buildDocLinkMarkdown('doc-ai-core', 'AI 核心')}`)
     expect(kernel.getDocumentMarkdownByPath('/LLM Wiki/LLM-Wiki-索引')).toContain('零散记录')
     expect(kernel.getDocumentMarkdownByPath('/LLM Wiki/LLM-Wiki-维护日志')).toContain('- Created pages: 1')
     expect(kernel.getDocumentMarkdownByPath('/LLM Wiki/LLM-Wiki-维护日志')).toContain('主题-AI-索引-llm-wiki')
@@ -239,6 +251,11 @@ describe('wiki documents', () => {
     expect(themeRecord?.pageId).toBe('doc-1')
     expect(themeRecord?.managedFingerprint).toBe(fingerprintWikiContent(themeDraft.managedMarkdown))
     expect(themeRecord?.lastApply?.result).toBe('created')
+    expect(themeRecord?.sourceDocumentEntries).toEqual([
+      { documentId: 'doc-ai-core', title: 'AI 核心', linkTypes: ['inbound', 'outbound'] },
+      { documentId: 'doc-ai-bridge', title: 'AI 桥接页', linkTypes: ['outbound', 'child'] },
+      { documentId: 'doc-ai-child', title: 'AI 子文档', linkTypes: ['child'] },
+    ])
 
     const rootAttrs = kernel.getBlockAttrsSnapshot('doc-1')
     expect(rootAttrs).toMatchObject({
@@ -385,6 +402,11 @@ describe('wiki documents', () => {
           themeDocumentBox: 'notebook-theme',
           themeDocumentHPath: '/主题/主题-AI-索引',
           sourceDocumentIds: ['doc-ai-core'],
+          sourceDocumentEntries: [
+            { documentId: 'doc-ai-core', title: 'AI 核心', linkTypes: ['inbound'] },
+            { documentId: 'doc-ai-bridge', title: 'AI 桥接页', linkTypes: ['outbound'] },
+            { documentId: 'doc-ai-child', title: 'AI 子文档', linkTypes: ['child'] },
+          ],
           preview,
           draft: themeDraft,
         },
@@ -831,6 +853,11 @@ describe('wiki documents', () => {
           themeDocumentBox: 'notebook-theme',
           themeDocumentHPath: '/主题/主题-AI-索引',
           sourceDocumentIds: ['doc-ai-core'],
+          sourceDocumentEntries: [
+            { documentId: 'doc-ai-core', title: 'AI 核心', linkTypes: ['inbound'] },
+            { documentId: 'doc-ai-bridge', title: 'AI 桥接页', linkTypes: ['outbound'] },
+            { documentId: 'doc-ai-child', title: 'AI 子文档', linkTypes: ['child'] },
+          ],
           preview,
           draft: themeDraft,
         },
@@ -843,6 +870,9 @@ describe('wiki documents', () => {
 
     expect(kernel.getDocumentMarkdownByPath('/LLM Wiki/LLM-Wiki-索引')).toContain('### 页面概览')
     expect(kernel.getDocumentMarkdownByPath('/LLM Wiki/LLM-Wiki-索引')).toContain(`- 最近维护时间：${new Date('2026-04-09T12:05:00.000Z').toLocaleString()}`)
+    expect(kernel.getDocumentMarkdownByPath('/LLM Wiki/LLM-Wiki-索引')).toContain('  - 入链:')
+    expect(kernel.getDocumentMarkdownByPath('/LLM Wiki/LLM-Wiki-索引')).toContain('  - 出链:')
+    expect(kernel.getDocumentMarkdownByPath('/LLM Wiki/LLM-Wiki-索引')).toContain('  - 子文档:')
     expect(kernel.getDocumentMarkdownByPath('/LLM Wiki/LLM-Wiki-维护日志')).toContain('- 新建页面数：1')
     expect(kernel.getDocumentMarkdownByPath('/LLM Wiki/LLM-Wiki-维护日志')).toContain('### 本次触达页面')
   })
@@ -925,6 +955,11 @@ describe('wiki documents', () => {
           themeDocumentBox: 'notebook-theme',
           themeDocumentHPath: '/主题/主题-AI-索引',
           sourceDocumentIds: ['doc-ai-core'],
+          sourceDocumentEntries: [
+            { documentId: 'doc-ai-core', title: 'AI 核心', linkTypes: ['inbound'] },
+            { documentId: 'doc-ai-bridge', title: 'AI 桥接页', linkTypes: ['outbound'] },
+            { documentId: 'doc-ai-child', title: 'AI 子文档', linkTypes: ['child'] },
+          ],
           preview,
           draft: themeDraft,
         },

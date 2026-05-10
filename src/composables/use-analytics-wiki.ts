@@ -8,6 +8,7 @@ import type { ThemeDocumentMatch } from '@/analytics/theme-documents'
 import type { AiDocumentIndexStore, DocumentIndexProfile } from '@/analytics/ai-index-store'
 import type { WikiPagePreviewResult } from '@/analytics/wiki-diff'
 import type { WikiApplyBatchResult } from '@/analytics/wiki-documents'
+import type { WikiSourceDocLinkType } from '@/analytics/wiki-source-docs'
 import { WIKI_SECTION_MARKER_PREFIX } from '@/analytics/wiki-renderer'
 import { findHeadingIndex, WIKI_PAGE_HEADINGS } from '@/analytics/wiki-page-model'
 import type { RenderedWikiDraft } from '@/analytics/wiki-renderer'
@@ -53,13 +54,12 @@ export interface WikiPreviewDeltaStats {
   processingTimeMs: number
 }
 
-export type WikiSourceDocLinkType = 'outbound' | 'inbound' | 'child'
-
 export interface WikiPreviewSourceDocMeta {
   documentId: string
   title: string
   deltaStatus: 'new' | 'changed' | 'unchanged' | 'deleted'
   linkType: WikiSourceDocLinkType
+  linkTypes?: WikiSourceDocLinkType[]
   updatedAt: string
   hasThemeLink?: boolean
   isWeakAssociation?: boolean
@@ -90,7 +90,7 @@ export interface SkippedWikiSourceDocument {
 
 export interface WikiPreviewRequest {
   sourceDocumentIds?: string[]
-  sourceDocumentLinkTypes?: Map<string, 'outbound' | 'inbound' | 'child'>
+  sourceDocumentLinkTypes?: Map<string, WikiSourceDocLinkType[]>
   scopeDescriptionLine?: string
   themeDocumentId?: string
 }

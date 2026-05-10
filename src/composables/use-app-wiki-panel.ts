@@ -1,6 +1,7 @@
 import { ref, type ComputedRef } from 'vue'
 
 import { buildSiyuanBlockLinkMarkdown } from '@/analytics/link-sync'
+import { normalizeWikiSourceDocLinkTypes, type WikiSourceDocLinkType } from '@/analytics/wiki-source-docs'
 import { t } from '@/i18n/ui'
 import type { WikiPreviewRequest } from './use-analytics-wiki'
 
@@ -10,6 +11,11 @@ type LinkAssociations = {
   outbound: DocumentIdItem[]
   inbound: DocumentIdItem[]
   childDocuments: DocumentIdItem[]
+}
+
+function pushLinkType(map: Map<string, WikiSourceDocLinkType[]>, documentId: string, type: WikiSourceDocLinkType) {
+  const current = map.get(documentId) ?? []
+  map.set(documentId, normalizeWikiSourceDocLinkTypes([...current, type]))
 }
 
 export function createAppWikiPanelController(params: {
@@ -48,15 +54,15 @@ export function createAppWikiPanelController(params: {
       ...associations.childDocuments.map(item => item.documentId),
     ]
 
-    const sourceDocumentLinkTypes = new Map<string, 'outbound' | 'inbound' | 'child'>()
+    const sourceDocumentLinkTypes = new Map<string, WikiSourceDocLinkType[]>()
     for (const item of associations.outbound) {
-      sourceDocumentLinkTypes.set(item.documentId, 'outbound')
+      pushLinkType(sourceDocumentLinkTypes, item.documentId, 'outbound')
     }
     for (const item of associations.inbound) {
-      sourceDocumentLinkTypes.set(item.documentId, 'inbound')
+      pushLinkType(sourceDocumentLinkTypes, item.documentId, 'inbound')
     }
     for (const item of associations.childDocuments) {
-      sourceDocumentLinkTypes.set(item.documentId, 'child')
+      pushLinkType(sourceDocumentLinkTypes, item.documentId, 'child')
     }
 
     activeWikiPreviewRequest.value = {

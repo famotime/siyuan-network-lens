@@ -848,6 +848,18 @@ const UI_TEXT = {
         en_US: '  - Source docs: {count}',
         zh_CN: '  - 源文档数：{count}',
       },
+      markdownSourceGroupInbound: {
+        en_US: 'Inbound',
+        zh_CN: '入链',
+      },
+      markdownSourceGroupOutbound: {
+        en_US: 'Outbound',
+        zh_CN: '出链',
+      },
+      markdownSourceGroupChild: {
+        en_US: 'Child docs',
+        zh_CN: '子文档',
+      },
       markdownWikiPageRowUpdatedAt: {
         en_US: '  - Updated at: {updatedAt}',
         zh_CN: '  - 最近更新时间：{updatedAt}',
@@ -1823,6 +1835,18 @@ const UI_TEXT = {
       markdownWikiPageRowCount: {
         en_US: '  - Source docs: {count}',
         zh_CN: '  - 源文档数：{count}',
+      },
+      markdownSourceGroupInbound: {
+        en_US: 'Inbound',
+        zh_CN: '入链',
+      },
+      markdownSourceGroupOutbound: {
+        en_US: 'Outbound',
+        zh_CN: '出链',
+      },
+      markdownSourceGroupChild: {
+        en_US: 'Child docs',
+        zh_CN: '子文档',
       },
       markdownWikiPageRowUpdatedAt: {
         en_US: '  - Updated at: {updatedAt}',

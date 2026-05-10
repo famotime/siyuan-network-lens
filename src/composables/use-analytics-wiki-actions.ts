@@ -18,6 +18,11 @@ import { renderThemeWikiDraft } from '@/analytics/wiki-renderer'
 import { buildWikiPageStorageKey, type AiWikiStore, type WikiPageSnapshotRecord } from '@/analytics/wiki-store'
 import type { WikiPreviewCacheStore } from '@/analytics/wiki-preview-store'
 import type { AnalyticsSnapshot } from '@/analytics/siyuan-data'
+import {
+  normalizeWikiSourceDocLinkTypes,
+  resolvePrimaryWikiSourceDocLinkType,
+  type WikiSourceDocumentEntry,
+} from '@/analytics/wiki-source-docs'
 import type { ThemeDocument } from '@/analytics/theme-documents'
 import { countThemeMatchesForDocument } from '@/analytics/theme-documents'
 import {
@@ -299,6 +304,7 @@ export function createAnalyticsWikiActionsController(params: {
         themeDocumentId: payload.themeDocumentId,
         themeDocumentTitle: payload.themeDocumentTitle,
         sourceDocumentIds: payload.sourceDocuments.map(document => document.documentId),
+        sourceDocumentEntries: [],
         sourceDocumentTimestamps,
         pageFingerprint: preview.pageFingerprint,
         managedFingerprint: preview.managedFingerprint,
@@ -329,17 +335,28 @@ export function createAnalyticsWikiActionsController(params: {
           themeDocuments: params.themeDocuments.value,
         })
 
+        const linkTypes = normalizeWikiSourceDocLinkTypes(request?.sourceDocumentLinkTypes?.get(doc.id) ?? ['outbound'])
+
         return {
           documentId: doc.id,
           title: doc.title || doc.hpath || doc.id,
           deltaStatus: deltaMap.get(doc.id) ?? 'new',
-          linkType: request?.sourceDocumentLinkTypes?.get(doc.id) ?? 'outbound',
+          linkType: resolvePrimaryWikiSourceDocLinkType(linkTypes),
+          linkTypes,
           updatedAt: doc.updated,
           hasThemeLink: false,
           isWeakAssociation: themeMatches.length === 0,
           themeSuggestions: themeMatches,
         }
       })
+
+      const sourceDocumentEntries: WikiSourceDocumentEntry[] = sourceDocMetas.map(meta => ({
+        documentId: meta.documentId,
+        title: meta.title,
+        linkTypes: normalizeWikiSourceDocLinkTypes(meta.linkTypes ?? [meta.linkType]),
+      }))
+
+      nextRecord.sourceDocumentEntries = sourceDocumentEntries
 
       const themePage: WikiPreviewThemePageItem = {
         pageId: existingPage?.pageId ?? storedRecord?.pageId,
@@ -452,6 +469,13 @@ export function createAnalyticsWikiActionsController(params: {
           themeDocumentBox: page.themeDocumentBox,
           themeDocumentHPath: page.themeDocumentHPath,
           sourceDocumentIds: page.sourceDocumentIds,
+          sourceDocumentEntries: (params.wikiPreview.value?.sourceDocMetas ?? [])
+            .filter(meta => page.sourceDocumentIds.includes(meta.documentId))
+            .map(meta => ({
+              documentId: meta.documentId,
+              title: meta.title,
+              linkTypes: normalizeWikiSourceDocLinkTypes(meta.linkTypes ?? [meta.linkType]),
+            })),
           preview: page.preview,
           draft: page.draft,
         })),

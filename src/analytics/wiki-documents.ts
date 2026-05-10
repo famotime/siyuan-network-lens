@@ -12,6 +12,11 @@ import {
 import { WIKI_SECTION_MARKER_PREFIX, type RenderedWikiDraft } from './wiki-renderer'
 import { buildWikiPageStorageKey, type AiWikiStore, type WikiPageSnapshotRecord } from './wiki-store'
 import type { WikiPagePreviewResult } from './wiki-diff'
+import {
+  WIKI_SOURCE_DOC_LINK_TYPE_PRIORITY,
+  type WikiSourceDocumentEntry,
+  type WikiSourceDocLinkType,
+} from './wiki-source-docs'
 import { t } from '@/i18n/ui'
 
 const INDEX_MANUAL_NOTES_MARKDOWN = [
@@ -37,6 +42,7 @@ export interface WikiThemePageApplyInput {
   themeDocumentBox: string
   themeDocumentHPath: string
   sourceDocumentIds: string[]
+  sourceDocumentEntries?: WikiSourceDocumentEntry[]
   preview: WikiPagePreviewResult
   draft: RenderedWikiDraft
 }
@@ -230,6 +236,7 @@ export async function applyWikiDocuments(params: {
     pageTitle: params.config.wikiIndexTitle,
     pageId: indexWriteResult.pageId,
     sourceDocumentIds: collectUniqueSourceDocumentIds(params.themePages, params.unclassifiedDocuments),
+    sourceDocumentEntries: [],
     pageFingerprint: refreshedIndexState.pageFingerprint,
     managedFingerprint: refreshedIndexState.managedFingerprint,
     lastGeneratedAt: params.generatedAt,
@@ -279,6 +286,7 @@ export async function applyWikiDocuments(params: {
     pageTitle: params.config.wikiLogTitle,
     pageId: logWriteResult.pageId,
     sourceDocumentIds: collectUniqueSourceDocumentIds(params.themePages, params.unclassifiedDocuments),
+    sourceDocumentEntries: [],
     pageFingerprint: refreshedLogState.pageFingerprint,
     managedFingerprint: refreshedLogState.pageFingerprint,
     lastGeneratedAt: params.generatedAt,
@@ -501,6 +509,7 @@ async function buildIndexDraft(params: {
             t('analytics.wiki.markdownWikiPageRowTheme', { themeLink }),
             t('analytics.wiki.markdownWikiPageRowSummary', { summary: summary || '-' }),
             t('analytics.wiki.markdownWikiPageRowCount', { count: record.sourceDocumentIds.length }),
+            ...buildSourceDocumentGroupLines(record.sourceDocumentEntries ?? []),
             t('analytics.wiki.markdownWikiPageRowUpdatedAt', { updatedAt: formatLocalTime(record.lastApply?.appliedAt || record.lastGeneratedAt) }),
           ].join('\n')
         }).join('\n')
@@ -747,6 +756,11 @@ function buildThemePageRecord(params: {
     themeDocumentId: params.page.themeDocumentId,
     themeDocumentTitle: params.page.themeDocumentTitle,
     sourceDocumentIds: [...params.page.sourceDocumentIds],
+    sourceDocumentEntries: params.page.sourceDocumentEntries?.map(entry => ({
+      documentId: entry.documentId,
+      title: entry.title,
+      linkTypes: [...entry.linkTypes],
+    })) ?? [],
     pageFingerprint: params.pageFingerprint,
     managedFingerprint: params.managedFingerprint,
     lastGeneratedAt: params.page.preview.lastGeneratedAt,
@@ -764,6 +778,43 @@ function buildThemePageRecord(params: {
       pageFingerprint: params.pageFingerprint ?? params.storedRecord?.pageFingerprint,
       managedFingerprint: params.managedFingerprint ?? params.storedRecord?.managedFingerprint,
     },
+  }
+}
+
+function buildSourceDocumentGroupLines(entries: WikiSourceDocumentEntry[]): string[] {
+  if (!entries.length) {
+    return []
+  }
+
+  const lines: string[] = []
+  const seen = new Set<string>()
+
+  for (const linkType of WIKI_SOURCE_DOC_LINK_TYPE_PRIORITY) {
+    const grouped = entries.filter(entry => !seen.has(entry.documentId) && entry.linkTypes.includes(linkType))
+    if (!grouped.length) {
+      continue
+    }
+
+    lines.push(`  - ${resolveSourceGroupLabel(linkType)}:`)
+    for (const entry of grouped) {
+      lines.push(`    - ${buildDocLinkMarkdown(entry.documentId, entry.title)}`)
+      seen.add(entry.documentId)
+    }
+  }
+
+  return lines
+}
+
+function resolveSourceGroupLabel(linkType: WikiSourceDocLinkType): string {
+  switch (linkType) {
+    case 'inbound':
+      return t('analytics.wiki.markdownSourceGroupInbound')
+    case 'outbound':
+      return t('analytics.wiki.markdownSourceGroupOutbound')
+    case 'child':
+      return t('analytics.wiki.markdownSourceGroupChild')
+    default:
+      return linkType
   }
 }
 

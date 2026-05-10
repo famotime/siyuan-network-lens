@@ -1,4 +1,5 @@
 import type { WikiApplyRecord, WikiPageType, WikiPreviewRecord } from './wiki-page-model'
+import { normalizeWikiSourceDocumentEntries, type WikiSourceDocumentEntry } from './wiki-source-docs'
 
 export const AI_WIKI_INDEX_STORAGE_NAME = 'ai-wiki-index.json'
 export const AI_WIKI_INDEX_SCHEMA_VERSION = 1
@@ -15,6 +16,7 @@ export interface WikiPageSnapshotRecord {
   themeDocumentId?: string
   themeDocumentTitle?: string
   sourceDocumentIds: string[]
+  sourceDocumentEntries?: WikiSourceDocumentEntry[]
   sourceDocumentTimestamps?: Record<string, string>
   pageFingerprint?: string
   managedFingerprint?: string
@@ -129,6 +131,7 @@ function normalizePageRecord(value: unknown): WikiPageSnapshotRecord {
     themeDocumentId: normalizeOptionalString(record.themeDocumentId) || undefined,
     themeDocumentTitle: normalizeOptionalString(record.themeDocumentTitle) || undefined,
     sourceDocumentIds: normalizeStringList(record.sourceDocumentIds),
+    sourceDocumentEntries: normalizeWikiSourceDocumentEntries(record.sourceDocumentEntries),
     sourceDocumentTimestamps: normalizeTimestampMap(record.sourceDocumentTimestamps),
     pageFingerprint: normalizeOptionalString(record.pageFingerprint) || undefined,
     managedFingerprint: normalizeOptionalString(record.managedFingerprint) || undefined,
