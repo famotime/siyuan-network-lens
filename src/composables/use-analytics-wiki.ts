@@ -198,12 +198,33 @@ export function buildWikiScopeDescriptionLines(params: {
 }) {
   return [
     params.scopeDescriptionLine ?? t('analytics.wiki.scopeSourceCurrentDocSample'),
-    t('analytics.wiki.timeWindowLine', { value: TIME_RANGE_LABEL_MAP[params.timeRange]() }),
-    t('analytics.wiki.notebookLine', { value: params.filters.notebook ? params.resolveNotebookName(params.filters.notebook) : t('analytics.wiki.allNotebooks') }),
-    t('analytics.wiki.tagsLine', { value: params.filters.tags?.length ? params.filters.tags.join(', ') : t('analytics.wiki.allTags') }),
-    t('analytics.wiki.topicsLine', { value: params.filters.themeNames?.length ? params.filters.themeNames.join(', ') : t('analytics.wiki.allTopics') }),
-    t('analytics.wiki.keywordLine', { value: params.filters.keyword?.trim() || t('analytics.wiki.none') }),
+    `  ${t('analytics.wiki.timeWindowLine', { value: TIME_RANGE_LABEL_MAP[params.timeRange]() })}`,
+    `  ${t('analytics.wiki.notebookLine', { value: params.filters.notebook ? params.resolveNotebookName(params.filters.notebook) : t('analytics.wiki.allNotebooks') })}`,
+    `  ${t('analytics.wiki.tagsLine', { value: params.filters.tags?.length ? params.filters.tags.join(', ') : t('analytics.wiki.allTags') })}`,
+    `  ${t('analytics.wiki.topicsLine', { value: params.filters.themeNames?.length ? params.filters.themeNames.join(', ') : t('analytics.wiki.allTopics') })}`,
+    `  ${t('analytics.wiki.keywordLine', { value: params.filters.keyword?.trim() || t('analytics.wiki.none') })}`,
   ]
+}
+
+export interface WikiScopeDescriptionItem {
+  text: string
+  depth: number
+}
+
+export function parseWikiScopeDescriptionLines(lines: string[]): WikiScopeDescriptionItem[] {
+  return lines
+    .map((line) => {
+      const text = line.trimStart()
+      if (!text.startsWith('- ')) {
+        return null
+      }
+      const leadingSpaces = line.length - line.trimStart().length
+      return {
+        text: text.slice(2),
+        depth: leadingSpaces >= 2 ? 1 : 0,
+      }
+    })
+    .filter((item): item is WikiScopeDescriptionItem => item !== null)
 }
 
 export function resolveWikiScopeDocuments(params: {

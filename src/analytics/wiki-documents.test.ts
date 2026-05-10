@@ -1,7 +1,7 @@
 import { afterEach, describe, expect, it, vi } from 'vitest'
 
 import { buildWikiPreview, fingerprintWikiContent } from './wiki-diff'
-import { buildDocLinkMarkdown } from './link-sync'
+import { buildDocLinkMarkdown, buildSiyuanBlockLinkMarkdown } from './link-sync'
 import { WIKI_BLOCK_ATTR_KEYS } from './wiki-page-model'
 import { renderThemeWikiDraft } from './wiki-renderer'
 import { applyWikiDocuments } from './wiki-documents'
@@ -845,6 +845,102 @@ describe('wiki documents', () => {
     expect(kernel.getDocumentMarkdownByPath('/LLM Wiki/LLM-Wiki-索引')).toContain(`- 最近维护时间：${new Date('2026-04-09T12:05:00.000Z').toLocaleString()}`)
     expect(kernel.getDocumentMarkdownByPath('/LLM Wiki/LLM-Wiki-维护日志')).toContain('- 新建页面数：1')
     expect(kernel.getDocumentMarkdownByPath('/LLM Wiki/LLM-Wiki-维护日志')).toContain('### 本次触达页面')
+  })
+
+  it('writes layered scope source details in the log and keeps core document links clickable', async () => {
+    ;(globalThis as typeof globalThis & {
+      siyuan?: {
+        config?: {
+          lang?: string
+        }
+      }
+    }).siyuan = {
+      config: {
+        lang: 'zh_CN',
+      },
+    }
+
+    vi.resetModules()
+
+    const { renderThemeWikiDraft: renderZhThemeWikiDraft } = await import('./wiki-renderer')
+    const { applyWikiDocuments: applyZhWikiDocuments } = await import('./wiki-documents')
+
+    const kernel = createFakeWikiKernel()
+    const store = createMemoryWikiStore()
+    const themeDraft = renderZhThemeWikiDraft({
+      pageTitle: '主题-AI-索引-llm-wiki',
+      pairedThemeDocumentId: '20260409120000-abcdef0',
+      pairedThemeTitle: '主题-AI-索引',
+      generatedAt: '2026-04-09T12:00:00.000Z',
+      model: 'gpt-4.1-mini',
+      sourceDocumentCount: 1,
+      diagnosis: TEST_DIAGNOSIS,
+      pagePlan: TEST_PAGE_PLAN,
+      sections: buildThemeSections({
+        intro: '主题概览',
+        highlights: ['AI 核心'],
+        corePrinciples: ['结构观察'],
+        sources: ['引用证据'],
+      }),
+    })
+    const preview = buildWikiPreview({
+      pageType: 'theme',
+      pageTitle: '主题-AI-索引-llm-wiki',
+      sourceDocumentIds: ['doc-ai-core'],
+      generatedAt: '2026-04-09T12:00:00.000Z',
+      nextDraft: themeDraft,
+    })
+
+    await applyZhWikiDocuments({
+      config: {
+        themeNotebookId: 'notebook-theme',
+        themeDocumentPath: '/主题',
+        wikiIndexTitle: 'LLM-Wiki-索引',
+        wikiLogTitle: 'LLM-Wiki-维护日志',
+        wikiPageSuffix: '-llm-wiki',
+        wikiContainerPath: '/知识库/LLM Wiki',
+      },
+      notebooks: [
+        { id: 'notebook-theme', name: '知识库' },
+      ],
+      generatedAt: '2026-04-09T12:05:00.000Z',
+      scopeSummary: {
+        sourceDocumentCount: 1,
+        themeGroupCount: 1,
+        unclassifiedDocumentCount: 0,
+        excludedWikiDocumentCount: 0,
+      },
+      scopeDescriptionLines: [
+        `- 范围来源：核心文档 ${buildSiyuanBlockLinkMarkdown('doc-core-beta', 'Beta')} 关联范围（正链 / 反链 / 子文档）`,
+        '  - 时间窗口：近 7 天',
+        '  - 标签：AI, 笔记',
+        '  - 关键词：bridge',
+      ],
+      themePages: [
+        {
+          pageTitle: '主题-AI-索引-llm-wiki',
+          themeName: 'AI',
+          themeDocumentId: 'doc-theme-ai',
+          themeDocumentTitle: '主题-AI-索引',
+          themeDocumentBox: 'notebook-theme',
+          themeDocumentHPath: '/主题/主题-AI-索引',
+          sourceDocumentIds: ['doc-ai-core'],
+          preview,
+          draft: themeDraft,
+        },
+      ],
+      unclassifiedDocuments: [],
+      overwriteConflicts: false,
+      store,
+      api: kernel.api,
+    })
+
+    const logMarkdown = kernel.getDocumentMarkdownByPath('/LLM Wiki/LLM-Wiki-维护日志')
+
+    expect(logMarkdown).toContain(`- 范围来源：核心文档 ${buildSiyuanBlockLinkMarkdown('doc-core-beta', 'Beta')} 关联范围（正链 / 反链 / 子文档）`)
+    expect(logMarkdown).toContain('  - 时间窗口：近 7 天')
+    expect(logMarkdown).toContain('  - 标签：AI, 笔记')
+    expect(logMarkdown).toContain('  - 关键词：bridge')
   })
 })
 

@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 
-import { buildWikiPreviewSummary, resolveAffectedSectionHeadings } from './use-analytics-wiki'
+import { buildWikiPreviewSummary, parseWikiScopeDescriptionLines, resolveAffectedSectionHeadings } from './use-analytics-wiki'
 
 describe('resolveAffectedSectionHeadings', () => {
   it('prefers current draft headings for affected sections that still exist in the draft', () => {
@@ -145,5 +145,23 @@ describe('buildWikiPreviewSummary', () => {
     })
 
     expect(summary.manualNotesParagraphCount).toBe(0)
+  })
+})
+
+describe('parseWikiScopeDescriptionLines', () => {
+  it('keeps the main scope source at depth 0 and indents later detail rows as children', () => {
+    const items = parseWikiScopeDescriptionLines([
+      '- 范围来源：核心文档 [Beta](siyuan://blocks/doc-beta) 关联范围（正链 / 反链 / 子文档）',
+      '  - 时间窗口：近 7 天',
+      '  - 标签：AI',
+      '  - 关键词：bridge',
+    ])
+
+    expect(items).toEqual([
+      { text: '范围来源：核心文档 [Beta](siyuan://blocks/doc-beta) 关联范围（正链 / 反链 / 子文档）', depth: 0 },
+      { text: '时间窗口：近 7 天', depth: 1 },
+      { text: '标签：AI', depth: 1 },
+      { text: '关键词：bridge', depth: 1 },
+    ])
   })
 })

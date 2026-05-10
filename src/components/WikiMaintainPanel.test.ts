@@ -4,6 +4,7 @@ import { renderToString } from '@vue/server-renderer'
 import { readFile } from 'node:fs/promises'
 
 import WikiMaintainPanel from './WikiMaintainPanel.vue'
+import { buildSiyuanBlockLinkMarkdown } from '@/analytics/link-sync'
 
 afterEach(() => {
   delete (globalThis as typeof globalThis & { siyuan?: unknown }).siyuan
@@ -39,8 +40,10 @@ describe('WikiMaintainPanel', () => {
               manualNotesParagraphCount: 2,
             },
             descriptionLines: [
-              '- 时间窗口：7d',
-              '- 主题筛选：AI',
+              `- 范围来源：核心文档 ${buildSiyuanBlockLinkMarkdown('doc-beta', 'Beta')} 关联范围（正链 / 反链 / 子文档）`,
+              '  - 时间窗口：7d',
+              '  - 标签：AI',
+              '  - 关键词：bridge',
             ],
           },
           themePages: [
@@ -193,6 +196,7 @@ describe('WikiMaintainPanel', () => {
         prepareWikiPreview: () => undefined,
         applyWikiChanges: () => undefined,
         openWikiDocument: () => undefined,
+        openSourceDocument: () => undefined,
         formatTimestamp: (ts?: string) => ts ?? '',
       }),
     })
@@ -229,6 +233,10 @@ describe('WikiMaintainPanel', () => {
     expect(html).toContain('Open index page')
     expect(html).toContain('Open log page')
     expect(html).toContain('Open latest updated page')
+    expect(html).toContain('href="siyuan://blocks/doc-beta"')
+    expect(html).toContain('时间窗口：7d')
+    expect(html).toContain('标签：AI')
+    expect(html).toContain('关键词：bridge')
   })
 
   it('renders disabled states for missing configuration', async () => {
@@ -257,6 +265,7 @@ describe('WikiMaintainPanel', () => {
         prepareWikiPreview: () => undefined,
         applyWikiChanges: () => undefined,
         openWikiDocument: () => undefined,
+        openSourceDocument: () => undefined,
         formatTimestamp: (ts?: string) => ts ?? '',
       }),
     })
@@ -358,6 +367,7 @@ describe('WikiMaintainPanel', () => {
         prepareWikiPreview: () => undefined,
         applyWikiChanges: () => undefined,
         openWikiDocument: () => undefined,
+        openSourceDocument: () => undefined,
         formatTimestamp: (ts?: string) => ts ?? '',
       }),
     })

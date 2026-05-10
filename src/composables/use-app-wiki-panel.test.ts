@@ -2,6 +2,7 @@ import { computed } from 'vue'
 import { describe, expect, it, vi } from 'vitest'
 
 import { createAppWikiPanelController } from './use-app-wiki-panel'
+import { buildSiyuanBlockLinkMarkdown } from '@/analytics/link-sync'
 
 describe('createAppWikiPanelController', () => {
   it('opens the ranking-scope wiki panel with a deduplicated association request', async () => {
@@ -31,7 +32,7 @@ describe('createAppWikiPanelController', () => {
         ['doc-d', 'inbound'],
         ['doc-e', 'child'],
       ]),
-      scopeDescriptionLine: '- Scope source: related range for core doc "Beta" (outbound / inbound / child docs)',
+      scopeDescriptionLine: `- Scope source: related range for core doc ${buildSiyuanBlockLinkMarkdown('doc-a', 'Beta')} (outbound / inbound / child docs)`,
       themeDocumentId: 'doc-a',
     })
     expect(controller.isCoreDocumentWikiPanelVisible('doc-a')).toBe(true)

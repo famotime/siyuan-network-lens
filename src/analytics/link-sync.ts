@@ -16,6 +16,13 @@ export function buildDocLinkMarkdown(documentId: string, title: string) {
   return `((${documentId} "${escaped}"))`
 }
 
+export function buildSiyuanBlockLinkMarkdown(documentId: string, title: string) {
+  const escaped = title
+    .replace(/\\/g, '\\\\')
+    .replace(/\]/g, '\\]')
+  return `[${escaped}](siyuan://blocks/${documentId})`
+}
+
 export async function syncAssociation(params: SyncAssociationParams) {
   if (params.direction === 'outbound') {
     await params.prependBlock('markdown', buildDocLinkMarkdown(params.coreDocumentId, params.resolveTitle(params.coreDocumentId)), params.targetDocumentId)

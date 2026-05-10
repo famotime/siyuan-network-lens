@@ -1,11 +1,16 @@
 import { describe, expect, it, vi } from 'vitest'
 
-import { buildDocLinkMarkdown, syncAssociation } from './link-sync'
+import { buildDocLinkMarkdown, buildSiyuanBlockLinkMarkdown, syncAssociation } from './link-sync'
 
 describe('link sync', () => {
   it('builds escaped block link markdown', () => {
     const markdown = buildDocLinkMarkdown('doc-1', 'Alpha "Quote"')
     expect(markdown).toBe('((doc-1 "Alpha \\\"Quote\\\""))')
+  })
+
+  it('builds markdown links for siyuan block jumps', () => {
+    const markdown = buildSiyuanBlockLinkMarkdown('doc-1', 'Alpha [Quote]')
+    expect(markdown).toBe('[Alpha [Quote\\]](siyuan://blocks/doc-1)')
   })
 
   it('syncs outbound and inbound links with correct target', async () => {

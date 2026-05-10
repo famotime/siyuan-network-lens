@@ -161,8 +161,17 @@
         </div>
       </div>
 
-      <div v-if="preview" class="wiki-panel__scope-lines">
-        <p v-for="line in preview.scope.descriptionLines" :key="line">{{ line }}</p>
+      <div v-if="scopeDescriptionItems.length" class="wiki-panel__scope-lines">
+        <ul class="wiki-panel__scope-list">
+          <li
+            v-for="item in scopeDescriptionItems"
+            :key="`${item.depth}-${item.text}`"
+            :class="['wiki-panel__scope-line', { 'wiki-panel__scope-line--child': item.depth > 0 }]"
+          >
+            <span class="wiki-panel__scope-bullet" aria-hidden="true">{{ item.depth > 0 ? '↳' : '•' }}</span>
+            <span class="wiki-panel__scope-text" v-html="renderScopeLine(item.text)" />
+          </li>
+        </ul>
       </div>
 
       <div v-if="preview?.deltaStats" class="wiki-panel__delta-stats">
@@ -300,7 +309,7 @@
 import { computed, ref } from 'vue'
 
 import type { WikiPreviewState } from '@/composables/use-analytics'
-import { resolveWikiSectionOrderLabels } from '@/composables/use-analytics-wiki'
+import { parseWikiScopeDescriptionLines, resolveWikiSectionOrderLabels } from '@/composables/use-analytics-wiki'
 import { t } from '@/i18n/ui'
 import { renderSimpleMarkdown } from '@/utils/markdown'
 
@@ -373,6 +382,8 @@ const latestUpdatedThemePageId = computed(() => {
 
   return latestPage?.pageId ?? ''
 })
+
+const scopeDescriptionItems = computed(() => parseWikiScopeDescriptionLines(props.preview?.scope.descriptionLines ?? []))
 
 function resolveTemplateLabel(templateType: string) {
   switch (templateType) {
@@ -478,6 +489,31 @@ function formatProcessingTime(ms: number): string {
   if (ms < 1000) return `${ms}ms`
   return `${(ms / 1000).toFixed(1)}s`
 }
+
+function escapeHtml(text: string): string {
+  return text
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+}
+
+function renderScopeLine(text: string): string {
+  const linkPattern = /\[([^\]]+)\]\(siyuan:\/\/blocks\/([^\s)]+)\)/g
+  const parts: string[] = []
+  let lastIndex = 0
+  let match: RegExpExecArray | null = linkPattern.exec(text)
+
+  while (match) {
+    parts.push(escapeHtml(text.slice(lastIndex, match.index)))
+    parts.push(`<a href="siyuan://blocks/${match[2]}" class="wiki-panel__scope-link">${escapeHtml(match[1])}</a>`)
+    lastIndex = match.index + match[0].length
+    match = linkPattern.exec(text)
+  }
+
+  parts.push(escapeHtml(text.slice(lastIndex)))
+  return parts.join('')
+}
 </script>
 
 <style scoped>
@@ -565,6 +601,49 @@ function formatProcessingTime(ms: number): string {
   margin: 2px 0;
   font-size: 13px;
   line-height: 1.6;
+}
+
+.wiki-panel__scope-list {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  display: grid;
+  gap: 4px;
+}
+
+.wiki-panel__scope-line {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  font-size: 13px;
+  line-height: 1.6;
+}
+
+.wiki-panel__scope-line--child {
+  padding-left: 18px;
+}
+
+.wiki-panel__scope-bullet {
+  width: 12px;
+  color: color-mix(in srgb, var(--b3-theme-on-background) 42%, transparent);
+  text-align: center;
+  flex-shrink: 0;
+}
+
+.wiki-panel__scope-text {
+  min-width: 0;
+  color: color-mix(in srgb, var(--b3-theme-on-background) 68%, transparent);
+}
+
+.wiki-panel__scope-text :deep(a),
+.wiki-panel__scope-link {
+  color: var(--b3-theme-primary);
+  text-decoration: none;
+}
+
+.wiki-panel__scope-text :deep(a:hover),
+.wiki-panel__scope-link:hover {
+  text-decoration: underline;
 }
 
 .wiki-panel__scope-card,

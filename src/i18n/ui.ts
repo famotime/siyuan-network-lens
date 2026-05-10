@@ -1741,8 +1741,8 @@ const UI_TEXT = {
         zh_CN: '- 范围来源：当前文档样本',
       },
       scopeSourceRelatedRange: {
-        en_US: '- Scope source: related range for core doc "{title}" (outbound / inbound / child docs)',
-        zh_CN: '- 范围来源：核心文档"{title}"的关联范围（出链 / 入链 / 子文档）',
+        en_US: '- Scope source: related range for core doc {title} (outbound / inbound / child docs)',
+        zh_CN: '- 范围来源：核心文档 {title} 关联范围（正链 / 反链 / 子文档）',
       },
       timeWindowLine: {
         en_US: '- Time window: {value}',

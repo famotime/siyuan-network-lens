@@ -1,5 +1,6 @@
 import { ref, type ComputedRef } from 'vue'
 
+import { buildSiyuanBlockLinkMarkdown } from '@/analytics/link-sync'
 import { t } from '@/i18n/ui'
 import type { WikiPreviewRequest } from './use-analytics-wiki'
 
@@ -61,7 +62,7 @@ export function createAppWikiPanelController(params: {
     activeWikiPreviewRequest.value = {
       sourceDocumentIds: [...new Set(sourceDocumentIds)],
       sourceDocumentLinkTypes,
-      scopeDescriptionLine: t('analytics.wiki.scopeSourceRelatedRange', { title: params.resolveTitle(documentId) }),
+      scopeDescriptionLine: t('analytics.wiki.scopeSourceRelatedRange', { title: buildSiyuanBlockLinkMarkdown(documentId, params.resolveTitle(documentId)) }),
       themeDocumentId: documentId,
     }
     wikiPanelPlacement.value = 'ranking'
