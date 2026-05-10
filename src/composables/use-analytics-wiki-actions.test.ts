@@ -21,7 +21,7 @@ describe('createAnalyticsWikiActionsController', () => {
           referenceCount: 4,
           manualNotesParagraphCount: 0,
         },
-        descriptionLines: ['- 范围来源：缓存预览'],
+        descriptionLines: ['- 范围来源：历史预览'],
       },
       themePages: [],
       unclassifiedDocuments: [],

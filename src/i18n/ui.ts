@@ -1225,7 +1225,7 @@ const UI_TEXT = {
     },
     cachedPreview: {
       en_US: 'Cached',
-      zh_CN: '缓存预览',
+      zh_CN: '历史预览',
     },
     generating: {
       en_US: 'Generating...',
