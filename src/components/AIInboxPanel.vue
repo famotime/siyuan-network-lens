@@ -281,7 +281,7 @@ async function handleAiInboxActionTargetClick(
   border: 1px solid var(--panel-border, color-mix(in srgb, var(--b3-theme-on-background) 8%, transparent));
   background: var(--surface-card-strong, var(--b3-theme-surface));
   box-shadow: 0 6px 16px -8px rgba(0, 0, 0, 0.08);
-  padding: 24px;
+  padding: var(--panel-padding, 24px);
 }
 
 .panel-header {
@@ -399,7 +399,7 @@ async function handleAiInboxActionTargetClick(
 .ai-inbox-panel__result,
 .ai-inbox-panel__list {
   display: grid;
-  gap: 14px;
+  gap: 16px;
 }
 
 .ai-inbox-panel__status,
@@ -447,7 +447,7 @@ async function handleAiInboxActionTargetClick(
 
 .ai-inbox-panel__item {
   display: grid;
-  gap: 10px;
+  gap: 8px;
   background:
     linear-gradient(180deg, color-mix(in srgb, var(--accent-warm, var(--b3-theme-primary)) 6%, transparent), transparent 44%),
     var(--surface-card, var(--b3-theme-surface));
@@ -493,7 +493,7 @@ async function handleAiInboxActionTargetClick(
 
 .ai-inbox-panel__targets {
   display: grid;
-  gap: 10px;
+  gap: 8px;
 }
 
 .ai-inbox-panel__action-pills {

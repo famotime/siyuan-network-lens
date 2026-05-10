@@ -245,7 +245,7 @@ onBeforeUnmount(() => {
 .theme-multi-select__option {
   display: flex;
   align-items: center;
-  gap: 10px;
+  gap: 8px;
   border-radius: 10px;
   padding: 8px 10px;
   cursor: pointer;

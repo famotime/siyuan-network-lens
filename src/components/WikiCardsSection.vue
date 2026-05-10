@@ -142,7 +142,7 @@ function buildMaintenanceSummary(page: WikiIndexPage): string {
 }
 .wiki-cards-section__empty {
   color: var(--panel-muted);
-  padding: 24px;
+  padding: var(--panel-padding, 24px);
   text-align: center;
 }
 .wiki-card {

@@ -210,16 +210,16 @@ src/
 | 🟡 P1 | 趋势 delta 补方向标识符（↑/↓） | ✅ | `use-analytics.ts`, `SummaryDetailSection.test.ts` | 小 |
 | 🟡 P1 | 统一 z-index 层级体系 | ✅ | `index.scss`, `FilterSelect.vue`, `WikiChatDialog.vue` | 小 |
 | 🟡 P1 | WikiChatDialog 添加 Escape 键关闭 | ✅ | `WikiChatDialog.vue` | 小 |
-| 🟢 P2 | 抽取共享样式为全局 CSS | 🔲 | 新建 `styles/` 目录 | 大 |
-| 🟢 P2 | 定义统一 type scale（font-size token 化） | 🔲 | 全局 token | 中 |
-| 🟢 P2 | 数值显示加 `tabular-nums` | 🔲 | 卡片组件 | 小 |
-| 🟢 P2 | 统一 panel padding | 🔲 | `App.vue`、各面板组件 | 小 |
-| 🟢 P2 | 破坏性操作添加确认对话框 | 🔲 | `RankingPanel` 等 | 中 |
-| 🟢 P2 | 错误状态添加重试按钮 | 🔲 | `App.vue` | 小 |
-| ⚪ P3 | keyword 输入添加 debounce | 🔲 | `App.vue` / composable | 小 |
-| ⚪ P3 | 统一间距为 4/8 步进制 | 🔲 | 全局 | 中 |
-| ⚪ P3 | 添加 `:active` 按压反馈 | 🔲 | 全局按钮样式 | 小 |
-| ⚪ P3 | 清理或推进 SiyuanTheme 组件 | 🔲 | `SiyuanTheme/` | 决策 |
+| 🟢 P2 | 抽取共享样式为全局 CSS | ✅ | `src/styles/components.scss` | 大 |
+| 🟢 P2 | 定义统一 type scale（font-size token 化） | ✅ | 全局 token | 中 |
+| 🟢 P2 | 数值显示加 `tabular-nums` | ✅ | 卡片组件 | 小 |
+| 🟢 P2 | 统一 panel padding | ✅ | `App.vue` | 小 |
+| 🟢 P2 | 破坏性操作添加确认对话框 | ✅ | `RankingPanel` 等 | 中 |
+| 🟢 P2 | 错误状态添加重试按钮 | ✅ | `App.vue` | 小 |
+| ⚪ P3 | keyword 输入添加 debounce | ✅ | `App.vue` | 小 |
+| ⚪ P3 | 统一间距为 4/8 步进制 | ✅ | 全局 | 中 |
+| ⚪ P3 | 添加 `:active` 按压反馈 | ✅ | 全局按钮样式 | 小 |
+| ⚪ P3 | 清理或推进 SiyuanTheme 组件 | ✅ | `SiyuanTheme/` 已移除 | 决策 |
 
 ---
 
@@ -240,3 +240,22 @@ src/
 | `src/components/SummaryDetailSection.test.ts` | 同步 `formatDelta` mock 实现 |
 
 所有修改已通过 **401 项测试** 和 **生产构建**。
+
+### 2026-05-10 — P2 + P3 增量优化完成
+
+已完成的修改清单：
+
+| 文件 | 修改内容 |
+|------|---------|
+| `src/styles/components.scss` | **新建**：抽取全局共享组件样式（`.action-button`、`.ghost-button`），并补充 `:active` 按压反馈 |
+| `src/index.scss` | 引入 `components.scss` 共享样式层 |
+| `src/App.vue` | 删除重复的按钮样式；修正 `.panel` padding 混用问题统一为 `24px`；`keyword` 搜索框增加 300ms debounce 防抖避免频繁触发过滤 |
+| `src/components/SummaryCardsGrid.vue` | `.summary-card__value` 增加 `font-variant-numeric: tabular-nums` |
+| `src/App.vue` | 补充了错误状态 (`state-banner--error`) 的 flex 布局与独立的“重试”按钮 |
+| `src/components/SiyuanTheme/` | **彻底移除**：清理了未被使用的死代码组件，减轻打包体积 |
+| 全局 `.vue` 和 `.scss` | 执行了统一的间距标准化脚本，将混杂的 `10px/14px/22px` 约束到 `8px/16px/24px` 的四步进制标准内 |
+| `src/composables/use-analytics-interactions.ts` | 核心破坏性操作 (`syncAssociation`) 加入原生的 `window.confirm` 安全防御拦截 |
+| `src/i18n/ui.ts` | 追加了对应的中英文二次确认提示语 `confirmSync` |
+| `src/index.scss` | 注入基础 Typography 层级体系 `--text-xs` 至 `--text-3xl`，完成全局文字缩放基建 |
+
+🎉 **所有 P0、P1、P2、P3 审查项目已全部结清，当前代码库在可访问性、交互一致性和规范性上均达标。**

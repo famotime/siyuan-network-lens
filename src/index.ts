@@ -4,6 +4,7 @@ import { reactive, watch } from 'vue'
 import pluginInfo from '@/../plugin.json'
 import { pickPluginText } from '@/i18n/plugin'
 import { destroyApp, destroySetting, mountApp, mountSetting } from '@/main'
+import './index.scss'
 import { openPluginDock } from './plugin-dock'
 import { PLUGIN_ICON, PLUGIN_ICON_SYMBOL } from './plugin-icon'
 import { DEFAULT_CONFIG, ensureConfigDefaults, type PluginConfig } from './types/config'
@@ -83,7 +84,7 @@ export default class ReferenceAnalyticsPlugin extends Plugin {
       title: this.i18n?.settingsTitle ?? pickPluginText('settingsTitle'),
       width: '680px',
       height: '720px',
-      content: '<div id="reference-analytics-setting-root" style="height: 100%;"></div>',
+      content: '<div id="reference-analytics-setting-root" class="reference-analytics-root" style="height: 100%;"></div>',
       destroyCallback: () => {
         destroySetting()
       },

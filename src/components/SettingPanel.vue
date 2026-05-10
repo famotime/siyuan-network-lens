@@ -440,7 +440,7 @@ onMounted(async () => {
   --panel-border: color-mix(in srgb, var(--b3-theme-on-background) 8%, transparent);
   --surface-card-strong: color-mix(in srgb, var(--b3-theme-surface) 96%, var(--b3-theme-background));
   --surface-card-soft: color-mix(in srgb, var(--b3-theme-surface) 90%, var(--b3-theme-background));
-  padding: 24px;
+  padding: var(--panel-padding, 24px);
   display: flex;
   flex-direction: column;
   gap: 32px;
@@ -568,7 +568,7 @@ onMounted(async () => {
 .setting-field__inline {
   display: grid;
   grid-template-columns: minmax(0, 1fr) auto;
-  gap: 10px;
+  gap: 8px;
   align-items: center;
 }
 
@@ -608,7 +608,7 @@ onMounted(async () => {
   display: grid;
   grid-template-columns: minmax(0, 1fr) auto;
   align-items: center;
-  gap: 10px;
+  gap: 8px;
 }
 
 .setting-input-with-action {

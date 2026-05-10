@@ -79,9 +79,10 @@
         <label class="filter-item filter-item--keyword">
           <span>{{ t('app.filter.keyword') }}</span>
           <input
-            v-model.trim="keyword"
+            :value="keyword"
             :placeholder="t('app.filter.keywordPlaceholder')"
             type="search"
+            @input="handleKeywordInput"
           >
         </label>
       </div>
@@ -91,7 +92,8 @@
       v-if="errorMessage"
       class="state-banner state-banner--error"
     >
-      {{ errorMessage }}
+      <div class="state-banner__message">{{ errorMessage }}</div>
+      <button class="ghost-button ghost-button--sm" @click="refresh">重试 (Retry)</button>
     </div>
 
     <div
@@ -463,6 +465,16 @@ const wikiPanelProps = computed(() => ({
   isThemeSuggestionActive,
 }))
 
+let keywordTimeout: number | undefined
+function handleKeywordInput(event: Event) {
+  const target = event.target as HTMLInputElement
+  const value = target.value
+  window.clearTimeout(keywordTimeout)
+  keywordTimeout = window.setTimeout(() => {
+    keyword.value = value.trim()
+  }, 300)
+}
+
 function handleIncrementalEnabledChange(value: boolean) {
   props.config.wikiIncrementalEnabled = value
 }
@@ -566,7 +578,7 @@ const {
   --accent-cool: #227c9d;
   height: 100%;
   overflow: auto;
-  padding: 24px;
+  padding: var(--layout-padding, 24px);
   background: var(--b3-theme-background);
   color: var(--b3-theme-on-background);
   box-sizing: border-box;
@@ -774,7 +786,7 @@ input {
 .summary-card__frame {
   display: flex;
   align-items: flex-start;
-  gap: 10px;
+  gap: 8px;
   min-width: 0;
 }
 
@@ -827,6 +839,7 @@ input {
   line-height: 1;
   font-weight: 600;
   color: var(--b3-theme-primary);
+  font-variant-numeric: tabular-nums;
 }
 
 .layout-grid {
@@ -836,7 +849,7 @@ input {
 }
 
 .panel {
-  padding: 24px 8px;
+  padding: var(--panel-padding, 24px);
 }
 
 .panel--primary {
@@ -1008,7 +1021,7 @@ input {
 .mini-list,
 .trend-list {
   display: grid;
-  gap: 10px;
+  gap: 8px;
 }
 
 .mini-list__entry,
@@ -1073,7 +1086,7 @@ input {
 .trend-stats {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
-  gap: 10px;
+  gap: 8px;
   margin-bottom: 18px;
 }
 
@@ -1154,7 +1167,7 @@ input {
 
 .trend-record {
   display: grid;
-  gap: 10px;
+  gap: 8px;
   padding: 14px;
   border-radius: 12px;
   border: 1px solid color-mix(in srgb, var(--card-accent, var(--b3-theme-primary)) 16%, var(--panel-border));
@@ -1247,66 +1260,7 @@ input {
   font-weight: 500;
 }
 
-.action-button,
-.ghost-button {
-  border: 0;
-  cursor: pointer;
-  font: inherit;
-  line-height: 1.2;
-  letter-spacing: 0;
-  white-space: nowrap;
-  width: auto;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  transition: opacity 0.2s, background-color 0.2s;
-  font-weight: 500;
-}
 
-.action-button {
-  min-width: 108px;
-  padding: 6px 12px;
-  border-radius: 8px;
-  background: var(--b3-theme-primary);
-  color: var(--b3-theme-on-primary, #fff);
-  box-shadow: 0 2px 6px color-mix(in srgb, var(--b3-theme-primary) 30%, transparent);
-}
-
-.action-button:hover:not(:disabled) {
-  opacity: 0.9;
-}
-
-.action-button:disabled {
-  opacity: 0.5;
-  cursor: progress;
-  box-shadow: none;
-}
-
-.ghost-button {
-  min-width: 108px;
-  padding: 6px 12px;
-  border-radius: 6px;
-  background: color-mix(in srgb, var(--b3-theme-primary) 8%, transparent);
-  color: var(--b3-theme-primary);
-}
-
-.ghost-button--filled {
-  background: color-mix(in srgb, var(--b3-theme-primary) 9%, var(--surface-card));
-  box-shadow: inset 0 1px 0 color-mix(in srgb, white 50%, transparent);
-}
-
-.ghost-button:hover {
-  background: color-mix(in srgb, var(--b3-theme-primary) 15%, transparent);
-}
-
-.ghost-button--filled:hover {
-  background: color-mix(in srgb, var(--b3-theme-primary) 16%, var(--surface-card));
-}
-
-.ghost-button:disabled {
-  opacity: 0.45;
-  cursor: not-allowed;
-}
 
 .detail-wiki-stack {
   display: grid;
@@ -1316,7 +1270,7 @@ input {
 
 .state-banner,
 .empty-state {
-  padding: 24px;
+  padding: var(--panel-padding, 24px);
   text-align: center;
   color: var(--panel-muted);
   background: var(--surface-card);
@@ -1328,14 +1282,18 @@ input {
   color: var(--b3-theme-error);
   border-color: color-mix(in srgb, var(--b3-theme-error) 40%, transparent);
   background: color-mix(in srgb, var(--b3-theme-error) 5%, var(--b3-theme-surface));
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 12px;
 }
 
 .loading-panel {
   position: relative;
   overflow: hidden;
   display: grid;
-  gap: 22px;
-  padding: 24px;
+  gap: 24px;
+  padding: var(--panel-padding, 24px);
   margin-bottom: 24px;
   border-color: color-mix(in srgb, var(--accent-cool) 18%, var(--panel-border));
   background:
@@ -1416,7 +1374,7 @@ input {
 .loading-panel__chips {
   display: flex;
   flex-wrap: wrap;
-  gap: 10px;
+  gap: 8px;
 }
 
 .loading-panel__chip {

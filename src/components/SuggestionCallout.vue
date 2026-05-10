@@ -35,7 +35,7 @@ defineProps<{
 <style scoped>
 .suggestion-callout {
   display: grid;
-  gap: 10px;
+  gap: 8px;
   margin-top: 12px;
   padding: 12px 14px;
   border-radius: 12px;

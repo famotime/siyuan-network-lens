@@ -1,0 +1,82 @@
+/* 共享组件样式 (Buttons, Badges, Panels, Empty States) */
+
+.action-button,
+.ghost-button {
+  border: 0;
+  cursor: pointer;
+  font: inherit;
+  line-height: 1.2;
+  letter-spacing: 0;
+  white-space: nowrap;
+  width: auto;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  transition: opacity 0.2s, background-color 0.2s, transform 0.2s;
+  font-weight: 500;
+}
+
+/* 主操作按钮 */
+.action-button {
+  min-width: 108px;
+  padding: 6px 12px;
+  border-radius: 8px;
+  background: var(--b3-theme-primary);
+  color: var(--b3-theme-on-primary, #fff);
+  box-shadow: 0 2px 6px color-mix(in srgb, var(--b3-theme-primary) 30%, transparent);
+}
+
+.action-button:hover:not(:disabled) {
+  opacity: 0.9;
+  transform: translateY(-1px);
+}
+
+.action-button:active:not(:disabled) {
+  transform: translateY(0);
+  opacity: 1;
+}
+
+.action-button:disabled {
+  opacity: 0.5;
+  cursor: progress; /* 默认 loading 态，可通过 aria-disabled 或其他类覆盖 */
+  box-shadow: none;
+}
+
+/* 次要/幽灵按钮 */
+.ghost-button {
+  min-width: 108px;
+  padding: 6px 12px;
+  border-radius: 6px;
+  background: color-mix(in srgb, var(--b3-theme-primary) 8%, transparent);
+  color: var(--b3-theme-primary);
+}
+
+.ghost-button--filled {
+  background: color-mix(in srgb, var(--b3-theme-primary) 9%, var(--surface-card));
+  box-shadow: inset 0 1px 0 color-mix(in srgb, white 50%, transparent);
+}
+
+.ghost-button:hover:not(:disabled) {
+  background: color-mix(in srgb, var(--b3-theme-primary) 15%, transparent);
+}
+
+.ghost-button--filled:hover:not(:disabled) {
+  background: color-mix(in srgb, var(--b3-theme-primary) 16%, var(--surface-card));
+}
+
+.ghost-button:active:not(:disabled) {
+  transform: translateY(1px);
+}
+
+.ghost-button:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+
+/* 小型幽灵按钮 */
+.ghost-button--sm {
+  min-width: 0;
+  padding: 4px 8px;
+  font-size: 13px;
+  border-radius: 4px;
+}

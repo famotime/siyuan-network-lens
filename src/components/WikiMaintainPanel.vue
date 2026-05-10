@@ -488,7 +488,7 @@ function formatProcessingTime(ms: number): string {
 
 .wiki-panel__header {
   display: grid;
-  gap: 10px;
+  gap: 8px;
 }
 
 .wiki-panel__eyebrow {
@@ -537,7 +537,7 @@ function formatProcessingTime(ms: number): string {
 .wiki-panel__scope-grid {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 10px;
+  gap: 8px;
 }
 
 .wiki-panel__scope-lines {
@@ -842,7 +842,7 @@ function formatProcessingTime(ms: number): string {
 
 .wiki-panel__delta-stats {
   display: grid;
-  gap: 10px;
+  gap: 8px;
 }
 
 .wiki-panel__delta-stats h4 {
@@ -864,7 +864,7 @@ function formatProcessingTime(ms: number): string {
 
 .wiki-panel__source-cards {
   display: grid;
-  gap: 10px;
+  gap: 8px;
 }
 
 .wiki-panel__source-cards-header {

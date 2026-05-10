@@ -329,7 +329,7 @@ function resolveAssociations(documentId: string): LinkAssociations {
   border: 1px solid var(--panel-border);
   background: var(--surface-card-strong);
   box-shadow: 0 6px 16px -8px rgba(0, 0, 0, 0.08);
-  padding: 24px;
+  padding: var(--panel-padding, 24px);
 }
 
 .panel--primary {
@@ -414,7 +414,7 @@ function resolveAssociations(documentId: string): LinkAssociations {
 
 .ranking-entry {
   display: grid;
-  gap: 10px;
+  gap: 8px;
 }
 
 .ranking-item {
@@ -424,7 +424,7 @@ function resolveAssociations(documentId: string): LinkAssociations {
   border: 1px solid var(--panel-border);
   transition: background-color 0.2s;
   display: grid;
-  gap: 10px;
+  gap: 8px;
 }
 
 .ranking-item:hover {
@@ -562,7 +562,7 @@ function resolveAssociations(documentId: string): LinkAssociations {
 }
 
 .empty-state {
-  padding: 24px;
+  padding: var(--panel-padding, 24px);
   text-align: center;
   color: var(--panel-muted);
   background: var(--surface-card);

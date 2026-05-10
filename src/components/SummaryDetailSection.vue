@@ -1141,7 +1141,7 @@ async function handleAiInboxActionTargetClick(
 }
 
 .panel {
-  padding: 24px;
+  padding: var(--panel-padding, 24px);
   border-radius: 16px;
   border: 1px solid var(--panel-border);
   background: var(--surface-card-strong);
@@ -1323,7 +1323,7 @@ async function handleAiInboxActionTargetClick(
 .ai-suggestion-panel__result,
 .ai-suggestion-panel__list {
   display: grid;
-  gap: 14px;
+  gap: 16px;
 }
 
 .ai-suggestion-panel__status,
@@ -1364,7 +1364,7 @@ async function handleAiInboxActionTargetClick(
 
 .ai-suggestion-panel__item {
   display: grid;
-  gap: 10px;
+  gap: 8px;
   background:
     linear-gradient(180deg, color-mix(in srgb, var(--accent-warm) 6%, transparent), transparent 44%),
     var(--surface-card);
@@ -1422,7 +1422,7 @@ async function handleAiInboxActionTargetClick(
 
 .ai-suggestion-panel__targets {
   display: grid;
-  gap: 10px;
+  gap: 8px;
 }
 
 .ai-suggestion-panel__target {
@@ -1816,7 +1816,7 @@ select {
 .trend-stats {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
-  gap: 10px;
+  gap: 8px;
   margin-bottom: 18px;
 }
 
@@ -1906,12 +1906,12 @@ select {
 
 .trend-list {
   display: grid;
-  gap: 10px;
+  gap: 8px;
 }
 
 .trend-record {
   display: grid;
-  gap: 10px;
+  gap: 8px;
   padding: 14px;
   border-radius: 12px;
   border: 1px solid color-mix(in srgb, var(--card-accent, var(--b3-theme-primary)) 16%, var(--panel-border));
@@ -1981,7 +1981,7 @@ select {
 }
 
 .empty-state {
-  padding: 24px;
+  padding: var(--panel-padding, 24px);
   text-align: center;
   color: var(--panel-muted);
   background: var(--surface-card);

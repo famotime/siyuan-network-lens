@@ -917,6 +917,10 @@ const UI_TEXT = {
         zh_CN: '冲突',
       },
     },
+    confirmSync: {
+      en_US: 'Are you sure you want to sync this connection?',
+      zh_CN: '确定要同步这个连接吗？',
+    },
   },
   aiInbox: {
     title: {
@@ -2453,6 +2457,10 @@ const UI_TEXT = {
       syncFailed: {
         en_US: 'Sync failed',
         zh_CN: '同步失败',
+      },
+      confirmSync: {
+        en_US: 'Are you sure you want to sync this connection? This will modify the document.',
+        zh_CN: '确定要同步这个连接吗？此操作将修改文档内容。',
       },
       topicLinkSuggestionRemoved: {
         en_US: 'Topic link suggestion removed',

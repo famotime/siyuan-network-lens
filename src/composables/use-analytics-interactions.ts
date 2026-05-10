@@ -83,6 +83,10 @@ export function createLinkAssociationInteractions(params: {
   }
 
   async function syncAssociation(coreDocumentId: string, targetDocumentId: string, direction: LinkDirection) {
+    if (!window.confirm(t('analytics.controller.confirmSync'))) {
+      return
+    }
+
     const key = buildSyncKey(coreDocumentId, targetDocumentId, direction)
     if (syncInProgress.value.has(key)) {
       return

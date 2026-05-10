@@ -275,7 +275,7 @@ function handleCardToggle(cardKey: SummaryCardKey) {
 .summary-card__frame {
   display: flex;
   align-items: flex-start;
-  gap: 10px;
+  gap: 8px;
   min-width: 0;
 }
 
@@ -335,5 +335,6 @@ function handleCardToggle(cardKey: SummaryCardKey) {
   line-height: 1;
   font-weight: 600;
   color: var(--b3-theme-primary);
+  font-variant-numeric: tabular-nums;
 }
 </style>

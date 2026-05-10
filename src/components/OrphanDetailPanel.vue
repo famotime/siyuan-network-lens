@@ -371,7 +371,7 @@ function resolveAiTagSuggestions(documentId: string): AiLinkTagSuggestion[] {
 
 .orphan-detail__ai-panel {
   display: grid;
-  gap: 10px;
+  gap: 8px;
   margin-top: 12px;
   padding-top: 12px;
   border-top: 1px dashed var(--panel-border);
@@ -381,7 +381,7 @@ function resolveAiTagSuggestions(documentId: string): AiLinkTagSuggestion[] {
   display: flex;
   flex-wrap: wrap;
   align-items: center;
-  gap: 10px;
+  gap: 8px;
 }
 
 .orphan-detail__ai-button {
@@ -411,7 +411,7 @@ function resolveAiTagSuggestions(documentId: string): AiLinkTagSuggestion[] {
 
 .orphan-detail__ai-body {
   display: grid;
-  gap: 10px;
+  gap: 8px;
   border-radius: 12px;
   padding: 12px;
   background: color-mix(in srgb, var(--b3-theme-primary) 6%, var(--surface-card));
@@ -431,7 +431,7 @@ function resolveAiTagSuggestions(documentId: string): AiLinkTagSuggestion[] {
 
 .orphan-detail__ai-result {
   display: grid;
-  gap: 10px;
+  gap: 8px;
 }
 
 .orphan-detail__ai-groups {
@@ -449,7 +449,7 @@ function resolveAiTagSuggestions(documentId: string): AiLinkTagSuggestion[] {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  gap: 10px;
+  gap: 8px;
 }
 
 .orphan-detail__ai-group-header {
