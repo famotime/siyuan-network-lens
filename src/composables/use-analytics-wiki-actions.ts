@@ -343,6 +343,15 @@ export function createAnalyticsWikiActionsController(params: {
         sourceDocMetas,
       }
       params.wikiPreviewCache.value.set(request.themeDocumentId, params.wikiPreview.value)
+
+      const hasNewPages = themePage.preview.status === 'create'
+      if (hasNewPages) {
+        try {
+          await applyWikiChanges()
+        } catch {
+          // Auto-apply errors are already handled inside applyWikiChanges.
+        }
+      }
     } catch (error) {
       const message = error instanceof Error ? error.message : t('analytics.controller.failedToGenerateWikiPreview')
       params.wikiError.value = message
