@@ -6,8 +6,11 @@
     <button
       class="filter-select__trigger"
       type="button"
+      role="combobox"
+      aria-haspopup="listbox"
       :aria-expanded="open"
       @click="toggleOpen"
+      @keydown="handleTriggerKeydown"
     >
       <span class="filter-select__summary">{{ summaryLabel }}</span>
       <span
@@ -19,17 +22,25 @@
     <div
       v-show="open || options.length === 0"
       class="filter-select__dropdown"
+      role="listbox"
     >
       <div
         v-if="options.length"
         class="filter-select__options"
       >
         <button
-          v-for="option in options"
+          v-for="(option, index) in options"
           :key="option.value"
-          :class="['filter-select__option', { 'filter-select__option--selected': option.value === modelValue }]"
+          :class="[
+            'filter-select__option',
+            { 'filter-select__option--selected': option.value === modelValue },
+            { 'filter-select__option--highlighted': index === highlightedIndex },
+          ]"
           type="button"
+          role="option"
+          :aria-selected="option.value === modelValue"
           @click="selectOption(option.value)"
+          @mouseenter="highlightedIndex = index"
         >
           <span>{{ option.label }}</span>
           <span
@@ -51,7 +62,7 @@
 </template>
 
 <script setup lang="ts">
-import { computed, onBeforeUnmount, onMounted, ref } from 'vue'
+import { computed, onBeforeUnmount, onMounted, ref, watch } from 'vue'
 import { t } from '@/i18n/ui'
 
 type FilterSelectOption = {
@@ -73,12 +84,23 @@ const emit = defineEmits<{
 
 const open = ref(false)
 const rootRef = ref<HTMLElement | null>(null)
+const highlightedIndex = ref(-1)
 const resolvedEmptyLabel = computed(() => props.emptyLabel ?? t('shared.noOptionsAvailable'))
 
 const summaryLabel = computed(() => {
   return props.options.find(option => option.value === props.modelValue)?.label
     ?? props.options[0]?.label
     ?? resolvedEmptyLabel.value
+})
+
+// 打开时将高亮定位到当前选中项
+watch(open, (isOpen) => {
+  if (isOpen) {
+    const selectedIdx = props.options.findIndex(o => o.value === props.modelValue)
+    highlightedIndex.value = selectedIdx >= 0 ? selectedIdx : 0
+  } else {
+    highlightedIndex.value = -1
+  }
 })
 
 function toggleOpen() {
@@ -88,6 +110,37 @@ function toggleOpen() {
 function selectOption(value: string) {
   emit('update:modelValue', value)
   open.value = false
+}
+
+/** 键盘导航：ArrowDown/ArrowUp 移动高亮，Enter 选中，Escape 关闭 */
+function handleTriggerKeydown(event: KeyboardEvent) {
+  const { key } = event
+
+  if (!open.value) {
+    // 关闭状态下，ArrowDown/ArrowUp/Enter/Space 打开菜单
+    if (key === 'ArrowDown' || key === 'ArrowUp' || key === 'Enter' || key === ' ') {
+      event.preventDefault()
+      open.value = true
+    }
+    return
+  }
+
+  if (key === 'ArrowDown') {
+    event.preventDefault()
+    highlightedIndex.value = Math.min(props.options.length - 1, highlightedIndex.value + 1)
+  } else if (key === 'ArrowUp') {
+    event.preventDefault()
+    highlightedIndex.value = Math.max(0, highlightedIndex.value - 1)
+  } else if (key === 'Enter' || key === ' ') {
+    event.preventDefault()
+    const option = props.options[highlightedIndex.value]
+    if (option) {
+      selectOption(option.value)
+    }
+  } else if (key === 'Escape') {
+    event.preventDefault()
+    open.value = false
+  }
 }
 
 function onDocumentClick(event: MouseEvent) {
@@ -164,7 +217,7 @@ onBeforeUnmount(() => {
   top: calc(100% + 8px);
   left: 0;
   right: 0;
-  z-index: 10;
+  z-index: var(--z-dropdown, 10);
   border: 1px solid color-mix(in srgb, var(--b3-theme-primary) 14%, var(--panel-border));
   border-radius: 14px;
   background:
@@ -201,7 +254,8 @@ onBeforeUnmount(() => {
   transition: background-color 0.2s, border-color 0.2s;
 }
 
-.filter-select__option:hover {
+.filter-select__option:hover,
+.filter-select__option--highlighted {
   background: var(--surface-card-soft);
 }
 

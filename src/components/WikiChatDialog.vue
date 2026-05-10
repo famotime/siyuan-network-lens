@@ -206,7 +206,17 @@ function onResizeEnd() {
   document.body.style.userSelect = ''
 }
 
+// Escape 键关闭对话框
+function onKeydownEscape(e: KeyboardEvent) {
+  if (e.key === 'Escape') emit('close')
+}
+
+onMounted(() => {
+  document.addEventListener('keydown', onKeydownEscape)
+})
+
 onBeforeUnmount(() => {
+  document.removeEventListener('keydown', onKeydownEscape)
   document.removeEventListener('mousemove', onDragMove)
   document.removeEventListener('mouseup', onDragEnd)
   document.removeEventListener('mousemove', onResizeMove)
@@ -275,8 +285,8 @@ const rootRef = ref<HTMLElement>()
           v-else-if="msg.role === 'user'"
           class="wiki-chat-dialog__bubble wiki-chat-dialog__bubble--user"
         >
-          <div class="wiki-chat-dialog__avatar wiki-chat-dialog__avatar--user">
-            &#x1f464;
+          <div class="wiki-chat-dialog__avatar wiki-chat-dialog__avatar--user" aria-hidden="true">
+            <svg viewBox="0 0 24 24" width="14" height="14" fill="currentColor"><path d="M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm0 2c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z"/></svg>
           </div>
           <div class="wiki-chat-dialog__bubble-body">
             <div class="wiki-chat-dialog__bubble-content wiki-chat-dialog__bubble-content--user">
@@ -293,8 +303,8 @@ const rootRef = ref<HTMLElement>()
           v-else
           class="wiki-chat-dialog__bubble wiki-chat-dialog__bubble--assistant"
         >
-          <div class="wiki-chat-dialog__avatar wiki-chat-dialog__avatar--assistant">
-            &#x1f916;
+          <div class="wiki-chat-dialog__avatar wiki-chat-dialog__avatar--assistant" aria-hidden="true">
+            <svg viewBox="0 0 24 24" width="14" height="14" fill="currentColor"><path d="M20 9V7c0-1.1-.9-2-2-2h-3c0-1.66-1.34-3-3-3S9 3.34 9 5H6c-1.1 0-2 .9-2 2v2c-1.66 0-3 1.34-3 3s1.34 3 3 3v4c0 1.1.9 2 2 2h12c1.1 0 2-.9 2-2v-4c1.66 0 3-1.34 3-3s-1.34-3-3-3zM7.5 11.5c0-.83.67-1.5 1.5-1.5s1.5.67 1.5 1.5S9.83 13 9 13s-1.5-.67-1.5-1.5zM16 17H8v-2h8v2zm-1-4c-.83 0-1.5-.67-1.5-1.5S14.17 10 15 10s1.5.67 1.5 1.5S15.83 13 15 13z"/></svg>
           </div>
           <div class="wiki-chat-dialog__bubble-body">
             <div class="wiki-chat-dialog__bubble-content wiki-chat-dialog__bubble-content--assistant">
@@ -306,7 +316,7 @@ const rootRef = ref<HTMLElement>()
                 v-if="msg.sourcePage"
                 class="wiki-chat-dialog__source-badge"
               >
-                &#x1f4c4; {{ msg.sourcePage.title }}
+                <svg class="wiki-chat-dialog__inline-icon" viewBox="0 0 24 24" width="12" height="12" fill="currentColor" aria-hidden="true"><path d="M14 2H6c-1.1 0-2 .9-2 2v16c0 1.1.9 2 2 2h12c1.1 0 2-.9 2-2V8l-6-6zm2 16H8v-2h8v2zm0-4H8v-2h8v2zm-3-5V3.5L18.5 9H13z"/></svg> {{ msg.sourcePage.title }}
               </span>
             </div>
           </div>
@@ -345,7 +355,7 @@ const rootRef = ref<HTMLElement>()
         :class="{ 'wiki-chat-dialog__mention-item--active': index === mentionSelectedIndex }"
         @mousedown.prevent="selectMention(page)"
       >
-        &#x1f4c4; {{ page.title }}
+        <svg class="wiki-chat-dialog__inline-icon" viewBox="0 0 24 24" width="12" height="12" fill="currentColor" aria-hidden="true"><path d="M14 2H6c-1.1 0-2 .9-2 2v16c0 1.1.9 2 2 2h12c1.1 0 2-.9 2-2V8l-6-6zm2 16H8v-2h8v2zm0-4H8v-2h8v2zm-3-5V3.5L18.5 9H13z"/></svg> {{ page.title }}
       </div>
     </div>
 
@@ -365,7 +375,7 @@ const rootRef = ref<HTMLElement>()
         :disabled="session.isLoading || !inputText.trim()"
         @click="sendMessage"
       >
-        &#x27a4;
+        <svg viewBox="0 0 24 24" width="16" height="16" fill="currentColor" aria-hidden="true"><path d="M2.01 21L23 12 2.01 3 2 10l15 2-15 2z"/></svg>
       </button>
     </div>
 
@@ -400,7 +410,7 @@ const rootRef = ref<HTMLElement>()
   box-shadow: 0 4px 24px rgba(0, 0, 0, 0.15);
   display: flex;
   flex-direction: column;
-  z-index: 1000;
+  z-index: var(--z-modal, 1000);
   overflow: hidden;
 }
 .wiki-chat-dialog--positioned {
@@ -681,5 +691,11 @@ const rootRef = ref<HTMLElement>()
   height: 8px;
   border-right: 2px solid var(--b3-border-color);
   border-bottom: 2px solid var(--b3-border-color);
+}
+
+/* SVG 内联图标的对齐 */
+.wiki-chat-dialog__inline-icon {
+  vertical-align: -2px;
+  flex-shrink: 0;
 }
 </style>

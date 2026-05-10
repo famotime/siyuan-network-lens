@@ -795,11 +795,12 @@ input {
 
 .summary-card__toggle {
   flex: none;
-  width: 20px;
-  height: 20px;
+  width: 36px;
+  height: 36px;
   border: 1px solid color-mix(in srgb, var(--b3-theme-primary) 16%, transparent);
   border-radius: 999px;
-  padding: 0;
+  padding: 8px;
+  box-sizing: border-box;
   background: color-mix(in srgb, var(--b3-theme-primary) 6%, var(--surface-card));
   color: var(--panel-muted);
   display: inline-flex;
@@ -817,8 +818,8 @@ input {
 }
 
 .summary-card__toggle-icon {
-  width: 10px;
-  height: 10px;
+  width: 12px;
+  height: 12px;
 }
 
 .summary-card__value {

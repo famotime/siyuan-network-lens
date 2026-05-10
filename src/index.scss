@@ -1,5 +1,35 @@
 .reference-analytics-root {
+  /* z-index 层级令牌 */
+  --z-dropdown: 10;
+  --z-popover: 50;
+  --z-dialog: 100;
+  --z-modal: 1000;
+  --z-toast: 1100;
+
   width: 100%;
   height: 100%;
   min-height: 100%;
+}
+
+/* 全局 focus-visible 基线样式 — 确保键盘导航可见 */
+.reference-analytics-root button:focus-visible,
+.reference-analytics-root [role="option"]:focus-visible,
+.reference-analytics-root [role="combobox"]:focus-visible,
+.reference-analytics-root select:focus-visible,
+.reference-analytics-root input:focus-visible,
+.reference-analytics-root textarea:focus-visible,
+.reference-analytics-root a:focus-visible {
+  outline: 2px solid var(--b3-theme-primary);
+  outline-offset: 2px;
+}
+
+/* P0：尊重系统级"减少动画"偏好 */
+@media (prefers-reduced-motion: reduce) {
+  .reference-analytics-root *,
+  .reference-analytics-root *::before,
+  .reference-analytics-root *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
 }

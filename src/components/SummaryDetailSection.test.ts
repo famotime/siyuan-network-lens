@@ -68,7 +68,11 @@ const baseProps = {
   isLinkGroupExpanded: vi.fn(() => false),
   isSyncing: vi.fn(() => false),
   syncAssociation: vi.fn(),
-  formatDelta: (delta: number) => delta > 0 ? `+${delta}` : String(delta),
+  formatDelta: (delta: number) => {
+    if (delta > 0) return `↑ +${delta}`
+    if (delta < 0) return `↓ ${delta}`
+    return '0'
+  },
   themeDocumentIds: new Set<string>(['doc-a']),
   themeDocuments: [],
   selectCommunity: vi.fn(),

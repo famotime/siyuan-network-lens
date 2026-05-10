@@ -914,7 +914,9 @@ export function useAnalyticsState(params: UseAnalyticsParams) {
   }
 
   function formatDelta(delta: number) {
-    return delta > 0 ? `+${delta}` : delta.toString()
+    if (delta > 0) return `↑ +${delta}`
+    if (delta < 0) return `↓ ${delta}`
+    return '0'
   }
 
   async function persistAiInboxHistory(result: AiInboxResult) {
