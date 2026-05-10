@@ -287,6 +287,7 @@ const props = withDefaults(defineProps<{
     applyWikiChanges: (overwriteConflicts?: boolean) => void | Promise<void>
     openWikiDocument: (documentId: string) => void
     formatTimestamp: (timestamp?: string) => string
+    formatWikiPreviewTimestamp: (timestamp?: string) => { dateText: string, timeText: string, fullText: string }
     incrementalEnabled?: boolean
     openSourceDocument?: (documentId: string) => void
     onUpdateIncrementalEnabled?: (value: boolean) => void

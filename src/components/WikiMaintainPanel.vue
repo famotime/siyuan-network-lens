@@ -50,8 +50,12 @@
 
     <template v-else>
       <div v-if="preview" class="wiki-panel__scope">
-        <p class="wiki-panel__generated-at">
-          {{ t('wikiMaintain.generatedAt') }}: {{ formatTimestamp(preview.generatedAt) }}
+        <p class="wiki-panel__generated-at" :title="generatedPreviewAt.fullText">
+          <span class="wiki-panel__generated-label">{{ t('wikiMaintain.generatedAt') }}:</span>
+          <strong class="wiki-panel__generated-value">
+            <span class="wiki-panel__generated-date">{{ generatedPreviewAt.dateText }}</span>
+            <span class="wiki-panel__generated-time">{{ generatedPreviewAt.timeText }}</span>
+          </strong>
           <span v-if="preview.isCachedPreview" class="wiki-panel__cached-badge">{{ t('wikiMaintain.cachedPreview') }}</span>
         </p>
         <div class="wiki-panel__scope-grid">
@@ -326,6 +330,7 @@ const props = defineProps<{
   openWikiDocument: (documentId: string) => void
   openSourceDocument: (documentId: string) => void
   formatTimestamp: (timestamp?: string) => string
+  formatWikiPreviewTimestamp: (timestamp?: string) => { dateText: string, timeText: string, fullText: string }
   incrementalEnabled?: boolean
   isThemeSuggestionActive?: (documentId: string, themeDocumentId: string) => boolean
 }>()
@@ -384,6 +389,7 @@ const latestUpdatedThemePageId = computed(() => {
 })
 
 const scopeDescriptionItems = computed(() => parseWikiScopeDescriptionLines(props.preview?.scope.descriptionLines ?? []))
+const generatedPreviewAt = computed(() => props.formatWikiPreviewTimestamp(props.preview?.generatedAt))
 
 function resolveTemplateLabel(templateType: string) {
   switch (templateType) {
@@ -567,14 +573,47 @@ function renderScopeLine(text: string): string {
 
 .wiki-panel__generated-at {
   margin: 0;
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 6px;
   font-size: 13px;
   font-weight: 500;
   color: color-mix(in srgb, var(--b3-theme-on-background) 75%, transparent);
 }
 
+.wiki-panel__generated-label {
+  color: color-mix(in srgb, var(--b3-theme-on-background) 60%, transparent);
+}
+
+.wiki-panel__generated-date {
+  color: var(--b3-theme-primary);
+  font-variant-numeric: tabular-nums;
+  letter-spacing: 0.02em;
+}
+
+.wiki-panel__generated-value {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 3px 10px;
+  border-radius: 999px;
+  font-size: 14px;
+  line-height: 1.2;
+  font-variant-numeric: tabular-nums;
+  color: var(--b3-theme-primary);
+  background: color-mix(in srgb, var(--b3-theme-primary) 14%, transparent);
+  box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--b3-theme-primary) 14%, transparent);
+}
+
+.wiki-panel__generated-time {
+  color: var(--b3-theme-primary);
+  font-weight: 700;
+  letter-spacing: 0.04em;
+}
+
 .wiki-panel__cached-badge {
   display: inline-block;
-  margin-left: 8px;
   padding: 1px 8px;
   border-radius: 999px;
   font-size: 11px;

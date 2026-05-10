@@ -916,6 +916,48 @@ export function useAnalyticsState(params: UseAnalyticsParams) {
     return `${timestamp.slice(0, 4)}-${timestamp.slice(4, 6)}-${timestamp.slice(6, 8)}`
   }
 
+  function formatWikiPreviewTimestamp(timestamp?: string) {
+    const unknownTime = t('analytics.controller.unknownTime')
+    if (!timestamp) {
+      return {
+        dateText: unknownTime,
+        timeText: unknownTime,
+        fullText: unknownTime,
+      }
+    }
+
+    const siyuanTimestamp = parseSiyuanTimestamp(timestamp)
+    const normalizedDate = siyuanTimestamp == null ? new Date(timestamp) : new Date(siyuanTimestamp)
+    if (Number.isNaN(normalizedDate.getTime())) {
+      return {
+        dateText: unknownTime,
+        timeText: unknownTime,
+        fullText: unknownTime,
+      }
+    }
+
+    const parts = new Intl.DateTimeFormat(resolveUiLanguageTag(), {
+      year: 'numeric',
+      month: '2-digit',
+      day: '2-digit',
+      hour: '2-digit',
+      minute: '2-digit',
+      second: '2-digit',
+      hour12: false,
+    }).formatToParts(normalizedDate)
+
+    const valueOf = (type: Intl.DateTimeFormatPartTypes) => parts.find(part => part.type === type)?.value ?? ''
+    const dateText = `${valueOf('year')}-${valueOf('month')}-${valueOf('day')}`
+    const timeText = `${valueOf('hour')}:${valueOf('minute')}:${valueOf('second')}`
+    const fullText = `${dateText} ${timeText}`.trim()
+
+    return {
+      dateText,
+      timeText,
+      fullText,
+    }
+  }
+
   function formatDelta(delta: number) {
     if (delta > 0) return `↑ +${delta}`
     if (delta < 0) return `↓ ${delta}`
@@ -1068,6 +1110,7 @@ export function useAnalyticsState(params: UseAnalyticsParams) {
     batchGenerateDocIndex,
     batchDeleteDocIndex,
     formatTimestamp,
+    formatWikiPreviewTimestamp,
     formatDelta,
     generateAiInbox,
     prepareWikiPreview,

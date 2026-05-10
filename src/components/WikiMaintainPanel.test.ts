@@ -198,6 +198,11 @@ describe('WikiMaintainPanel', () => {
         openWikiDocument: () => undefined,
         openSourceDocument: () => undefined,
         formatTimestamp: (ts?: string) => ts ?? '',
+        formatWikiPreviewTimestamp: () => ({
+          dateText: '2026-04-10',
+          timeText: '08:00:00',
+          fullText: '2026-04-10 08:00:00',
+        }),
       }),
     })
 
@@ -233,6 +238,10 @@ describe('WikiMaintainPanel', () => {
     expect(html).toContain('Open index page')
     expect(html).toContain('Open log page')
     expect(html).toContain('Open latest updated page')
+    expect(html).toContain('2026-04-10')
+    expect(html).toContain('08:00:00')
+    expect(html).toContain('wiki-panel__generated-value')
+    expect(html).toContain('wiki-panel__generated-time')
     expect(html).toContain('href="siyuan://blocks/doc-beta"')
     expect(html).toContain('时间窗口：7d')
     expect(html).toContain('标签：AI')
@@ -267,6 +276,11 @@ describe('WikiMaintainPanel', () => {
         openWikiDocument: () => undefined,
         openSourceDocument: () => undefined,
         formatTimestamp: (ts?: string) => ts ?? '',
+        formatWikiPreviewTimestamp: () => ({
+          dateText: '2026-04-10',
+          timeText: '08:00:00',
+          fullText: '2026-04-10 08:00:00',
+        }),
       }),
     })
 
@@ -369,6 +383,11 @@ describe('WikiMaintainPanel', () => {
         openWikiDocument: () => undefined,
         openSourceDocument: () => undefined,
         formatTimestamp: (ts?: string) => ts ?? '',
+        formatWikiPreviewTimestamp: () => ({
+          dateText: '2026-04-10',
+          timeText: '08:00:00',
+          fullText: '2026-04-10 08:00:00',
+        }),
       }),
     })
 
@@ -385,5 +404,51 @@ describe('WikiMaintainPanel', () => {
     expect(html).toContain('置信度')
     expect(html).toContain('技术主题')
     expect(html).toContain('高')
+  })
+
+  it('renders generated time with the full timestamp emphasized', async () => {
+    const app = createSSRApp({
+      render: () => h(WikiMaintainPanel, {
+        wikiEnabled: true,
+        aiEnabled: true,
+        aiConfigReady: true,
+        previewLoading: false,
+        applyLoading: false,
+        error: '',
+        preview: {
+          generatedAt: '2026-05-05T16:07:08.000Z',
+          scope: {
+            summary: {
+              sourceDocumentCount: 1,
+              generatedSectionCount: 1,
+              referenceCount: 1,
+              manualNotesParagraphCount: 0,
+            },
+            descriptionLines: [],
+          },
+          themePages: [],
+          unclassifiedDocuments: [],
+        },
+        prepareWikiPreview: () => undefined,
+        applyWikiChanges: () => undefined,
+        openWikiDocument: () => undefined,
+        openSourceDocument: () => undefined,
+        formatTimestamp: (ts?: string) => ts ?? '',
+        formatWikiPreviewTimestamp: () => ({
+          dateText: '2026-05-06',
+          timeText: '00:07:08',
+          fullText: '2026-05-06 00:07:08',
+        }),
+      }),
+    })
+
+    const html = await renderToString(app)
+
+    expect(html).toContain('wiki-panel__generated-value')
+    expect(html).toContain('wiki-panel__generated-date')
+    expect(html).toContain('wiki-panel__generated-time')
+    expect(html).toContain('2026-05-06')
+    expect(html).toContain('00:07:08')
+    expect(html).toContain('title="2026-05-06 00:07:08"')
   })
 })

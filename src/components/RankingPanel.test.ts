@@ -32,6 +32,11 @@ const wikiPanelProps = {
   applyWikiChanges: vi.fn(),
   openWikiDocument: vi.fn(),
   formatTimestamp: (ts?: string) => ts ?? '',
+  formatWikiPreviewTimestamp: () => ({
+    dateText: '2026-04-10',
+    timeText: '08:00:00',
+    fullText: '2026-04-10 08:00:00',
+  }),
 }
 
 describe('RankingPanel', () => {

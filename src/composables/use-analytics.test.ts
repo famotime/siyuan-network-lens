@@ -114,6 +114,58 @@ describe('useAnalyticsState', () => {
     expect(state.snapshotLabel.value).toBe('--')
   })
 
+  it('formats wiki preview timestamps with date and time for ISO strings', async () => {
+    ;(globalThis as typeof globalThis & {
+      siyuan?: {
+        config?: {
+          lang?: string
+        }
+      }
+    }).siyuan = {
+      config: {
+        lang: 'zh_CN',
+      },
+    }
+
+    const state = useAnalyticsState({
+      plugin: { eventBus: { on: () => {}, off: () => {} }, app: {} } as any,
+      config: {
+        showSummaryCards: true,
+        showRanking: true,
+        showLargeDocuments: true,
+        showCommunities: true,
+        showOrphanBridge: true,
+        showTrends: true,
+        showPropagation: true,
+        themeNotebookId: 'box-1',
+        themeDocumentPath: '/专题',
+        themeNamePrefix: '主题-',
+        themeNameSuffix: '-索引',
+      },
+      loadSnapshot: async () => snapshot as any,
+      nowProvider: () => now,
+      createActiveDocumentSync: () => () => {},
+      showMessage: () => {},
+      openTab: () => {},
+      appendBlock: async () => [],
+      prependBlock: async () => [],
+      deleteBlock: async () => [],
+      updateBlock: async () => [],
+      getChildBlocks: async () => [],
+      getBlockKramdown: async () => ({ id: '', kramdown: '' }),
+    })
+
+    const result = state.formatWikiPreviewTimestamp('2026-05-05T16:07:08.000Z')
+
+    expect(result).toEqual({
+      dateText: '2026-05-06',
+      timeText: '00:07:08',
+      fullText: '2026-05-06 00:07:08',
+    })
+
+    delete (globalThis as typeof globalThis & { siyuan?: unknown }).siyuan
+  })
+
   it('reorders summary cards and persists the manual order into config', async () => {
     const config = {
       showSummaryCards: true,
