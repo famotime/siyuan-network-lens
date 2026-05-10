@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref, watch, nextTick, onMounted, onBeforeUnmount } from 'vue'
+import { computed, ref, watch, nextTick, onMounted, onBeforeUnmount } from 'vue'
 import type { WikiChatScope, WikiIndexPage } from '@/analytics/wiki-index'
 import { createWikiChatSession } from '@/composables/use-wiki-chat-session'
 import { createPluginLogger } from '@/utils/plugin-logger'
@@ -30,6 +30,17 @@ const emit = defineEmits<{
 
 const logger = createPluginLogger(() => props.config.enableConsoleLogging === true)
 
+const chatSession = createWikiChatSession({
+  scope: ref(props.scope),
+  wikiPages: ref(props.wikiPages),
+  forwardProxy: props.forwardProxy,
+  getBlockKramdown: props.getBlockKramdown,
+  config: ref(props.config),
+  logger,
+}) as ReturnType<typeof createWikiChatSession> & {
+  syncMentionState?: (cursorPos: number) => void
+}
+
 const {
   session,
   inputText,
@@ -38,18 +49,14 @@ const {
   sendMessage,
   switchSource,
   buildSaveMarkdown,
-} = createWikiChatSession({
-  scope: ref(props.scope),
-  wikiPages: ref(props.wikiPages),
-  forwardProxy: props.forwardProxy,
-  getBlockKramdown: props.getBlockKramdown,
-  config: ref(props.config),
-  logger,
-})
+} = chatSession
 
 const messagesRef = ref<HTMLElement>()
 const inputRef = ref<HTMLTextAreaElement>()
 const mentionSelectedIndex = ref(0)
+const MAX_VISIBLE_MENTION_ITEMS = 3
+const visibleMentionPages = computed(() => filteredPages.value.slice(0, MAX_VISIBLE_MENTION_ITEMS))
+const hasMoreMentions = computed(() => filteredPages.value.length > MAX_VISIBLE_MENTION_ITEMS)
 
 // Auto-scroll to bottom on new messages
 watch(() => session.value.messages.length, async () => {
@@ -59,8 +66,8 @@ watch(() => session.value.messages.length, async () => {
   }
 })
 
-// Reset mention selection when filter changes
-watch(() => filteredPages.value.length, () => {
+// Reset mention selection whenever the filtered mention candidates change.
+watch(filteredPages, () => {
   mentionSelectedIndex.value = 0
 })
 
@@ -69,20 +76,20 @@ function handleInput() {
   const textarea = inputRef.value
   if (!textarea) return
   const cursorPos = textarea.selectionStart ?? inputText.value.length
-  const beforeCursor = inputText.value.slice(0, cursorPos)
-  const atMatch = beforeCursor.match(/@([^@\s]*)$/)
-  if (atMatch) {
-    mentionPopupVisible.value = true
-  } else {
-    mentionPopupVisible.value = false
+  if (typeof chatSession.syncMentionState === 'function') {
+    chatSession.syncMentionState(cursorPos)
+    return
   }
+
+  const beforeCursor = inputText.value.slice(0, cursorPos)
+  mentionPopupVisible.value = /@([^@\s]*)$/.test(beforeCursor)
 }
 
 function handleKeydown(e: KeyboardEvent) {
-  if (mentionPopupVisible.value && filteredPages.value.length > 0) {
+  if (mentionPopupVisible.value && visibleMentionPages.value.length > 0) {
     if (e.key === 'ArrowDown') {
       e.preventDefault()
-      mentionSelectedIndex.value = Math.min(filteredPages.value.length - 1, mentionSelectedIndex.value + 1)
+      mentionSelectedIndex.value = Math.min(visibleMentionPages.value.length - 1, mentionSelectedIndex.value + 1)
       return
     }
     if (e.key === 'ArrowUp') {
@@ -92,7 +99,7 @@ function handleKeydown(e: KeyboardEvent) {
     }
     if (e.key === 'Enter') {
       e.preventDefault()
-      const page = filteredPages.value[mentionSelectedIndex.value]
+      const page = visibleMentionPages.value[mentionSelectedIndex.value]
       if (page) {
         selectMention(page)
       }
@@ -342,43 +349,53 @@ const rootRef = ref<HTMLElement>()
       </div>
     </div>
 
-    <!-- @ Mention Popup -->
-    <div
-      v-if="mentionPopupVisible && filteredPages.length > 0"
-      class="wiki-chat-dialog__mention-popup"
-    >
-      <div class="wiki-chat-dialog__mention-header">
-        {{ t('llmWiki.chat.mentionPlaceholder') }}
-      </div>
+    <div class="wiki-chat-dialog__input-shell">
       <div
-        v-for="(page, index) in filteredPages"
-        :key="page.documentId"
-        class="wiki-chat-dialog__mention-item"
-        :class="{ 'wiki-chat-dialog__mention-item--active': index === mentionSelectedIndex }"
-        @mousedown.prevent="selectMention(page)"
+        v-if="mentionPopupVisible && visibleMentionPages.length > 0"
+        class="wiki-chat-dialog__mention-popup"
       >
-        <svg class="wiki-chat-dialog__inline-icon" viewBox="0 0 24 24" width="12" height="12" fill="currentColor" aria-hidden="true"><path d="M14 2H6c-1.1 0-2 .9-2 2v16c0 1.1.9 2 2 2h12c1.1 0 2-.9 2-2V8l-6-6zm2 16H8v-2h8v2zm0-4H8v-2h8v2zm-3-5V3.5L18.5 9H13z"/></svg> {{ page.title }}
+        <div class="wiki-chat-dialog__mention-header">
+          {{ t('llmWiki.chat.mentionPlaceholder') }}
+        </div>
+        <div class="wiki-chat-dialog__mention-list">
+          <div
+            v-for="(page, index) in visibleMentionPages"
+            :key="page.documentId"
+            class="wiki-chat-dialog__mention-item"
+            :class="{ 'wiki-chat-dialog__mention-item--active': index === mentionSelectedIndex }"
+            @mousedown.prevent="selectMention(page)"
+          >
+            <svg class="wiki-chat-dialog__inline-icon" viewBox="0 0 24 24" width="12" height="12" fill="currentColor" aria-hidden="true"><path d="M14 2H6c-1.1 0-2 .9-2 2v16c0 1.1.9 2 2 2h12c1.1 0 2-.9 2-2V8l-6-6zm2 16H8v-2h8v2zm0-4H8v-2h8v2zm-3-5V3.5L18.5 9H13z"/></svg>
+            <span class="wiki-chat-dialog__mention-title">{{ page.title }}</span>
+          </div>
+        </div>
+        <div
+          v-if="hasMoreMentions"
+          class="wiki-chat-dialog__mention-overflow"
+        >
+          ...
+        </div>
       </div>
-    </div>
 
-    <!-- Input Area -->
-    <div class="wiki-chat-dialog__input-area">
-      <textarea
-        ref="inputRef"
-        v-model="inputText"
-        :placeholder="t('llmWiki.chat.inputWithMentionHint')"
-        :disabled="session.isLoading"
-        rows="1"
-        @input="handleInput"
-        @keydown="handleKeydown"
-      />
-      <button
-        class="wiki-chat-dialog__send-btn"
-        :disabled="session.isLoading || !inputText.trim()"
-        @click="sendMessage"
-      >
-        <svg viewBox="0 0 24 24" width="16" height="16" fill="currentColor" aria-hidden="true"><path d="M2.01 21L23 12 2.01 3 2 10l15 2-15 2z"/></svg>
-      </button>
+      <!-- Input Area -->
+      <div class="wiki-chat-dialog__input-area">
+        <textarea
+          ref="inputRef"
+          v-model="inputText"
+          :placeholder="t('llmWiki.chat.inputWithMentionHint')"
+          :disabled="session.isLoading"
+          rows="1"
+          @input="handleInput"
+          @keydown="handleKeydown"
+        />
+        <button
+          class="wiki-chat-dialog__send-btn"
+          :disabled="session.isLoading || !inputText.trim()"
+          @click="sendMessage"
+        >
+          <svg viewBox="0 0 24 24" width="16" height="16" fill="currentColor" aria-hidden="true"><path d="M2.01 21L23 12 2.01 3 2 10l15 2-15 2z"/></svg>
+        </button>
+      </div>
     </div>
 
     <!-- Footer -->
@@ -572,20 +589,34 @@ const rootRef = ref<HTMLElement>()
   padding: 8px;
 }
 
+.wiki-chat-dialog__input-shell {
+  position: relative;
+}
+
 /* Mention Popup */
 .wiki-chat-dialog__mention-popup {
-  margin: 0 16px;
-  background: var(--b3-theme-surface);
+  position: absolute;
+  left: 16px;
+  right: 16px;
+  bottom: calc(100% + 8px);
+  background: color-mix(in srgb, var(--b3-theme-surface) 92%, var(--b3-theme-background));
   border: 1px solid var(--b3-border-color);
-  border-radius: 8px;
+  border-radius: 10px;
+  box-shadow: 0 16px 28px color-mix(in srgb, var(--b3-theme-background) 28%, transparent);
   overflow: hidden;
   font-size: 12px;
+  z-index: 2;
+}
+.wiki-chat-dialog__mention-list {
+  max-height: 148px;
+  overflow-y: auto;
 }
 .wiki-chat-dialog__mention-header {
   padding: 6px 12px;
-  color: var(--b3-theme-on-surface-light);
+  color: color-mix(in srgb, var(--b3-theme-on-background) 70%, transparent);
   font-size: 11px;
   border-bottom: 1px solid var(--b3-border-color);
+  background: color-mix(in srgb, var(--b3-theme-background) 76%, var(--b3-theme-surface));
 }
 .wiki-chat-dialog__mention-item {
   padding: 8px 12px;
@@ -595,10 +626,23 @@ const rootRef = ref<HTMLElement>()
   gap: 8px;
 }
 .wiki-chat-dialog__mention-item:hover {
-  background: var(--b3-theme-surface-light);
+  background: color-mix(in srgb, var(--b3-theme-primary) 10%, transparent);
 }
 .wiki-chat-dialog__mention-item--active {
-  background: var(--b3-theme-primary-lightest);
+  background: color-mix(in srgb, var(--b3-theme-primary) 14%, var(--b3-theme-background));
+}
+.wiki-chat-dialog__mention-title {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.wiki-chat-dialog__mention-overflow {
+  padding: 4px 12px 8px;
+  border-top: 1px solid color-mix(in srgb, var(--b3-border-color) 72%, transparent);
+  color: color-mix(in srgb, var(--b3-theme-on-background) 64%, transparent);
+  text-align: center;
+  letter-spacing: 0.08em;
 }
 
 /* Input Area */
