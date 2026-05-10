@@ -1,11 +1,9 @@
 <template>
   <component :is="variant === 'panel' ? 'section' : 'div'" :class="variant === 'panel' ? 'panel panel--primary' : 'ranking-detail'">
     <div v-if="variant === 'panel'" class="panel-header">
-      <div>
-        <h2>{{ t('rankingPanel.title') }}</h2>
-        <p>{{ t('rankingPanel.description') }}</p>
-      </div>
-      <div class="panel-header__actions">
+      <div class="panel-header__main">
+        <h2 class="panel-header__title">{{ t('rankingPanel.title') }}</h2>
+        <div class="panel-header__actions">
         <span class="meta-text">{{ t('rankingPanel.docsCount', { count: panelCount }) }}</span>
         <span class="meta-text">{{ t('rankingPanel.lastRefreshed', { value: snapshotLabel }) }}</span>
         <button
@@ -20,8 +18,10 @@
             class="panel-toggle__caret"
             aria-hidden="true"
           />
-        </button>
+          </button>
+        </div>
       </div>
+      <p class="panel-header__description">{{ t('rankingPanel.description') }}</p>
     </div>
 
     <div
@@ -341,17 +341,22 @@ function resolveAssociations(documentId: string): LinkAssociations {
 }
 
 .panel-header {
-  display: flex;
-  align-items: flex-start;
-  justify-content: space-between;
+  display: grid;
   gap: 12px;
   margin-bottom: 20px;
 }
 
-.panel-header h2 {
-  font-size: 18px;
+.panel-header__main {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.panel-header__title {
+  font-size: var(--text-lg, 16px);
   font-weight: 600;
-  margin-bottom: 4px;
+  margin: 0;
 }
 
 .panel-header p,

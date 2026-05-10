@@ -2,19 +2,32 @@
   <section class="panel">
     <div class="panel-header">
       <div class="panel-header__main">
-        <div class="panel-header__content">
-          <h2>{{ detail.title }}</h2>
-          <p>{{ detail.description }}</p>
-        </div>
+        <h2 class="panel-header__title">{{ detail.title }}</h2>
         <div class="panel-header__actions">
           <span class="meta-text">{{ summaryCountLabel }}</span>
           <button
             v-if="collapsibleItemIds.length > 1"
-            class="panel-header__collapse-all"
+            class="panel-toggle panel-header__collapse-all"
             type="button"
+            :title="allCollapsed ? t('summaryDetail.expandAll') : t('summaryDetail.collapseAll')"
+            :aria-label="allCollapsed ? t('summaryDetail.expandAll') : t('summaryDetail.collapseAll')"
             @click="toggleCollapseAll"
           >
-            {{ allCollapsed ? t('summaryDetail.expandAll') : t('summaryDetail.collapseAll') }}
+            <svg
+              viewBox="0 0 48 48"
+              style="width: 16px; height: 16px;"
+              fill="none"
+              aria-hidden="true"
+            >
+              <template v-if="allCollapsed">
+                <path d="M22 42H6V26" stroke="currentColor" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"/>
+                <path d="M26 6H42V22" stroke="currentColor" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"/>
+              </template>
+              <template v-else>
+                <path d="M44 20H28V4" stroke="currentColor" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"/>
+                <path d="M4 28H20V44" stroke="currentColor" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"/>
+              </template>
+            </svg>
           </button>
           <button
             class="panel-toggle"
@@ -30,6 +43,7 @@
           </button>
         </div>
       </div>
+      <p class="panel-header__description">{{ detail.description }}</p>
       <div
         v-if="detail.kind === 'aiInbox' && isExpanded"
         class="panel-header__ai-toolbar"
@@ -88,6 +102,8 @@
           :ai-config-ready="aiLinkSuggestionConfigReady"
           :ai-suggestion-states="orphanAiSuggestionStates"
           :on-generate-ai-suggestion="generateOrphanAiSuggestion"
+          :is-item-collapsed="(id) => !!collapsedItems[id]"
+          :toggle-item-collapse="toggleItemCollapse"
         />
       </template>
       <template v-else-if="detail.key === 'dormant'">
@@ -1150,7 +1166,7 @@ async function handleAiInboxActionTargetClick(
 
 .panel-header {
   display: grid;
-  gap: 16px;
+  gap: 8px;
   margin-bottom: 20px;
 }
 
@@ -1161,11 +1177,15 @@ async function handleAiInboxActionTargetClick(
   justify-content: space-between;
 }
 
-.panel-header__content {
-  flex: 1;
-  min-width: 0;
-  display: grid;
-  gap: 8px;
+.panel-header__title {
+  font-size: var(--text-lg, 16px);
+  font-weight: 600;
+  margin: 0;
+}
+
+.panel-header__description {
+  margin: 0;
+  line-height: 1.5;
 }
 
 .panel-header__ai-toolbar {

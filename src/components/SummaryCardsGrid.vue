@@ -303,11 +303,11 @@ function handleCardToggle(cardKey: SummaryCardKey) {
 
 .summary-card__toggle {
   flex: none;
-  width: 36px;
-  height: 36px;
+  width: 28px;
+  height: 28px;
   border: 1px solid color-mix(in srgb, var(--b3-theme-primary) 16%, transparent);
   border-radius: 999px;
-  padding: 8px;
+  padding: 0;
   box-sizing: border-box;
   background: color-mix(in srgb, var(--b3-theme-primary) 6%, var(--surface-card));
   color: var(--panel-muted);
@@ -326,8 +326,8 @@ function handleCardToggle(cardKey: SummaryCardKey) {
 }
 
 .summary-card__toggle-icon {
-  width: 12px;
-  height: 12px;
+  width: 16px;
+  height: 16px;
 }
 
 .summary-card__value {

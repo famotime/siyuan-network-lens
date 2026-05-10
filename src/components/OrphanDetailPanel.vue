@@ -20,7 +20,7 @@
       <article
         v-for="item in items"
         :key="item.documentId"
-        class="summary-detail-item"
+        :class="['summary-detail-item', { 'summary-detail-item--collapsed': isItemCollapsed && isItemCollapsed(item.documentId) }]"
       >
         <div class="summary-detail-item__header">
           <DocumentTitle
@@ -29,13 +29,12 @@
             :open-document="openDocument"
             :is-theme-document="item.isThemeDocument"
           />
-          <span
-            v-if="item.badge"
-            class="badge"
-          >
-            {{ item.badge }}
-          </span>
+          <div class="summary-detail-item__header-end">
+            <span v-if="item.badge" class="badge">{{ item.badge }}</span>
+            <button v-if="isItemCollapsed && toggleItemCollapse" class="summary-detail-item__collapse-toggle" type="button" :aria-expanded="!isItemCollapsed(item.documentId)" @click="toggleItemCollapse(item.documentId)"><span class="summary-detail-item__caret" aria-hidden="true"/></button>
+          </div>
         </div>
+        <div v-show="!isItemCollapsed || !isItemCollapsed(item.documentId)">
         <p class="summary-detail-item__meta">
           {{ item.meta }}
         </p>
@@ -162,8 +161,7 @@
               </div>
             </div>
           </div>
-        </div>
-      </article>
+        </div></div></article>
     </div>
     <div
       v-else
@@ -198,6 +196,8 @@ const props = defineProps<{
   aiConfigReady: boolean
   aiSuggestionStates: Map<string, OrphanAiSuggestionState>
   onGenerateAiSuggestion: (documentId: string) => void | Promise<void>
+  isItemCollapsed?: (documentId: string) => boolean
+  toggleItemCollapse?: (documentId: string) => void
 }>()
 
 function onSortChange(event: Event) {
@@ -534,5 +534,37 @@ function resolveAiTagSuggestions(documentId: string): AiLinkTagSuggestion[] {
   color: var(--panel-muted);
   font-family: var(--b3-font-family-code, monospace);
   font-size: 12px;
+}
+
+.summary-detail-item__collapse-toggle {
+  width: 24px;
+  height: 24px;
+  border: 0;
+  border-radius: 999px;
+  background: transparent;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0;
+  transition: background-color 0.2s;
+}
+
+.summary-detail-item__collapse-toggle:hover {
+  background: var(--surface-card-soft);
+}
+
+.summary-detail-item__caret {
+  display: inline-block;
+  width: 6px;
+  height: 6px;
+  border-right: 1.5px solid var(--panel-muted);
+  border-bottom: 1.5px solid var(--panel-muted);
+  transform: rotate(45deg);
+  transition: transform 0.2s ease;
+}
+
+.summary-detail-item__collapse-toggle[aria-expanded='false'] .summary-detail-item__caret {
+  transform: rotate(-45deg);
 }
 </style>

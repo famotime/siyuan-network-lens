@@ -1,14 +1,12 @@
 <template>
   <section class="panel ai-inbox-panel">
     <div class="panel-header">
-      <div class="ai-inbox-panel__header-copy">
-        <p class="ai-inbox-panel__eyebrow">AI Inbox</p>
-        <h2>{{ t('aiInbox.title') }}</h2>
-        <p class="ai-inbox-panel__description">
-          {{ t('aiInbox.description') }}
-        </p>
-      </div>
-      <div class="panel-header__actions">
+      <div class="panel-header__main">
+        <div class="ai-inbox-panel__header-copy">
+          <p class="ai-inbox-panel__eyebrow">AI Inbox</p>
+          <h2 class="panel-header__title">{{ t('aiInbox.title') }}</h2>
+        </div>
+        <div class="panel-header__actions">
         <button
           v-if="isConfigured"
           class="ghost-button"
@@ -36,6 +34,10 @@
           {{ isExpanded ? t('aiInbox.collapse') : t('aiInbox.expand') }}
         </button>
       </div>
+    </div>
+      <p class="panel-header__description">
+        {{ t('aiInbox.description') }}
+      </p>
     </div>
 
     <div v-if="isExpanded" class="ai-inbox-panel__body">
@@ -285,11 +287,29 @@ async function handleAiInboxActionTargetClick(
 }
 
 .panel-header {
+  display: grid;
+  gap: 12px;
+  margin-bottom: 18px;
+}
+
+.panel-header__main {
   display: flex;
   justify-content: space-between;
   gap: 16px;
   align-items: flex-start;
-  margin-bottom: 18px;
+}
+
+.panel-header__title {
+  font-size: var(--text-lg, 16px);
+  font-weight: 600;
+  margin: 0;
+}
+
+.panel-header__description {
+  margin: 0;
+  line-height: 1.5;
+  color: var(--panel-muted);
+  font-size: 13px;
 }
 
 .panel-header__actions {
