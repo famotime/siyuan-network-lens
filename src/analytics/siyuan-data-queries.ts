@@ -92,7 +92,7 @@ export const REFERENCE_SQL = `
   FROM refs r
   LEFT JOIN blocks src_block ON src_block.id = r.block_id
   LEFT JOIN blocks src_doc ON src_doc.id = r.root_id
-  WHERE r.type = 'ref_id'
+  WHERE r.type IN ('ref_id', 'textmark')
     AND r.root_id <> r.def_block_root_id
   ORDER BY sourceUpdated DESC
   LIMIT ${QUERY_LIMIT}

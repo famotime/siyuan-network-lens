@@ -129,6 +129,63 @@ describe('loadAnalyticsSnapshot', () => {
     expect(snapshot.references).toHaveLength(3)
   })
 
+  it('loads textmark type references from the refs table alongside ref_id', async () => {
+    apiMocks.sqlMock.mockImplementation(async (query: string) => {
+      if (query.includes('FROM refs r')) {
+        return [
+          {
+            id: 'textmark-1',
+            sourceBlockId: '20260510100001-srcblk1',
+            sourceDocumentId: '20260510100000-srcdoc1',
+            targetBlockId: '20260510100002-tgtdoc1',
+            targetDocumentId: '20260510100002-tgtdoc1',
+            content: '~Skills',
+            sourceUpdated: '20260510110000',
+          },
+        ]
+      }
+
+      if (query.includes("WHERE doc.type = 'd'")) {
+        return [
+          {
+            id: '20260510100000-srcdoc1',
+            box: 'box-1',
+            path: '/a.sy',
+            hpath: '/A',
+            title: 'Source A',
+            tag: null,
+            created: '20260510100000',
+            updated: '20260510110000',
+          },
+          {
+            id: '20260510100002-tgtdoc1',
+            box: 'box-1',
+            path: '/b.sy',
+            hpath: '/B',
+            title: 'Target B',
+            tag: null,
+            created: '20260510100000',
+            updated: '20260510110000',
+          },
+        ]
+      }
+
+      return []
+    })
+
+    apiMocks.lsNotebooksMock.mockResolvedValue({ notebooks: [] })
+
+    const snapshot = await loadAnalyticsSnapshot()
+
+    expect(snapshot.references).toEqual([
+      expect.objectContaining({
+        sourceDocumentId: '20260510100000-srcdoc1',
+        targetDocumentId: '20260510100002-tgtdoc1',
+        content: '~Skills',
+      }),
+    ])
+  })
+
   it('parses block references from markdown when refs rows are missing', async () => {
     apiMocks.sqlMock.mockImplementation(async (query: string) => {
       if (query.includes('FROM refs r')) {
