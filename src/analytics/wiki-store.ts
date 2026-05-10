@@ -33,6 +33,7 @@ export interface AiWikiStore {
   saveSnapshot: (snapshot: AiWikiIndexSnapshot) => Promise<void>
   getPageRecord: (pageKey: string) => Promise<WikiPageSnapshotRecord | null>
   savePageRecord: (record: WikiPageSnapshotRecord) => Promise<void>
+  deletePageRecord: (pageKey: string) => Promise<void>
 }
 
 export function createAiWikiStoreFromPlugin(plugin: PluginStorageLike | null | undefined): AiWikiStore | null {
@@ -63,6 +64,12 @@ export function createAiWikiStore(storage: PluginStorageLike): AiWikiStore {
         themeDocumentId: record.themeDocumentId,
       })
       snapshot.pages[pageKey] = normalizePageRecord(record)
+      await saveSnapshot(storage, snapshot)
+    },
+
+    async deletePageRecord(pageKey) {
+      const snapshot = await loadSnapshot(storage)
+      delete snapshot.pages[pageKey]
       await saveSnapshot(storage, snapshot)
     },
   }

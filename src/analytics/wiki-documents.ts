@@ -452,7 +452,7 @@ async function buildIndexDraft(params: {
   }
 }): Promise<RenderedWikiDraft> {
   const snapshot = await params.store.loadSnapshot()
-  const themeRows = await Promise.all(
+  const themeRowsRaw = await Promise.all(
     Object.values(snapshot.pages)
       .filter(record => record.pageType === 'theme')
       .filter(record => record.pageId)
@@ -461,12 +461,22 @@ async function buildIndexDraft(params: {
         const pageMarkdown = record.pageId
           ? await safeReadBlockMarkdown(record.pageId, params.api.getBlockKramdown)
           : ''
+        if (!pageMarkdown) {
+          const pageKey = buildWikiPageStorageKey({
+            pageType: record.pageType,
+            pageTitle: record.pageTitle,
+            themeDocumentId: record.themeDocumentId,
+          })
+          await params.store.deletePageRecord(pageKey)
+          return null
+        }
         return {
           record,
           summary: extractIntroSummary(pageMarkdown),
         }
       }),
   )
+  const themeRows = themeRowsRaw.filter((row): row is NonNullable<typeof row> => row !== null)
 
   const managedMarkdown = [
     `# ${params.title}`,
@@ -796,12 +806,11 @@ function extractIntroSummary(markdown: string): string {
     return ''
   }
 
-  return stripIalFromKramdown(introBody)
+  const cleaned = stripIalFromKramdown(introBody)
     .replace(/<sup>[\s\S]*?<\/sup>/g, '')
     .replace(/^\s*-\s*/gm, '')
-    .replace(/\s+/g, ' ')
-    .trim()
-    .slice(0, 80)
+  const firstParagraph = cleaned.split(/\n\s*\n/)[0] ?? ''
+  return firstParagraph.replace(/\s+/g, ' ').trim()
 }
 
 function stripIalFromKramdown(text: string): string {
