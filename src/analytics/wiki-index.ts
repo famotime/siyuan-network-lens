@@ -1,6 +1,7 @@
 const SIYUAN_BLOCK_URL_PATTERN = /siyuan:\/\/blocks\/([^?\s<>"')\]#]+)/gi
 const MARKDOWN_LINK_WITH_BLOCK_PATTERN = /\[([^\]]+)\]\(\s*siyuan:\/\/blocks\/([^?\s<>"')\]#]+)(?:\s+"[^"]*")?\s*\)/gi
 const BLOCK_REFERENCE_PATTERN = /\(\(\s*([^)\s"']+)(?:\s+"([^"]*)")?\s*\)\)/g
+const SUMMARY_LINE_PATTERN = /^\s*-\s*(?:摘要|Summary)\s*[：:]\s*(.+)\s*$/i
 
 export interface WikiMaintenanceState {
   status: 'idle' | 'reviewing' | 'suggestions-ready' | 'applying'
@@ -106,5 +107,43 @@ export function parseWikiIndexPages(params: {
     })
   }
 
+  attachPageSummariesFromIndexMarkdown(params.kramdown, pages)
+
   return pages
+}
+
+function attachPageSummariesFromIndexMarkdown(kramdown: string, pages: WikiIndexPage[]) {
+  if (!pages.length) {
+    return
+  }
+
+  const pageById = new Map(pages.map(page => [page.documentId, page]))
+  const lines = kramdown.split(/\r?\n/)
+  let currentPage: WikiIndexPage | undefined
+
+  for (const rawLine of lines) {
+    const line = rawLine.trimEnd()
+    const pageMatch = line.match(/^\s*-\s*\[(.+?)\]\(\s*siyuan:\/\/blocks\/([^?\s<>"')\]#]+)(?:\s+"[^"]*")?\s*\)/)
+    if (pageMatch) {
+      currentPage = pageById.get(pageMatch[2])
+      continue
+    }
+
+    if (!currentPage) {
+      continue
+    }
+
+    const summaryMatch = line.match(SUMMARY_LINE_PATTERN)
+    if (summaryMatch) {
+      const summary = summaryMatch[1]?.trim()
+      if (summary) {
+        currentPage.summary = summary
+      }
+      continue
+    }
+
+    if (/^\s*-\s+/.test(line) && !/^\s{2,}-\s+/.test(rawLine)) {
+      currentPage = undefined
+    }
+  }
 }

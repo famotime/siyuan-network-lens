@@ -94,6 +94,42 @@ describe('sendMessage', () => {
     expect(mockProxy).toHaveBeenCalledTimes(2)
   })
 
+  it('topic 模式路由使用索引摘要，不为所有候选页面读取正文', async () => {
+    const pageA = { ...makePage('doc-a', '深度学习基础-llm-wiki'), summary: '介绍反向传播、梯度下降与训练流程。' }
+    const pageB = { ...makePage('doc-b', '强化学习基础-llm-wiki'), summary: '介绍策略迭代、价值函数与探索利用。' }
+    const mockProxy = vi.fn()
+      .mockResolvedValueOnce({ body: JSON.stringify({ choices: [{ message: { content: '强化学习基础-llm-wiki' } }] }) })
+      .mockResolvedValueOnce({ body: JSON.stringify({ choices: [{ message: { content: '{"answer":"强化学习关注奖励信号。","referencedDocumentIds":[]}' } }] }) })
+    const mockGetKramdown = vi.fn(async (id: string) => ({ id, kramdown: `# ${id}` }))
+
+    const session = createWikiChatSession({
+      scope: ref({ mode: 'topic' } as WikiChatScope),
+      wikiPages: ref([pageA, pageB]),
+      forwardProxy: mockProxy,
+      getBlockKramdown: mockGetKramdown,
+      config: ref({
+        aiBaseUrl: 'http://localhost',
+        aiApiKey: 'key',
+        aiModel: 'model',
+        aiRequestTimeoutSeconds: 60,
+        aiMaxTokens: 4096,
+        aiTemperature: 0.7,
+        aiMaxContextMessages: 1,
+      }),
+    })
+
+    session.inputText.value = '奖励函数和探索利用怎么理解？'
+    await session.sendMessage()
+
+    expect(session.session.value.currentSourcePage).toEqual(pageB)
+    expect(mockGetKramdown).toHaveBeenCalledTimes(1)
+    expect(mockGetKramdown).toHaveBeenCalledWith('doc-b')
+
+    const routePayload = JSON.parse(mockProxy.mock.calls[0][2])
+    expect(routePayload.messages[1].content).toContain('Summary: 介绍反向传播、梯度下降与训练流程。')
+    expect(routePayload.messages[1].content).toContain('Summary: 介绍策略迭代、价值函数与探索利用。')
+  })
+
   it('document 模式直接问答不触发路由', async () => {
     const targetPage = makePage('doc1', '深度学习基础-llm-wiki')
     const mockProxy = vi.fn()

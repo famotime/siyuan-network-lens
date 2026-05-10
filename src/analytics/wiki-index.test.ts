@@ -16,6 +16,46 @@ describe('resolveThemeDocumentIdFromTitle', () => {
 })
 
 describe('parseWikiIndexPages', () => {
+  it('从索引页条目里解析每个 wiki 页的摘要', () => {
+    const kramdown = `
+### Wiki 页面清单
+- [Vue 入门-llm-wiki](siyuan://blocks/aaa111 "Vue 入门-llm-wiki")
+  - 配对主题页：[Vue 入门](siyuan://blocks/theme-1 "Vue 入门")
+  - 摘要：面向组件、响应式与组合式 API 的入门说明。
+  - 源文档数：3
+  - 最近更新时间：2026/05/10 10:00:00
+- [React 基础-llm-wiki](siyuan://blocks/bbb222 "React 基础-llm-wiki")
+  - 配对主题页：[React 基础](siyuan://blocks/theme-2 "React 基础")
+  - 摘要：聚焦组件树、状态提升与渲染模式。
+  - 源文档数：5
+`
+    const pages = parseWikiIndexPages({
+      kramdown,
+      wikiPageSuffix: '-llm-wiki',
+    })
+
+    expect(pages).toHaveLength(2)
+    expect(pages[0].summary).toBe('面向组件、响应式与组合式 API 的入门说明。')
+    expect(pages[1].summary).toBe('聚焦组件树、状态提升与渲染模式。')
+  })
+
+  it('索引页条目缺少摘要时仅保留标题与文档信息', () => {
+    const kramdown = `
+### Wiki 页面清单
+- [Vue 入门-llm-wiki](siyuan://blocks/aaa111 "Vue 入门-llm-wiki")
+  - 配对主题页：[Vue 入门](siyuan://blocks/theme-1 "Vue 入门")
+  - 源文档数：3
+`
+    const pages = parseWikiIndexPages({
+      kramdown,
+      wikiPageSuffix: '-llm-wiki',
+    })
+
+    expect(pages).toHaveLength(1)
+    expect(pages[0].title).toBe('Vue 入门-llm-wiki')
+    expect(pages[0].summary).toBeUndefined()
+  })
+
   it('从 markdown 链接中提取标题以 suffix 结尾的文档', () => {
     const kramdown = `
 - [页面A-llm-wiki](siyuan://blocks/aaa111 "页面A-llm-wiki")
