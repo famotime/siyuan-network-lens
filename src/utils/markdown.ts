@@ -48,7 +48,10 @@ export function renderSimpleMarkdown(source: string): string {
   for (const rawLine of lines) {
     const line = rawLine
       .replace(/<!--[\s\S]*?-->/g, '')
-      .replace(/\(\([^)\s]+\s*"[^"]*"\)\)/g, '')
+      .replace(/<sup>[\s\S]*?<\/sup>/gi, '')
+      .replace(/\(\([^)\s]+\s*"([^"]*)"\)\)/g, (_match, label: string) => {
+        return /^\d+$/.test(label.trim()) ? '' : label.trim()
+      })
       .replace(/\[[^\]]*?\]\(siyuan:\/\/[^)]*\)/g, '')
       .replace(/\{:\s[^}]*\}/g, '')
       .trim()
@@ -74,7 +77,12 @@ export function renderSimpleMarkdown(source: string): string {
 
     if (/^[-*]\s+/.test(line)) {
       openList('ul')
-      out.push(`<li>${formatInline(line.replace(/^[-*]\s+/, ''))}</li>`)
+      let content = line.replace(/^[-*]\s+/, '')
+      while (/^[-*]\s+/.test(content)) {
+        content = content.replace(/^[-*]\s+/, '')
+      }
+
+      out.push(`<li>${formatInline(content)}</li>`)
       continue
     }
 

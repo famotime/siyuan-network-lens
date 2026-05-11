@@ -1,6 +1,6 @@
 import { WIKI_PAGE_HEADINGS } from './wiki-page-model'
 import type { WikiPagePlan, WikiSectionDraft, WikiTemplateDiagnosis } from './wiki-template-model'
-import { t } from '@/i18n/ui'
+import { resolveUiLanguageTag, t } from '@/i18n/ui'
 
 export const WIKI_SECTION_MARKER_PREFIX = '<!-- network-lens-wiki-section:'
 
@@ -37,7 +37,7 @@ export function renderThemeWikiDraft(params: {
       heading: t('analytics.wikiPage.metaHeading'),
       body: [
         t('wikiMaintain.pairedTopicPageLine', { value: `((${params.pairedThemeDocumentId} "${params.pairedThemeTitle}"))` }),
-        t('wikiMaintain.generatedAtLine', { value: params.generatedAt }),
+        t('wikiMaintain.generatedAtLine', { value: formatGeneratedAt(params.generatedAt) }),
         t('wikiMaintain.sourceDocsLine', { value: params.sourceDocumentCount }),
         t('wikiMaintain.modelLine', { value: params.model }),
       ].join('\n'),
@@ -86,6 +86,25 @@ export function renderThemeWikiDraft(params: {
   }
 }
 
+function formatGeneratedAt(isoString: string): string {
+  const date = new Date(isoString)
+  if (Number.isNaN(date.getTime())) {
+    return isoString
+  }
+
+  const parts = new Intl.DateTimeFormat(resolveUiLanguageTag(), {
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit',
+    hour: '2-digit',
+    minute: '2-digit',
+    hour12: false,
+  }).formatToParts(date)
+
+  const val = (type: Intl.DateTimeFormatPartTypes) => parts.find(p => p.type === type)?.value ?? ''
+  return `${val('year')}-${val('month')}-${val('day')} ${val('hour')}:${val('minute')}`
+}
+
 const BLOCK_ID_PATTERN = /^[0-9a-f]{22}$/
 
 function isDocumentSourceRef(ref: string): boolean {
@@ -121,12 +140,6 @@ function formatInlineSourceRefs(refs: string[], sourceRefIndexMap: Map<string, n
     .map(ref => `((${ref} "${sourceRefIndexMap.get(ref)}"))`)
     .join(' ')
   return ` <sup>${supers}</sup>`
-}
-
-function formatSourceEntry(ref: string, blockText: string, titleMap: Record<string, string>): string {
-  const title = titleMap[ref]
-  const refLabel = title ? `《${title}》` : ref
-  return `- ((${ref} "${refLabel}")) - ${blockText}`
 }
 
 function resolveRenderedSections(
@@ -198,19 +211,44 @@ function normalizeSourcesSectionBody(
     return ''
   }
 
-  return draft.blocks
-    .flatMap((block) => {
-      const text = block.text.trim()
-      if (!text) {
-        return [] as string[]
+  const grouped = new Map<string, string[]>()
+  const unlinked: string[] = []
+
+  for (const block of draft.blocks) {
+    const text = block.text.trim()
+    if (!text) {
+      continue
+    }
+
+    const docRefs = block.sourceRefs.filter(ref => isDocumentSourceRef(ref))
+    if (!docRefs.length) {
+      unlinked.push(text)
+      continue
+    }
+
+    for (const ref of docRefs) {
+      const existing = grouped.get(ref)
+      if (existing) {
+        existing.push(text)
+      } else {
+        grouped.set(ref, [text])
       }
-      const docRefs = block.sourceRefs.filter(ref => isDocumentSourceRef(ref))
-      if (!docRefs.length) {
-        return [`- ${text}`]
-      }
-      return docRefs.map(ref => formatSourceEntry(ref, text, titleMap))
-    })
-    .join('\n')
+    }
+  }
+
+  const lines: string[] = []
+  for (const [ref, texts] of grouped) {
+    const title = titleMap[ref]
+    const refLabel = title ? `《${title}》` : ref
+    const link = `((${ref} "${refLabel}"))`
+    const body = texts.join('；')
+    lines.push(`- ${link}：${body}`)
+  }
+  for (const text of unlinked) {
+    lines.push(`- ${text}`)
+  }
+
+  return lines.join('\n')
 }
 
 function resolveSectionHeading(sectionType: string, draft?: WikiSectionDraft): string {

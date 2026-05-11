@@ -147,7 +147,7 @@ describe('wiki renderer', () => {
     expect(rendered.managedMarkdown).toContain('- 先保留证据，再下结论。 <sup>((doc-ai-bridge "2"))</sup>')
   })
 
-  it('renders sources section entries as block references with titles', () => {
+  it('renders sources section entries grouped by document title', () => {
     const rendered = renderThemeWikiDraft({
       pageTitle: '主题-AI-索引-llm-wiki',
       pairedThemeDocumentId: '20260409120000-abcdef0',
@@ -161,8 +161,77 @@ describe('wiki renderer', () => {
       sourceDocumentTitleMap,
     })
 
-    expect(rendered.managedMarkdown).toContain('- ((doc-ai-bridge "《AI 桥接维护》")) - AI 桥接 -> AI 核心 在当前窗口新增 1 条连接。')
-    expect(rendered.managedMarkdown).toContain('- ((doc-ai-core "《AI 核心概念》")) - AI 桥接 -> AI 核心 在当前窗口新增 1 条连接。')
+    expect(rendered.managedMarkdown).toContain('- ((doc-ai-bridge "《AI 桥接维护》"))：AI 桥接 -> AI 核心 在当前窗口新增 1 条连接。')
+    expect(rendered.managedMarkdown).toContain('- ((doc-ai-core "《AI 核心概念》"))：AI 桥接 -> AI 核心 在当前窗口新增 1 条连接。')
+  })
+
+  it('deduplicates sources entries when multiple blocks reference the same document', () => {
+    const duplicateSections: WikiSectionDraft[] = [
+      {
+        sectionType: 'intro',
+        title: '概览',
+        format: 'overview',
+        blocks: [{ text: '概览。', sourceRefs: ['doc-1'] }],
+        sourceRefs: ['doc-1'],
+      },
+      {
+        sectionType: 'sources',
+        title: '来源与证据',
+        format: 'catalog',
+        blocks: [
+          { text: '引用一。', sourceRefs: ['doc-1'] },
+          { text: '引用二。', sourceRefs: ['doc-1'] },
+          { text: '引用三。', sourceRefs: ['doc-2'] },
+        ],
+        sourceRefs: ['doc-1', 'doc-2'],
+      },
+    ]
+
+    const rendered = renderThemeWikiDraft({
+      pageTitle: 'test-llm-wiki',
+      pairedThemeDocumentId: 'theme-1',
+      pairedThemeTitle: 'Test',
+      generatedAt: '2026-04-09T12:00:00.000Z',
+      model: 'test',
+      sourceDocumentCount: 2,
+      diagnosis,
+      pagePlan: {
+        ...pagePlan,
+        sectionOrder: ['intro', 'sources'],
+        optionalSections: [],
+      },
+      sections: duplicateSections,
+      sourceDocumentTitleMap: { 'doc-1': '文档一', 'doc-2': '文档二' },
+    })
+
+    expect(rendered.managedMarkdown).toContain('- ((doc-1 "《文档一》"))：引用一。；引用二。')
+    expect(rendered.managedMarkdown).toContain('- ((doc-2 "《文档二》"))：引用三。')
+  })
+
+  it('renders generatedAt in a user-friendly datetime format', () => {
+    const rendered = renderThemeWikiDraft({
+      pageTitle: 'test-llm-wiki',
+      pairedThemeDocumentId: 'theme-1',
+      pairedThemeTitle: 'Test',
+      generatedAt: '2026-04-09T14:30:00.000Z',
+      model: 'test',
+      sourceDocumentCount: 0,
+      diagnosis,
+      pagePlan: {
+        ...pagePlan,
+        sectionOrder: ['intro', 'sources'],
+        optionalSections: [],
+      },
+      sections: [
+        { sectionType: 'intro', title: '概览', format: 'overview', blocks: [], sourceRefs: [] },
+        { sectionType: 'sources', title: '来源', format: 'catalog', blocks: [], sourceRefs: [] },
+      ],
+    })
+
+    // Should contain a formatted datetime, not raw ISO string
+    expect(rendered.managedMarkdown).not.toContain('2026-04-09T14:30:00.000Z')
+    // Should match YYYY-MM-DD HH:mm pattern (locale-dependent label)
+    expect(rendered.managedMarkdown).toMatch(/\d{4}-\d{2}-\d{2}\s\d{2}:\d{2}/)
   })
 
   it('skips rendering a conflict section when blocks are empty', () => {

@@ -39,4 +39,50 @@ describe('renderSimpleMarkdown', () => {
     expect(html).toContain('<strong>&lt;script&gt;alert(1)&lt;/script&gt;</strong>')
     expect(html).not.toContain('<script>alert(1)</script>')
   })
+
+  it('strips <sup> tags and their content', () => {
+    const html = renderSimpleMarkdown('正文内容 <sup>((block-id "1"))</sup> 继续')
+
+    expect(html).not.toContain('<sup>')
+    expect(html).not.toContain('&lt;sup&gt;')
+    expect(html).toContain('正文内容')
+    expect(html).toContain('继续')
+  })
+
+  it('strips <sup> tags with plain text content', () => {
+    const html = renderSimpleMarkdown('引用<sup>[1]</sup>文本')
+
+    expect(html).not.toContain('sup')
+    expect(html).toContain('引用')
+    expect(html).toContain('文本')
+  })
+
+  it('preserves meaningful document titles from block references', () => {
+    const html = renderSimpleMarkdown('- ((doc-ai-core "《AI 核心》"))：引用内容。')
+
+    expect(html).toContain('《AI 核心》')
+    expect(html).toContain('引用内容')
+    expect(html).not.toContain('((')
+  })
+
+  it('strips numeric-only block reference labels', () => {
+    const html = renderSimpleMarkdown('正文((block-id "2"))结束')
+
+    expect(html).toContain('正文')
+    expect(html).toContain('结束')
+    expect(html).not.toContain('2')
+    expect(html).not.toContain('((')
+  })
+
+  it('removes duplicate list markers from list item content', () => {
+    const html = renderSimpleMarkdown([
+      '- - 嵌套列表项',
+      '- * 另一项',
+    ].join('\n'))
+
+    expect(html).toContain('<li>嵌套列表项</li>')
+    expect(html).toContain('<li>另一项</li>')
+    expect(html).not.toContain('- 嵌套')
+    expect(html).not.toContain('* 另一')
+  })
 })
