@@ -1,0 +1,899 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>LLM Wiki 信息图</title>
+  <style>
+    :root {
+      --paper: #f5efe4;
+      --paper-soft: rgba(255, 252, 247, 0.76);
+      --sage-1: #e9f1ea;
+      --sage-2: #d5e3da;
+      --sage-3: #7e9a87;
+      --ink: #203227;
+      --ink-soft: #4d5f57;
+      --blue-1: #e7eef3;
+      --peach-1: #f6e8d9;
+      --gold-1: #f2deba;
+      --line: rgba(65, 86, 74, 0.16);
+      --shadow: 0 30px 70px rgba(60, 72, 59, 0.12);
+      --radius-xl: 36px;
+      --radius-lg: 28px;
+      --radius-md: 20px;
+      --body-font: "Microsoft YaHei", "PingFang SC", "Noto Sans CJK SC", sans-serif;
+      --title-font: "Palatino Linotype", "Book Antiqua", "Noto Serif SC", "Source Han Serif SC", serif;
+    }
+
+    * {
+      box-sizing: border-box;
+    }
+
+    html,
+    body {
+      margin: 0;
+      min-height: 100%;
+      background:
+        radial-gradient(circle at top left, rgba(245, 224, 194, 0.62), transparent 28%),
+        radial-gradient(circle at right 16% top 10%, rgba(212, 227, 219, 0.92), transparent 22%),
+        radial-gradient(circle at left 72% bottom 12%, rgba(228, 236, 242, 0.86), transparent 24%),
+        linear-gradient(140deg, #f7f0e6 0%, #eef3eb 48%, #eaedf0 100%);
+      color: var(--ink);
+      font-family: var(--body-font);
+    }
+
+    body {
+      padding: 28px;
+    }
+
+    .poster {
+      position: relative;
+      width: min(1640px, calc(100vw - 56px));
+      margin: 0 auto;
+      min-height: 980px;
+      padding: 34px 38px 28px;
+      border-radius: 42px;
+      overflow: visible;
+      background:
+        linear-gradient(180deg, rgba(255, 253, 248, 0.96), rgba(247, 243, 236, 0.92)),
+        linear-gradient(120deg, rgba(255, 255, 255, 0.5), rgba(255, 255, 255, 0));
+      border: 1px solid rgba(90, 106, 96, 0.14);
+      box-shadow: var(--shadow);
+      isolation: isolate;
+    }
+
+    .poster::before,
+    .poster::after {
+      content: "";
+      position: absolute;
+      inset: 0;
+      pointer-events: none;
+    }
+
+    .poster::before {
+      background:
+        repeating-linear-gradient(90deg, transparent 0 63px, rgba(50, 71, 61, 0.04) 63px 64px),
+        repeating-linear-gradient(0deg, transparent 0 63px, rgba(50, 71, 61, 0.04) 63px 64px);
+      opacity: 0.42;
+      mask: linear-gradient(180deg, rgba(0, 0, 0, 0.72), rgba(0, 0, 0, 0.16));
+    }
+
+    .poster::after {
+      background:
+        radial-gradient(circle at 14% 22%, rgba(242, 222, 186, 0.22), transparent 16%),
+        radial-gradient(circle at 82% 18%, rgba(167, 190, 175, 0.18), transparent 20%),
+        radial-gradient(circle at 74% 78%, rgba(182, 204, 218, 0.2), transparent 20%);
+      z-index: -1;
+    }
+
+    .hero {
+      position: relative;
+      display: grid;
+      grid-template-columns: minmax(0, 1fr);
+      gap: 18px;
+      align-items: start;
+      margin-bottom: 22px;
+    }
+
+    .eyebrow {
+      display: inline-flex;
+      align-items: center;
+      gap: 10px;
+      padding: 10px 18px;
+      border-radius: 999px;
+      margin-bottom: 18px;
+      background: rgba(232, 240, 232, 0.92);
+      border: 1px solid rgba(126, 154, 135, 0.26);
+      color: var(--sage-3);
+      font-size: 14px;
+      font-weight: 700;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+    }
+
+    .eyebrow::before {
+      content: "";
+      width: 10px;
+      height: 10px;
+      border-radius: 50%;
+      background: linear-gradient(135deg, #6b8975, #9fb6a4);
+      box-shadow: 0 0 0 6px rgba(126, 154, 135, 0.14);
+    }
+
+    h1 {
+      margin: 0;
+      font-family: var(--title-font);
+      font-size: clamp(2.5rem, 3.8vw, 4.35rem);
+      line-height: 1.02;
+      letter-spacing: -0.03em;
+      text-wrap: balance;
+    }
+
+    .subtitle {
+      margin: 16px 0 0;
+      color: var(--ink-soft);
+      font-size: clamp(1rem, 1.24vw, 1.3rem);
+      line-height: 1.72;
+      text-wrap: pretty;
+    }
+
+    .hero-side {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 12px;
+      justify-content: flex-start;
+    }
+
+    .note-chip,
+    .focus-tag {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      border-radius: 999px;
+      white-space: nowrap;
+      font-weight: 700;
+    }
+
+    .note-chip {
+      padding: 10px 16px;
+      background: rgba(246, 232, 217, 0.8);
+      border: 1px solid rgba(171, 131, 95, 0.2);
+      color: #845a35;
+      font-size: 13px;
+      letter-spacing: 0.06em;
+    }
+
+    .focus-tag {
+      padding: 12px 18px;
+      background: rgba(231, 238, 243, 0.9);
+      border: 1px solid rgba(112, 131, 146, 0.18);
+      color: #4d6878;
+      font-size: 14px;
+    }
+
+    .compare-strip {
+      display: grid;
+      grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr);
+      gap: 18px;
+      align-items: center;
+      margin-bottom: 22px;
+    }
+
+    .compare-card,
+    .bridge-card,
+    .panel,
+    .mini-card,
+    .scene-card,
+    .value-item {
+      background: var(--paper-soft);
+      backdrop-filter: blur(14px);
+      border: 1px solid rgba(78, 97, 86, 0.12);
+      box-shadow: 0 10px 30px rgba(58, 67, 58, 0.06);
+    }
+
+    .compare-card {
+      padding: 16px 18px 18px;
+      border-radius: 24px;
+      min-height: 134px;
+    }
+
+    .compare-card h2,
+    .bridge-card h2,
+    .panel h2,
+    .panel h3,
+    .mini-card h3,
+    .value-item h3,
+    .scene-card h3 {
+      margin: 0;
+      font-size: 1rem;
+      line-height: 1.3;
+    }
+
+    .compare-card h2 {
+      margin-bottom: 10px;
+      font-size: 1.02rem;
+    }
+
+    .compare-card p,
+    .bridge-card p,
+    .stack-card p,
+    .op-card p,
+    .mini-card p,
+    .scene-card p,
+    .value-item p,
+    .footer-note {
+      margin: 0;
+      color: var(--ink-soft);
+      line-height: 1.58;
+      font-size: 0.95rem;
+      text-wrap: pretty;
+    }
+
+    .compare-card--left {
+      background: linear-gradient(180deg, rgba(249, 241, 231, 0.94), rgba(255, 251, 246, 0.82));
+    }
+
+    .compare-card--right {
+      background: linear-gradient(180deg, rgba(232, 242, 234, 0.94), rgba(251, 254, 251, 0.84));
+    }
+
+    .compare-label {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      margin-bottom: 12px;
+      padding: 6px 12px;
+      border-radius: 999px;
+      font-size: 12px;
+      font-weight: 700;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+    }
+
+    .compare-card--left .compare-label {
+      background: rgba(250, 228, 205, 0.92);
+      color: #885938;
+    }
+
+    .compare-card--right .compare-label {
+      background: rgba(223, 239, 225, 0.96);
+      color: #547160;
+    }
+
+    .bridge-card {
+      padding: 14px 18px;
+      border-radius: 999px;
+      text-align: center;
+      background: linear-gradient(90deg, rgba(246, 238, 225, 0.98), rgba(235, 242, 236, 0.96));
+      min-width: 260px;
+    }
+
+    .bridge-card h2 {
+      font-size: 0.95rem;
+      color: var(--sage-3);
+      letter-spacing: 0.05em;
+    }
+
+    .bridge-card p {
+      margin-top: 4px;
+      font-size: 0.88rem;
+    }
+
+    .main-grid {
+      display: grid;
+      grid-template-columns: 1.05fr 1.28fr 1.05fr;
+      grid-template-rows: minmax(0, 1fr) auto;
+      gap: 22px;
+    }
+
+    .panel {
+      position: relative;
+      padding: 22px;
+      border-radius: var(--radius-xl);
+    }
+
+    .panel-title {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      margin-bottom: 16px;
+    }
+
+    .panel-title::before {
+      content: "";
+      width: 14px;
+      height: 14px;
+      border-radius: 50%;
+      background: linear-gradient(135deg, #6b8975, #a2b7aa);
+      flex: none;
+      box-shadow: 0 0 0 8px rgba(126, 154, 135, 0.14);
+    }
+
+    .panel-title h2 {
+      font-size: 1.14rem;
+      letter-spacing: 0.02em;
+    }
+
+    .architecture {
+      display: grid;
+      grid-template-rows: auto 1fr;
+    }
+
+    .stack-list,
+    .ops-list,
+    .value-list {
+      display: grid;
+      gap: 14px;
+    }
+
+    .stack-card,
+    .op-card,
+    .mini-card,
+    .scene-card,
+    .value-item {
+      position: relative;
+      padding: 18px 18px 16px;
+      border-radius: var(--radius-lg);
+    }
+
+    .stack-card {
+      padding-top: 20px;
+      background: rgba(255, 252, 248, 0.92);
+    }
+
+    .stack-card::before,
+    .op-card::before,
+    .mini-card::before,
+    .scene-card::before,
+    .value-item::before {
+      content: "";
+      position: absolute;
+      top: 0;
+      left: 0;
+      right: 0;
+      height: 7px;
+      border-radius: inherit inherit 0 0;
+      background: linear-gradient(90deg, rgba(126, 154, 135, 0.94), rgba(126, 154, 135, 0.28));
+    }
+
+    .stack-card:nth-child(1) {
+      transform: rotate(-0.45deg);
+    }
+
+    .stack-card:nth-child(2) {
+      transform: rotate(0.32deg);
+    }
+
+    .stack-card:nth-child(3) {
+      transform: rotate(-0.2deg);
+    }
+
+    .stack-card h3,
+    .op-card h3,
+    .mini-card h3,
+    .scene-card h3,
+    .value-item h3 {
+      margin-bottom: 8px;
+      font-size: 1.02rem;
+    }
+
+    .flywheel {
+      display: grid;
+      grid-template-rows: auto 1fr auto;
+      background:
+        linear-gradient(180deg, rgba(255, 253, 248, 0.94), rgba(244, 248, 244, 0.88));
+    }
+
+    .flywheel .panel-title {
+      margin-bottom: 8px;
+    }
+
+    .flywheel-summary {
+      color: var(--ink-soft);
+      margin-bottom: 18px;
+      font-size: 0.96rem;
+    }
+
+    .wheel-zone {
+      position: relative;
+      min-height: 370px;
+      display: grid;
+      place-items: center;
+      margin-inline: 6px;
+    }
+
+    .wheel-ring {
+      position: relative;
+      width: min(100%, 430px);
+      aspect-ratio: 1;
+      border-radius: 50%;
+      display: grid;
+      place-items: center;
+      background:
+        radial-gradient(circle at center, rgba(255, 251, 245, 0.96) 0 34%, transparent 34% 100%),
+        conic-gradient(from -22deg,
+          rgba(126, 154, 135, 0.24),
+          rgba(126, 154, 135, 0.7),
+          rgba(178, 197, 205, 0.65),
+          rgba(242, 222, 186, 0.7),
+          rgba(126, 154, 135, 0.24));
+      box-shadow:
+        inset 0 0 0 28px rgba(255, 252, 246, 0.88),
+        0 22px 42px rgba(59, 75, 67, 0.12);
+    }
+
+    .wheel-ring::before,
+    .wheel-ring::after {
+      content: "";
+      position: absolute;
+      border-radius: 50%;
+      inset: 18px;
+      border: 1px dashed rgba(95, 118, 104, 0.26);
+    }
+
+    .wheel-ring::after {
+      inset: 56px;
+      border-style: solid;
+      border-color: rgba(95, 118, 104, 0.12);
+    }
+
+    .wheel-core {
+      width: 58%;
+      aspect-ratio: 1;
+      padding: 18px;
+      border-radius: 50%;
+      background: linear-gradient(180deg, rgba(255, 251, 246, 0.98), rgba(244, 248, 243, 0.94));
+      border: 1px solid rgba(98, 120, 107, 0.12);
+      display: grid;
+      place-items: center;
+      text-align: center;
+      box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.8);
+    }
+
+    .wheel-core strong {
+      display: block;
+      font-family: var(--title-font);
+      font-size: clamp(1.3rem, 1.9vw, 1.9rem);
+      line-height: 1.2;
+    }
+
+    .wheel-core span {
+      display: block;
+      margin-top: 10px;
+      color: var(--sage-3);
+      font-size: 0.95rem;
+      line-height: 1.55;
+    }
+
+    .step-card {
+      position: absolute;
+      width: 170px;
+      padding: 14px 16px 13px;
+      border-radius: 18px;
+      background: rgba(255, 253, 249, 0.97);
+      border: 1px solid rgba(90, 106, 96, 0.12);
+      box-shadow: 0 14px 30px rgba(58, 67, 58, 0.1);
+      text-align: center;
+    }
+
+    .step-card strong {
+      display: block;
+      font-size: 0.98rem;
+      margin-bottom: 4px;
+    }
+
+    .step-card span {
+      display: block;
+      color: var(--ink-soft);
+      font-size: 0.84rem;
+      line-height: 1.42;
+    }
+
+    .step-top {
+      top: -2px;
+      left: 50%;
+      transform: translateX(-50%);
+    }
+
+    .step-right {
+      top: 50%;
+      right: -8px;
+      transform: translateY(-50%);
+    }
+
+    .step-bottom {
+      bottom: -2px;
+      left: 50%;
+      transform: translateX(-50%);
+    }
+
+    .step-left {
+      top: 50%;
+      left: -8px;
+      transform: translateY(-50%);
+    }
+
+    .flywheel-footnote {
+      margin-top: 14px;
+      padding: 12px 16px;
+      border-radius: 18px;
+      background: linear-gradient(90deg, rgba(246, 239, 228, 0.98), rgba(234, 243, 236, 0.94));
+      border: 1px solid rgba(90, 106, 96, 0.12);
+      font-size: 0.92rem;
+      color: var(--ink-soft);
+      text-align: center;
+    }
+
+    .operations {
+      background: linear-gradient(180deg, rgba(252, 249, 244, 0.96), rgba(245, 248, 245, 0.9));
+    }
+
+    .op-card {
+      padding-left: 20px;
+    }
+
+    .op-card::after {
+      content: "";
+      position: absolute;
+      left: 18px;
+      top: 18px;
+      bottom: 18px;
+      width: 2px;
+      background: linear-gradient(180deg, rgba(126, 154, 135, 0.24), rgba(126, 154, 135, 0.02));
+      opacity: 0.65;
+    }
+
+    .op-card h3,
+    .op-card p {
+      position: relative;
+      padding-left: 22px;
+    }
+
+    .op-card h3::before {
+      content: "";
+      position: absolute;
+      left: 0;
+      top: 0.34em;
+      width: 12px;
+      height: 12px;
+      border-radius: 50%;
+      background: linear-gradient(135deg, #6b8975, #a5baa9);
+      box-shadow: 0 0 0 7px rgba(126, 154, 135, 0.12);
+    }
+
+    .bottom-row {
+      display: grid;
+      grid-template-columns: 1.15fr 0.92fr 1fr;
+      gap: 22px;
+      grid-column: 1 / -1;
+    }
+
+    .scenes-grid {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 14px;
+    }
+
+    .scene-card,
+    .mini-card,
+    .value-item {
+      background: rgba(255, 252, 247, 0.92);
+    }
+
+    .mini-grid {
+      display: grid;
+      gap: 14px;
+    }
+
+    .mini-card--split {
+      display: grid;
+      gap: 12px;
+      background: linear-gradient(180deg, rgba(232, 240, 233, 0.76), rgba(255, 252, 247, 0.9));
+    }
+
+    .mini-card dl {
+      margin: 0;
+      display: grid;
+      gap: 10px;
+    }
+
+    .mini-card div {
+      display: grid;
+      gap: 4px;
+    }
+
+    .mini-card dt {
+      font-size: 0.82rem;
+      font-weight: 700;
+      color: var(--sage-3);
+      letter-spacing: 0.05em;
+      text-transform: uppercase;
+    }
+
+    .mini-card dd {
+      margin: 0;
+      font-size: 0.95rem;
+      color: var(--ink-soft);
+      line-height: 1.52;
+    }
+
+    .value-list {
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+
+    .value-item h3 {
+      margin-bottom: 6px;
+    }
+
+    .value-item p {
+      font-size: 0.9rem;
+      line-height: 1.5;
+    }
+
+    .footer-note {
+      margin-top: 16px;
+      padding-top: 14px;
+      border-top: 1px solid rgba(68, 89, 78, 0.12);
+      font-size: 0.92rem;
+    }
+
+    .footer-note strong {
+      color: var(--ink);
+    }
+
+    @media (max-width: 1320px) {
+      body {
+        padding: 18px;
+      }
+
+      .poster {
+        width: min(100%, 1200px);
+        aspect-ratio: auto;
+      }
+
+      .compare-strip,
+      .main-grid,
+      .bottom-row,
+      .scenes-grid,
+      .value-list {
+        grid-template-columns: 1fr;
+      }
+
+      .main-grid {
+        grid-template-rows: auto;
+      }
+
+      .wheel-zone {
+        min-height: 520px;
+      }
+
+      .step-left,
+      .step-right {
+        left: 50%;
+        right: auto;
+        transform: translateX(-50%);
+      }
+
+      .step-left {
+        top: 18px;
+      }
+
+      .step-top {
+        top: 112px;
+      }
+
+      .step-right {
+        top: auto;
+        bottom: 112px;
+      }
+
+      .step-bottom {
+        bottom: 18px;
+      }
+
+      .hero-side {
+        justify-content: flex-start;
+      }
+    }
+
+    @media print {
+      body {
+        padding: 0;
+        background: white;
+      }
+
+      .poster {
+        width: 100%;
+        min-height: auto;
+        border-radius: 0;
+        box-shadow: none;
+      }
+    }
+  </style>
+</head>
+<body>
+  <article class="poster" aria-label="LLM Wiki 中文信息图">
+    <header class="hero">
+      <h1>LLM Wiki：让知识像系统一样持续生长</h1>
+      <p class="subtitle">
+        不是每次重找答案，而是把阅读、提问与整理不断沉淀成可维护的个人知识体系。把零散资料变成持续演化的 Wiki，把偶然得到的洞察变成反复复用的知识资产。
+      </p>
+    </header>
+
+    <section class="compare-strip" aria-label="认知转折区">
+      <article class="compare-card compare-card--left">
+        <div class="compare-label">传统问答 / RAG</div>
+        <h2>提问时再检索，答案常常从头拼装。</h2>
+        <p>每次都在重新找片段、重新串上下文，知识不会自然长成结构。</p>
+      </article>
+
+      <article class="bridge-card" aria-label="核心判断">
+        <h2>关键变化</h2>
+        <p>重点不只是找到资料，而是把资料编译成长期可用的知识。</p>
+      </article>
+
+      <article class="compare-card compare-card--right">
+        <div class="compare-label">LLM Wiki</div>
+        <h2>平时就持续整理，问题与答案还能继续回写。</h2>
+        <p>交叉引用、矛盾提示、主题综述与新结论会一直累积，知识因此越用越完整。</p>
+      </article>
+    </section>
+
+    <main class="main-grid">
+      <section class="panel architecture" aria-labelledby="architecture-title">
+        <div class="panel-title">
+          <h2 id="architecture-title">三层架构</h2>
+        </div>
+        <div class="stack-list">
+          <article class="stack-card">
+            <h3>原始资料层</h3>
+            <p>文章、论文、播客、图片、会议记录等都在这里。它们只读保存，是知识系统的事实来源。</p>
+          </article>
+          <article class="stack-card">
+            <h3>Wiki 层</h3>
+            <p>由 LLM 维护的主题页、概念页、人物页、比较页与综述页。你阅读它，LLM 持续更新它。</p>
+          </article>
+          <article class="stack-card">
+            <h3>规则层</h3>
+            <p>命名、归档、互链、索引、日志与维护流程的约定。它决定 LLM 是聊天机器人，还是稳定的知识维护者。</p>
+          </article>
+        </div>
+      </section>
+
+      <section class="panel flywheel" aria-labelledby="flywheel-title">
+        <div class="panel-title">
+          <h2 id="flywheel-title">知识沉淀飞轮</h2>
+        </div>
+        <p class="flywheel-summary">核心不是“每次重新发现”，而是“让已经形成的理解继续增长、继续修正、继续被使用”。</p>
+        <div class="wheel-zone" aria-hidden="true">
+          <div class="wheel-ring">
+            <div class="wheel-core">
+              <div>
+                <strong>知识不会<br>每次从零开始</strong>
+                <span>而是越用越完整</span>
+              </div>
+            </div>
+          </div>
+          <div class="step-card step-top">
+            <strong>收集来源</strong>
+            <span>把文章、记录、书摘与素材纳入体系</span>
+          </div>
+          <div class="step-card step-right">
+            <strong>提炼整合</strong>
+            <span>摘要、归档、互链、修订已有页面</span>
+          </div>
+          <div class="step-card step-bottom">
+            <strong>提问回写</strong>
+            <span>把有价值的比较、分析和洞察存回 Wiki</span>
+          </div>
+          <div class="step-card step-left">
+            <strong>Wiki 演化</strong>
+            <span>页面网络越来越丰富，理解不断更新</span>
+          </div>
+        </div>
+        <div class="flywheel-footnote">好的答案不该消失在对话历史里，而应该成为下一轮理解的起点。</div>
+      </section>
+
+      <section class="panel operations" aria-labelledby="operations-title">
+        <div class="panel-title">
+          <h2 id="operations-title">三类关键操作</h2>
+        </div>
+        <div class="ops-list">
+          <article class="op-card">
+            <h3>Ingest 纳入</h3>
+            <p>新资料进入后，LLM 写摘要、更新相关页面，并同步补齐索引与日志。一份来源可能联动多页内容。</p>
+          </article>
+          <article class="op-card">
+            <h3>Query 提问</h3>
+            <p>你不是只在问答案，而是在推动知识系统继续长出比较、分析、图表、结论与新页面。</p>
+          </article>
+          <article class="op-card">
+            <h3>Lint 巡检</h3>
+            <p>定期寻找矛盾、过时内容、孤立页面、缺失概念和待补证据，让 Wiki 在增长中保持健康。</p>
+          </article>
+        </div>
+      </section>
+
+      <section class="bottom-row">
+        <section class="panel" aria-labelledby="scenes-title">
+          <div class="panel-title">
+            <h2 id="scenes-title">适用场景</h2>
+          </div>
+          <div class="scenes-grid">
+            <article class="scene-card">
+              <h3>个人成长</h3>
+              <p>把目标、日记、播客笔记和文章长期串联，逐步形成对自己的稳定理解。</p>
+            </article>
+            <article class="scene-card">
+              <h3>专题研究</h3>
+              <p>围绕一个议题持续积累资料，让论点、证据与反例不断互相修正。</p>
+            </article>
+            <article class="scene-card">
+              <h3>读书陪伴</h3>
+              <p>章节、人物、主题与情节线同步沉淀，阅读过程本身会生成一套 companion wiki。</p>
+            </article>
+            <article class="scene-card">
+              <h3>团队知识库</h3>
+              <p>会议纪要、项目文档、客户访谈与讨论线程不再散落在多个地方。</p>
+            </article>
+          </div>
+        </section>
+
+        <section class="panel" aria-labelledby="helper-title">
+          <div class="panel-title">
+            <h2 id="helper-title">导航与分工</h2>
+          </div>
+          <div class="mini-grid">
+            <article class="mini-card">
+              <h3>index.md</h3>
+              <p>内容目录。先回答“这里有什么”，帮助 LLM 快速定位相关页面。</p>
+            </article>
+            <article class="mini-card">
+              <h3>log.md</h3>
+              <p>变化时间轴。记录最近纳入、提问与巡检，让系统知道它是怎样演化到现在的。</p>
+            </article>
+            <article class="mini-card mini-card--split">
+              <h3>人机协作边界</h3>
+              <dl>
+                <div>
+                  <dt>人负责</dt>
+                  <dd>选资料、提问题、判断方向、决定哪些认知值得保留。</dd>
+                </div>
+                <div>
+                  <dt>LLM 负责</dt>
+                  <dd>摘要、互链、归档、对照、修订和跨页维护这些繁琐工作。</dd>
+                </div>
+              </dl>
+            </article>
+          </div>
+        </section>
+
+        <section class="panel" aria-labelledby="value-title">
+          <div class="panel-title">
+            <h2 id="value-title">为什么它有效</h2>
+          </div>
+          <div class="value-list">
+            <article class="value-item">
+              <h3>维护成本接近零</h3>
+              <p>人们放弃 Wiki 往往不是因为不重要，而是因为维护太累。</p>
+            </article>
+            <article class="value-item">
+              <h3>交叉引用自动补齐</h3>
+              <p>LLM 擅长一次触碰多页内容，把遗漏的连接补回来。</p>
+            </article>
+            <article class="value-item">
+              <h3>新旧观点持续修正</h3>
+              <p>新资料到来时，旧结论不是被遗忘，而是被更新、被挑战、被标注。</p>
+            </article>
+            <article class="value-item">
+              <h3>知识资产随时间复利</h3>
+              <p>每次阅读、提问与整理都会让下一次理解更快、更稳、更深入。</p>
+            </article>
+          </div>
+          <p class="footer-note"><strong>本质上，LLM Wiki 是一套由 LLM 维护的 Markdown 知识系统。</strong> 你负责判断意义，LLM 负责把意义组织成可长期使用的结构。</p>
+        </section>
+      </section>
+    </main>
+  </article>
+</body>
+</html>
