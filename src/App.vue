@@ -271,6 +271,7 @@
       :current-markdown="''"
       :suggestions="llmWikiMaintainTargetPage.maintenanceState?.suggestions ?? []"
       :revised-markdown="llmWikiMaintainTargetPage.maintenanceState?.diffPreview ?? ''"
+      :loading="llmWikiMaintainTargetPage.maintenanceState?.status === 'reviewing'"
       @close="closeLlmWikiMaintainDiff"
       @apply="handleLlmWikiMaintainApply"
     />
@@ -494,9 +495,12 @@ function handleAddTag(documentId: string) {
   toggleOrphanAiTagSuggestion(documentId, tag)
 }
 
-function handleLlmWikiMaintain(page: WikiIndexPage) {
-  reviewLlmWikiPage(page)
+async function handleLlmWikiMaintain(page: WikiIndexPage) {
+  console.info('[llm-wiki-maintain] button clicked', page.documentId, page.title)
   openLlmWikiMaintainDiff(page)
+  const updatedPage = await reviewLlmWikiPage(page)
+  llmWikiMaintainTargetPage.value = updatedPage
+  console.info('[llm-wiki-maintain] review completed, status:', updatedPage.maintenanceState?.status)
 }
 
 async function handleLlmWikiChatSave(markdown: string) {

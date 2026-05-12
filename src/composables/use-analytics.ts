@@ -646,6 +646,7 @@ export function useAnalyticsState(params: UseAnalyticsParams) {
     forwardProxy: params.forwardProxy,
     getBlockKramdown,
     updateBlock,
+    logger: pluginLogger,
   })
 
   const llmWikiChat = createLlmWikiChatController()

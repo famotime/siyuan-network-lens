@@ -12,6 +12,7 @@ export function parseMaintenanceResponse(content: string): WikiMaintenanceResult
       .replace(/^```(?:json)?\s*\n?/i, '')
       .replace(/\n?```\s*$/i, '')
       .trim()
+    console.info('[llm-wiki-maintain] parseMaintenanceResponse cleaned length:', cleaned.length, 'first 100 chars:', cleaned.slice(0, 100))
     const parsed = JSON.parse(cleaned)
     const suggestions: WikiMaintenanceSuggestion[] = Array.isArray(parsed.suggestions)
       ? parsed.suggestions.map((s: any) => ({
@@ -24,7 +25,8 @@ export function parseMaintenanceResponse(content: string): WikiMaintenanceResult
       suggestions,
       revisedMarkdown: typeof parsed.revisedMarkdown === 'string' ? parsed.revisedMarkdown : '',
     }
-  } catch {
+  } catch (e: any) {
+    console.error('[llm-wiki-maintain] parseMaintenanceResponse failed:', e.message)
     return { suggestions: [], revisedMarkdown: '' }
   }
 }
