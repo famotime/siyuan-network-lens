@@ -760,28 +760,26 @@ import type { ThemeDocument, ThemeDocumentMatch } from '@/analytics/theme-docume
 import type { PathScope } from '@/composables/use-analytics-derived'
 import { t } from '@/i18n/ui'
 import {
-  resolveAiInboxActionTargets as resolveAiInboxActionTargetsFromData,
   resolveAiInboxActionLines,
   resolveAiInboxItemDocumentId,
   resolveAiInboxTargetIntent,
   splitAiInboxItemTitle,
 } from '@/components/ai-inbox-detail'
+import {
+  buildAiInboxHistoryTooltip,
+  buildSuggestionCalloutItems,
+  hasSuggestionCallout,
+  resolveAiInboxActionTargets as resolveAiInboxActionTargetsFromSummaryDetail,
+  resolveAiInboxTypeLabel,
+  type DetailItemWithThemeSuggestions,
+} from '@/components/summary-detail-ai-inbox'
 import DocumentTitle from '@/components/DocumentTitle.vue'
 import DormantDetailPanel from '@/components/DormantDetailPanel.vue'
 import OrphanDetailPanel from '@/components/OrphanDetailPanel.vue'
 import RankingPanel from '@/components/RankingPanel.vue'
 import SuggestionCallout from '@/components/SuggestionCallout.vue'
+import { useSummaryDetailDocIndex } from '@/components/use-summary-detail-doc-index'
 import WikiCardsSection from '@/components/WikiCardsSection.vue'
-
-type DetailItemWithThemeSuggestions = {
-  documentId: string
-  title: string
-  meta: string
-  badge?: string
-  isThemeDocument?: boolean
-  suggestions?: Array<{ label: string, text: string }>
-  themeSuggestions: ThemeDocumentMatch[]
-}
 
 const props = withDefaults(defineProps<{
   detail: SummaryDetailSectionType
@@ -939,9 +937,6 @@ watch(
   },
 )
 
-const docIndexExists = ref<Record<string, boolean>>({})
-const docIndexGenerating = ref<Record<string, boolean>>({})
-
 const visibleDocumentIds = computed(() => {
   if (props.detail.kind === 'list' && props.detail.key === 'documents') {
     return listItems.value.map(item => item.documentId)
@@ -949,153 +944,36 @@ const visibleDocumentIds = computed(() => {
   return []
 })
 
-watch(
-  () => [props.showDocumentIndex, visibleDocumentIds.value.join(',')],
-  async () => {
-    if (!props.showDocumentIndex || !props.hasDocIndex) {
-      docIndexExists.value = {}
-      return
-    }
-
-    const next: Record<string, boolean> = {}
-    for (const documentId of visibleDocumentIds.value) {
-      next[documentId] = await props.hasDocIndex(documentId)
-    }
-    docIndexExists.value = next
-  },
-  { immediate: true },
-)
-
-async function handleGenerateDocIndex(documentId: string) {
-  if (!props.generateDocIndex) {
-    return
-  }
-  docIndexGenerating.value = { ...docIndexGenerating.value, [documentId]: true }
-  try {
-    await props.generateDocIndex(documentId)
-    if (props.hasDocIndex) {
-      docIndexExists.value = { ...docIndexExists.value, [documentId]: await props.hasDocIndex(documentId) }
-    }
-  } finally {
-    const next = { ...docIndexGenerating.value }
-    delete next[documentId]
-    docIndexGenerating.value = next
-  }
-}
-
-async function handleOpenDocIndex(documentId: string) {
-  if (!props.openDocIndex) {
-    return
-  }
-  await props.openDocIndex(documentId)
-}
-
-const batchGenerating = ref(false)
-const batchProgress = ref({ done: 0, total: 0 })
-const batchDeleting = ref(false)
-
-async function handleBatchGenerate() {
-  if (!props.batchGenerateDocIndex || batchGenerating.value) {
-    return
-  }
-  const ids = visibleDocumentIds.value
-  if (!ids.length) {
-    return
-  }
-  batchGenerating.value = true
-  batchProgress.value = { done: 0, total: ids.length }
-  try {
-    const result = await props.batchGenerateDocIndex(ids, (done, total) => {
-      batchProgress.value = { done, total }
-    })
-    if (props.hasDocIndex) {
-      const next: Record<string, boolean> = { ...docIndexExists.value }
-      for (const id of ids) {
-        next[id] = await props.hasDocIndex(id)
-      }
-      docIndexExists.value = next
-    }
-    return result
-  } finally {
-    batchGenerating.value = false
-  }
-}
-
-async function handleBatchDelete() {
-  if (!props.batchDeleteDocIndex || batchDeleting.value) {
-    return
-  }
-  const ids = visibleDocumentIds.value
-  if (!ids.length) {
-    return
-  }
-  batchDeleting.value = true
-  try {
-    await props.batchDeleteDocIndex(ids)
-    docIndexExists.value = {}
-  } finally {
-    batchDeleting.value = false
-  }
-}
-
-function hasSuggestionCallout(item: DetailItemWithThemeSuggestions): boolean {
-  return Boolean(item.suggestions?.length || item.themeSuggestions.length)
-}
-
-function buildSuggestionCalloutItems(item: DetailItemWithThemeSuggestions): DetailSuggestion[] {
-  const suggestions = item.suggestions ?? []
-  if (!item.themeSuggestions.length) {
-    return suggestions
-  }
-
-  return suggestions.map((suggestion) => {
-    if (suggestion.label !== t('summaryDetail.labels.repairLinks')) {
-      return suggestion
-    }
-
-    const text = suggestion.text.replace(/[.。；，,\s]*$/, '')
-    return {
-      ...suggestion,
-      text: t('summaryDetail.labels.repairLinksWithTopics', { text }),
-    }
-  })
-}
-
-function resolveAiInboxTypeLabel(type: AiInboxItemType) {
-  if (type === 'connection') {
-    return t('summaryDetail.labels.repairLinks')
-  }
-  if (type === 'topic-page') {
-    return t('summaryDetail.labels.buildTopicPage')
-  }
-  if (type === 'bridge-risk') {
-    return t('summaryDetail.labels.bridgeRisk')
-  }
-  return t('summaryDetail.labels.documentCleanup')
-}
-
 function resolveAiInboxItemTitleParts(title: string) {
   return splitAiInboxItemTitle(title)
 }
 
 function resolveAiInboxActionTargets(item: NonNullable<SummaryDetailSectionType & { kind: 'aiInbox' }>['result']['items'][number]) {
-  return resolveAiInboxActionTargetsFromData({
+  return resolveAiInboxActionTargetsFromSummaryDetail({
     item,
     themeDocuments: props.themeDocuments,
-  }).filter(target => Boolean(target.documentId?.trim()))
+  })
 }
 
-function buildAiInboxHistoryTooltip(entry: TodaySuggestionHistoryEntry) {
-  return [
-    t('summaryDetail.historyTooltip.generated', { value: entry.generatedAt || t('summaryDetail.historyTooltip.unknownTime') }),
-    t('summaryDetail.historyTooltip.window', { value: entry.timeRange }),
-    t('summaryDetail.historyTooltip.count', { value: entry.summaryCount }),
-    t('summaryDetail.historyTooltip.notebook', { value: entry.filters.notebook || t('summaryDetail.historyTooltip.all') }),
-    t('summaryDetail.historyTooltip.tags', { value: entry.filters.tags?.join(' / ') || t('summaryDetail.historyTooltip.all') }),
-    t('summaryDetail.historyTooltip.topics', { value: entry.filters.themeNames?.join(' / ') || t('summaryDetail.historyTooltip.all') }),
-    t('summaryDetail.historyTooltip.keyword', { value: entry.filters.keyword || t('summaryDetail.historyTooltip.none') }),
-  ].join('\n')
-}
+const {
+  docIndexExists,
+  docIndexGenerating,
+  batchGenerating,
+  batchProgress,
+  batchDeleting,
+  handleGenerateDocIndex,
+  handleOpenDocIndex,
+  handleBatchGenerate,
+  handleBatchDelete,
+} = useSummaryDetailDocIndex({
+  showDocumentIndex: computed(() => Boolean(props.showDocumentIndex)),
+  visibleDocumentIds,
+  hasDocIndex: props.hasDocIndex,
+  generateDocIndex: props.generateDocIndex,
+  openDocIndex: props.openDocIndex,
+  batchGenerateDocIndex: props.batchGenerateDocIndex,
+  batchDeleteDocIndex: props.batchDeleteDocIndex,
+})
 
 function isAiInboxTargetActive(item: NonNullable<SummaryDetailSectionType & { kind: 'aiInbox' }>['result']['items'][number], target: NonNullable<SummaryDetailSectionType & { kind: 'aiInbox' }>['result']['items'][number]['recommendedTargets'][number]) {
   const intent = resolveAiInboxTargetIntent(item, target)

@@ -3,6 +3,14 @@ import type { WikiIndexPage, WikiMaintenanceSuggestion } from '@/analytics/wiki-
 import { parseWikiIndexPages } from '@/analytics/wiki-index'
 import { parseMaintenanceResponse, buildMaintenanceSystemPrompt, buildMaintenanceUserPrompt } from '@/analytics/llm-wiki-maintain-service'
 import { resolveAiEndpoint } from '@/analytics/ai-inbox'
+import {
+  buildMaintenanceErrorState,
+  buildMaintenanceSuccessState,
+  buildMissingDependencyState,
+  probeBrokenLinkIds,
+  readMaintenanceContentFromResponseBody,
+  syncWikiPageState,
+} from './llm-wiki-maintain-review'
 import type { PluginConfig } from '@/types/config'
 import type { PluginLogger } from '@/utils/plugin-logger'
 
@@ -31,7 +39,7 @@ export function createLlmWikiController(params: {
   config: ComputedRef<PluginConfig>
   forwardProxy?: ForwardProxyFn
   getBlockKramdown?: GetBlockKramdownFn
-  updateBlock?: (id: string, dataType: string, data: string) => Promise<any>
+  updateBlock?: (dataType: string, data: string, id: string) => Promise<any>
   logger?: PluginLogger
 }): LlmWikiController {
   const log = params.logger ?? noopLogger
@@ -55,33 +63,20 @@ export function createLlmWikiController(params: {
         forwardProxy: !!params.forwardProxy,
         getBlockKramdown: !!params.getBlockKramdown,
       })
-      page.maintenanceState = {
-        status: 'idle',
-        suggestions: [{ type: 'outdated-section', description: 'Missing dependencies: forwardProxy or getBlockKramdown not available' }],
-      }
-      syncWikiPageState(page)
+      page.maintenanceState = buildMissingDependencyState()
+      wikiPages.value = syncWikiPageState(wikiPages.value, page)
       return page
     }
 
     page.maintenanceState = { status: 'reviewing' }
-    syncWikiPageState(page)
+    wikiPages.value = syncWikiPageState(wikiPages.value, page)
 
     try {
       log.debug('[llm-wiki-maintain] fetching kramdown for', page.documentId)
       const block = await params.getBlockKramdown(page.documentId)
       log.debug('[llm-wiki-maintain] kramdown length', block.kramdown.length)
 
-      const linkPattern = /siyuan:\/\/blocks\/([^?\s<>"')\]#]+)/gi
-      const brokenLinkIds: string[] = []
-      const linkMatches = [...block.kramdown.matchAll(linkPattern)]
-      log.debug('[llm-wiki-maintain] found', linkMatches.length, 'links, probing...')
-      for (const match of linkMatches) {
-        try {
-          await params.getBlockKramdown(match[1])
-        } catch {
-          brokenLinkIds.push(match[1])
-        }
-      }
+      const brokenLinkIds = await probeBrokenLinkIds(block.kramdown, params.getBlockKramdown)
       log.info('[llm-wiki-maintain] broken links detected', brokenLinkIds.length)
 
       const cfg = params.config.value
@@ -112,11 +107,7 @@ export function createLlmWikiController(params: {
       )
       log.info('[llm-wiki-maintain] LLM API response received')
       const body = typeof response.body === 'string' ? JSON.parse(response.body) : response.body
-      if (body.error) {
-        const errMsg = body.error.message || body.error.type || JSON.stringify(body.error)
-        throw new Error(`LLM API error: ${errMsg}`)
-      }
-      const content = body.choices?.[0]?.message?.content ?? ''
+      const content = readMaintenanceContentFromResponseBody(body)
       log.info('[llm-wiki-maintain] raw LLM content length:', content.length, 'preview:', content.slice(0, 1000))
       if (!content) {
         log.warn('[llm-wiki-maintain] LLM returned empty content, full response body:', JSON.stringify(body).slice(0, 1000))
@@ -124,40 +115,28 @@ export function createLlmWikiController(params: {
       const result = parseMaintenanceResponse(content)
 
       log.info('[llm-wiki-maintain] parsed', result.suggestions.length, 'suggestions, revisedMarkdown length:', result.revisedMarkdown.length)
-      page.maintenanceState = {
-        status: 'suggestions-ready',
-        suggestions: result.suggestions,
-        diffPreview: result.revisedMarkdown,
-      }
-      syncWikiPageState(page)
+      page.maintenanceState = buildMaintenanceSuccessState(result)
+      wikiPages.value = syncWikiPageState(wikiPages.value, page)
     } catch (e: any) {
       log.error('[llm-wiki-maintain] reviewPage error', e.message ?? e)
-      page.maintenanceState = {
-        status: 'idle',
-        suggestions: [{ type: 'outdated-section', description: e.message ?? String(e) }],
-      }
-      syncWikiPageState(page)
+      page.maintenanceState = buildMaintenanceErrorState(e)
+      wikiPages.value = syncWikiPageState(wikiPages.value, page)
     }
 
     return page
   }
 
-  function syncWikiPageState(page: WikiIndexPage) {
-    const idx = wikiPages.value.findIndex(p => p.documentId === page.documentId)
-    if (idx >= 0) {
-      wikiPages.value[idx] = { ...page }
-    }
-  }
-
   async function applyMaintenance(page: WikiIndexPage, revisedMarkdown: string) {
     if (!params.updateBlock) return
     page.maintenanceState = { ...page.maintenanceState, status: 'applying' }
+    wikiPages.value = syncWikiPageState(wikiPages.value, page)
     try {
-      await params.updateBlock(page.documentId, 'markdown', revisedMarkdown)
+      await params.updateBlock('markdown', revisedMarkdown, page.documentId)
       page.maintenanceState = { status: 'idle' }
     } catch {
       page.maintenanceState = { ...page.maintenanceState, status: 'suggestions-ready' }
     }
+    wikiPages.value = syncWikiPageState(wikiPages.value, page)
   }
 
   return {

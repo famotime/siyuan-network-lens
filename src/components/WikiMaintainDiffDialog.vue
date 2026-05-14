@@ -2,6 +2,13 @@
 import { ref, computed, watch, onBeforeUnmount } from 'vue'
 import type { WikiMaintenanceSuggestion } from '@/analytics/wiki-index'
 import { t } from '@/i18n/ui'
+import {
+  buildInitialSelectedSuggestionIndices,
+  getSelectedSuggestions,
+  resolveDiffDialogLoading,
+  selectAllSuggestionIndices,
+  toggleSelectedSuggestionIndex,
+} from '@/components/wiki-maintain-diff-state'
 
 const props = defineProps<{
   pageTitle: string
@@ -16,43 +23,47 @@ const emit = defineEmits<{
   apply: [selectedSuggestions: WikiMaintenanceSuggestion[]]
 }>()
 
-const isLoading = ref(props.loading ?? false)
+const isLoading = ref(resolveDiffDialogLoading({
+  loading: props.loading,
+  suggestions: props.suggestions,
+  revisedMarkdown: props.revisedMarkdown,
+}))
 
 watch(() => props.loading, (val) => {
-  if (val !== undefined) isLoading.value = val
+  isLoading.value = resolveDiffDialogLoading({
+    loading: val,
+    suggestions: props.suggestions,
+    revisedMarkdown: props.revisedMarkdown,
+  })
 })
 
-watch(() => props.suggestions.length, (len) => {
-  if (len > 0) isLoading.value = false
+watch([
+  () => props.suggestions,
+  () => props.revisedMarkdown,
+], ([suggestions, revisedMarkdown]) => {
+  isLoading.value = resolveDiffDialogLoading({
+    loading: props.loading,
+    suggestions,
+    revisedMarkdown,
+  })
 })
 
-watch(() => props.revisedMarkdown, (val) => {
-  if (val) isLoading.value = false
-})
-
-const selectedIndices = ref<Set<number>>(new Set(props.suggestions.map((_, i) => i)))
+const selectedIndices = ref<Set<number>>(buildInitialSelectedSuggestionIndices(props.suggestions))
 
 watch(() => props.suggestions, (newSuggestions) => {
-  selectedIndices.value = new Set(newSuggestions.map((_, i) => i))
+  selectedIndices.value = buildInitialSelectedSuggestionIndices(newSuggestions)
 })
 
 function toggleSuggestion(index: number) {
-  if (selectedIndices.value.has(index)) {
-    selectedIndices.value.delete(index)
-  } else {
-    selectedIndices.value.add(index)
-  }
+  selectedIndices.value = toggleSelectedSuggestionIndex(selectedIndices.value, index)
 }
 
 function selectAll() {
-  selectedIndices.value = new Set(props.suggestions.map((_, i) => i))
+  selectedIndices.value = selectAllSuggestionIndices(props.suggestions)
 }
 
 function applySelected() {
-  const selected = [...selectedIndices.value]
-    .sort((a, b) => a - b)
-    .map(i => props.suggestions[i])
-  emit('apply', selected)
+  emit('apply', getSelectedSuggestions(props.suggestions, selectedIndices.value))
 }
 
 const hasSelection = computed(() => selectedIndices.value.size > 0)

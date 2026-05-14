@@ -51,6 +51,7 @@ import { createAnalyticsWikiActionsController } from './use-analytics-wiki-actio
 import { createLlmWikiController } from './use-analytics-llm-wiki'
 import { createLlmWikiChatController } from './use-analytics-llm-wiki-chat'
 import { createAnalyticsDocumentIndexController } from './use-analytics-document-index'
+import { setupAnalyticsSelectionSync } from './use-analytics-selection-sync'
 import { createAiInboxService, isAiConfigComplete, type AiInboxResult, type AiInboxService } from '@/analytics/ai-inbox'
 import {
   createAiDocumentIndexStoreFromPlugin,
@@ -668,93 +669,25 @@ export function useAnalyticsState(params: UseAnalyticsParams) {
     }).catch(() => {})
   })
 
-  watch(pathOptions, (options) => {
-    if (options.length === 0) {
-      fromDocumentId.value = ''
-      toDocumentId.value = ''
-      return
-    }
-    if (!options.some(option => option.id === fromDocumentId.value)) {
-      fromDocumentId.value = options[0]?.id ?? ''
-    }
-    if (!options.some(option => option.id === toDocumentId.value) || toDocumentId.value === fromDocumentId.value) {
-      toDocumentId.value = options.find(option => option.id !== fromDocumentId.value)?.id ?? ''
-    }
-  }, { immediate: true })
-
-  watch(report, (nextReport) => {
-    if (!nextReport) {
-      selectedEvidenceDocument.value = ''
-      selectedCommunityId.value = ''
-      return
-    }
-
-    const preferredDocumentId = nextReport.ranking[0]?.documentId
-      ?? nextReport.orphans[0]?.documentId
-      ?? nextReport.bridgeDocuments[0]?.documentId
-      ?? ''
-
-    if (!preferredDocumentId) {
-      selectedEvidenceDocument.value = ''
-    } else if (!sampleDocumentIds.value.has(selectedEvidenceDocument.value)) {
-      selectedEvidenceDocument.value = preferredDocumentId
-    }
-
-    if (!nextReport.communities.some(item => item.id === selectedCommunityId.value)) {
-      selectedCommunityId.value = nextReport.communities[0]?.id ?? ''
-    }
-  }, { immediate: true })
-
-  watch(() => params.config.summaryCardOrder, (savedOrder) => {
-    if (isSameSummaryCardOrder(savedOrder, summaryCardOrder.value)) {
-      return
-    }
-    summaryCardOrder.value = normalizeSummaryCardOrder(savedOrder)
-  }, { immediate: true })
-
-  watch(summaryCards, (cards) => {
-    if (cards.length === 0) {
-      return
-    }
-    if (!cards.some(card => card.key === selectedSummaryCardKey.value)) {
-      selectedSummaryCardKey.value = cards[0].key
-    }
-  }, { immediate: true })
-
-  watch(themeOptions, (options) => {
-    const allowedThemes = new Set(options.map(option => option.value))
-    selectedThemes.value = selectedThemes.value.filter(themeName => allowedThemes.has(themeName))
-  }, { immediate: true })
-
-  watch(tagOptions, (options) => {
-    const allowedTags = new Set(options)
-    selectedTags.value = selectedTags.value.filter(tag => allowedTags.has(tag))
-  }, { immediate: true })
-
-  watch([activeDocumentId, sampleDocumentIds], ([documentId, documentIds]) => {
-    if (documentId && documentIds.has(documentId)) {
-      selectedEvidenceDocument.value = documentId
-      return
-    }
-    if (selectedEvidenceDocument.value && !documentIds.has(selectedEvidenceDocument.value)) {
-      selectedEvidenceDocument.value = ''
-    }
-  })
-
-  watch([report, selectedEvidenceDocument], ([nextReport, documentId]) => {
-    if (!nextReport || !documentId) {
-      return
-    }
-    const community = nextReport.communities.find(item => item.documentIds.includes(documentId))
-    if (community) {
-      selectedCommunityId.value = community.id
-    }
-  }, { immediate: true })
-
-  watch(pathScope, (scope) => {
-    if (scope === 'community' && !selectedCommunity.value) {
-      pathScope.value = 'focused'
-    }
+  setupAnalyticsSelectionSync({
+    pathOptions,
+    fromDocumentId,
+    toDocumentId,
+    report,
+    sampleDocumentIds,
+    selectedEvidenceDocument,
+    selectedCommunityId,
+    summaryCardOrderSource: computed(() => params.config.summaryCardOrder),
+    summaryCardOrder,
+    summaryCards,
+    selectedSummaryCardKey,
+    themeOptions,
+    selectedThemes,
+    tagOptions,
+    selectedTags,
+    activeDocumentId,
+    pathScope,
+    selectedCommunity,
   })
 
   const instance = getCurrentInstance()

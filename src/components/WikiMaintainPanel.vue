@@ -318,6 +318,20 @@ import type { WikiPreviewState } from '@/composables/use-analytics'
 import { resolveWikiSectionOrderLabels } from '@/composables/use-analytics-wiki'
 import { t } from '@/i18n/ui'
 import { renderSimpleMarkdown } from '@/utils/markdown'
+import {
+  buildApplyResultSummary,
+  buildPreviewNoticeText,
+  deltaStatusLabel as deltaStatusLabelFromPresenter,
+  formatProcessingTime as formatProcessingTimeFromPresenter,
+  linkTypeLabel as linkTypeLabelFromPresenter,
+  resolveConfidenceLabel as resolveConfidenceLabelFromPresenter,
+  resolveSectionOrderLabels as resolveSectionOrderLabelsFromPresenter,
+  resolveTemplateLabel as resolveTemplateLabelFromPresenter,
+  resolveThemeWikiDocumentId as resolveThemeWikiDocumentIdFromPresenter,
+  sanitizeSummaryText as sanitizeSummaryTextFromPresenter,
+  sortSourceDocMetas as sortSourceDocMetasFromPresenter,
+  stripMetaSection as stripMetaSectionFromPresenter,
+} from '@/components/wiki-maintain-panel-presenter'
 
 const props = defineProps<{
   wikiEnabled: boolean
@@ -359,14 +373,7 @@ const statusLabelMap = computed(() => ({
   conflict: t('wikiMaintain.statusConflict'),
 } as const))
 
-const resultSummary = computed(() => {
-  if (!props.preview?.applyResult) {
-    return ''
-  }
-
-  const { counts } = props.preview.applyResult
-  return t('wikiMaintain.applyRunSummary', counts)
-})
+const resultSummary = computed(() => buildApplyResultSummary(props.preview?.applyResult, t))
 
 const canPreparePreview = computed(() => props.wikiEnabled && props.aiEnabled && props.aiConfigReady)
 const canApply = computed(() => {
@@ -383,42 +390,14 @@ const canApply = computed(() => {
 })
 
 const generatedPreviewAt = computed(() => props.formatWikiPreviewTimestamp(props.preview?.generatedAt))
-const previewNoticeText = computed(() => {
-  const lines = props.preview?.scope.descriptionLines ?? []
-  const skippedDocumentLine = lines.find(line => line.includes('跳过') || line.includes('Skipped '))?.trim()
-  const incompleteLine = lines.find(line => line.includes('不完整') || line.includes('incomplete'))?.trim()
-
-  return [incompleteLine, skippedDocumentLine]
-    .filter(Boolean)
-    .join(' ')
-})
+const previewNoticeText = computed(() => buildPreviewNoticeText(props.preview?.scope.descriptionLines ?? []))
 
 function resolveTemplateLabel(templateType: string) {
-  switch (templateType) {
-    case 'tech_topic':
-      return t('wikiMaintain.templateTechTopic')
-    case 'product_howto':
-      return t('wikiMaintain.templateProductHowto')
-    case 'social_topic':
-      return t('wikiMaintain.templateSocialTopic')
-    case 'media_list':
-      return t('wikiMaintain.templateMediaList')
-    default:
-      return templateType
-    }
+  return resolveTemplateLabelFromPresenter(templateType, t)
 }
 
 function resolveConfidenceLabel(confidence: string) {
-  switch (confidence) {
-    case 'high':
-      return t('wikiMaintain.confidenceHigh')
-    case 'medium':
-      return t('wikiMaintain.confidenceMedium')
-    case 'low':
-      return t('wikiMaintain.confidenceLow')
-    default:
-      return confidence
-  }
+  return resolveConfidenceLabelFromPresenter(confidence, t)
 }
 
 function resolveSectionOrderLabels(page: WikiPreviewState['themePages'][number]) {
@@ -427,84 +406,36 @@ function resolveSectionOrderLabels(page: WikiPreviewState['themePages'][number])
     draft: page.draft,
   })
 
-  return labels.length ? labels.join(', ') : t('wikiMaintain.noChanges')
+  return resolveSectionOrderLabelsFromPresenter(labels, t)
 }
 
 function sanitizeSummaryText(text: string): string {
-  return text
-    .replace(/<!--[\s\S]*?-->/g, '')
-    .replace(/\(\([^)\s]+\s*"[^"]*"\)\)/g, '')
-    .replace(/\[[^\]]*?\]\(siyuan:\/\/[^)]*\)/g, '')
-    .replace(/#{1,6}\s+/g, '')
-    .replace(/\{:\s[^}]*\}/g, '')
-    .replace(/<[^>]+>/g, '')
-    .replace(/\s+/g, ' ')
-    .trim()
+  return sanitizeSummaryTextFromPresenter(text)
 }
 
 function stripMetaSection(markdown: string): string {
-  const lines = markdown.split(/\r?\n/)
-  let skipUntilNextH3 = false
-
-  for (let index = 0; index < lines.length; index += 1) {
-    const line = lines[index].trim()
-    if (!line.startsWith('### ')) {
-      continue
-    }
-
-    const heading = line.replace(/^###\s+/, '').replace(/\s*\{:[^}]*\}$/, '').trim()
-    if (heading === 'Page meta' || heading === '页面头信息') {
-      skipUntilNextH3 = true
-      continue
-    }
-
-    if (skipUntilNextH3) {
-      return lines.slice(index).join('\n')
-    }
-
-    return lines.slice(index).join('\n')
-  }
-
-  return markdown
+  return stripMetaSectionFromPresenter(markdown)
 }
 
 const sortedSourceDocMetas = computed(() => {
   if (!props.preview?.sourceDocMetas) return []
-  const order = { new: 0, changed: 1, unchanged: 2, deleted: 3 } as const
-  return [...props.preview.sourceDocMetas].sort((a, b) => order[a.deltaStatus] - order[b.deltaStatus])
+  return sortSourceDocMetasFromPresenter(props.preview.sourceDocMetas)
 })
 
 function deltaStatusLabel(status: string): string {
-  switch (status) {
-    case 'new': return t('wikiMaintain.deltaStatusNew')
-    case 'changed': return t('wikiMaintain.deltaStatusChanged')
-    case 'unchanged': return t('wikiMaintain.deltaStatusUnchanged')
-    case 'deleted': return t('wikiMaintain.deltaStatusDeleted')
-    default: return status
-  }
+  return deltaStatusLabelFromPresenter(status, t)
 }
 
 function linkTypeLabel(linkType: string): string {
-  switch (linkType) {
-    case 'outbound': return t('wikiMaintain.linkTypeOutbound')
-    case 'inbound': return t('wikiMaintain.linkTypeInbound')
-    case 'child': return t('wikiMaintain.linkTypeChild')
-    default: return linkType
-  }
+  return linkTypeLabelFromPresenter(linkType, t)
 }
 
 function formatProcessingTime(ms: number): string {
-  if (ms < 1000) return `${ms}ms`
-  return `${(ms / 1000).toFixed(1)}s`
+  return formatProcessingTimeFromPresenter(ms)
 }
 
 function resolveThemeWikiDocumentId(page: WikiPreviewState['themePages'][number]): string {
-  if (page.pageId) {
-    return page.pageId
-  }
-
-  const appliedPage = props.preview?.applyResult?.themePages.find(item => item.pageTitle === page.pageTitle)
-  return appliedPage?.pageId ?? ''
+  return resolveThemeWikiDocumentIdFromPresenter(page, props.preview?.applyResult)
 }
 </script>
 
