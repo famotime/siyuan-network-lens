@@ -12,6 +12,7 @@ export type DetailItemWithThemeSuggestions = {
   badge?: string
   isThemeDocument?: boolean
   suggestions?: Array<{ label: string, text: string }>
+  readTagSuggestions?: string[]
   themeSuggestions: ThemeDocumentMatch[]
 }
 

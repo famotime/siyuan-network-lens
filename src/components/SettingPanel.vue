@@ -3,13 +3,27 @@
     <div
       v-for="section in baseSections"
       :key="section.key"
+      :data-section-key="section.key"
       class="setting-group"
     >
-      <div class="setting-header">
-        <h3>{{ section.title }}</h3>
-        <p>{{ section.description }}</p>
-      </div>
-      <div class="setting-form">
+      <button
+        class="setting-header setting-header--toggle"
+        type="button"
+        :aria-controls="`setting-section-${section.key}`"
+        :aria-expanded="isSectionExpanded(section.key)"
+        @click="toggleSection(section.key)"
+      >
+        <span class="setting-header__copy">
+          <h3>{{ section.title }}</h3>
+          <p>{{ section.description }}</p>
+        </span>
+        <span class="setting-header__caret" aria-hidden="true" />
+      </button>
+      <div
+        :id="`setting-section-${section.key}`"
+        v-show="isSectionExpanded(section.key)"
+        class="setting-form"
+      >
         <label
           v-for="field in section.fields"
           :key="field.modelKey"
@@ -37,42 +51,63 @@
       </div>
     </div>
 
-    <div class="setting-group">
-      <div class="setting-header">
-        <h3>{{ t('settings.summaryCards.title') }}</h3>
-        <p>{{ t('settings.summaryCards.description') }}</p>
-      </div>
-      <label class="setting-item">
-        <span class="setting-item__text">
-          <strong>{{ t('settings.summaryCards.topSummaryCards') }}</strong>
-          <span>{{ t('settings.summaryCards.topSummaryCardsDescription') }}</span>
+    <div data-section-key="summaryCards" class="setting-group">
+      <button
+        class="setting-header setting-header--toggle"
+        type="button"
+        aria-controls="setting-section-summaryCards"
+        :aria-expanded="isSectionExpanded('summaryCards')"
+        @click="toggleSection('summaryCards')"
+      >
+        <span class="setting-header__copy">
+          <h3>{{ t('settings.summaryCards.title') }}</h3>
+          <p>{{ t('settings.summaryCards.description') }}</p>
         </span>
-        <input type="checkbox" v-model="config.showSummaryCards" class="b3-switch">
-      </label>
-      <div class="setting-item-wrapper setting-item-grid" v-if="config.showSummaryCards">
-        <label
-          v-for="cardSetting in summaryCardSettings"
-          :key="cardSetting.key"
-          class="setting-item setting-item--nested setting-item--grid"
-        >
+        <span class="setting-header__caret" aria-hidden="true" />
+      </button>
+      <div id="setting-section-summaryCards" v-show="isSectionExpanded('summaryCards')">
+        <label class="setting-item">
           <span class="setting-item__text">
-            <strong>{{ cardSetting.settingLabel }}</strong>
-            <span>{{ cardSetting.settingDescription }}</span>
+            <strong>{{ t('settings.summaryCards.topSummaryCards') }}</strong>
+            <span>{{ t('settings.summaryCards.topSummaryCardsDescription') }}</span>
           </span>
-          <input
-            v-model="config[cardSetting.visibilityConfigKey]"
-            type="checkbox"
-            class="b3-switch"
-          >
+          <input type="checkbox" v-model="config.showSummaryCards" class="b3-switch">
         </label>
+        <div class="setting-item-wrapper setting-item-grid" v-if="config.showSummaryCards">
+          <label
+            v-for="cardSetting in summaryCardSettings"
+            :key="cardSetting.key"
+            class="setting-item setting-item--nested setting-item--grid"
+          >
+            <span class="setting-item__text">
+              <strong>{{ cardSetting.settingLabel }}</strong>
+              <span>{{ cardSetting.settingDescription }}</span>
+            </span>
+            <input
+              v-model="config[cardSetting.visibilityConfigKey]"
+              type="checkbox"
+              class="b3-switch"
+            >
+          </label>
+        </div>
       </div>
     </div>
 
-    <div v-if="showAiSettingsGroup" class="setting-group">
-      <div class="setting-header">
-        <h3>{{ aiSettingsTitle }}</h3>
-        <p>{{ aiSettingsDescription }}</p>
-      </div>
+    <div v-if="showAiSettingsGroup" data-section-key="aiSettings" class="setting-group">
+      <button
+        class="setting-header setting-header--toggle"
+        type="button"
+        aria-controls="setting-section-aiSettings"
+        :aria-expanded="isSectionExpanded('aiSettings')"
+        @click="toggleSection('aiSettings')"
+      >
+        <span class="setting-header__copy">
+          <h3>{{ aiSettingsTitle }}</h3>
+          <p>{{ aiSettingsDescription }}</p>
+        </span>
+        <span class="setting-header__caret" aria-hidden="true" />
+      </button>
+      <div id="setting-section-aiSettings" v-show="isSectionExpanded('aiSettings')">
       <div class="setting-form">
         <label v-if="showAiServiceSettings" class="setting-item setting-item--full">
           <span class="setting-item__text">
@@ -324,34 +359,56 @@
         <span v-if="aiConnectionMessage" class="setting-feedback setting-feedback--success">{{ aiConnectionMessage }}</span>
         <span v-if="aiConnectionError" class="setting-feedback setting-feedback--error">{{ aiConnectionError }}</span>
       </div>
+      </div>
     </div>
 
-    <div class="setting-group">
-      <div class="setting-header">
-        <h3>{{ t('settings.debug.title') }}</h3>
-        <p>{{ t('settings.debug.description') }}</p>
+    <div data-section-key="debug" class="setting-group">
+      <button
+        class="setting-header setting-header--toggle"
+        type="button"
+        aria-controls="setting-section-debug"
+        :aria-expanded="isSectionExpanded('debug')"
+        @click="toggleSection('debug')"
+      >
+        <span class="setting-header__copy">
+          <h3>{{ t('settings.debug.title') }}</h3>
+          <p>{{ t('settings.debug.description') }}</p>
+        </span>
+        <span class="setting-header__caret" aria-hidden="true" />
+      </button>
+      <div id="setting-section-debug" v-show="isSectionExpanded('debug')">
+        <label class="setting-item">
+          <span class="setting-item__text">
+            <strong>{{ t('settings.debug.printLogs') }}</strong>
+            <span>{{ t('settings.debug.printLogsDescription') }}</span>
+          </span>
+          <input type="checkbox" v-model="config.enableConsoleLogging" class="b3-switch">
+        </label>
+        <label class="setting-item">
+          <span class="setting-item__text">
+            <strong>{{ t('settings.debug.showDocumentIndex') }}</strong>
+            <span>{{ t('settings.debug.showDocumentIndexDescription') }}</span>
+          </span>
+          <input type="checkbox" v-model="config.showDocumentIndex" class="b3-switch">
+        </label>
       </div>
-      <label class="setting-item">
-        <span class="setting-item__text">
-          <strong>{{ t('settings.debug.printLogs') }}</strong>
-          <span>{{ t('settings.debug.printLogsDescription') }}</span>
-        </span>
-        <input type="checkbox" v-model="config.enableConsoleLogging" class="b3-switch">
-      </label>
-      <label class="setting-item">
-        <span class="setting-item__text">
-          <strong>{{ t('settings.debug.showDocumentIndex') }}</strong>
-          <span>{{ t('settings.debug.showDocumentIndexDescription') }}</span>
-        </span>
-        <input type="checkbox" v-model="config.showDocumentIndex" class="b3-switch">
-      </label>
     </div>
 
-    <div class="setting-group">
-      <div class="setting-header">
-        <h3>{{ t('settings.propagation.title') }}</h3>
-        <p>{{ t('settings.propagation.description') }}</p>
-      </div>
+    <div data-section-key="propagation" class="setting-group">
+      <button
+        class="setting-header setting-header--toggle"
+        type="button"
+        aria-controls="setting-section-propagation"
+        :aria-expanded="isSectionExpanded('propagation')"
+        @click="toggleSection('propagation')"
+      >
+        <span class="setting-header__copy">
+          <h3>{{ t('settings.propagation.title') }}</h3>
+          <p>{{ t('settings.propagation.description') }}</p>
+        </span>
+        <span class="setting-header__caret" aria-hidden="true" />
+      </button>
+      <div id="setting-section-propagation" v-show="isSectionExpanded('propagation')" />
     </div>
   </div>
 </template>
@@ -391,6 +448,29 @@ const aiSettingsTitle = showAiServiceSettings ? t('settings.ai.title') : 'LLM Wi
 const aiSettingsDescription = showAiServiceSettings
   ? t('settings.ai.description')
   : t('settings.ai.wikiDescription')
+
+type SettingSectionKey = 'analysisScope' | 'topicDocs' | 'readRules' | 'summaryCards' | 'aiSettings' | 'debug' | 'propagation'
+
+const expandedSections = ref<Record<SettingSectionKey, boolean>>({
+  analysisScope: false,
+  topicDocs: true,
+  readRules: true,
+  summaryCards: true,
+  aiSettings: false,
+  debug: false,
+  propagation: false,
+})
+
+function isSectionExpanded(sectionKey: SettingSectionKey) {
+  return expandedSections.value[sectionKey]
+}
+
+function toggleSection(sectionKey: SettingSectionKey) {
+  expandedSections.value = {
+    ...expandedSections.value,
+    [sectionKey]: !expandedSections.value[sectionKey],
+  }
+}
 
 const {
   AI_FIELD_TOOLTIPS,
@@ -468,6 +548,41 @@ onMounted(async () => {
   border-bottom: 1px solid color-mix(in srgb, var(--b3-theme-primary) 15%, transparent);
   padding-bottom: 8px;
   margin-bottom: 4px;
+}
+
+.setting-header--toggle {
+  display: flex;
+  width: 100%;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 0 0 8px;
+  background: transparent;
+  border-left: 0;
+  border-right: 0;
+  border-top: 0;
+  cursor: pointer;
+  text-align: left;
+}
+
+.setting-header__copy {
+  display: grid;
+  gap: 4px;
+}
+
+.setting-header__caret {
+  width: 10px;
+  height: 10px;
+  border-right: 2px solid color-mix(in srgb, var(--b3-theme-primary) 72%, transparent);
+  border-bottom: 2px solid color-mix(in srgb, var(--b3-theme-primary) 72%, transparent);
+  transform: rotate(45deg);
+  transition: transform 0.2s ease;
+  flex: 0 0 auto;
+  margin-right: 6px;
+}
+
+.setting-header--toggle[aria-expanded='true'] .setting-header__caret {
+  transform: rotate(225deg);
 }
 
 .setting-header h3 {

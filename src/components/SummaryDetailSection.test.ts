@@ -288,6 +288,7 @@ describe('SummaryDetailSection', () => {
               title: 'Alpha',
               meta: 'Created 2026-03-14',
               badge: 'Needs review',
+              readTagSuggestions: ['已读'],
               suggestions: [{ label: 'Repair links', text: 'No doc-level links in the current window.' }],
             },
           ],
@@ -300,6 +301,9 @@ describe('SummaryDetailSection', () => {
     expect(html).toContain('Unread docs')
     expect(html).toContain('Created 2026-03-14')
     expect(html).toContain('Repair links')
+    expect(html).toContain('Read tags')
+    expect(html).toContain('已读')
+    expect(html).toContain('detail-theme-tag')
     expect(html).toContain('No doc-level links in the current window, suggested topic docs below (click to add):')
     expect(html).toContain('AI')
   })

@@ -486,13 +486,13 @@ function handleToggleThemeLink(documentId: string, themeDocumentId: string) {
   toggleOrphanThemeSuggestion(documentId, themeDocumentId)
 }
 
-function handleAddTag(documentId: string) {
-  const themePage = wikiPreview.value?.themePages?.[0]
-  const tag = themePage?.themeName?.trim()
-  if (!tag) {
+function handleAddTag(documentId: string, tag?: string) {
+  const resolvedTag = tag?.trim() || wikiPreview.value?.themePages?.[0]?.themeName?.trim()
+  if (!resolvedTag) {
     return
   }
-  toggleOrphanAiTagSuggestion(documentId, tag)
+
+  toggleOrphanAiTagSuggestion(documentId, resolvedTag)
 }
 
 async function handleLlmWikiMaintain(page: WikiIndexPage) {

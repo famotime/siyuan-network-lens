@@ -31,6 +31,7 @@ export interface SummaryDetailItem {
   badge?: string
   isThemeDocument?: boolean
   suggestions?: DetailSuggestion[]
+  readTagSuggestions?: string[]
 }
 
 export interface DetailSuggestion {

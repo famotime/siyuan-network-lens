@@ -308,6 +308,23 @@
                   :suggestions="buildSuggestionCalloutItems(item)"
                 >
                   <div
+                    v-if="item.readTagSuggestions?.length"
+                    class="detail-theme-section"
+                  >
+                    <span class="detail-theme-label">{{ t('settings.readRules.readTags') }}</span>
+                    <div class="detail-theme-tags">
+                      <button
+                        v-for="tag in item.readTagSuggestions"
+                        :key="`${item.documentId}-${tag}`"
+                        :class="['detail-theme-tag', { 'detail-theme-tag--active': isAiTagSuggestionActive(item.documentId, tag) }]"
+                        type="button"
+                        @click="emit('addTag', item.documentId, tag)"
+                      >
+                        <span class="detail-theme-name">{{ tag }}</span>
+                      </button>
+                    </div>
+                  </div>
+                  <div
                     v-if="item.themeSuggestions?.length"
                     class="detail-theme-section"
                   >
@@ -872,7 +889,7 @@ const props = withDefaults(defineProps<{
 const emit = defineEmits<{
   (e: 'update:incrementalEnabled', value: boolean): void
   (e: 'toggleThemeLink', documentId: string, themeDocumentId: string): void
-  (e: 'addTag', documentId: string): void
+  (e: 'addTag', documentId: string, tag?: string): void
   (e: 'openWikiChat', scope: WikiChatScope): void
   (e: 'maintainWikiPage', page: WikiIndexPage): void
 }>()
@@ -1595,6 +1612,13 @@ async function handleAiInboxActionTargetClick(
 .detail-theme-section {
   display: grid;
   gap: 6px;
+}
+
+.detail-theme-label {
+  font-size: 12px;
+  line-height: 1.4;
+  font-weight: 700;
+  color: color-mix(in srgb, var(--b3-theme-on-background) 68%, transparent);
 }
 
 .detail-theme-tags {

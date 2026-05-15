@@ -29,6 +29,81 @@ import SettingPanel from './SettingPanel.vue'
 import { ALPHA_FEATURE_HIDE_CONFIG } from '@/plugin/alpha-feature-config'
 
 describe('SettingPanel', () => {
+  it('renders collapsible setting groups with the expected default expanded states', async () => {
+    const app = createSSRApp({
+      render: () => h(SettingPanel, {
+        config: {
+          showSummaryCards: true,
+          showDocuments: true,
+          showRead: true,
+          showReferences: true,
+          showRanking: true,
+          showCommunities: true,
+          showTrends: true,
+          showOrphans: true,
+          showDormant: true,
+          showBridges: true,
+          showPropagation: true,
+          analysisExcludedPaths: '',
+          analysisExcludedNamePrefixes: '',
+          analysisExcludedNameSuffixes: '',
+          themeDocumentPath: '/知识库/专题',
+          themeNamePrefix: '主题-',
+          themeNameSuffix: '-索引',
+          readTagNames: ['已读'],
+          readTitlePrefixes: '',
+          readTitleSuffixes: '',
+          readPaths: '',
+          aiEnabled: true,
+          aiBaseUrl: 'https://api.example.com/v1',
+          aiApiKey: 'sk-test',
+          aiModel: 'gpt-4.1-mini',
+          aiRequestTimeoutSeconds: 30,
+          aiMaxTokens: 10240,
+          aiTemperature: 0.7,
+          aiMaxContextMessages: 7,
+          aiContextCapacity: 'compact',
+          enableConsoleLogging: false,
+          wikiEnabled: true,
+          wikiPageSuffix: '-llm-wiki',
+          wikiIndexTitle: 'LLM-Wiki-索引',
+          wikiLogTitle: 'LLM-Wiki-维护日志',
+        },
+      }),
+    })
+
+    const html = await renderToString(app)
+
+    expect(html).toContain('data-section-key="analysisScope"')
+    expect(html).toContain('data-section-key="topicDocs"')
+    expect(html).toContain('data-section-key="readRules"')
+    expect(html).toContain('data-section-key="summaryCards"')
+    expect(html).toContain('data-section-key="aiSettings"')
+    expect(html).toContain('data-section-key="debug"')
+    expect(html).toContain('data-section-key="propagation"')
+    expect(html).toContain('data-section-key="analysisScope"')
+    expect(html).toContain('aria-controls="setting-section-analysisScope"')
+    expect(html).toContain('aria-controls="setting-section-topicDocs"')
+    expect(html).toContain('aria-controls="setting-section-readRules"')
+    expect(html).toContain('aria-controls="setting-section-summaryCards"')
+    expect(html).toContain('aria-controls="setting-section-aiSettings"')
+    expect(html).toContain('aria-controls="setting-section-debug"')
+    expect(html).toContain('aria-controls="setting-section-propagation"')
+    expect(html).toContain('aria-expanded="false"')
+    expect(html).toContain('aria-expanded="true"')
+    expect(html).toContain('id="setting-section-analysisScope"')
+    expect(html).toContain('id="setting-section-aiSettings"')
+    expect(html).toContain('id="setting-section-debug"')
+    expect(html).toContain('id="setting-section-propagation"')
+    expect(html).toContain('id="setting-section-topicDocs" class="setting-form" style=""')
+    expect(html).toContain('id="setting-section-readRules" class="setting-form" style=""')
+    expect(html).toContain('id="setting-section-summaryCards" style=""')
+    expect(html).toMatch(/id="setting-section-analysisScope"[^>]*style="display:none;"/)
+    expect(html).toMatch(/id="setting-section-aiSettings"[^>]*style="display:none;"/)
+    expect(html).toMatch(/id="setting-section-debug"[^>]*style="display:none;"/)
+    expect(html).toMatch(/id="setting-section-propagation"[^>]*style="display:none;"/)
+  })
+
   it('renders setting groups in the expected order and lists the current summary card toggles', async () => {
     const app = createSSRApp({
       render: () => h(SettingPanel, {

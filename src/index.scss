@@ -1,3 +1,5 @@
+@use './styles/components.scss';
+
 .reference-analytics-root {
   /* z-index 层级令牌 */
   --z-dropdown: 10;
@@ -23,8 +25,6 @@
   height: 100%;
   min-height: 100%;
 }
-
-@import './styles/components.scss';
 
 /* 全局 focus-visible 基线样式 — 确保键盘导航可见 */
 .reference-analytics-root button:focus-visible,

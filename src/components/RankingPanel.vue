@@ -311,7 +311,7 @@ const props = withDefaults(defineProps<{
 const emit = defineEmits<{
   (e: 'update:incrementalEnabled', value: boolean): void
   (e: 'toggleThemeLink', documentId: string, themeDocumentId: string): void
-  (e: 'addTag', documentId: string): void
+  (e: 'addTag', documentId: string, tag?: string): void
 }>()
 
 function resolveAssociations(documentId: string): LinkAssociations {

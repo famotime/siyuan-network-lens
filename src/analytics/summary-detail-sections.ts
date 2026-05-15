@@ -98,6 +98,7 @@ export function buildSummaryDetailSections(params: {
   const readCardMode = params.readCardMode ?? 'unread'
   const largeDocumentCardMode = params.largeDocumentCardMode ?? 'words'
   const readDocumentIdSet = new Set(readMatches.map(item => item.documentId))
+  const readTagSuggestions = normalizeReadTagSuggestions(params.config?.readTagNames)
   const largeDocumentItems = buildLargeDocumentRankings({
     documents: filteredDocuments,
     metrics: params.largeDocumentMetrics,
@@ -118,10 +119,12 @@ export function buildSummaryDetailSections(params: {
       meta: t('analytics.summaryDetailSource.createdDate', { date: formatCompactDate(document.created) }),
       badge: t('analytics.summaryDetailSource.needsReview'),
       isThemeDocument: themeDocumentIdSet.has(document.id),
+      readTagSuggestions,
       suggestions: buildUnreadSuggestions({
         documentId: document.id,
         suggestionMap,
         largeDocumentMetrics: params.largeDocumentMetrics,
+        readTagSuggestions,
       }),
     }))
 
@@ -377,8 +380,17 @@ function buildUnreadSuggestions(params: {
   documentId: string
   suggestionMap: SuggestionMap
   largeDocumentMetrics?: ReadonlyMap<string, LargeDocumentMetric>
+  readTagSuggestions?: string[]
 }): DetailSuggestion[] {
-  const suggestions = resolveSuggestions(params.suggestionMap, params.documentId, 'repair-orphan')
+  const suggestions: DetailSuggestion[] = []
+  if (params.readTagSuggestions?.length) {
+    suggestions.push({
+      label: t('settings.readRules.readTags'),
+      text: params.readTagSuggestions.join(' / '),
+    })
+  }
+
+  suggestions.push(...resolveSuggestions(params.suggestionMap, params.documentId, 'repair-orphan'))
   const metric = params.largeDocumentMetrics?.get(params.documentId)
 
   if (metric && metric.assetCount > 0 && metric.totalBytes > LARGE_DOCUMENT_STORAGE_THRESHOLD_BYTES) {
@@ -386,6 +398,26 @@ function buildUnreadSuggestions(params: {
   }
 
   return suggestions
+}
+
+function normalizeReadTagSuggestions(tags?: readonly string[]): string[] {
+  if (!Array.isArray(tags)) {
+    return []
+  }
+
+  const result: string[] = []
+  const seen = new Set<string>()
+
+  for (const rawTag of tags) {
+    const tag = rawTag.trim()
+    if (!tag || seen.has(tag)) {
+      continue
+    }
+    seen.add(tag)
+    result.push(tag)
+  }
+
+  return result
 }
 
 function buildEmbeddedAssetCleanupSuggestion(metric: Pick<LargeDocumentMetric, 'assetCount' | 'assetBytes' | 'totalBytes'>): DetailSuggestion {

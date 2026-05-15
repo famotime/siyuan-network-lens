@@ -226,13 +226,16 @@ describe('buildSummaryDetailSections', () => {
           documentId: 'doc-a',
           badge: 'Needs review',
           meta: 'Created 2026-03-01',
-          suggestions: [],
+          suggestions: [
+            expect.objectContaining({ label: 'Read tags', text: 'topic' }),
+          ],
         }),
         expect.objectContaining({
           documentId: 'doc-c',
           badge: 'Needs review',
           meta: 'Created 2026-03-03',
           suggestions: [
+            expect.objectContaining({ label: 'Read tags', text: 'topic' }),
             expect.objectContaining({ label: 'Repair links', text: 'No doc-level links in the current window' }),
             expect.objectContaining({ label: 'Clean embedded assets' }),
           ],
