@@ -120,11 +120,13 @@ export function buildSummaryDetailSections(params: {
       badge: t('analytics.summaryDetailSource.needsReview'),
       isThemeDocument: themeDocumentIdSet.has(document.id),
       readTagSuggestions,
+      readTagSuggestionDescription: readTagSuggestions.length
+        ? t('analytics.summaryDetailSource.markDocAsRead')
+        : undefined,
       suggestions: buildUnreadSuggestions({
         documentId: document.id,
         suggestionMap,
         largeDocumentMetrics: params.largeDocumentMetrics,
-        readTagSuggestions,
       }),
     }))
 
@@ -380,16 +382,8 @@ function buildUnreadSuggestions(params: {
   documentId: string
   suggestionMap: SuggestionMap
   largeDocumentMetrics?: ReadonlyMap<string, LargeDocumentMetric>
-  readTagSuggestions?: string[]
 }): DetailSuggestion[] {
   const suggestions: DetailSuggestion[] = []
-  if (params.readTagSuggestions?.length) {
-    suggestions.push({
-      label: t('settings.readRules.readTags'),
-      text: params.readTagSuggestions.join(' / '),
-    })
-  }
-
   suggestions.push(...resolveSuggestions(params.suggestionMap, params.documentId, 'repair-orphan'))
   const metric = params.largeDocumentMetrics?.get(params.documentId)
 

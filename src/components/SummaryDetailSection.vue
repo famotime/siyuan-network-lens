@@ -308,23 +308,6 @@
                   :suggestions="buildSuggestionCalloutItems(item)"
                 >
                   <div
-                    v-if="item.readTagSuggestions?.length"
-                    class="detail-theme-section"
-                  >
-                    <span class="detail-theme-label">{{ t('settings.readRules.readTags') }}</span>
-                    <div class="detail-theme-tags">
-                      <button
-                        v-for="tag in item.readTagSuggestions"
-                        :key="`${item.documentId}-${tag}`"
-                        :class="['detail-theme-tag', { 'detail-theme-tag--active': isAiTagSuggestionActive(item.documentId, tag) }]"
-                        type="button"
-                        @click="emit('addTag', item.documentId, tag)"
-                      >
-                        <span class="detail-theme-name">{{ tag }}</span>
-                      </button>
-                    </div>
-                  </div>
-                  <div
                     v-if="item.themeSuggestions?.length"
                     class="detail-theme-section"
                   >
@@ -342,6 +325,29 @@
                     </div>
                   </div>
                 </SuggestionCallout>
+                <div
+                  v-if="item.readTagSuggestions?.length"
+                  class="detail-theme-section detail-theme-section--read-tags"
+                >
+                  <span class="detail-theme-label">{{ t('settings.readRules.readTags') }}</span>
+                  <p
+                    v-if="item.readTagSuggestionDescription || item.readTagSuggestions?.length"
+                    class="detail-theme-description"
+                  >
+                    {{ item.readTagSuggestionDescription || t('analytics.summaryDetailSource.markDocAsRead') }}
+                  </p>
+                  <div class="detail-theme-tags">
+                    <button
+                      v-for="tag in item.readTagSuggestions"
+                      :key="`${item.documentId}-${tag}`"
+                      :class="['detail-theme-tag', { 'detail-theme-tag--active': isAiTagSuggestionActive(item.documentId, tag) }]"
+                      type="button"
+                      @click="emit('addTag', item.documentId, tag)"
+                    >
+                      <span class="detail-theme-name">{{ tag }}</span>
+                    </button>
+                  </div>
+                </div>
                 <div
                   v-if="showDocumentIndex && detail.key === 'documents'"
                   class="doc-index-actions"
@@ -1614,11 +1620,26 @@ async function handleAiInboxActionTargetClick(
   gap: 6px;
 }
 
+.detail-theme-section--read-tags {
+  margin-top: 12px;
+  padding: 12px 14px;
+  border-radius: 12px;
+  border: 1px solid color-mix(in srgb, var(--b3-theme-primary) 16%, var(--panel-border));
+  background: color-mix(in srgb, var(--b3-theme-primary) 5%, var(--surface-card-soft));
+}
+
 .detail-theme-label {
   font-size: 12px;
   line-height: 1.4;
   font-weight: 700;
   color: color-mix(in srgb, var(--b3-theme-on-background) 68%, transparent);
+}
+
+.detail-theme-description {
+  margin: 0;
+  font-size: 12px;
+  line-height: 1.5;
+  color: var(--panel-muted);
 }
 
 .detail-theme-tags {

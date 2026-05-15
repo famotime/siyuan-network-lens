@@ -13,6 +13,7 @@ export type DetailItemWithThemeSuggestions = {
   isThemeDocument?: boolean
   suggestions?: Array<{ label: string, text: string }>
   readTagSuggestions?: string[]
+  readTagSuggestionDescription?: string
   themeSuggestions: ThemeDocumentMatch[]
 }
 

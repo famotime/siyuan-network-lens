@@ -302,10 +302,12 @@ describe('SummaryDetailSection', () => {
     expect(html).toContain('Created 2026-03-14')
     expect(html).toContain('Repair links')
     expect(html).toContain('Read tags')
+    expect(html).toContain('Mark this doc as read.')
     expect(html).toContain('已读')
     expect(html).toContain('detail-theme-tag')
     expect(html).toContain('No doc-level links in the current window, suggested topic docs below (click to add):')
     expect(html).toContain('AI')
+    expect(html).not.toContain('<span class="suggestion-callout__label">Read tags</span>')
   })
 
   it('renders today suggestions with a separate toolbar row below the title area', async () => {

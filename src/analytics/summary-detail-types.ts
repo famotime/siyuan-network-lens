@@ -32,6 +32,7 @@ export interface SummaryDetailItem {
   isThemeDocument?: boolean
   suggestions?: DetailSuggestion[]
   readTagSuggestions?: string[]
+  readTagSuggestionDescription?: string
 }
 
 export interface DetailSuggestion {

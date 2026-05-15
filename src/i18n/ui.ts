@@ -2166,6 +2166,10 @@ const UI_TEXT = {
         en_US: 'Docs not matched by read paths, tags, or title rules.',
         zh_CN: '未命中已读路径、标签或标题规则的文档。',
       },
+      markDocAsRead: {
+        en_US: 'Mark this doc as read.',
+        zh_CN: '将该文档标记为已读状态',
+      },
       suggestionsRankedByPriority: {
         en_US: 'Suggestions ranked by priority.',
         zh_CN: '按优先级排序的建议。',
