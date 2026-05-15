@@ -70,6 +70,11 @@ function selectAll() {
   selectedIndices.value = selectAllSuggestionIndices(props.suggestions)
 }
 
+function applyAll() {
+  selectedIndices.value = selectAllSuggestionIndices(props.suggestions)
+  applySelected()
+}
+
 function applySelected() {
   emit('apply', getSelectedSuggestions(props.suggestions, selectedIndices.value))
 }
@@ -155,6 +160,17 @@ const suggestionDiffPreviews = computed(() =>
 )
 
 function resolveSuggestionTypeLabel(type: WikiMaintenanceSuggestion['type']): string {
+  const normalizedType = normalizeSuggestionType(type)
+  switch (type) {
+    case 'broken-link':
+    case 'outdated-section':
+    case 'missing-reference':
+      break
+    default:
+      type = normalizedType
+      break
+  }
+
   switch (type) {
     case 'broken-link':
       return t('llmWiki.maintain.brokenLink')
@@ -164,6 +180,23 @@ function resolveSuggestionTypeLabel(type: WikiMaintenanceSuggestion['type']): st
       return t('llmWiki.maintain.missingReference')
     default:
       return type
+  }
+}
+
+function normalizeSuggestionType(type: string): WikiMaintenanceSuggestion['type'] {
+  const normalized = type.trim().toLowerCase().replace(/[_\s]+/g, '-')
+  switch (normalized) {
+    case 'broken-link':
+    case 'brokenlink':
+      return 'broken-link'
+    case 'missing-reference':
+    case 'missingreference':
+      return 'missing-reference'
+    case 'outdated':
+    case 'outdated-section':
+    case 'stale-section':
+    default:
+      return 'outdated-section'
   }
 }
 
@@ -347,12 +380,13 @@ onBeforeUnmount(() => {
               </div>
             </div>
             <div
+              v-if="!suggestionDiffPreviews[index]?.hasDiff"
               class="suggestion-card__snippet markdown-body"
               :class="{ 'suggestion-card__snippet--collapsed': suggestionSnippetNeedsCollapse[index] && !expandedSnippetIndices.has(index) }"
               v-html="suggestionSnippetHtml[index]"
             />
             <button
-              v-if="suggestionSnippetNeedsCollapse[index]"
+              v-if="!suggestionDiffPreviews[index]?.hasDiff && suggestionSnippetNeedsCollapse[index]"
               class="suggestion-card__snippet-toggle"
               type="button"
               @click.stop="toggleSnippetExpanded(index)"
@@ -365,7 +399,7 @@ onBeforeUnmount(() => {
       <div class="wiki-maintain-diff-dialog__footer">
         <button
           class="action-button"
-          @click="selectAll"
+          @click="applyAll"
         >
           {{ t('llmWiki.maintain.applyAll') }}
         </button>

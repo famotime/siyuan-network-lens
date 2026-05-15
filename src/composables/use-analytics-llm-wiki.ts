@@ -3,6 +3,7 @@ import type { WikiIndexPage, WikiMaintenanceSuggestion } from '@/analytics/wiki-
 import { parseWikiIndexPages } from '@/analytics/wiki-index'
 import { parseMaintenanceResponse, buildMaintenanceSystemPrompt, buildMaintenanceUserPrompt } from '@/analytics/llm-wiki-maintain-service'
 import { resolveAiEndpoint } from '@/analytics/ai-inbox'
+import { resolveUiLocale } from '@/i18n/ui'
 import {
   buildMaintenanceErrorState,
   buildMaintenanceSuccessState,
@@ -94,6 +95,7 @@ export function createLlmWikiController(params: {
               wikiPageTitle: page.title,
               wikiPageMarkdown: block.kramdown,
               brokenLinkIds,
+              locale: resolveUiLocale(),
             }) },
           ],
           max_tokens: cfg.aiMaxTokens ?? 4096,
@@ -113,7 +115,7 @@ export function createLlmWikiController(params: {
       if (!content) {
         log.warn('[llm-wiki-maintain] LLM returned empty content, full response body:', JSON.stringify(body).slice(0, 1000))
       }
-      const result = parseMaintenanceResponse(content)
+      const result = parseMaintenanceResponse(content, resolveUiLocale())
 
       log.info('[llm-wiki-maintain] parsed', result.suggestions.length, 'suggestions, revisedMarkdown length:', result.revisedMarkdown.length)
       page.maintenanceState = {

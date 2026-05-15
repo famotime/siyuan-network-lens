@@ -1,12 +1,64 @@
 import type { WikiMaintenanceSuggestion } from './wiki-index'
-import { t } from '@/i18n/ui'
+import { resolveUiLocale, t, type UiLocale } from '@/i18n/ui'
 
 export interface WikiMaintenanceResult {
   suggestions: WikiMaintenanceSuggestion[]
   revisedMarkdown: string
 }
 
-export function parseMaintenanceResponse(content: string): WikiMaintenanceResult {
+function localizeMaintenanceDescription(description: string, locale: UiLocale): string {
+  const text = description.trim()
+  if (!text) {
+    return ''
+  }
+
+  if (locale !== 'zh_CN') {
+    return text
+  }
+
+  const localized = [
+    {
+      pattern: /^source document\s+`?["“]?(.+?)["”]?`?\s+\(id:\s*([^)]+)\)\s+is listed in the reference section but is not cited in the page content\.?\s*consider adding relevant citations from this source where appropriate\.?$/i,
+      build: (_match: RegExpMatchArray, title: string, id: string) => `来源文档「${title}」（ID：${id}）出现在参考区域中，但未在页面内容中被引用。可在合适位置补充相关引文。`,
+    },
+    {
+      pattern: /^the page indicates (\d+) source documents in the header, but only (\d+) are cited in the content\.?\s*the ['"]ai managed area['"] section['"]s ['"]source count['"] metadata should be verified against the actual number of cited sources\.?$/i,
+      build: (_match: RegExpMatchArray, total: string, cited: string) => `页面头部显示有 ${total} 篇来源文档，但正文仅引用了 ${cited} 篇。请核对“AI 管理区”中的“源文档数”是否与实际引用数量一致。`,
+    },
+  ] as const
+
+  for (const item of localized) {
+    const match = text.match(item.pattern)
+    if (match) {
+      return item.build(match, ...match.slice(1))
+    }
+  }
+
+  return text
+}
+
+function normalizeSuggestionType(type: unknown): WikiMaintenanceSuggestion['type'] {
+  const normalized = typeof type === 'string'
+    ? type.trim().toLowerCase().replace(/[_\s]+/g, '-')
+    : ''
+
+  switch (normalized) {
+    case 'broken-link':
+    case 'brokenlink':
+      return 'broken-link'
+    case 'outdated-section':
+    case 'outdated':
+    case 'stale-section':
+      return 'outdated-section'
+    case 'missing-reference':
+    case 'missingreference':
+      return 'missing-reference'
+    default:
+      return 'outdated-section'
+  }
+}
+
+export function parseMaintenanceResponse(content: string, locale = resolveUiLocale()): WikiMaintenanceResult {
   try {
     const cleaned = content
       .replace(/^```(?:json)?\s*\n?/i, '')
@@ -16,8 +68,8 @@ export function parseMaintenanceResponse(content: string): WikiMaintenanceResult
     const parsed = JSON.parse(cleaned)
     const suggestions: WikiMaintenanceSuggestion[] = Array.isArray(parsed.suggestions)
       ? parsed.suggestions.map((s: any) => ({
-        type: s.type ?? 'outdated-section',
-        description: s.description ?? '',
+        type: normalizeSuggestionType(s.type),
+        description: localizeMaintenanceDescription(s.description ?? '', locale),
         sectionHeading: s.sectionHeading,
       }))
       : []
@@ -64,6 +116,7 @@ export function buildMaintenanceSystemPrompt(): string {
     '2. Outdated sections (content that should be updated based on source documents)',
     '3. Missing references (source documents not linked from the wiki page)',
     'Return JSON with two fields: "suggestions" (array of {type, description, sectionHeading?}) and "revisedMarkdown" (the corrected full wiki page content).',
+    '如果界面语言是中文，请使用中文输出 suggestions.description 和 revisedMarkdown。',
     'Do not invent content not grounded in the source materials.',
   ].join(' ')
 }
@@ -72,15 +125,22 @@ export function buildMaintenanceUserPrompt(params: {
   wikiPageTitle: string
   wikiPageMarkdown: string
   brokenLinkIds: string[]
+  locale?: UiLocale
 }): string {
+  const localeLine = params.locale === 'zh_CN'
+    ? '界面语言：中文，请优先使用中文输出。'
+    : 'UI language: English.'
   const parts = [
-    `Wiki page title: ${params.wikiPageTitle}`,
+    `页面标题：${params.wikiPageTitle}`,
+    localeLine,
     '',
-    'Wiki page content:',
+    '页面内容：',
     params.wikiPageMarkdown,
   ]
   if (params.brokenLinkIds.length) {
-    parts.push('', `Confirmed broken link IDs: ${params.brokenLinkIds.join(', ')}`)
+    parts.push('', params.locale === 'zh_CN'
+      ? `确认失效的块 ID：${params.brokenLinkIds.join(', ')}`
+      : `Confirmed broken link IDs: ${params.brokenLinkIds.join(', ')}`)
   }
   return parts.join('\n')
 }

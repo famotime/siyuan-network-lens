@@ -75,12 +75,12 @@ describe('WikiMaintainDiffDialog', () => {
 
     const html = await renderToString(app)
 
-    expect(html).toContain('suggestion-card__snippet markdown-body')
     expect(html).toContain('过时段落')
     expect(html).toContain('失效链接')
     expect(html).toContain('suggestion-card__snippet-heading')
     expect(html).toContain('命中段落')
     expect(html).toContain('suggestion-card__diff-preview')
+    expect(html).not.toContain('suggestion-card__snippet markdown-body')
     expect(html).toContain('当前内容')
     expect(html).toContain('建议内容')
     expect(html).toContain('<p>旧概述内容</p>')
@@ -89,12 +89,50 @@ describe('WikiMaintainDiffDialog', () => {
     expect(html).toContain('<li>《AI 核心》</li>')
     expect(html).toContain('<p>正文结束</p>')
     expect(html).toContain('<p>补充 说明</p>')
-    expect(html).toContain('suggestion-card__snippet--collapsed')
-    expect(html).toContain('展开更多')
+    expect(html).not.toContain('suggestion-card__snippet--collapsed')
+    expect(html).not.toContain('展开更多')
     expect(html).not.toContain('<pre')
     expect(html).not.toContain('doc-ai-core')
     expect(html).not.toContain('&lt;sup&gt;')
     expect(html).not.toContain('&lt;div&gt;')
+  })
+
+  it('maps aliased suggestion types to localized labels and avoids duplicated snippet body when diff exists', async () => {
+    const { default: WikiMaintainDiffDialog } = await import('./WikiMaintainDiffDialog.vue')
+
+    const app = createSSRApp({
+      render: () => h(WikiMaintainDiffDialog, {
+        pageTitle: '正念与冥想概述-llm-wiki',
+        currentMarkdown: [
+          '# 正念与冥想概述-llm-wiki',
+          '',
+          '## 正念与冥想概述',
+          '旧版段落一',
+          '旧版段落二',
+        ].join('\n'),
+        suggestions: [
+          {
+            type: 'outdated' as any,
+            description: '正念与冥想概述需要更新',
+            sectionHeading: '正念与冥想概述',
+          },
+        ],
+        revisedMarkdown: [
+          '# 正念与冥想概述-llm-wiki',
+          '',
+          '## 正念与冥想概述',
+          '新版段落一',
+          '新版段落二',
+        ].join('\n'),
+      }),
+    })
+
+    const html = await renderToString(app)
+
+    expect(html).toContain('过时段落')
+    expect(html).not.toContain('>outdated<')
+    expect(html).toContain('suggestion-card__diff-preview')
+    expect(html).not.toContain('suggestion-card__snippet markdown-body')
   })
 
   it('keeps markdown renderer import and snippet html binding in source', async () => {
@@ -112,5 +150,14 @@ describe('WikiMaintainDiffDialog', () => {
     expect(source).toContain("t('llmWiki.maintain.showMore')")
     expect(source).toContain("t('llmWiki.maintain.showLess')")
     expect(source).not.toContain('<pre\n          v-if="suggestionSnippets[index]"')
+  })
+
+  it('binds 全部采纳 to applyAll so it does not only select items', async () => {
+    const source = await readFile(new URL('./WikiMaintainDiffDialog.vue', import.meta.url), 'utf8')
+
+    expect(source).toContain("@click=\"applyAll\"")
+    expect(source).toContain('function applyAll()')
+    expect(source).toContain('selectedIndices.value = selectAllSuggestionIndices(props.suggestions)')
+    expect(source).toContain('applySelected()')
   })
 })
