@@ -110,6 +110,7 @@ describe('RankingPanel', () => {
     expect((html.match(/ghost-button ghost-button--filled/g) ?? []).length).toBeGreaterThanOrEqual(2)
     expect(html).not.toContain('范围来源：核心文档《Alpha》关联范围')
     expect((html.match(/wiki-panel panel/g) ?? [])).toHaveLength(1)
+    expect(html).toContain('wiki-panel--embedded')
   })
 
   it('hides core document wiki actions when the alpha gate disables wiki entry points', async () => {

@@ -1181,6 +1181,10 @@ const UI_TEXT = {
       en_US: 'Sync',
       zh_CN: '同步',
     },
+    syncTooltip: {
+      en_US: 'Insert a reciprocal reference link into the current document',
+      zh_CN: '在当前文档中插入一条对等引用链接',
+    },
     linking: {
       en_US: 'Linking...',
       zh_CN: '链接中...',
@@ -1188,6 +1192,10 @@ const UI_TEXT = {
     link: {
       en_US: 'Link',
       zh_CN: '补链',
+    },
+    linkTooltip: {
+      en_US: 'Insert a reference link from the core document to this child document',
+      zh_CN: '从核心文档向该子文档插入一条引用链接',
     },
     noOutbound: {
       en_US: 'No outbound links.',

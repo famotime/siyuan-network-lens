@@ -1,5 +1,5 @@
 <template>
-  <section class="wiki-panel panel">
+  <section class="wiki-panel panel wiki-panel--embedded">
     <div class="wiki-panel__header">
       <p class="wiki-panel__eyebrow">LLM Wiki</p>
       <h2>{{ t('wikiMaintain.title') }}</h2>
@@ -444,6 +444,13 @@ function resolveThemeWikiDocumentId(page: WikiPreviewState['themePages'][number]
   display: grid;
   gap: 16px;
   margin-bottom: 24px;
+}
+
+.wiki-panel--embedded {
+  padding: 0;
+  border: 0;
+  background: transparent;
+  box-shadow: none;
 }
 
 .wiki-panel__header {

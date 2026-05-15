@@ -49,7 +49,7 @@ function buildMaintenanceSummary(page: WikiIndexPage): string {
 </script>
 
 <template>
-  <div class="wiki-cards-section">
+  <div class="wiki-cards-section wiki-cards-section--embedded">
     <div class="wiki-cards-section__header">
       <button
         class="action-button"
@@ -113,6 +113,10 @@ function buildMaintenanceSummary(page: WikiIndexPage): string {
 <style scoped>
 .wiki-cards-section {
   padding: 12px;
+}
+
+.wiki-cards-section--embedded {
+  padding: 0;
 }
 .wiki-cards-section__header {
   margin-bottom: 12px;

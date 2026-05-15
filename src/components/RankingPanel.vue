@@ -111,6 +111,7 @@
                       class="ghost-button"
                       type="button"
                       :disabled="isSyncing(item.documentId, link.documentId, 'outbound')"
+                      :title="t('rankingPanel.syncTooltip')"
                       @click="syncAssociation(item.documentId, link.documentId, 'outbound')"
                     >
                       {{ isSyncing(item.documentId, link.documentId, 'outbound') ? t('rankingPanel.syncing') : t('rankingPanel.sync') }}
@@ -156,6 +157,7 @@
                       class="ghost-button"
                       type="button"
                       :disabled="isSyncing(item.documentId, link.documentId, 'inbound')"
+                      :title="t('rankingPanel.syncTooltip')"
                       @click="syncAssociation(item.documentId, link.documentId, 'inbound')"
                     >
                       {{ isSyncing(item.documentId, link.documentId, 'inbound') ? t('rankingPanel.syncing') : t('rankingPanel.sync') }}
@@ -200,6 +202,7 @@
                       class="ghost-button"
                       type="button"
                       :disabled="isSyncing(item.documentId, link.documentId, 'child')"
+                      :title="t('rankingPanel.linkTooltip')"
                       @click="syncAssociation(item.documentId, link.documentId, 'child')"
                     >
                       {{ isSyncing(item.documentId, link.documentId, 'child') ? t('rankingPanel.linking') : t('rankingPanel.link') }}
