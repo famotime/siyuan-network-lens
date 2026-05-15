@@ -1,7 +1,10 @@
 <template>
   <div
     ref="rootRef"
-    class="theme-multi-select"
+    :class="[
+      'theme-multi-select',
+      `theme-multi-select--dropdown-${resolvedDropdownWidth}`,
+    ]"
   >
     <button
       class="theme-multi-select__trigger"
@@ -17,8 +20,10 @@
     </button>
 
     <div
+      ref="dropdownRef"
       v-show="open || options.length === 0"
       class="theme-multi-select__dropdown"
+      :style="dropdownStyle"
     >
       <div
         v-if="options.length"
@@ -46,7 +51,11 @@
             :checked="modelValue.includes(option.value)"
             @change="toggleOption(option.value)"
           >
-          <span>{{ option.label }}</span>
+          <span
+            :ref="(element) => setOptionLabelRef(resolveOptionKey(option), element as Element | null)"
+            class="theme-multi-select__option-label"
+            :title="resolveTruncatedTitle(option.label, truncatedOptionKeys[resolveOptionKey(option)])"
+          >{{ option.label }}</span>
         </label>
       </div>
 
@@ -61,10 +70,11 @@
 </template>
 
 <script setup lang="ts">
-import { computed, onBeforeUnmount, onMounted, ref } from 'vue'
+import { computed, nextTick, onBeforeUnmount, onMounted, ref, watch } from 'vue'
 
 import type { ThemeOption } from '@/analytics/theme-documents'
 import { t } from '@/i18n/ui'
+import { buildDropdownLayout, buildTruncationMap, resolveTruncatedTitle } from './dropdown-option-truncation'
 
 type MultiSelectOption = Pick<ThemeOption, 'value' | 'label'> & {
   documentId?: string
@@ -77,10 +87,12 @@ const props = withDefaults(defineProps<{
   allLabel?: string
   emptyLabel?: string
   selectionUnit?: string
+  dropdownWidth?: 'trigger' | 'content'
 }>(), {
   allLabel: undefined,
   emptyLabel: undefined,
   selectionUnit: undefined,
+  dropdownWidth: 'content',
 })
 
 const emit = defineEmits<{
@@ -89,9 +101,19 @@ const emit = defineEmits<{
 
 const open = ref(false)
 const rootRef = ref<HTMLElement | null>(null)
+const dropdownRef = ref<HTMLElement | null>(null)
+const optionLabelRefs = new Map<string, HTMLElement>()
+const truncatedOptionKeys = ref<Record<string, boolean>>({})
+const dropdownMaxWidth = ref('min(28rem, calc(100vw - 32px))')
+const dropdownOffsetX = ref('0px')
 const resolvedAllLabel = computed(() => props.allLabel ?? t('shared.allTopics'))
 const resolvedEmptyLabel = computed(() => props.emptyLabel ?? t('shared.noTopicDocsConfigured'))
 const resolvedSelectionUnit = computed(() => props.selectionUnit ?? t('shared.themesUnit'))
+const resolvedDropdownWidth = computed(() => props.dropdownWidth)
+const dropdownStyle = computed(() => ({
+  maxWidth: dropdownMaxWidth.value,
+  transform: `translateX(${dropdownOffsetX.value})`,
+}))
 
 const summaryLabel = computed(() => {
   if (props.options.length === 0) {
@@ -126,6 +148,69 @@ function resolveOptionKey(option: MultiSelectOption) {
   return option.key ?? option.documentId ?? option.value
 }
 
+function setOptionLabelRef(optionKey: string, element: Element | null) {
+  if (element instanceof HTMLElement) {
+    optionLabelRefs.set(optionKey, element)
+    return
+  }
+
+  optionLabelRefs.delete(optionKey)
+}
+
+function measureOptionLabels() {
+  const dropdownRect = dropdownRef.value?.getBoundingClientRect()
+
+  truncatedOptionKeys.value = buildTruncationMap(
+    [...optionLabelRefs.entries()].map(([key, element]) => ({
+      key,
+      clientWidth: element.clientWidth,
+      scrollWidth: element.scrollWidth,
+      clippedLeft: Boolean(dropdownRect && element.getBoundingClientRect().left < dropdownRect.left),
+      clippedRight: Boolean(dropdownRect && element.getBoundingClientRect().right > dropdownRect.right),
+    })),
+  )
+}
+
+function updateDropdownLayout() {
+  if (!rootRef.value || !dropdownRef.value) {
+    return
+  }
+
+  const rootRect = rootRef.value.getBoundingClientRect()
+  const dropdownRect = dropdownRef.value.getBoundingClientRect()
+  const container = rootRef.value.closest('.reference-analytics') ?? rootRef.value.closest('.reference-analytics-root') ?? rootRef.value.parentElement
+  const containerRect = container?.getBoundingClientRect() ?? rootRect
+
+  const layout = buildDropdownLayout({
+    triggerLeft: rootRect.left,
+    triggerWidth: rootRect.width,
+    contentWidth: dropdownRect.width,
+    containerLeft: containerRect.left,
+    containerWidth: containerRect.width,
+    viewportWidth: window.innerWidth,
+    viewportPadding: 16,
+    designMaxWidth: 448,
+  })
+
+  dropdownMaxWidth.value = layout.maxWidth
+  dropdownOffsetX.value = layout.offsetX
+}
+
+async function measureOptionLabelsAfterRender() {
+  await nextTick()
+  updateDropdownLayout()
+  await nextTick()
+  measureOptionLabels()
+}
+
+function handleWindowResize() {
+  if (!open.value) {
+    return
+  }
+
+  void measureOptionLabelsAfterRender()
+}
+
 function onDocumentClick(event: MouseEvent) {
   if (!rootRef.value) {
     return
@@ -136,12 +221,30 @@ function onDocumentClick(event: MouseEvent) {
   }
 }
 
+watch(open, (isOpen) => {
+  if (!isOpen) {
+    return
+  }
+
+  void measureOptionLabelsAfterRender()
+})
+
+watch(() => props.options, () => {
+  if (!open.value) {
+    return
+  }
+
+  void measureOptionLabelsAfterRender()
+}, { deep: true })
+
 onMounted(() => {
   document.addEventListener('click', onDocumentClick)
+  window.addEventListener('resize', handleWindowResize)
 })
 
 onBeforeUnmount(() => {
   document.removeEventListener('click', onDocumentClick)
+  window.removeEventListener('resize', handleWindowResize)
 })
 </script>
 
@@ -199,8 +302,9 @@ onBeforeUnmount(() => {
   position: absolute;
   top: calc(100% + 8px);
   left: 0;
-  right: 0;
-  z-index: 10;
+  min-width: 100%;
+  width: max-content;
+  z-index: var(--z-dropdown, 10);
   border: 1px solid color-mix(in srgb, var(--b3-theme-primary) 14%, var(--panel-border));
   border-radius: 14px;
   background:
@@ -211,6 +315,15 @@ onBeforeUnmount(() => {
     inset 0 1px 0 color-mix(in srgb, var(--b3-theme-background) 52%, transparent);
   overflow: hidden;
   backdrop-filter: blur(12px);
+}
+
+.theme-multi-select--dropdown-trigger .theme-multi-select__dropdown {
+  width: 100%;
+  max-width: none;
+}
+
+.theme-multi-select--dropdown-content .theme-multi-select__dropdown {
+  width: max-content;
 }
 
 .theme-multi-select__actions {
@@ -237,6 +350,8 @@ onBeforeUnmount(() => {
 .theme-multi-select__options {
   display: grid;
   gap: 2px;
+  width: max-content;
+  min-width: 100%;
   max-height: 220px;
   overflow: auto;
   padding: 8px;
@@ -251,6 +366,15 @@ onBeforeUnmount(() => {
   cursor: pointer;
   transition: background-color 0.2s, border-color 0.2s;
   border: 1px solid transparent;
+  min-width: 0;
+}
+
+.theme-multi-select__option-label {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  flex: 1;
 }
 
 .theme-multi-select__option:hover {

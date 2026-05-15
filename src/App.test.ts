@@ -69,6 +69,9 @@ describe('App trend detail layout', () => {
 
     expect(source).toContain('filter-panel__row--meta')
     expect(source).toContain('filter-panel__row--focus')
+    expect(source).toContain(':dropdown-width="\'content\'"')
+    expect(source).not.toContain(':dropdown-width="\'wide\'"')
+    expect(source).not.toContain(':dropdown-align="\'end\'"')
     expect(source).toContain('visibleSummaryCards')
     expect(source).toContain("import { createAppFilterController } from '@/composables/use-app-filters'")
     expect(source).toContain('createAppFilterController({')

@@ -20,9 +20,11 @@
     </button>
 
     <div
+      ref="dropdownRef"
       v-show="open || options.length === 0"
       class="filter-select__dropdown"
       role="listbox"
+      :style="dropdownStyle"
     >
       <div
         v-if="options.length"
@@ -42,7 +44,11 @@
           @click="selectOption(option.value)"
           @mouseenter="highlightedIndex = index"
         >
-          <span>{{ option.label }}</span>
+          <span
+            :ref="(element) => setOptionLabelRef(option.value, element as Element | null)"
+            class="filter-select__option-label"
+            :title="resolveTruncatedTitle(option.label, truncatedOptionValues[option.value])"
+          >{{ option.label }}</span>
           <span
             v-if="option.value === modelValue"
             class="filter-select__check"
@@ -62,8 +68,11 @@
 </template>
 
 <script setup lang="ts">
-import { computed, onBeforeUnmount, onMounted, ref, watch } from 'vue'
+import { computed, nextTick, onBeforeUnmount, onMounted, ref, watch } from 'vue'
+
 import { t } from '@/i18n/ui'
+
+import { buildDropdownLayout, buildTruncationMap, resolveTruncatedTitle } from './dropdown-option-truncation'
 
 type FilterSelectOption = {
   value: string
@@ -84,8 +93,17 @@ const emit = defineEmits<{
 
 const open = ref(false)
 const rootRef = ref<HTMLElement | null>(null)
+const dropdownRef = ref<HTMLElement | null>(null)
 const highlightedIndex = ref(-1)
+const optionLabelRefs = new Map<string, HTMLElement>()
+const truncatedOptionValues = ref<Record<string, boolean>>({})
+const dropdownMaxWidth = ref('min(28rem, calc(100vw - 32px))')
+const dropdownOffsetX = ref('0px')
 const resolvedEmptyLabel = computed(() => props.emptyLabel ?? t('shared.noOptionsAvailable'))
+const dropdownStyle = computed(() => ({
+  maxWidth: dropdownMaxWidth.value,
+  transform: `translateX(${dropdownOffsetX.value})`,
+}))
 
 const summaryLabel = computed(() => {
   return props.options.find(option => option.value === props.modelValue)?.label
@@ -93,15 +111,23 @@ const summaryLabel = computed(() => {
     ?? resolvedEmptyLabel.value
 })
 
-// 打开时将高亮定位到当前选中项
 watch(open, (isOpen) => {
   if (isOpen) {
     const selectedIdx = props.options.findIndex(o => o.value === props.modelValue)
     highlightedIndex.value = selectedIdx >= 0 ? selectedIdx : 0
+    void measureOptionLabelsAfterRender()
   } else {
     highlightedIndex.value = -1
   }
 })
+
+watch(() => props.options, () => {
+  if (!open.value) {
+    return
+  }
+
+  void measureOptionLabelsAfterRender()
+}, { deep: true })
 
 function toggleOpen() {
   open.value = !open.value
@@ -112,12 +138,73 @@ function selectOption(value: string) {
   open.value = false
 }
 
-/** 键盘导航：ArrowDown/ArrowUp 移动高亮，Enter 选中，Escape 关闭 */
+function setOptionLabelRef(optionValue: string, element: Element | null) {
+  if (element instanceof HTMLElement) {
+    optionLabelRefs.set(optionValue, element)
+    return
+  }
+
+  optionLabelRefs.delete(optionValue)
+}
+
+function measureOptionLabels() {
+  const dropdownRect = dropdownRef.value?.getBoundingClientRect()
+
+  truncatedOptionValues.value = buildTruncationMap(
+    [...optionLabelRefs.entries()].map(([key, element]) => ({
+      key,
+      clientWidth: element.clientWidth,
+      scrollWidth: element.scrollWidth,
+      clippedLeft: Boolean(dropdownRect && element.getBoundingClientRect().left < dropdownRect.left),
+      clippedRight: Boolean(dropdownRect && element.getBoundingClientRect().right > dropdownRect.right),
+    })),
+  )
+}
+
+function updateDropdownLayout() {
+  if (!rootRef.value || !dropdownRef.value) {
+    return
+  }
+
+  const rootRect = rootRef.value.getBoundingClientRect()
+  const dropdownRect = dropdownRef.value.getBoundingClientRect()
+  const container = rootRef.value.closest('.reference-analytics') ?? rootRef.value.closest('.reference-analytics-root') ?? rootRef.value.parentElement
+  const containerRect = container?.getBoundingClientRect() ?? rootRect
+
+  const layout = buildDropdownLayout({
+    triggerLeft: rootRect.left,
+    triggerWidth: rootRect.width,
+    contentWidth: dropdownRect.width,
+    containerLeft: containerRect.left,
+    containerWidth: containerRect.width,
+    viewportWidth: window.innerWidth,
+    viewportPadding: 16,
+    designMaxWidth: 448,
+  })
+
+  dropdownMaxWidth.value = layout.maxWidth
+  dropdownOffsetX.value = layout.offsetX
+}
+
+async function measureOptionLabelsAfterRender() {
+  await nextTick()
+  updateDropdownLayout()
+  await nextTick()
+  measureOptionLabels()
+}
+
+function handleWindowResize() {
+  if (!open.value) {
+    return
+  }
+
+  void measureOptionLabelsAfterRender()
+}
+
 function handleTriggerKeydown(event: KeyboardEvent) {
   const { key } = event
 
   if (!open.value) {
-    // 关闭状态下，ArrowDown/ArrowUp/Enter/Space 打开菜单
     if (key === 'ArrowDown' || key === 'ArrowUp' || key === 'Enter' || key === ' ') {
       event.preventDefault()
       open.value = true
@@ -155,10 +242,12 @@ function onDocumentClick(event: MouseEvent) {
 
 onMounted(() => {
   document.addEventListener('click', onDocumentClick)
+  window.addEventListener('resize', handleWindowResize)
 })
 
 onBeforeUnmount(() => {
   document.removeEventListener('click', onDocumentClick)
+  window.removeEventListener('resize', handleWindowResize)
 })
 </script>
 
@@ -216,7 +305,8 @@ onBeforeUnmount(() => {
   position: absolute;
   top: calc(100% + 8px);
   left: 0;
-  right: 0;
+  min-width: 100%;
+  width: max-content;
   z-index: var(--z-dropdown, 10);
   border: 1px solid color-mix(in srgb, var(--b3-theme-primary) 14%, var(--panel-border));
   border-radius: 14px;
@@ -233,6 +323,8 @@ onBeforeUnmount(() => {
 .filter-select__options {
   display: grid;
   gap: 2px;
+  width: max-content;
+  min-width: 100%;
   max-height: 220px;
   overflow: auto;
   padding: 8px;
@@ -252,6 +344,16 @@ onBeforeUnmount(() => {
   justify-content: space-between;
   gap: 12px;
   transition: background-color 0.2s, border-color 0.2s;
+  white-space: nowrap;
+  min-width: 0;
+}
+
+.filter-select__option-label {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  flex: 1;
 }
 
 .filter-select__option:hover,

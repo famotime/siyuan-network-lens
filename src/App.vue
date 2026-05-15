@@ -64,6 +64,7 @@
             :all-label="t('app.filter.allTags')"
             :empty-label="t('app.filter.noTags')"
             :selection-unit="t('app.filter.tagUnit')"
+            :dropdown-width="'content'"
           />
         </label>
       </div>

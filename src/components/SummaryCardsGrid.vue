@@ -268,8 +268,8 @@ function handleCardToggle(cardKey: SummaryCardKey) {
 
 .summary-card__label {
   font-size: 13px;
-  color: var(--panel-muted);
-  font-weight: 500;
+  color: var(--b3-theme-on-background);
+  font-weight: 700;
 }
 
 .summary-card__frame {
