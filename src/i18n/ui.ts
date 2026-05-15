@@ -3130,6 +3130,10 @@ const UI_TEXT = {
         en_US: 'missing reference(s)',
         zh_CN: '缺失引用',
       },
+      targetSection: {
+        en_US: 'Target section',
+        zh_CN: '命中段落',
+      },
       diffTitle: {
         en_US: 'Maintenance diff preview',
         zh_CN: '维护变更预览',
@@ -3157,6 +3161,14 @@ const UI_TEXT = {
       noSuggestions: {
         en_US: 'No maintenance suggestions. Page is up to date.',
         zh_CN: '无维护建议，页面内容已是最新。',
+      },
+      showMore: {
+        en_US: 'Show more',
+        zh_CN: '展开更多',
+      },
+      showLess: {
+        en_US: 'Show less',
+        zh_CN: '收起内容',
       },
       applied: {
         en_US: 'Changes applied',

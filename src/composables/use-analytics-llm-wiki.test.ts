@@ -115,6 +115,12 @@ describe('createLlmWikiController', () => {
           sectionHeading: '概述',
         },
       ],
+      currentMarkdown: [
+        '# 主题-AI-索引-llm-wiki',
+        '',
+        '[Good](siyuan://blocks/good-link)',
+        '[Bad](siyuan://blocks/bad-link)',
+      ].join('\n'),
       diffPreview: '# 修订后的 wiki',
     })
     expect(controller.wikiPages.value[0].maintenanceState?.status).toBe('suggestions-ready')
@@ -158,6 +164,7 @@ describe('createLlmWikiController', () => {
       maintenanceState: {
         status: 'suggestions-ready',
         suggestions: [{ type: 'outdated-section', description: '更新概述' }],
+        currentMarkdown: '# 当前 wiki',
         diffPreview: '# 修订后的 wiki',
       },
     }
@@ -182,6 +189,7 @@ describe('createLlmWikiController', () => {
       maintenanceState: {
         status: 'suggestions-ready',
         suggestions: [{ type: 'broken-link', description: '坏链' }],
+        currentMarkdown: '# 当前 wiki',
         diffPreview: '# 修订后的 wiki',
       },
     }
@@ -191,7 +199,62 @@ describe('createLlmWikiController', () => {
     expect(page.maintenanceState).toEqual({
       status: 'suggestions-ready',
       suggestions: [{ type: 'broken-link', description: '坏链' }],
+      currentMarkdown: '# 当前 wiki',
       diffPreview: '# 修订后的 wiki',
     })
+  })
+
+  it('applies only the selected section content when selected suggestions target a specific section', async () => {
+    const updateBlock = vi.fn(async () => [])
+    const controller = createLlmWikiController({
+      config: createConfig(),
+      updateBlock: updateBlock as any,
+    })
+    const page = {
+      documentId: 'wiki-page-1',
+      title: '主题-AI-索引-llm-wiki',
+      maintenanceState: {
+        status: 'suggestions-ready',
+        suggestions: [{ type: 'outdated-section', description: '更新概述', sectionHeading: 'Topic overview' }],
+        currentMarkdown: [
+          '# 主题-AI-索引-llm-wiki',
+          '',
+          '## AI managed area',
+          '',
+          '<!-- network-lens-wiki-section:intro -->',
+          '### Topic overview',
+          '旧概述',
+          '',
+          '<!-- network-lens-wiki-section:highlights -->',
+          '### Highlights',
+          '- 旧亮点 A',
+        ].join('\n'),
+        diffPreview: [
+          '# 主题-AI-索引-llm-wiki',
+          '',
+          '## AI managed area',
+          '',
+          '<!-- network-lens-wiki-section:intro -->',
+          '### Topic overview',
+          '新概述',
+          '',
+          '<!-- network-lens-wiki-section:highlights -->',
+          '### Highlights',
+          '- 新亮点 A',
+        ].join('\n'),
+      },
+    }
+
+    await controller.applyMaintenance(page as any, page.maintenanceState.diffPreview, [
+      { type: 'outdated-section', description: '更新概述', sectionHeading: 'Topic overview' },
+    ])
+
+    expect(updateBlock).toHaveBeenCalledWith(
+      'markdown',
+      expect.stringContaining('### Topic overview\n新概述'),
+      'wiki-page-1',
+    )
+    expect(updateBlock.mock.calls[0][1]).toContain('### Highlights\n- 旧亮点 A')
+    expect(updateBlock.mock.calls[0][1]).not.toContain('### Highlights\n- 新亮点 A')
   })
 })

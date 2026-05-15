@@ -268,7 +268,7 @@
     <WikiMaintainDiffDialog
       v-if="llmWikiMaintainDiffVisible && llmWikiMaintainTargetPage"
       :page-title="llmWikiMaintainTargetPage.title"
-      :current-markdown="''"
+      :current-markdown="llmWikiMaintainTargetPage.maintenanceState?.currentMarkdown ?? ''"
       :suggestions="llmWikiMaintainTargetPage.maintenanceState?.suggestions ?? []"
       :revised-markdown="llmWikiMaintainTargetPage.maintenanceState?.diffPreview ?? ''"
       :loading="llmWikiMaintainTargetPage.maintenanceState?.status === 'reviewing'"
@@ -527,11 +527,12 @@ async function handleLlmWikiChatSave(markdown: string) {
   }
 }
 
-function handleLlmWikiMaintainApply(_selectedSuggestions: any[]) {
+function handleLlmWikiMaintainApply(selectedSuggestions: any[]) {
   if (llmWikiMaintainTargetPage.value?.maintenanceState?.diffPreview) {
     applyLlmWikiMaintenance(
       llmWikiMaintainTargetPage.value,
       llmWikiMaintainTargetPage.value.maintenanceState.diffPreview,
+      selectedSuggestions,
     )
     closeLlmWikiMaintainDiff()
   }

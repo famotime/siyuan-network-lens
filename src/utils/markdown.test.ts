@@ -85,4 +85,26 @@ describe('renderSimpleMarkdown', () => {
     expect(html).not.toContain('- 嵌套')
     expect(html).not.toContain('* 另一')
   })
+
+  it('preserves link labels while stripping SiYuan block ids', () => {
+    const html = renderSimpleMarkdown('- [《AI 核心》](siyuan://blocks/doc-ai-core)', {
+      preserveSiyuanLinkLabels: true,
+    })
+
+    expect(html).toContain('《AI 核心》')
+    expect(html).not.toContain('doc-ai-core')
+    expect(html).not.toContain('siyuan://blocks')
+  })
+
+  it('strips generic html tags while keeping readable text content', () => {
+    const html = renderSimpleMarkdown('<div>补充 <span>说明</span></div>', {
+      stripHtmlTags: true,
+    })
+
+    expect(html).toContain('补充 说明')
+    expect(html).not.toContain('&lt;div&gt;')
+    expect(html).not.toContain('&lt;span&gt;')
+    expect(html).not.toContain('<div>')
+    expect(html).not.toContain('<span>')
+  })
 })

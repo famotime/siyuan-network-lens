@@ -6,6 +6,7 @@ const SUMMARY_LINE_PATTERN = /^\s*-\s*(?:摘要|Summary)\s*[：:]\s*(.+)\s*$/i
 export interface WikiMaintenanceState {
   status: 'idle' | 'reviewing' | 'suggestions-ready' | 'applying'
   suggestions?: WikiMaintenanceSuggestion[]
+  currentMarkdown?: string
   diffPreview?: string
 }
 

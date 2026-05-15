@@ -97,6 +97,14 @@ describe('App trend detail layout', () => {
     expect(source).toContain('showWikiFeature')
   })
 
+  it('passes current markdown and selected maintenance suggestions through the LLM wiki maintain apply flow', async () => {
+    const source = await readFile(new URL('./App.vue', import.meta.url), 'utf8')
+
+    expect(source).toContain(':current-markdown="llmWikiMaintainTargetPage.maintenanceState?.currentMarkdown ?? \'\'"')
+    expect(source).toContain('function handleLlmWikiMaintainApply(selectedSuggestions: any[])')
+    expect(source).toContain('selectedSuggestions,')
+  })
+
   it('shows an in-panel loading skeleton for the first analytics load', async () => {
     const source = await readFile(new URL('./App.vue', import.meta.url), 'utf8')
 

@@ -11,6 +11,7 @@ import {
   readMaintenanceContentFromResponseBody,
   syncWikiPageState,
 } from './llm-wiki-maintain-review'
+import { resolveAppliedMaintenanceMarkdown } from './llm-wiki-maintain-apply'
 import type { PluginConfig } from '@/types/config'
 import type { PluginLogger } from '@/utils/plugin-logger'
 
@@ -30,7 +31,7 @@ export interface LlmWikiController {
   wikiPageCount: Ref<number>
   loadWikiPages: (kramdown: string) => void
   reviewPage: (page: WikiIndexPage) => Promise<WikiIndexPage>
-  applyMaintenance: (page: WikiIndexPage, revisedMarkdown: string) => Promise<void>
+  applyMaintenance: (page: WikiIndexPage, revisedMarkdown: string, selectedSuggestions?: WikiMaintenanceSuggestion[]) => Promise<void>
 }
 
 const noopLogger: PluginLogger = { log: () => {}, debug: () => {}, info: () => {}, warn: () => {}, error: () => {} }
@@ -115,7 +116,10 @@ export function createLlmWikiController(params: {
       const result = parseMaintenanceResponse(content)
 
       log.info('[llm-wiki-maintain] parsed', result.suggestions.length, 'suggestions, revisedMarkdown length:', result.revisedMarkdown.length)
-      page.maintenanceState = buildMaintenanceSuccessState(result)
+      page.maintenanceState = {
+        ...buildMaintenanceSuccessState(result),
+        currentMarkdown: block.kramdown,
+      }
       wikiPages.value = syncWikiPageState(wikiPages.value, page)
     } catch (e: any) {
       log.error('[llm-wiki-maintain] reviewPage error', e.message ?? e)
@@ -126,12 +130,21 @@ export function createLlmWikiController(params: {
     return page
   }
 
-  async function applyMaintenance(page: WikiIndexPage, revisedMarkdown: string) {
+  async function applyMaintenance(
+    page: WikiIndexPage,
+    revisedMarkdown: string,
+    selectedSuggestions: WikiMaintenanceSuggestion[] = [],
+  ) {
     if (!params.updateBlock) return
     page.maintenanceState = { ...page.maintenanceState, status: 'applying' }
     wikiPages.value = syncWikiPageState(wikiPages.value, page)
     try {
-      await params.updateBlock('markdown', revisedMarkdown, page.documentId)
+      const nextMarkdown = resolveAppliedMaintenanceMarkdown({
+        currentMarkdown: page.maintenanceState?.currentMarkdown ?? '',
+        revisedMarkdown,
+        selectedSuggestions,
+      })
+      await params.updateBlock('markdown', nextMarkdown, page.documentId)
       page.maintenanceState = { status: 'idle' }
     } catch {
       page.maintenanceState = { ...page.maintenanceState, status: 'suggestions-ready' }

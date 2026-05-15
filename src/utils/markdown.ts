@@ -4,6 +4,11 @@
  * Strips SiYuan-specific artifacts (block references, siyuan:// links, IAL attrs, HTML comments).
  */
 
+export interface SimpleMarkdownRenderOptions {
+  preserveSiyuanLinkLabels?: boolean
+  stripHtmlTags?: boolean
+}
+
 function escapeHtml(text: string): string {
   return text
     .replace(/&/g, '&amp;')
@@ -20,7 +25,34 @@ function formatInline(text: string): string {
   return result
 }
 
-export function renderSimpleMarkdown(source: string): string {
+function sanitizeMarkdownLine(rawLine: string, options: SimpleMarkdownRenderOptions): string {
+  let line = rawLine
+    .replace(/<!--[\s\S]*?-->/g, '')
+    .replace(/<sup\b[^>]*>[\s\S]*?<\/sup>/gi, '')
+    .replace(/\(\(\s*([^\)\s"']+)(?:\s+"([^"]*)"|\s+'([^']*)')?\s*\)\)/g, (_match, _id: string, doubleQuotedLabel?: string, singleQuotedLabel?: string) => {
+      const label = (doubleQuotedLabel ?? singleQuotedLabel ?? '').trim()
+      return label && !/^\d+$/.test(label) ? label : ''
+    })
+    .replace(/\[([^\]]*?)\]\(\s*siyuan:\/\/blocks\/([^?\s<>"')\]#]+)(?:\s+"[^"]*")?\s*\)/gi, (_match, label: string) => {
+      const trimmedLabel = label.trim()
+      if (!options.preserveSiyuanLinkLabels) {
+        return ''
+      }
+      return trimmedLabel && !/^\d+$/.test(trimmedLabel) ? trimmedLabel : ''
+    })
+    .replace(/siyuan:\/\/blocks\/([^?\s<>"')\]#]+)/gi, '')
+    .replace(/\{:\s[^}]*\}/g, '')
+
+  if (options.stripHtmlTags) {
+    line = line
+      .replace(/<\/?[^>]+>/g, ' ')
+      .replace(/\s{2,}/g, ' ')
+  }
+
+  return line.trim()
+}
+
+export function renderSimpleMarkdown(source: string, options: SimpleMarkdownRenderOptions = {}): string {
   const lines = source.split(/\r?\n/)
   const out: string[] = []
 
@@ -46,15 +78,7 @@ export function renderSimpleMarkdown(source: string): string {
   }
 
   for (const rawLine of lines) {
-    const line = rawLine
-      .replace(/<!--[\s\S]*?-->/g, '')
-      .replace(/<sup>[\s\S]*?<\/sup>/gi, '')
-      .replace(/\(\([^)\s]+\s*"([^"]*)"\)\)/g, (_match, label: string) => {
-        return /^\d+$/.test(label.trim()) ? '' : label.trim()
-      })
-      .replace(/\[[^\]]*?\]\(siyuan:\/\/[^)]*\)/g, '')
-      .replace(/\{:\s[^}]*\}/g, '')
-      .trim()
+    const line = sanitizeMarkdownLine(rawLine, options)
 
     if (!line) {
       closeList()
