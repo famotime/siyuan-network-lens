@@ -67,6 +67,7 @@ export interface PluginConfig {
   wikiLogTitle?: string
   wikiContainerPath?: string
   wikiIncrementalEnabled?: boolean
+  wikiFullContentEnabled?: boolean
   summaryCardOrder?: string[]
 }
 
@@ -105,6 +106,7 @@ export const DEFAULT_CONFIG: PluginConfig = {
   wikiLogTitle: DEFAULT_WIKI_LOG_TITLE,
   wikiContainerPath: DEFAULT_WIKI_CONTAINER_PATH,
   wikiIncrementalEnabled: true,
+  wikiFullContentEnabled: false,
   summaryCardOrder: undefined,
 }
 
@@ -232,6 +234,9 @@ export function ensureConfigDefaults(config: PluginConfig) {
   )
   if (typeof config.wikiIncrementalEnabled !== 'boolean') {
     config.wikiIncrementalEnabled = true
+  }
+  if (typeof config.wikiFullContentEnabled !== 'boolean') {
+    config.wikiFullContentEnabled = false
   }
   ensureAiProviderConfigState(config)
 }

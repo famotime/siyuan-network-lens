@@ -26,14 +26,20 @@
       </div>
     </div>
 
+    <div class="wiki-panel__toggle-row">
+      <label class="wiki-panel__toggle">
+        <input v-model="incrementalEnabled" type="checkbox" class="b3-switch">
+        <span>{{ t('wikiMaintain.incrementalGeneration') }}</span>
+      </label>
+      <label class="wiki-panel__toggle">
+        <input v-model="fullContentEnabled" type="checkbox" class="b3-switch">
+        <span>{{ t('wikiMaintain.fullContentGeneration') }}</span>
+      </label>
+    </div>
+
     <label class="wiki-panel__toggle">
       <input v-model="allowOverwriteConflicts" type="checkbox" class="b3-switch">
       <span>{{ t('wikiMaintain.allowOverwriteConflictPages') }}</span>
-    </label>
-
-    <label class="wiki-panel__toggle">
-      <input v-model="incrementalEnabled" type="checkbox" class="b3-switch">
-      <span>{{ t('wikiMaintain.incrementalGeneration') }}</span>
     </label>
 
     <div v-if="error" class="state-banner state-banner--error">
@@ -348,11 +354,13 @@ const props = defineProps<{
   formatTimestamp: (timestamp?: string) => string
   formatWikiPreviewTimestamp: (timestamp?: string) => { dateText: string, timeText: string, fullText: string }
   incrementalEnabled?: boolean
+  fullContentEnabled?: boolean
   isThemeSuggestionActive?: (documentId: string, themeDocumentId: string) => boolean
 }>()
 
 const emit = defineEmits<{
   (e: 'update:incrementalEnabled', value: boolean): void
+  (e: 'update:fullContentEnabled', value: boolean): void
   (e: 'toggleThemeLink', documentId: string, themeDocumentId: string): void
   (e: 'addTag', documentId: string): void
 }>()
@@ -364,6 +372,11 @@ const sourceCardsCollapsed = ref(true)
 const incrementalEnabled = computed({
   get: () => props.incrementalEnabled ?? true,
   set: (value: boolean) => emit('update:incrementalEnabled', value),
+})
+
+const fullContentEnabled = computed({
+  get: () => props.fullContentEnabled ?? false,
+  set: (value: boolean) => emit('update:fullContentEnabled', value),
 })
 
 const statusLabelMap = computed(() => ({
@@ -480,6 +493,12 @@ function resolveThemeWikiDocumentId(page: WikiPreviewState['themePages'][number]
   display: flex;
   flex-wrap: wrap;
   gap: 8px;
+}
+
+.wiki-panel__toggle-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px 16px;
 }
 
 .wiki-panel__toggle {

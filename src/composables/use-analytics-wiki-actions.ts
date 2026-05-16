@@ -234,7 +234,7 @@ export function createAnalyticsWikiActionsController(params: {
       // --- End incremental diff logic ---
 
       const scopedDocumentMap = new Map(scopedDocuments.map(document => [document.id, document]))
-      const payload = buildSingleThemeWikiPayload({
+      const payload = await buildSingleThemeWikiPayload({
         config: params.appliedConfig.value,
         themeDocument,
         sourceDocuments: effectiveSourceDocuments,
@@ -243,6 +243,8 @@ export function createAnalyticsWikiActionsController(params: {
         documentMap: scopedDocumentMap,
         getDocumentProfile: document => sourceProfileMap.get(document.id) ?? null,
         deltaMap,
+        getBlockKramdown: params.getBlockKramdown,
+        fullContentEnabled: params.config.wikiFullContentEnabled === true,
       })
 
       const diagnosis = await params.aiWikiService.diagnoseThemeTemplate({
@@ -520,7 +522,7 @@ export function createAnalyticsWikiActionsController(params: {
   }
 }
 
-function buildSingleThemeWikiPayload(params: {
+async function buildSingleThemeWikiPayload(params: {
   config: Pick<PluginConfig, 'wikiPageSuffix'>
   themeDocument: { documentId: string, title: string, themeName: string }
   sourceDocuments: DocumentRecord[]
@@ -529,7 +531,9 @@ function buildSingleThemeWikiPayload(params: {
   documentMap: ReadonlyMap<string, DocumentRecord>
   getDocumentProfile: (document: DocumentRecord) => DocumentIndexProfile | null
   deltaMap?: Map<string, 'new' | 'changed' | 'unchanged' | 'deleted'>
-}): WikiThemeBundle {
+  getBlockKramdown?: (id: string) => Promise<{ id: string, kramdown: string }>
+  fullContentEnabled?: boolean
+}): Promise<WikiThemeBundle> {
   const bundleDocuments = params.sourceDocuments.map((document) => {
     const profile = params.getDocumentProfile(document)
     if (!profile) {
@@ -566,6 +570,20 @@ function buildSingleThemeWikiPayload(params: {
       deltaStatus: params.deltaMap?.get(document.id) ?? 'new',
     }
   })
+
+  if (params.fullContentEnabled && params.getBlockKramdown) {
+    const MAX_FULL_CONTENT_CHARS = 5000
+    for (const item of bundleDocuments) {
+      try {
+        const { kramdown } = await params.getBlockKramdown(item.documentId)
+        item.fullContent = kramdown?.length > MAX_FULL_CONTENT_CHARS
+          ? kramdown.slice(0, MAX_FULL_CONTENT_CHARS)
+          : (kramdown ?? '')
+      } catch {
+        // skip documents that fail to load
+      }
+    }
+  }
 
   const sourceDocumentIds = bundleDocuments.map(item => item.documentId)
   const sourceDocumentIdSet = new Set(sourceDocumentIds)

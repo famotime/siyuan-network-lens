@@ -25,6 +25,7 @@ export interface WikiBundleDocumentItem {
   sourceUpdatedAt: string
   generatedAt: string
   deltaStatus?: WikiDeltaStatus
+  fullContent?: string
 }
 
 export interface WikiThemeAnalysisSignals {

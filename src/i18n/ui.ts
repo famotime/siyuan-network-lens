@@ -1459,6 +1459,10 @@ const UI_TEXT = {
       en_US: 'Incremental generation',
       zh_CN: '增量生成',
     },
+    fullContentGeneration: {
+      en_US: 'Full content input',
+      zh_CN: '全量输入',
+    },
     deltaStatsTitle: {
       en_US: 'Processing statistics',
       zh_CN: '本次处理统计',
@@ -1915,6 +1919,10 @@ const UI_TEXT = {
       incrementalModePrompt: {
         en_US: 'You are in incremental update mode. The existing wiki page content is provided as context. Preserve parts unaffected by changed documents. Update or supplement parts affected by new/changed documents. Remove references to deleted documents. Output complete updated sections (not fragments).',
         zh_CN: '你正处于增量更新模式。现有 wiki 页面内容作为上下文提供。保留未受变化文档影响的部分。更新或补充受新增/变化文档影响的部分。移除已删除文档相关的引用和内容。输出完整的更新后章节（非片段）。',
+      },
+      fullContentPrompt: {
+        en_US: 'The following are the full original content of each source document. Use them as the primary evidence for wiki generation instead of the index data in the JSON payload.',
+        zh_CN: '以下是各源文档的完整原文内容，请优先以此为依据生成 Wiki 内容，而非 JSON payload 中的索引数据。',
       },
       noSourceChangesUseCache: {
         en_US: 'No new or changed source documents found. Showing the previous preview.',

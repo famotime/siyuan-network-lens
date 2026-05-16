@@ -102,6 +102,7 @@ export function createAiWikiService(deps: {
                 parts.push(t('analytics.wiki.incrementalModePrompt'))
                 parts.push(`Existing wiki page content:\n${params.existingWikiContent}`)
               }
+              parts.push(...buildFullContentParts(params.payload))
               parts.push(JSON.stringify({ payload: params.payload }))
               return parts.join('\n')
             })(),
@@ -139,6 +140,7 @@ export function createAiWikiService(deps: {
                 parts.push(t('analytics.wiki.incrementalModePrompt'))
                 parts.push(`Existing wiki page content:\n${params.existingWikiContent}`)
               }
+              parts.push(...buildFullContentParts(params.payload))
               parts.push(JSON.stringify({ payload: params.payload, diagnosis: params.diagnosis }))
               return parts.join('\n')
             })(),
@@ -186,6 +188,7 @@ export function createAiWikiService(deps: {
                 parts.push(t('analytics.wiki.incrementalModePrompt'))
                 parts.push(`Existing wiki page content:\n${params.existingWikiContent}`)
               }
+              parts.push(...buildFullContentParts(params.payload))
               parts.push(JSON.stringify({
                 payload: params.payload,
                 diagnosis: params.diagnosis,
@@ -201,6 +204,20 @@ export function createAiWikiService(deps: {
       return normalizeSectionDraft(parseJsonFromContent(response), params.sectionType)
     },
   }
+}
+
+function buildFullContentParts(payload: WikiThemeBundle): string[] {
+  const fullContentDocs = payload.sourceDocuments.filter(doc => doc.fullContent)
+  if (fullContentDocs.length === 0) {
+    return []
+  }
+  const parts: string[] = [t('analytics.wiki.fullContentPrompt')]
+  for (const doc of fullContentDocs) {
+    parts.push(`--- Document: ${doc.title} (ID: ${doc.documentId}) ---`)
+    parts.push(doc.fullContent!)
+    parts.push('')
+  }
+  return parts
 }
 
 function assertAiReady(config: AiConfig) {

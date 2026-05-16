@@ -1,6 +1,26 @@
+# CLAUDE.md
+
+This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
+
 ## Project Overview
 
 SiYuan note-taking plugin ("脉络镜 / Network lens") that performs document-level reference network analysis. Not a graph renderer — it analyzes structural relationships between documents to surface rankings, communities, bridges, orphans, dormant docs, propagation nodes, trends, and actionable suggestions.
+
+## Development Commands
+
+```bash
+pnpm install              # Install dependencies (CI uses pnpm 8)
+pnpm test                 # Run all tests (vitest run)
+pnpm test -- path/to.test.ts   # Run a single test file
+pnpm build                # Production build → ./dist + package.zip
+pnpm dev                  # Watch mode (builds to SiYuan workspace if VITE_SIYUAN_WORKSPACE_PATH is set in .env)
+npx eslint .              # Lint (no dedicated script; uses @antfu/eslint-config flat config)
+```
+
+- `pnpm build` produces `package.zip` in the project root — this is the artifact used for releases.
+- CI (`.github/workflows/release.yml`) triggers on `v*` tags: pnpm install → pnpm build → upload `package.zip` as GitHub Release.
+- Release versioning: `pnpm release` (auto-detect bump) or `pnpm release:patch|minor|major`. Updates `plugin.json` + `package.json` versions, commits, and tags.
+- Path alias: `@/` maps to `src/` (configured in both `tsconfig.json` and `vite.config.ts`).
 
 ## Architecture
 

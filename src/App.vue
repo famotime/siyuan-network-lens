@@ -239,6 +239,7 @@
         :batch-generate-doc-index="batchGenerateDocIndex"
         :batch-delete-doc-index="batchDeleteDocIndex"
         @update:incremental-enabled="handleIncrementalEnabledChange"
+        @update:full-content-enabled="handleFullContentEnabledChange"
         @toggle-theme-link="handleToggleThemeLink"
         @add-tag="handleAddTag"
         @open-wiki-chat="openLlmWikiChat"
@@ -465,6 +466,7 @@ const wikiPanelProps = computed(() => ({
   formatTimestamp,
   formatWikiPreviewTimestamp,
   incrementalEnabled: props.config.wikiIncrementalEnabled ?? true,
+  fullContentEnabled: props.config.wikiFullContentEnabled ?? false,
   openSourceDocument: openDocument,
   isThemeSuggestionActive,
 }))
@@ -481,6 +483,10 @@ function handleKeywordInput(event: Event) {
 
 function handleIncrementalEnabledChange(value: boolean) {
   props.config.wikiIncrementalEnabled = value
+}
+
+function handleFullContentEnabledChange(value: boolean) {
+  props.config.wikiFullContentEnabled = value
 }
 
 function handleToggleThemeLink(documentId: string, themeDocumentId: string) {
