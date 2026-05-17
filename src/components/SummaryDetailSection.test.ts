@@ -16,6 +16,12 @@ const wikiPanelProps = {
   applyWikiChanges: vi.fn(),
   openWikiDocument: vi.fn(),
   formatTimestamp: (ts?: string) => ts ?? '',
+  formatWikiPreviewTimestamp: () => ({
+    dateText: '2026-04-10',
+    timeText: '08:00:00',
+    fullText: '2026-04-10 08:00:00',
+  }),
+  fullContentEnabled: true,
 }
 
 const baseProps = {
@@ -233,6 +239,40 @@ describe('SummaryDetailSection', () => {
     expect(html).not.toContain('summary-detail-wiki-action')
     expect(html).not.toContain('Maintain LLM Wiki')
     expect(html).not.toContain('wiki-panel panel')
+  })
+
+  it('passes the full-content toggle through to embedded wiki panels', async () => {
+    const app = createSSRApp({
+      render: () => h(SummaryDetailSection, {
+        ...baseProps,
+        showWikiPanelActions: true,
+        isCoreDocumentWikiPanelVisible: vi.fn(() => true),
+        detail: {
+          key: 'ranking',
+          title: 'Ranking',
+          description: 'Core docs ranked by current connectivity.',
+          kind: 'ranking',
+          ranking: [
+            {
+              documentId: 'doc-a',
+              title: 'Alpha',
+              inboundReferences: 3,
+              distinctSourceDocuments: 2,
+              outboundReferences: 1,
+              childDocumentCount: 0,
+              createdAt: '20260301090000',
+              updatedAt: '20260311120000',
+              isThemeDocument: true,
+              suggestions: [],
+            },
+          ],
+        },
+      } as any),
+    })
+
+    const html = await renderToString(app)
+
+    expect(html).toContain('Full content input')
   })
 
   it('renders propagation detail items and path controls', async () => {

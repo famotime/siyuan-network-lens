@@ -37,6 +37,7 @@ const wikiPanelProps = {
     timeText: '08:00:00',
     fullText: '2026-04-10 08:00:00',
   }),
+  fullContentEnabled: true,
 }
 
 describe('RankingPanel', () => {
@@ -111,6 +112,7 @@ describe('RankingPanel', () => {
     expect(html).not.toContain('范围来源：核心文档《Alpha》关联范围')
     expect((html.match(/wiki-panel panel/g) ?? [])).toHaveLength(1)
     expect(html).toContain('wiki-panel--embedded')
+    expect(html).toContain('Full content input')
   })
 
   it('hides core document wiki actions when the alpha gate disables wiki entry points', async () => {

@@ -572,13 +572,10 @@ async function buildSingleThemeWikiPayload(params: {
   })
 
   if (params.fullContentEnabled && params.getBlockKramdown) {
-    const MAX_FULL_CONTENT_CHARS = 5000
     for (const item of bundleDocuments) {
       try {
         const { kramdown } = await params.getBlockKramdown(item.documentId)
-        item.fullContent = kramdown?.length > MAX_FULL_CONTENT_CHARS
-          ? kramdown.slice(0, MAX_FULL_CONTENT_CHARS)
-          : (kramdown ?? '')
+        item.fullContent = kramdown ?? ''
       } catch {
         // skip documents that fail to load
       }

@@ -393,6 +393,7 @@ describe('WikiMaintainPanel', () => {
     expect(html).toContain('LLM Wiki 维护')
     expect(html).toContain('生成预览')
     expect(html).toContain('应用变更')
+    expect(html).toContain('全量输入')
     expect(html).toContain('允许覆盖冲突页面')
     expect(html).toContain('来源文档')
     expect(html).toContain('生成章节')
@@ -401,6 +402,36 @@ describe('WikiMaintainPanel', () => {
     expect(html).toContain('置信度')
     expect(html).toContain('技术主题')
     expect(html).toContain('高')
+  })
+
+  it('renders the full-content toggle when wiki maintain switches are shown', async () => {
+    const app = createSSRApp({
+      render: () => h(WikiMaintainPanel, {
+        wikiEnabled: true,
+        aiEnabled: true,
+        aiConfigReady: true,
+        previewLoading: false,
+        applyLoading: false,
+        error: '',
+        preview: null,
+        prepareWikiPreview: () => undefined,
+        applyWikiChanges: () => undefined,
+        openWikiDocument: () => undefined,
+        openSourceDocument: () => undefined,
+        formatTimestamp: (ts?: string) => ts ?? '',
+        formatWikiPreviewTimestamp: () => ({
+          dateText: '2026-05-06',
+          timeText: '00:07:08',
+          fullText: '2026-05-06 00:07:08',
+        }),
+        incrementalEnabled: true,
+        fullContentEnabled: true,
+      }),
+    })
+
+    const html = await renderToString(app)
+
+    expect(html).toContain('Full content input')
   })
 
   it('renders generated time with the full timestamp emphasized', async () => {

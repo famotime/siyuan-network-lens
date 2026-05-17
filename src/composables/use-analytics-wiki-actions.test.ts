@@ -174,4 +174,174 @@ describe('createAnalyticsWikiActionsController', () => {
     expect(controller.wikiPreview.value?.applyResult).toEqual(applyResult)
     expect(controller.wikiApplyLoading.value).toBe(false)
   })
+
+  it('includes uncapped full document content in wiki payloads when full-content input is enabled', async () => {
+    const kramdown = '# Alpha\n' + 'A'.repeat(7000)
+    const getBlockKramdown = vi.fn(async (id: string) => ({ id, kramdown }))
+    let savedProfile: any = null
+    const forwardProxy = vi.fn(async (url: string) => ({
+      body: JSON.stringify({
+        choices: [{
+          message: {
+            content: JSON.stringify({
+              positioning: '定位',
+              propositions: [{ text: '命题', sourceBlockIds: ['blk-1'] }],
+              keywords: ['AI'],
+            }),
+          },
+        }],
+      }),
+      contentType: 'application/json',
+      elapsed: 1,
+      headers: {},
+      status: 200,
+      url,
+    }))
+    const diagnoseThemeTemplate = vi.fn(async ({ payload }: any) => ({
+      templateType: 'tech_topic',
+      confidence: 'high',
+      reason: '测试诊断',
+      enabledModules: ['intro'],
+      suppressedModules: [],
+      evidenceSummary: payload.sourceDocuments[0]?.fullContent ?? '',
+    }))
+    const planThemePage = vi.fn(async () => ({
+      templateType: 'tech_topic',
+      confidence: 'high',
+      coreSections: ['intro'],
+      optionalSections: [],
+      sectionOrder: ['intro'],
+      sectionGoals: { intro: '主题概览' },
+      sectionFormats: { intro: 'overview' },
+    }))
+    const generateThemeSection = vi.fn(async () => ({
+      sectionType: 'intro',
+      title: '主题概览',
+      format: 'overview',
+      blocks: [{ text: '正文', sourceRefs: ['doc-a'] }],
+      sourceRefs: ['doc-a'],
+    }))
+
+    const controller = createAnalyticsWikiActionsController({
+      config: {
+        wikiEnabled: true,
+        aiEnabled: true,
+        wikiIncrementalEnabled: false,
+        wikiFullContentEnabled: true,
+      } as any,
+      appliedConfig: computed(() => ({
+        themeNotebookId: 'box-1',
+        themeDocumentPath: '/专题',
+        wikiIndexTitle: 'LLM-Wiki-Index',
+        wikiLogTitle: 'LLM-Wiki-Maintenance-Log',
+        wikiPageSuffix: '-llm-wiki',
+        wikiContainerPath: '/box-1/LLM Wiki',
+        aiBaseUrl: 'https://api.example.com/v1',
+        aiApiKey: 'sk-test',
+        aiModel: 'gpt-test',
+      } as any)),
+      snapshot: ref({ notebooks: [{ id: 'box-1', name: 'Notebook 1' }] } as any),
+      report: computed(() => ({
+        ranking: [{ documentId: 'doc-a' }],
+        bridgeDocuments: [],
+        propagationNodes: [],
+        orphans: [],
+        evidenceByDocument: {},
+      } as any)),
+      trends: computed(() => ({
+        risingDocuments: [],
+        fallingDocuments: [],
+      } as any)),
+      filters: computed(() => ({} as any)),
+      timeRange: ref('7d' as const),
+      filteredDocuments: computed(() => [{
+        id: 'doc-a',
+        box: 'box-1',
+        path: '/notes/a.sy',
+        hpath: '/笔记/Alpha',
+        title: 'Alpha',
+        updated: '20260517090000',
+      }] as any),
+      associationDocumentMap: computed(() => new Map([['doc-a', {
+        id: 'doc-a',
+        box: 'box-1',
+        path: '/notes/a.sy',
+        hpath: '/笔记/Alpha',
+        title: 'Alpha',
+        updated: '20260517090000',
+      }]])),
+      themeDocuments: computed(() => [{
+        documentId: 'theme-doc-1',
+        title: '主题-AI-索引',
+        themeName: 'AI',
+        box: 'box-1',
+        hpath: '/专题/主题-AI-索引',
+      }] as any),
+      aiConfigReady: computed(() => true),
+      wikiPreviewLoading: ref(false),
+      wikiApplyLoading: ref(false),
+      wikiError: ref(''),
+      wikiPreview: ref(null),
+      wikiPreviewCache: ref(new Map()),
+      aiIndexStore: {
+        getFreshDocumentProfile: vi.fn(async () => savedProfile),
+        getDocumentProfile: vi.fn(async () => savedProfile),
+        saveDocumentIndex: vi.fn(async (params: any) => {
+          savedProfile = {
+            title: params.sourceDocument.title,
+            positioning: params.positioning,
+            propositionsJson: JSON.stringify(params.propositions),
+            keywordsJson: JSON.stringify(params.keywords),
+            primarySourceBlocksJson: JSON.stringify(params.primarySourceBlocks),
+            secondarySourceBlocksJson: JSON.stringify(params.secondarySourceBlocks),
+            sourceUpdatedAt: params.sourceDocument.updated,
+            generatedAt: params.generatedAt,
+          }
+        }),
+      } as any,
+      aiWikiStore: {
+        getPageRecord: vi.fn(async () => null),
+        savePageRecord: vi.fn(async () => undefined),
+      } as any,
+      aiWikiService: {
+        diagnoseThemeTemplate,
+        planThemePage,
+        generateThemeSection,
+      } as any,
+      forwardProxy,
+      getChildBlocks: vi.fn(async () => [{ id: 'blk-1', type: 'p' }]),
+      getBlockKramdown,
+      createDocWithMd: undefined,
+      getIDsByHPath: vi.fn(async () => []),
+      prependBlock: vi.fn(),
+      appendBlock: vi.fn(),
+      updateBlock: vi.fn(),
+      deleteBlock: vi.fn(),
+      getBlockAttrs: vi.fn(async () => ({})),
+      setBlockAttrs: vi.fn(async () => undefined),
+      resolveNotebookName: vi.fn((notebookId: string) => notebookId),
+      notify: vi.fn(),
+    })
+
+    await controller.prepareWikiPreview({
+      themeDocumentId: 'theme-doc-1',
+      sourceDocumentIds: ['doc-a'],
+      scopeDescriptionLine: '- 范围来源：主题《AI》关联范围',
+    })
+
+    expect(getBlockKramdown.mock.calls.map(call => call[0])).toContain('doc-a')
+    expect(diagnoseThemeTemplate).toHaveBeenCalledWith(expect.objectContaining({
+      payload: expect.objectContaining({
+        sourceDocuments: [
+          expect.objectContaining({
+            documentId: 'doc-a',
+            fullContent: kramdown,
+          }),
+        ],
+      }),
+    }))
+    expect((diagnoseThemeTemplate.mock.calls[0]?.[0] as any).payload.sourceDocuments[0].fullContent.length).toBe(kramdown.length)
+    expect((diagnoseThemeTemplate.mock.calls[0]?.[0] as any).payload.sourceDocuments[0].fullContent.length).toBeGreaterThan(5000)
+    expect(forwardProxy).toHaveBeenCalled()
+  })
 })
