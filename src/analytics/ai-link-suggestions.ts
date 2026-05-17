@@ -8,6 +8,7 @@ import { countThemeMatchesForDocument, type ThemeDocument } from './theme-docume
 import { isAiConfigComplete, resolveAiEndpoint, resolveAiRequestOptions } from './ai-inbox'
 import { resolveUiLocale, t, type UiLocale } from '@/i18n/ui'
 import type { PluginConfig } from '@/types/config'
+import { createPluginLogger } from '@/utils/plugin-logger'
 
 type ForwardProxyFn = (
   url: string,
@@ -28,6 +29,7 @@ type AiConfig = Pick<
   | 'aiMaxTokens'
   | 'aiTemperature'
   | 'aiMaxContextMessages'
+  | 'enableConsoleLogging'
   | 'themeNamePrefix'
   | 'themeNameSuffix'
   | 'readTitlePrefixes'
@@ -118,6 +120,7 @@ export function createAiLinkSuggestionService(deps: {
   return {
     async suggestForOrphan(params) {
       const locale = resolveUiLocale()
+      const logger = createPluginLogger(() => params.config.enableConsoleLogging === true)
       if (!params.config.aiEnabled) {
         throw new Error(t('analytics.aiLink.enableAiInSettingsFirst'))
       }
@@ -191,7 +194,7 @@ export function createAiLinkSuggestionService(deps: {
         ],
       })
 
-      const result = normalizeSuggestionResult(parseJsonFromResponse(payload))
+      const result = normalizeSuggestionResult(parseJsonFromResponse(payload), logger)
       return await rewriteSuggestionResultForLocaleIfNeeded({
         config: params.config,
         forwardProxy: deps.forwardProxy,
@@ -237,7 +240,7 @@ async function rewriteSuggestionResultForLocaleIfNeeded(params: {
       ],
     })
 
-    return normalizeSuggestionResult(parseJsonFromResponse(payload))
+    return normalizeSuggestionResult(parseJsonFromResponse(payload), createPluginLogger(() => params.config.enableConsoleLogging === true))
   } catch {
     return params.result
   }
@@ -485,14 +488,22 @@ function parseJsonFromResponse(payload: any) {
   }
 }
 
-function normalizeSuggestionResult(payload: any): AiLinkSuggestionResult {
-  const suggestions = Array.isArray(payload?.suggestions)
-    ? payload.suggestions
+function normalizeSuggestionResult(payload: any, logger = createPluginLogger(() => false)): AiLinkSuggestionResult {
+  const rawSuggestions = extractSuggestionArray(payload)
+  const suggestions = rawSuggestions.length
+    ? rawSuggestions
       .map((item: any) => normalizeSuggestionItem(item))
       .filter((item: AiLinkSuggestionItem | null): item is AiLinkSuggestionItem => item !== null)
     : []
 
   if (!suggestions.length) {
+    logger.warn('[ai-link-suggestions] AI response contained no usable suggestions', {
+      topLevelKeys: payload && typeof payload === 'object' ? Object.keys(payload) : [],
+      rawSuggestionCount: rawSuggestions.length,
+      firstSuggestionKeys: rawSuggestions[0] && typeof rawSuggestions[0] === 'object'
+        ? Object.keys(rawSuggestions[0])
+        : [],
+    })
     throw new Error(t('analytics.aiLink.invalidSuggestions'))
   }
 
@@ -505,12 +516,28 @@ function normalizeSuggestionResult(payload: any): AiLinkSuggestionResult {
   }
 }
 
+function extractSuggestionArray(payload: any): any[] {
+  if (Array.isArray(payload?.suggestions)) {
+    return payload.suggestions
+  }
+  if (Array.isArray(payload?.links)) {
+    return payload.links
+  }
+  if (Array.isArray(payload?.recommendations)) {
+    return payload.recommendations
+  }
+  if (Array.isArray(payload?.items)) {
+    return payload.items
+  }
+  return []
+}
+
 function normalizeSuggestionItem(value: any): AiLinkSuggestionItem | null {
-  const targetDocumentId = typeof value?.targetDocumentId === 'string' ? value.targetDocumentId.trim() : ''
-  const targetTitle = typeof value?.targetTitle === 'string' ? value.targetTitle.trim() : ''
+  const targetDocumentId = firstStringValue(value, ['targetDocumentId', 'documentId', 'targetId', 'id'])
+  const targetTitle = firstStringValue(value, ['targetTitle', 'title', 'name', 'documentTitle'])
   const reason = mergeSuggestionReason(
-    typeof value?.reason === 'string' ? value.reason.trim() : '',
-    typeof value?.expectedBenefit === 'string' ? value.expectedBenefit.trim() : '',
+    firstStringValue(value, ['reason', 'description', 'rationale', 'explanation']),
+    firstStringValue(value, ['expectedBenefit', 'benefit', 'expectedImprovement']),
   )
   if (!targetDocumentId || !targetTitle || !reason) {
     return null
@@ -519,14 +546,24 @@ function normalizeSuggestionItem(value: any): AiLinkSuggestionItem | null {
   return {
     targetDocumentId,
     targetTitle,
-    targetType: normalizeTargetType(value?.targetType),
+    targetType: normalizeTargetType(value?.targetType ?? value?.type),
     confidence: normalizeConfidence(value?.confidence),
     reason,
-    draftText: typeof value?.draftText === 'string' && value.draftText.trim()
-      ? value.draftText.trim()
+    draftText: firstStringValue(value, ['draftText', 'draft', 'linkText'])
+      ? firstStringValue(value, ['draftText', 'draft', 'linkText'])
       : undefined,
-    tagSuggestions: normalizeTagSuggestions(value?.tagSuggestions),
+    tagSuggestions: normalizeTagSuggestions(value?.tagSuggestions ?? value?.tags ?? value?.suggestedTags),
   }
+}
+
+function firstStringValue(value: any, keys: string[]): string {
+  for (const key of keys) {
+    const candidate = value?.[key]
+    if (typeof candidate === 'string' && candidate.trim()) {
+      return candidate.trim()
+    }
+  }
+  return ''
 }
 
 function normalizeTargetType(value: unknown): CandidateTargetType {
@@ -584,16 +621,20 @@ function normalizeTagSuggestions(value: unknown): AiLinkTagSuggestion[] | undefi
 }
 
 function normalizeTagSuggestion(value: any): AiLinkTagSuggestion | null {
-  const tag = typeof value?.tag === 'string' ? value.tag.trim() : ''
+  if (typeof value === 'string') {
+    const tag = value.trim()
+    return tag ? { tag, source: 'new' } : null
+  }
+  const tag = firstStringValue(value, ['tag', 'name', 'label'])
   if (!tag) {
     return null
   }
 
   return {
     tag,
-    source: normalizeTagSuggestionSource(value?.source),
-    reason: typeof value?.reason === 'string' && value.reason.trim()
-      ? value.reason.trim()
+    source: normalizeTagSuggestionSource(value?.source ?? value?.type),
+    reason: firstStringValue(value, ['reason', 'description', 'rationale'])
+      ? firstStringValue(value, ['reason', 'description', 'rationale'])
       : undefined,
   }
 }

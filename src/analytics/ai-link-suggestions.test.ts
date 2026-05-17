@@ -687,4 +687,100 @@ describe('ai link suggestions', () => {
       ],
     }))
   })
+
+  it('accepts common AI field aliases for link suggestions instead of treating them as empty', async () => {
+    const service = createAiLinkSuggestionService({
+      forwardProxy: async () => ({
+        status: 200,
+        body: JSON.stringify({
+          choices: [
+            {
+              message: {
+                content: JSON.stringify({
+                  summary: '可补充 ClaudeCode 主题链接。',
+                  links: [
+                    {
+                      documentId: 'doc-theme-claude',
+                      title: 'ClaudeCode',
+                      type: 'theme-document',
+                      confidence: 'high',
+                      description: '该主题页是 Claude Code 相关内容的稳定入口。',
+                      tags: [
+                        { name: 'Agent', type: 'existing', description: '涉及智能体工具链。' },
+                      ],
+                    },
+                  ],
+                }),
+              },
+            },
+          ],
+        }),
+      }) as any,
+    })
+
+    const result = await service.suggestForOrphan({
+      config: {
+        aiEnabled: true,
+        aiBaseUrl: 'https://api.example.com/v1',
+        aiApiKey: 'sk-test',
+        aiModel: 'gpt-4.1-mini',
+      } as any,
+      sourceDocument: {
+        id: 'doc-orphan',
+        box: 'box-1',
+        path: '/notes/orphan.sy',
+        hpath: '/笔记/Claude Code',
+        title: 'Claude Code 技巧',
+        tags: [],
+        content: 'Claude Code hidden commands and multi-agent tips.',
+        updated: '20260418120000',
+      },
+      orphan: {
+        documentId: 'doc-orphan',
+        title: 'Claude Code 技巧',
+        degree: 0,
+        createdAt: '20260417120000',
+        updatedAt: '20260418120000',
+        historicalReferenceCount: 0,
+        lastHistoricalAt: '',
+        hasSparseEvidence: true,
+      },
+      documents: [
+        { id: 'doc-orphan', box: 'box-1', path: '/notes/orphan.sy', hpath: '/笔记/Claude Code', title: 'Claude Code 技巧', tags: [], content: 'Claude Code hidden commands and multi-agent tips.', updated: '20260418120000' },
+        { id: 'doc-theme-claude', box: 'box-1', path: '/topics/claude.sy', hpath: '/专题/ClaudeCode', title: 'ClaudeCode', tags: ['Agent'], content: 'Claude Code topic page', updated: '20260418120000' },
+      ],
+      themeDocuments: [
+        {
+          documentId: 'doc-theme-claude',
+          title: 'ClaudeCode',
+          themeName: 'ClaudeCode',
+          matchTerms: ['Claude Code', 'ClaudeCode'],
+          box: 'box-1',
+          path: '/topics/claude.sy',
+          hpath: '/专题/ClaudeCode',
+        },
+      ],
+      existingTags: ['Agent'],
+      report: {
+        ranking: [],
+      } as any,
+    })
+
+    expect(result.suggestions).toEqual([
+      expect.objectContaining({
+        targetDocumentId: 'doc-theme-claude',
+        targetTitle: 'ClaudeCode',
+        targetType: 'theme-document',
+        confidence: 'high',
+        reason: '该主题页是 Claude Code 相关内容的稳定入口。',
+        tagSuggestions: [
+          expect.objectContaining({
+            tag: 'Agent',
+            source: 'existing',
+            reason: '涉及智能体工具链。',
+          }),
+        ],
+      }),
+    ])
+  })
 })

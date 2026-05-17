@@ -26,6 +26,8 @@ import { collectThemeDocuments } from '@/analytics/theme-documents'
 import type { ThemeDocument } from '@/analytics/theme-documents'
 import { buildLinkAssociations } from '@/analytics/link-associations'
 import { isAiConfigComplete } from '@/analytics/ai-inbox'
+import { createAiLinkSuggestionService, isAiLinkSuggestionConfigComplete } from '@/analytics/ai-link-suggestions'
+import type { AiLinkSuggestionItem } from '@/analytics/ai-link-suggestions'
 import { createAiWikiService } from '@/analytics/wiki-ai'
 import { createAiDocumentIndexStoreFromPlugin } from '@/analytics/ai-index-store'
 import { createAiWikiStoreFromPlugin } from '@/analytics/wiki-store'
@@ -58,6 +60,11 @@ const COMMANDS: WikiPublicCommand[] = [
     title: '生成 LLM Wiki 文档',
     description: '基于主题文档及其关联文档生成 LLM Wiki 页面',
   },
+  {
+    id: 'suggest-orphan-links-and-tags',
+    title: '生成孤立文档链接和标签建议',
+    description: '基于当前文档内容生成相关文档链接和标签建议，仅返回结构化结果',
+  },
 ]
 
 export function createWikiCommandProvider(options: {
@@ -72,15 +79,102 @@ export function createWikiCommandProvider(options: {
     providerVersion: options.pluginVersion,
     listCommands: () => COMMANDS,
     invokeCommand: async (commandId, context) => {
-      if (commandId !== 'generate-llm-wiki') {
-        return {
-          ok: false,
-          errorCode: 'command-not-found',
-          message: `未找到命令：${commandId}`,
-        }
+      if (commandId === 'generate-llm-wiki') {
+        return invokeWikiGenerationDirect(options.plugin, context)
       }
-      return invokeWikiGenerationDirect(options.plugin, context)
+      if (commandId === 'suggest-orphan-links-and-tags') {
+        return invokeOrphanLinkAndTagSuggestions(options.plugin, context)
+      }
+      return {
+        ok: false,
+        errorCode: 'command-not-found',
+        message: `未找到命令：${commandId}`,
+      }
     },
+  }
+}
+
+async function invokeOrphanLinkAndTagSuggestions(
+  plugin: Plugin,
+  context: WikiCommandInvokeContext,
+): Promise<WikiCommandInvokeResult> {
+  try {
+    const rawConfig = await plugin.loadData(STORAGE_NAME)
+    const config: PluginConfig = { ...DEFAULT_CONFIG, ...(rawConfig as PluginConfig ?? {}) }
+    ensureConfigDefaults(config)
+
+    if (!config.aiEnabled || !isAiLinkSuggestionConfigComplete(config)) {
+      return { ok: false, errorCode: 'ai-not-configured', message: '请先在脉络镜设置中配置 AI 服务' }
+    }
+
+    const documentId = context.themeDocumentId
+    if (!documentId) {
+      return { ok: false, errorCode: 'execution-failed', message: '未指定文档 ID' }
+    }
+
+    const snapshot = await loadAnalyticsSnapshot()
+    const now = new Date()
+    const timeRange = '7d' as const
+    const report = analyzeReferenceGraph({
+      documents: snapshot.documents,
+      references: snapshot.references,
+      now,
+      timeRange,
+      wikiPageSuffix: config.wikiPageSuffix,
+      excludedPaths: config.analysisExcludedPaths,
+      excludedNamePrefixes: config.analysisExcludedNamePrefixes,
+      excludedNameSuffixes: config.analysisExcludedNameSuffixes,
+      notebooks: snapshot.notebooks,
+    })
+    const sourceDocument = snapshot.documents.find(document => document.id === documentId)
+    if (!sourceDocument) {
+      return { ok: false, errorCode: 'execution-failed', message: `未找到文档：${documentId}` }
+    }
+
+    const orphan = report.orphans.find(item => item.documentId === documentId) ?? {
+      documentId,
+      title: sourceDocument.title || sourceDocument.hpath || sourceDocument.path || sourceDocument.id,
+      degree: 0,
+      createdAt: sourceDocument.created || '',
+      updatedAt: sourceDocument.updated || '',
+      historicalReferenceCount: 0,
+      lastHistoricalAt: '',
+      hasSparseEvidence: true,
+    }
+    const themeDocuments = collectThemeDocuments({
+      documents: snapshot.documents,
+      config,
+      notebooks: snapshot.notebooks,
+    })
+    const existingTags = collectExistingTags(snapshot.documents)
+    const service = createAiLinkSuggestionService({ forwardProxy })
+    const result = await service.suggestForOrphan({
+      config,
+      sourceDocument,
+      orphan,
+      documents: snapshot.documents,
+      themeDocuments,
+      existingTags,
+      report,
+    })
+    const suggestions = result.suggestions.map(normalizePublicSuggestion)
+    const tagCount = countUniqueSuggestionTags(suggestions)
+
+    return {
+      ok: true,
+      message: `已生成 AI 关联建议：${suggestions.length} 个链接，${tagCount} 个标签`,
+      data: {
+        generatedAt: result.generatedAt,
+        summary: result.summary,
+        suggestions,
+      },
+    }
+  } catch (error) {
+    return {
+      ok: false,
+      errorCode: 'execution-failed',
+      message: error instanceof Error ? error.message : 'AI 关联建议生成失败',
+    }
   }
 }
 
@@ -427,4 +521,57 @@ function findDocumentAsTheme(
     hpath: doc.hpath,
     path: doc.path,
   }
+}
+
+function normalizePublicSuggestion(suggestion: AiLinkSuggestionItem) {
+  return {
+    targetDocumentId: suggestion.targetDocumentId,
+    targetTitle: suggestion.targetTitle,
+    targetType: suggestion.targetType,
+    confidence: suggestion.confidence,
+    reason: suggestion.reason,
+    draftText: suggestion.draftText,
+    tagSuggestions: (suggestion.tagSuggestions ?? []).map(item => ({
+      tag: item.tag,
+      source: item.source,
+      reason: item.reason,
+    })),
+  }
+}
+
+function collectExistingTags(documents: DocumentRecord[]): string[] {
+  const result: string[] = []
+  const seen = new Set<string>()
+  for (const document of documents) {
+    for (const tag of normalizeTagList(document.tags)) {
+      const key = tag.toLocaleLowerCase()
+      if (seen.has(key)) {
+        continue
+      }
+      seen.add(key)
+      result.push(tag)
+    }
+  }
+  return result.sort((left, right) => left.localeCompare(right, 'zh-CN'))
+}
+
+function normalizeTagList(tags?: readonly string[] | string): string[] {
+  if (!tags) {
+    return []
+  }
+  const values = Array.isArray(tags) ? tags : tags.split(/[,\s#]+/u)
+  return values.map(tag => tag.trim()).filter(Boolean)
+}
+
+function countUniqueSuggestionTags(suggestions: ReturnType<typeof normalizePublicSuggestion>[]): number {
+  const seen = new Set<string>()
+  for (const suggestion of suggestions) {
+    for (const tagSuggestion of suggestion.tagSuggestions) {
+      const key = tagSuggestion.tag.trim().toLocaleLowerCase()
+      if (key) {
+        seen.add(key)
+      }
+    }
+  }
+  return seen.size
 }
