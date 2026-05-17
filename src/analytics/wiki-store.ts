@@ -167,6 +167,7 @@ function normalizePreviewRecord(value: unknown): WikiPreviewRecord | undefined {
     sourceDocumentIds: normalizeStringList(value.sourceDocumentIds),
     pageFingerprint: normalizeOptionalString(value.pageFingerprint) || undefined,
     managedFingerprint: normalizeOptionalString(value.managedFingerprint) || undefined,
+    promptVersions: normalizePromptVersions(value.promptVersions),
   }
 }
 
@@ -189,6 +190,7 @@ function normalizeApplyRecord(value: unknown): WikiApplyRecord | undefined {
     sourceDocumentIds: normalizeStringList(value.sourceDocumentIds),
     pageFingerprint: normalizeOptionalString(value.pageFingerprint) || undefined,
     managedFingerprint: normalizeOptionalString(value.managedFingerprint) || undefined,
+    promptVersions: normalizePromptVersions(value.promptVersions),
   }
 }
 
@@ -211,6 +213,18 @@ function normalizeTimestampMap(value: unknown): Record<string, string> | undefin
   const entries = Object.entries(value)
     .filter(([key, val]) => typeof key === 'string' && typeof val === 'string' && val.trim())
     .map(([key, val]) => [key.trim(), (val as string).trim()])
+
+  return entries.length > 0 ? Object.fromEntries(entries) : undefined
+}
+
+function normalizePromptVersions(value: unknown): Record<string, number> | undefined {
+  if (!isRecord(value)) {
+    return undefined
+  }
+
+  const entries = Object.entries(value)
+    .filter(([key, val]) => typeof key === 'string' && key.trim() && typeof val === 'number' && Number.isFinite(val) && val > 0)
+    .map(([key, val]) => [key.trim(), Math.trunc(val as number)])
 
   return entries.length > 0 ? Object.fromEntries(entries) : undefined
 }

@@ -1,4 +1,5 @@
 import { isAiConfigComplete, limitChatCompletionMessages, resolveAiEndpoint, resolveAiRequestOptions } from './ai-inbox'
+import { buildThemeDiagnosisPrompt, buildThemePagePlanPrompt, buildThemeSectionPrompt } from './llm-wiki-prompts'
 import type { WikiThemeBundle } from './wiki-generation'
 import {
   WIKI_OPTIONAL_SECTION_TYPES,
@@ -62,52 +63,21 @@ export interface AiWikiService {
   }) => Promise<WikiSectionDraft>
 }
 
-const BASE_SYSTEM_PROMPT = [
-  'You are a topic wiki maintenance assistant for SiYuan notes.',
-  'Base every answer on the provided topic page bundle, source document bundles, template signals, and analysis signals.',
-  'Return JSON only.',
-  'Do not output Markdown, explanations, or code blocks.',
-  'Do not invent documents, topic pages, relationships, evidence, or user-visible claims that are not grounded in the input.',
-  'All user-visible text must follow the current workspace UI language.',
-].join(' ')
-
 export function createAiWikiService(deps: {
   forwardProxy: ForwardProxyFn
 }): AiWikiService {
   return {
     async diagnoseThemeTemplate(params) {
       assertAiReady(params.config)
+      const prompt = buildThemeDiagnosisPrompt({
+        payload: params.payload,
+        existingWikiContent: params.existingWikiContent,
+      })
 
       const response = await requestChatCompletion({
         config: params.config,
         forwardProxy: deps.forwardProxy,
-        messages: [
-          {
-            role: 'system',
-            content: [
-              BASE_SYSTEM_PROMPT,
-              'Diagnose the best wiki template for the current theme.',
-              'The JSON must include templateType, confidence, reason, enabledModules, suppressedModules, and evidenceSummary.',
-            ].join(' '),
-          },
-          {
-            role: 'user',
-            content: (() => {
-              const parts = [
-                t('analytics.wiki.diagnoseThemeTemplatePrompt', { theme: params.payload.themeName }),
-                t('analytics.wiki.diagnoseThemeTemplateSchemaPrompt'),
-                t('analytics.wiki.conservativeFallbackPrompt'),
-              ]
-              if (params.existingWikiContent) {
-                parts.push(t('analytics.wiki.incrementalModePrompt'))
-                parts.push(`Existing wiki page content:\n${params.existingWikiContent}`)
-              }
-              parts.push(...buildFullContentParts(params.payload))
-              parts.push(JSON.stringify({ payload: params.payload }))
-              return parts.join('\n')
-            })(),
-          },
-        ],
+        messages: prompt.messages,
       })
 
       return normalizeTemplateDiagnosis(parseJsonFromContent(response))
@@ -115,37 +85,16 @@ export function createAiWikiService(deps: {
 
     async planThemePage(params) {
       assertAiReady(params.config)
+      const prompt = buildThemePagePlanPrompt({
+        payload: params.payload,
+        diagnosis: params.diagnosis,
+        existingWikiContent: params.existingWikiContent,
+      })
 
       const response = await requestChatCompletion({
         config: params.config,
         forwardProxy: deps.forwardProxy,
-        messages: [
-          {
-            role: 'system',
-            content: [
-              BASE_SYSTEM_PROMPT,
-              'Generate a wiki page plan for the diagnosed theme template.',
-              'The JSON must include templateType, confidence, coreSections, optionalSections, sectionOrder, sectionGoals, and sectionFormats.',
-            ].join(' '),
-          },
-          {
-            role: 'user',
-            content: (() => {
-              const parts = [
-                t('analytics.wiki.planThemePagePrompt', { theme: params.payload.themeName }),
-                t('analytics.wiki.planThemePageSchemaPrompt'),
-                t('analytics.wiki.conservativeFallbackPrompt'),
-              ]
-              if (params.existingWikiContent) {
-                parts.push(t('analytics.wiki.incrementalModePrompt'))
-                parts.push(`Existing wiki page content:\n${params.existingWikiContent}`)
-              }
-              parts.push(...buildFullContentParts(params.payload))
-              parts.push(JSON.stringify({ payload: params.payload, diagnosis: params.diagnosis }))
-              return parts.join('\n')
-            })(),
-          },
-        ],
+        messages: prompt.messages,
       })
 
       return normalizePagePlan(parseJsonFromContent(response), params.diagnosis)
@@ -153,71 +102,23 @@ export function createAiWikiService(deps: {
 
     async generateThemeSection(params) {
       assertAiReady(params.config)
+      const prompt = buildThemeSectionPrompt({
+        payload: params.payload,
+        diagnosis: params.diagnosis,
+        pagePlan: params.pagePlan,
+        sectionType: params.sectionType,
+        existingWikiContent: params.existingWikiContent,
+      })
 
       const response = await requestChatCompletion({
         config: params.config,
         forwardProxy: deps.forwardProxy,
-        messages: [
-          {
-            role: 'system',
-            content: (() => {
-              const parts = [
-                BASE_SYSTEM_PROMPT,
-                'Generate exactly one wiki section draft.',
-                'The JSON must include sectionType, title, format, blocks, and sourceRefs.',
-                'Each block must include text and sourceRefs.',
-                'For every block, populate sourceRefs with the documentId values from the provided source documents that best support that block content. Use documentId, never blockId.',
-                'For the sources (catalog) section, each block sourceRefs must include all relevant source documentIds so the renderer can produce explicit reference entries.',
-                'For the intro (overview) section, each block text must be a concise self-contained summary sentence. Do not include block IDs, document IDs, or technical identifiers in the visible text.',
-              ]
-              if (params.sectionType === 'conflict') {
-                parts.push(t('analytics.wiki.conflictSectionPrompt'))
-              }
-              return parts.join(' ')
-            })(),
-          },
-          {
-            role: 'user',
-            content: (() => {
-              const parts = [
-                t('analytics.wiki.generateThemeSectionPrompt', { theme: params.payload.themeName, sectionType: params.sectionType }),
-                t('analytics.wiki.generateThemeSectionSchemaPrompt'),
-                t('analytics.wiki.conservativeFallbackPrompt'),
-              ]
-              if (params.existingWikiContent) {
-                parts.push(t('analytics.wiki.incrementalModePrompt'))
-                parts.push(`Existing wiki page content:\n${params.existingWikiContent}`)
-              }
-              parts.push(...buildFullContentParts(params.payload))
-              parts.push(JSON.stringify({
-                payload: params.payload,
-                diagnosis: params.diagnosis,
-                pagePlan: params.pagePlan,
-                sectionType: params.sectionType,
-              }))
-              return parts.join('\n')
-            })(),
-          },
-        ],
+        messages: prompt.messages,
       })
 
       return normalizeSectionDraft(parseJsonFromContent(response), params.sectionType)
     },
   }
-}
-
-function buildFullContentParts(payload: WikiThemeBundle): string[] {
-  const fullContentDocs = payload.sourceDocuments.filter(doc => doc.fullContent)
-  if (fullContentDocs.length === 0) {
-    return []
-  }
-  const parts: string[] = [t('analytics.wiki.fullContentPrompt')]
-  for (const doc of fullContentDocs) {
-    parts.push(`--- Document: ${doc.title} (ID: ${doc.documentId}) ---`)
-    parts.push(doc.fullContent!)
-    parts.push('')
-  }
-  return parts
 }
 
 function assertAiReady(config: AiConfig) {

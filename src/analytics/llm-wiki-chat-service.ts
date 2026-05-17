@@ -1,3 +1,9 @@
+import {
+  buildWikiChatPrompt,
+  buildWikiContextMessage as buildPromptWikiContextMessage,
+  buildWikiRoutePrompt,
+} from './llm-wiki-prompts'
+
 export interface WikiChatResult {
   answer: string
   usedPageTitle: string
@@ -27,11 +33,10 @@ export function parseChatResponse(content: string): { answer: string, referenced
 }
 
 export function buildRouteSystemPrompt(): string {
-  return [
-    'You are a topic routing assistant for SiYuan notes.',
-    'Given a user question and a list of wiki page titles, return ONLY the single most relevant page title.',
-    'Return the exact title string, nothing else.',
-  ].join(' ')
+  return buildWikiRoutePrompt({
+    question: '',
+    pageTitles: [],
+  }).messages[0].content
 }
 
 export function buildRouteUserPrompt(params: {
@@ -39,22 +44,7 @@ export function buildRouteUserPrompt(params: {
   pageTitles: string[]
   pageSummaries?: string[]
 }): string {
-  const lines = [
-    `User question: ${params.question}`,
-    '',
-    'Available wiki pages:',
-  ]
-  for (let i = 0; i < params.pageTitles.length; i++) {
-    const summary = params.pageSummaries?.[i]
-    if (summary) {
-      lines.push(`${i + 1}. ${params.pageTitles[i]}`)
-      lines.push(`   Summary: ${summary}`)
-    } else {
-      lines.push(`${i + 1}. ${params.pageTitles[i]}`)
-    }
-  }
-  lines.push('', 'Return the single most relevant page title:')
-  return lines.join('\n')
+  return buildWikiRoutePrompt(params).messages[1].content
 }
 
 export function extractFirstSectionAfterHeader(kramdown: string, headerText: string): string {
@@ -88,13 +78,11 @@ export function extractFirstSectionAfterHeader(kramdown: string, headerText: str
 }
 
 export function buildChatSystemPrompt(): string {
-  return [
-    'You are a knowledge assistant for SiYuan notes.',
-    'Answer the user question based on the provided wiki page content.',
-    'If you need to reference specific source documents mentioned in the wiki page, include their document IDs in your response.',
-    'Return JSON with two fields: "answer" (string) and "referencedDocumentIds" (string array, empty if no source documents were needed).',
-    'Do not invent information not present in the provided context.',
-  ].join(' ')
+  return buildWikiChatPrompt({
+    question: '',
+    wikiPageTitle: '',
+    wikiPageMarkdown: '',
+  }).messages[0].content
 }
 
 export function buildChatUserPrompt(params: {
@@ -103,22 +91,7 @@ export function buildChatUserPrompt(params: {
   wikiPageMarkdown: string
   sourceDocuments?: Array<{ id: string, title: string, markdown: string }>
 }): string {
-  const parts = [
-    `Wiki page: ${params.wikiPageTitle}`,
-    '',
-    'Wiki page content:',
-    params.wikiPageMarkdown,
-  ]
-  if (params.sourceDocuments?.length) {
-    parts.push('', 'Referenced source documents:')
-    for (const doc of params.sourceDocuments) {
-      parts.push(`--- Document: ${doc.title} (ID: ${doc.id}) ---`)
-      parts.push(doc.markdown.slice(0, 3000))
-      parts.push('')
-    }
-  }
-  parts.push('', `User question: ${params.question}`)
-  return parts.join('\n')
+  return buildWikiChatPrompt(params).messages[1].content
 }
 
 export function buildWikiContextMessage(params: {
@@ -126,19 +99,5 @@ export function buildWikiContextMessage(params: {
   wikiPageMarkdown: string
   sourceDocuments?: Array<{ id: string, title: string, markdown: string }>
 }): string {
-  const parts = [
-    `Wiki page: ${params.wikiPageTitle}`,
-    '',
-    'Wiki page content:',
-    params.wikiPageMarkdown,
-  ]
-  if (params.sourceDocuments?.length) {
-    parts.push('', 'Referenced source documents:')
-    for (const doc of params.sourceDocuments) {
-      parts.push(`--- Document: ${doc.title} (ID: ${doc.id}) ---`)
-      parts.push(doc.markdown.slice(0, 3000))
-      parts.push('')
-    }
-  }
-  return parts.join('\n')
+  return buildPromptWikiContextMessage(params)
 }

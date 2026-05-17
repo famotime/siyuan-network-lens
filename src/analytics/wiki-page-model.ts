@@ -50,6 +50,7 @@ export interface WikiPreviewRecord {
   sourceDocumentIds: string[]
   pageFingerprint?: string
   managedFingerprint?: string
+  promptVersions?: Record<string, number>
 }
 
 export interface WikiApplyRecord {
@@ -58,6 +59,7 @@ export interface WikiApplyRecord {
   sourceDocumentIds: string[]
   pageFingerprint?: string
   managedFingerprint?: string
+  promptVersions?: Record<string, number>
 }
 
 export function buildThemeWikiPageTitle(themeTitle: string, suffix: string): string {

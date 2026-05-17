@@ -1,4 +1,5 @@
 import type { WikiMaintenanceSuggestion } from './wiki-index'
+import { buildSinglePageMaintenancePrompt } from './llm-wiki-prompts'
 import { resolveUiLocale, t, type UiLocale } from '@/i18n/ui'
 
 export interface WikiMaintenanceResult {
@@ -109,16 +110,11 @@ export function buildMaintenanceSummary(suggestions: Pick<WikiMaintenanceSuggest
 }
 
 export function buildMaintenanceSystemPrompt(): string {
-  return [
-    'You are a wiki page maintenance assistant for SiYuan notes.',
-    'Review the provided wiki page content and check for:',
-    '1. Broken document ID links (siyuan://blocks/<id> pointing to non-existent documents)',
-    '2. Outdated sections (content that should be updated based on source documents)',
-    '3. Missing references (source documents not linked from the wiki page)',
-    'Return JSON with two fields: "suggestions" (array of {type, description, sectionHeading?}) and "revisedMarkdown" (the corrected full wiki page content).',
-    '如果界面语言是中文，请使用中文输出 suggestions.description 和 revisedMarkdown。',
-    'Do not invent content not grounded in the source materials.',
-  ].join(' ')
+  return buildSinglePageMaintenancePrompt({
+    wikiPageTitle: '',
+    wikiPageMarkdown: '',
+    brokenLinkIds: [],
+  }).messages[0].content
 }
 
 export function buildMaintenanceUserPrompt(params: {
@@ -127,20 +123,5 @@ export function buildMaintenanceUserPrompt(params: {
   brokenLinkIds: string[]
   locale?: UiLocale
 }): string {
-  const localeLine = params.locale === 'zh_CN'
-    ? '界面语言：中文，请优先使用中文输出。'
-    : 'UI language: English.'
-  const parts = [
-    `页面标题：${params.wikiPageTitle}`,
-    localeLine,
-    '',
-    '页面内容：',
-    params.wikiPageMarkdown,
-  ]
-  if (params.brokenLinkIds.length) {
-    parts.push('', params.locale === 'zh_CN'
-      ? `确认失效的块 ID：${params.brokenLinkIds.join(', ')}`
-      : `Confirmed broken link IDs: ${params.brokenLinkIds.join(', ')}`)
-  }
-  return parts.join('\n')
+  return buildSinglePageMaintenancePrompt(params).messages[1].content
 }

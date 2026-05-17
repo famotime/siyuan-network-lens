@@ -8,6 +8,7 @@ import type {
   TrendReport,
 } from '@/analytics/analysis'
 import type { AiDocumentIndexStore, DocumentIndexProfile } from '@/analytics/ai-index-store'
+import { LLM_WIKI_THEME_PROMPT_VERSIONS } from '@/analytics/llm-wiki-prompts'
 import type { AiWikiService } from '@/analytics/wiki-ai'
 import { buildWikiPreview } from '@/analytics/wiki-diff'
 import { applyWikiDocuments } from '@/analytics/wiki-documents'
@@ -317,6 +318,7 @@ export function createAnalyticsWikiActionsController(params: {
           sourceDocumentIds: payload.sourceDocuments.map(document => document.documentId),
           pageFingerprint: preview.pageFingerprint,
           managedFingerprint: preview.managedFingerprint,
+          promptVersions: { ...LLM_WIKI_THEME_PROMPT_VERSIONS },
         },
         lastApply: storedRecord?.lastApply,
       }

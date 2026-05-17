@@ -54,12 +54,22 @@ describe('wiki store', () => {
         status: 'update',
         sourceDocumentIds: ['doc-1', 'doc-2'],
         managedFingerprint: 'preview-managed',
+        promptVersions: {
+          'llm-wiki.theme.diagnosis': 1,
+          'llm-wiki.theme.plan': 1,
+          'llm-wiki.theme.section': 1,
+        },
       },
       lastApply: {
         appliedAt: '2026-04-09T10:10:00.000Z',
         result: 'updated',
         sourceDocumentIds: ['doc-1', 'doc-2'],
         managedFingerprint: 'apply-managed',
+        promptVersions: {
+          'llm-wiki.theme.diagnosis': 1,
+          'llm-wiki.theme.plan': 1,
+          'llm-wiki.theme.section': 1,
+        },
       },
     })
 
@@ -86,6 +96,11 @@ describe('wiki store', () => {
         sourceDocumentIds: ['doc-1', 'doc-2'],
         pageFingerprint: undefined,
         managedFingerprint: 'preview-managed',
+        promptVersions: {
+          'llm-wiki.theme.diagnosis': 1,
+          'llm-wiki.theme.plan': 1,
+          'llm-wiki.theme.section': 1,
+        },
       },
       lastApply: {
         appliedAt: '2026-04-09T10:10:00.000Z',
@@ -93,6 +108,11 @@ describe('wiki store', () => {
         sourceDocumentIds: ['doc-1', 'doc-2'],
         pageFingerprint: undefined,
         managedFingerprint: 'apply-managed',
+        promptVersions: {
+          'llm-wiki.theme.diagnosis': 1,
+          'llm-wiki.theme.plan': 1,
+          'llm-wiki.theme.section': 1,
+        },
       },
     })
   })

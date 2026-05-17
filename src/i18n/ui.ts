@@ -1656,30 +1656,6 @@ const UI_TEXT = {
         en_US: 'AI settings are incomplete. Add Base URL, API Key, and Model.',
         zh_CN: 'AI 接入配置不完整，请补充 Base URL、API Key 和 Model。',
       },
-      diagnoseThemeTemplatePrompt: {
-        en_US: 'Diagnose the best wiki template for the current theme wiki page. Theme: {theme}.',
-        zh_CN: '请诊断当前主题 wiki 最适合的模板类型。主题：{theme}。',
-      },
-      diagnoseThemeTemplateSchemaPrompt: {
-        en_US: 'Return JSON only with templateType, confidence, reason, enabledModules, suppressedModules, and evidenceSummary.',
-        zh_CN: '请只返回 JSON，并包含 templateType、confidence、reason、enabledModules、suppressedModules、evidenceSummary。',
-      },
-      planThemePagePrompt: {
-        en_US: 'Generate a wiki page plan from the diagnosis for the current theme. Theme: {theme}.',
-        zh_CN: '请基于模板诊断结果规划主题 wiki 页面结构。主题：{theme}。',
-      },
-      planThemePageSchemaPrompt: {
-        en_US: 'Return JSON only with templateType, confidence, coreSections, optionalSections, sectionOrder, sectionGoals, and sectionFormats.',
-        zh_CN: '请只返回 JSON，并包含 templateType、confidence、coreSections、optionalSections、sectionOrder、sectionGoals、sectionFormats。',
-      },
-      generateThemeSectionPrompt: {
-        en_US: 'Generate exactly one wiki section draft for the current theme. Theme: {theme}. Section type: {sectionType}.',
-        zh_CN: '请只生成一个 wiki 章节草稿。主题：{theme}。章节类型：{sectionType}。',
-      },
-      generateThemeSectionSchemaPrompt: {
-        en_US: 'Return JSON only with sectionType, title, format, blocks, and sourceRefs. Each block must include text and sourceRefs. Populate sourceRefs with documentId values (not blockId) from the provided source documents that support each block.',
-        zh_CN: '请只返回 JSON，并包含 sectionType、title、format、blocks、sourceRefs。每个 block 必须包含 text 和 sourceRefs。请使用所提供的源文档 documentId（非 blockId）填充每个 block 的 sourceRefs。',
-      },
       generateStructuredContentPrompt: {
         en_US: 'Generate structured content for the topic wiki page. Topic: {theme}.',
         zh_CN: '请为主题 wiki 页面生成结构化内容。主题：{theme}。',
@@ -1687,10 +1663,6 @@ const UI_TEXT = {
       emphasizeSectionsPrompt: {
         en_US: 'Emphasize the topic overview, key documents, structure observations, relationship evidence, and cleanup actions.',
         zh_CN: '请突出主题概览、关键文档、结构观察、关系证据和整理动作。',
-      },
-      conservativeFallbackPrompt: {
-        en_US: 'If evidence is weak in any section, respond conservatively with "No clear ..." instead of inventing content.',
-        zh_CN: '如果某部分证据不足，可以保守输出“暂无明显...”而不是编造。',
       },
       aiRequestFailed: {
         en_US: 'AI request failed ({status})',
@@ -1919,18 +1891,6 @@ const UI_TEXT = {
       resultConflict: {
         en_US: 'conflict',
         zh_CN: '冲突',
-      },
-      conflictSectionPrompt: {
-        en_US: 'When sectionType is "conflict": Identify genuine contradictions: opposing conclusions, mutually exclusive claims, or directly conflicting recommendations on the same topic across different source documents. Do NOT classify complementary perspectives, different angles, or progressive elaboration as conflicts. Each conflict entry MUST cite at least one sourceRef. Opposing sides of the same conflict MUST reference different source documents. Use the existing sourceRefs mechanism for citation (documentId + sequential number). If no genuine conflicts exist among the source documents, return an empty blocks array.',
-        zh_CN: '当 sectionType 为 "conflict" 时：识别真正的矛盾——同一主题下不同源文档中的对立结论、互斥主张或直接冲突的建议。不要将互补视角、不同角度或递进阐述误判为冲突。每个冲突条目必须引用至少一个 sourceRef。同一冲突的对立双方必须引用不同的源文档。使用现有 sourceRefs 机制进行引用（documentId + 序号）。如果源文档间不存在真正的冲突，返回空的 blocks 数组。',
-      },
-      incrementalModePrompt: {
-        en_US: 'You are in incremental update mode. The existing wiki page content is provided as context. Preserve parts unaffected by changed documents. Update or supplement parts affected by new/changed documents. Remove references to deleted documents. Output complete updated sections (not fragments).',
-        zh_CN: '你正处于增量更新模式。现有 wiki 页面内容作为上下文提供。保留未受变化文档影响的部分。更新或补充受新增/变化文档影响的部分。移除已删除文档相关的引用和内容。输出完整的更新后章节（非片段）。',
-      },
-      fullContentPrompt: {
-        en_US: 'The following are the full original content of each source document. Use them as the primary evidence for wiki generation instead of the index data in the JSON payload.',
-        zh_CN: '以下是各源文档的完整原文内容，请优先以此为依据生成 Wiki 内容，而非 JSON payload 中的索引数据。',
       },
       noSourceChangesUseCache: {
         en_US: 'No new or changed source documents found. Showing the previous preview.',

@@ -1,4 +1,5 @@
 import { buildDocLinkMarkdown } from './link-sync'
+import { LLM_WIKI_THEME_PROMPT_VERSIONS } from './llm-wiki-prompts'
 import { resolveScopedPathTarget, type NotebookPathOption } from './document-paths'
 import { fingerprintWikiContent } from './wiki-diff'
 import {
@@ -246,6 +247,7 @@ export async function applyWikiDocuments(params: {
       sourceDocumentIds: collectUniqueSourceDocumentIds(params.themePages, params.unclassifiedDocuments),
       pageFingerprint: refreshedIndexState.pageFingerprint,
       managedFingerprint: refreshedIndexState.managedFingerprint,
+      promptVersions: { ...LLM_WIKI_THEME_PROMPT_VERSIONS },
     },
   })
 
@@ -298,6 +300,7 @@ export async function applyWikiDocuments(params: {
       sourceDocumentIds: collectUniqueSourceDocumentIds(params.themePages, params.unclassifiedDocuments),
       pageFingerprint: refreshedLogState.pageFingerprint,
       managedFingerprint: refreshedLogState.pageFingerprint,
+      promptVersions: { ...LLM_WIKI_THEME_PROMPT_VERSIONS },
     },
   })
 
@@ -854,6 +857,7 @@ function buildThemePageRecord(params: {
       sourceDocumentIds: [...params.page.sourceDocumentIds],
       pageFingerprint: params.page.preview.pageFingerprint,
       managedFingerprint: params.page.preview.managedFingerprint,
+      promptVersions: { ...LLM_WIKI_THEME_PROMPT_VERSIONS },
     },
     lastApply: {
       appliedAt: params.appliedAt,
@@ -861,6 +865,7 @@ function buildThemePageRecord(params: {
       sourceDocumentIds: [...params.page.sourceDocumentIds],
       pageFingerprint: params.pageFingerprint ?? params.storedRecord?.pageFingerprint,
       managedFingerprint: params.managedFingerprint ?? params.storedRecord?.managedFingerprint,
+      promptVersions: { ...LLM_WIKI_THEME_PROMPT_VERSIONS },
     },
   }
 }
