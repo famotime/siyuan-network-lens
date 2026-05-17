@@ -16,8 +16,8 @@
     "en_US": "Network Lens"
   },
   "description": {
-    "default": "分析思源文档级引用网络，识别核心节点、主题社区、孤立文档、趋势、路径和整理建议。",
-    "en_US": "Doc-link analytics for SiYuan: hubs, themes, orphans, trends, paths, and actions."
+    "default": "在知识库中发现关联文档，识别核心节点、孤立文档、热点趋势，并提供整理建议。借助AI生成LLM Wiki，让隐没的知识，重现脉络。",
+    "en_US": "Doc-link analytics for SiYuan: hubs, themes, orphans, trends, paths, and actions. Generate LLM Wiki to show the hidden knowledge."
   },
   "readme": {
     "default": "README_zh_CN.md",
