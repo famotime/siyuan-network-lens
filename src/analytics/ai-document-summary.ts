@@ -2,7 +2,8 @@ import type { DocumentRecord } from './analysis'
 import type { AiDocumentIndexStore } from './ai-index-store'
 import type { ClassifiedSourceBlocks } from './document-index-source-blocks'
 import { collectDocumentSourceBlocks } from './document-index-source-blocks'
-import { normalizeTags, resolveDocumentTitle } from './document-utils'
+import { buildAiDocumentEvidencePrompt } from './ai-prompts'
+import { resolveDocumentTitle } from './document-utils'
 import { isAiConfigComplete, resolveAiEndpoint, resolveAiRequestOptions } from './ai-inbox'
 import { t } from '@/i18n/ui'
 import type { PluginConfig } from '@/types/config'
@@ -192,36 +193,6 @@ export async function ensureDocumentSummary(params: {
   }
 }
 
-const EVIDENCE_COMPILATION_SYSTEM_PROMPT = `You are an evidence compiler for a personal knowledge base. Read a document and its evidence blocks, then produce a structured index.
-
-Return ONLY a valid JSON object. No markdown fences, no explanation, no extra text before or after the JSON.
-
-Required JSON structure:
-{
-  "positioning": "one sentence describing the document topic",
-  "propositions": [
-    { "text": "a factual claim from the document", "sourceBlockIds": ["block-id-1"] }
-  ],
-  "keywords": ["keyword1", "keyword2"]
-}
-
-Field rules:
-
-positioning — One sentence (under 120 chars). Neutral description of what the document covers. No evaluative language.
-
-propositions — 3 to 6 items. Each is a factual claim or key idea from the document. Each must:
-  - Be self-contained and understandable without reading the document
-  - Reference at least one sourceBlockId from the evidence blocks provided
-  - Use neutral language, no "this document explains" or similar
-  - Keep each proposition under 100 characters
-
-keywords — 5 to 8 keywords. Mix specific terms and broader concepts.
-
-IMPORTANT:
-- sourceBlockIds must be real block IDs from the evidence blocks below
-- All text in the same language as the document
-- Return ONLY the JSON object, nothing else`
-
 async function requestEvidenceCompilation(params: {
   config: AiConfig
   forwardProxy: ForwardProxyFn
@@ -229,30 +200,18 @@ async function requestEvidenceCompilation(params: {
   sourceBlocks: ClassifiedSourceBlocks
 }): Promise<EvidenceCompilationResult> {
   const title = resolveDocumentTitle(params.sourceDocument)
-  const tags = normalizeTags(params.sourceDocument.tags)
 
   const allBlocks = [...params.sourceBlocks.primary, ...params.sourceBlocks.secondary]
-  const blockSection = allBlocks.length > 0
-    ? allBlocks.map(block => `[${block.blockId}] ${block.text}`).join('\n\n')
-    : '(No evidence blocks extracted)'
-
-  const userMessage = [
-    `Document: ${title}`,
-    params.sourceDocument.hpath ? `Path: ${params.sourceDocument.hpath}` : '',
-    tags.length ? `Tags: ${tags.join(', ')}` : '',
-    '',
-    'Evidence blocks:',
-    blockSection,
-  ].filter(Boolean).join('\n')
+  const prompt = buildAiDocumentEvidencePrompt({
+    sourceDocument: params.sourceDocument,
+    sourceBlocks: params.sourceBlocks,
+  })
 
   const requestOptions = resolveAiRequestOptions(params.config)
   const endpoint = resolveAiEndpoint(params.config.aiBaseUrl!, 'chat/completions')
   const body = JSON.stringify({
     model: params.config.aiModel,
-    messages: [
-      { role: 'system', content: EVIDENCE_COMPILATION_SYSTEM_PROMPT },
-      { role: 'user', content: userMessage },
-    ],
+    messages: prompt.messages,
     max_tokens: Math.min(requestOptions.maxTokens, 4096),
     temperature: 0.3,
   })

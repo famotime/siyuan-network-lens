@@ -1,6 +1,6 @@
 # 项目结构
 
-更新时间：2026-05-05
+更新时间：2026-05-17
 
 ## 顶层目录
 
@@ -67,15 +67,21 @@
 - `src/analytics/ui-copy.ts`
   - 建议标签等文案映射。
 - `src/analytics/ai-document-summary.ts`
-  - 通用文档摘要补建与 freshness 复用，供孤立文档 AI 补链和 wiki 维护共用。
+  - 通用文档摘要补建与 freshness 复用，供孤立文档 AI 补链和 wiki 维护共用；证据编译 prompt 委托 `ai-prompts.ts`。
 - `src/analytics/ai-index-store.ts`
   - AI 私有索引读写，保存文档语义摘要、证据片段和建议缓存。
+- `src/analytics/llm-prompt-types.ts`
+  - 共享 prompt spec 类型定义，供 LLM Wiki 与通用 AI prompt registry 复用。
+- `src/analytics/ai-prompts.ts`
+  - 通用 AI Prompt Registry，集中构建 AI Inbox、连接测试、AI 补链、补链重写和文档索引证据编译 prompt。
+- `src/analytics/llm-wiki-prompts.ts`
+  - LLM Wiki Prompt Registry，集中构建主题生成、单页维护和 Wiki 聊天 prompt。
 - `src/analytics/wiki-scope.ts`
   - 基于当前筛选结果构建 wiki 维护范围，输出主题分组、未归类来源和排除的 wiki 页面。
 - `src/analytics/wiki-generation.ts`
   - 将主题分组、摘要索引和结构信号组合为主题 wiki 生成 payload。
 - `src/analytics/wiki-ai.ts`
-  - 调用 OpenAI 兼容接口生成主题 wiki 的结构化 JSON section 内容。
+  - 调用 OpenAI 兼容接口生成主题 wiki 的结构化 JSON section 内容；prompt 委托 `llm-wiki-prompts.ts`。
 - `src/analytics/wiki-renderer.ts`
   - 将结构化 wiki section 渲染为稳定 markdown 草稿与 section metadata。
 - `src/analytics/wiki-diff.ts`
@@ -157,7 +163,7 @@
 ## 测试分布
 
 - `src/analytics/*.test.ts`
-  - 覆盖图分析、趋势、fallback 引用采集、数据采集 helper、主题文档、已读规则、wiki 生成/写入流程、卡片详情与共享 helper。
+  - 覆盖图分析、趋势、fallback 引用采集、数据采集 helper、主题文档、已读规则、AI prompt registry、wiki 生成/写入流程、卡片详情与共享 helper。
 - `src/composables/use-analytics.test.ts`
   - 覆盖主 composable 的公开行为，包括 AI/Wiki 状态重置与 LLM Wiki 预览/写入闭环。
 - `src/composables/use-analytics-document-index.test.ts`

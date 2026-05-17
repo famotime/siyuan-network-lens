@@ -1,20 +1,8 @@
 import type { WikiThemeBundle } from './wiki-generation'
+export type { LlmPromptMessage, LlmPromptRole, LlmPromptSpec } from './llm-prompt-types'
+import type { LlmPromptSpec } from './llm-prompt-types'
 import type { WikiPagePlan, WikiSectionType, WikiTemplateDiagnosis } from './wiki-template-model'
 import { resolveUiLocale, type UiLocale } from '@/i18n/ui'
-
-export type LlmPromptRole = 'system' | 'user' | 'assistant'
-
-export interface LlmPromptMessage {
-  role: LlmPromptRole
-  content: string
-}
-
-export interface LlmPromptSpec {
-  id: string
-  version: number
-  messages: LlmPromptMessage[]
-  expectedJsonSchemaName?: string
-}
 
 export const LLM_WIKI_THEME_PROMPT_VERSIONS = {
   'llm-wiki.theme.diagnosis': 1,

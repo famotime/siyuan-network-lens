@@ -6,6 +6,7 @@ import {
 } from './document-utils'
 import { countThemeMatchesForDocument, type ThemeDocument } from './theme-documents'
 import { isAiConfigComplete, resolveAiEndpoint, resolveAiRequestOptions } from './ai-inbox'
+import { buildAiLinkRewritePrompt, buildAiLinkSuggestionPrompt, type AiLinkSuggestionPromptInput } from './ai-prompts'
 import { resolveUiLocale, t, type UiLocale } from '@/i18n/ui'
 import type { PluginConfig } from '@/types/config'
 import { createPluginLogger } from '@/utils/plugin-logger'
@@ -90,26 +91,6 @@ export interface AiLinkSuggestionService {
   }) => Promise<AiLinkSuggestionResult>
 }
 
-const SUGGESTION_SYSTEM_PROMPT = [
-  'You are a link-repair assistant for SiYuan notes.',
-  'Only choose from the provided candidate targets. Do not invent documents that do not exist.',
-  'You must return JSON in the format {"summary": string, "suggestions": Suggestion[] }.',
-  'Each Suggestion must include targetDocumentId, targetTitle, targetType, confidence, and reason, with optional draftText and tagSuggestions.',
-  'reason must merge the recommendation basis and the main expected improvement into one concise explanation.',
-  'tagSuggestions is an array of tag suggestions. Each item includes tag, source, and reason; source can only be existing or new.',
-  'For tag suggestions, actively propose both: (1) existing tags from the existingTags list that fit the document content, and (2) new tags that do not exist yet but would be reasonable and useful for organizing the document. New tags should follow the naming style and granularity of the existing tags.',
-  'If a topic page is clearly suitable, prefer recommending the topic page.',
-  'All user-visible text must follow the current workspace UI language.',
-].join(' ')
-
-const SUGGESTION_REWRITE_SYSTEM_PROMPT = [
-  'You normalize SiYuan link suggestion JSON into the requested workspace language.',
-  'Return JSON only.',
-  'Keep targetDocumentId, targetTitle, targetType, confidence, tag text, and source unchanged.',
-  'Only rewrite summary, reason, draftText, and tagSuggestions.reason.',
-  'Do not add, remove, or reorder suggestions or tagSuggestions.',
-].join(' ')
-
 export function isAiLinkSuggestionConfigComplete(config: AiConfig): boolean {
   return isAiConfigComplete(config)
 }
@@ -151,47 +132,46 @@ export function createAiLinkSuggestionService(deps: {
       const normalizedSourceDocument = normalizeDocumentTitleFields(params.sourceDocument, params.config)
 
       params.onProgress?.(t('analytics.aiLink.aiIsAnalyzing'))
+      const promptInput: AiLinkSuggestionPromptInput = {
+        uiLanguage: locale,
+        sourceDocument: {
+          id: params.sourceDocument.id,
+          title: resolveNormalizedDocumentTitle(normalizedSourceDocument, params.config),
+          hpath: normalizedSourceDocument.hpath,
+          tags: normalizeTags(params.sourceDocument.tags),
+          contentPreview: extractContentPreview(params.sourceDocument.content),
+          historicalReferenceCount: params.orphan.historicalReferenceCount,
+          hasSparseEvidence: params.orphan.hasSparseEvidence,
+        },
+        availableThemes: params.themeDocuments.map((themeDocument) => {
+          const normalizedThemeDocument = normalizeThemeDocumentForAi(themeDocument, params.config)
+          return {
+            documentId: themeDocument.documentId,
+            title: resolveNormalizedDocumentTitle(normalizedThemeDocument, params.config),
+            themeName: themeDocument.themeName,
+            matchTerms: themeDocument.matchTerms,
+            hpath: normalizedThemeDocument.hpath,
+          }
+        }),
+        existingTags: deduplicateTags(params.existingTags),
+        candidates: topCandidates.map(candidate => ({
+          id: candidate.documentId,
+          title: candidate.title,
+          targetType: candidate.targetType,
+          baseScore: candidate.baseScore,
+          finalScore: candidate.finalScore,
+          reasons: candidate.reasons,
+        })),
+      }
+      const prompt = buildAiLinkSuggestionPrompt({
+        locale,
+        input: promptInput,
+      })
 
       const payload = await requestChatCompletion({
         config: params.config,
         forwardProxy: deps.forwardProxy,
-        messages: [
-          { role: 'system', content: buildSuggestionSystemPrompt(locale) },
-          {
-            role: 'user',
-            content: JSON.stringify({
-              uiLanguage: locale,
-              sourceDocument: {
-                id: params.sourceDocument.id,
-                title: resolveNormalizedDocumentTitle(normalizedSourceDocument, params.config),
-                hpath: normalizedSourceDocument.hpath,
-                tags: normalizeTags(params.sourceDocument.tags),
-                contentPreview: extractContentPreview(params.sourceDocument.content),
-                historicalReferenceCount: params.orphan.historicalReferenceCount,
-                hasSparseEvidence: params.orphan.hasSparseEvidence,
-              },
-              availableThemes: params.themeDocuments.map((themeDocument) => {
-                const normalizedThemeDocument = normalizeThemeDocumentForAi(themeDocument, params.config)
-                return {
-                  documentId: themeDocument.documentId,
-                  title: resolveNormalizedDocumentTitle(normalizedThemeDocument, params.config),
-                  themeName: themeDocument.themeName,
-                  matchTerms: themeDocument.matchTerms,
-                  hpath: normalizedThemeDocument.hpath,
-                }
-              }),
-              existingTags: deduplicateTags(params.existingTags),
-              candidates: topCandidates.map(candidate => ({
-                id: candidate.documentId,
-                title: candidate.title,
-                targetType: candidate.targetType,
-                baseScore: candidate.baseScore,
-                finalScore: candidate.finalScore,
-                reasons: candidate.reasons,
-              })),
-            }),
-          },
-        ],
+        messages: prompt.messages,
       })
 
       const result = normalizeSuggestionResult(parseJsonFromResponse(payload), logger)
@@ -205,11 +185,6 @@ export function createAiLinkSuggestionService(deps: {
   }
 }
 
-function buildSuggestionSystemPrompt(locale: UiLocale) {
-  const targetLanguage = locale === 'zh_CN' ? 'Simplified Chinese' : 'English'
-  return `${SUGGESTION_SYSTEM_PROMPT} Current workspace locale is ${locale}. Write summary, reason, draftText, and tagSuggestions.reason in ${targetLanguage}.`
-}
-
 async function rewriteSuggestionResultForLocaleIfNeeded(params: {
   config: AiConfig
   forwardProxy: ForwardProxyFn
@@ -221,34 +196,20 @@ async function rewriteSuggestionResultForLocaleIfNeeded(params: {
   }
 
   try {
+    const prompt = buildAiLinkRewritePrompt({
+      locale: params.locale,
+      result: params.result,
+    })
     const payload = await requestChatCompletion({
       config: params.config,
       forwardProxy: params.forwardProxy,
-      messages: [
-        {
-          role: 'system',
-          content: buildSuggestionRewriteSystemPrompt(params.locale),
-        },
-        {
-          role: 'user',
-          content: JSON.stringify({
-            locale: params.locale,
-            summary: params.result.summary,
-            suggestions: params.result.suggestions,
-          }),
-        },
-      ],
+      messages: prompt.messages,
     })
 
     return normalizeSuggestionResult(parseJsonFromResponse(payload), createPluginLogger(() => params.config.enableConsoleLogging === true))
   } catch {
     return params.result
   }
-}
-
-function buildSuggestionRewriteSystemPrompt(locale: UiLocale) {
-  const targetLanguage = locale === 'zh_CN' ? 'Simplified Chinese' : 'English'
-  return `${SUGGESTION_REWRITE_SYSTEM_PROMPT} Rewrite the user-visible copy into ${targetLanguage}.`
 }
 
 function shouldRewriteSuggestionResultForLocale(result: AiLinkSuggestionResult, locale: UiLocale) {

@@ -164,12 +164,17 @@ LLM Wiki 目前已经形成三条相关链路：
 
 | 项目 | 所在文件 | 当前形态 |
 |---|---|---|---|
-| Prompt 类型 | `src/analytics/llm-wiki-prompts.ts` | 集中 builder，返回 `LlmPromptSpec` |
+| Prompt 类型 | `src/analytics/llm-prompt-types.ts` | 共享 `LlmPromptSpec`、message、role 类型 |
+| LLM Wiki Prompt Registry | `src/analytics/llm-wiki-prompts.ts` | 集中构建主题生成、单页维护、Wiki 聊天 prompt |
+| 通用 AI Prompt Registry | `src/analytics/ai-prompts.ts` | 集中构建 AI Inbox、连接测试、AI 补链、文档索引 prompt |
 | Prompt 测试 | `src/analytics/llm-wiki-prompts.test.ts` | 覆盖版本、消息结构、增量、冲突、全文、维护和聊天 |
+| 通用 AI Prompt 测试 | `src/analytics/ai-prompts.test.ts` | 覆盖非 Wiki prompt 的版本、schema、消息结构和关键约束 |
 | 主题生成 prompt 版本 | `LLM_WIKI_THEME_PROMPT_VERSIONS` | 写入预览和应用快照 |
 | 主题生成中英文协议文案 | `THEME_PROMPT_TEXT` | registry 内部常量，不再放在 i18n |
 
 当前所有 LLM Wiki prompt 都通过 registry 统一构建。`wiki-ai.ts`、`llm-wiki-maintain-service.ts`、`llm-wiki-chat-service.ts` 不再直接拼接核心 prompt，只保留 AI 请求、响应解析、归一化或兼容导出。
+
+AI Inbox、AI 补链和文档索引等非 LLM Wiki prompt 已迁入 `src/analytics/ai-prompts.ts`。`ai-inbox.ts`、`ai-link-suggestions.ts`、`ai-document-summary.ts` 不再直接维护核心 system/user prompt，只保留 payload 构造、AI 请求、响应解析和错误处理。
 
 ### 6.2 主题 Wiki 三段式生成
 
@@ -205,26 +210,45 @@ LLM Wiki 目前已经形成三条相关链路：
 | 多轮上下文消息 | `buildWikiContextMessage()` | `src/analytics/llm-wiki-prompts.ts` | 集中模板函数 |
 | 兼容导出 | `buildRouteSystemPrompt()` 等 | `src/analytics/llm-wiki-chat-service.ts` | 委托 registry |
 
+### 6.5 非 LLM Wiki AI 能力
+
+| 能力 | Builder | Prompt ID | 版本 | 输出 schema |
+|---|---|---|---:|---|
+| AI Inbox 今日建议 | `buildAiInboxPrompt()` | `ai-inbox.generate` | 1 | `AiInboxResult` |
+| AI 连接测试 | `buildAiConnectionTestPrompt()` | `ai.connection-test` | 1 | 无 |
+| 孤立文档 AI 补链 | `buildAiLinkSuggestionPrompt()` | `ai-link.suggest` | 1 | `AiLinkSuggestionResult` |
+| 补链结果语言重写 | `buildAiLinkRewritePrompt()` | `ai-link.rewrite` | 1 | `AiLinkSuggestionResult` |
+| 文档索引证据编译 | `buildAiDocumentEvidencePrompt()` | `ai-document.evidence-compile` | 1 | `EvidenceCompilationResult` |
+
+非 Wiki prompt 的输入仍以结构化 payload 为主：
+
+- AI Inbox：自然语言任务约束 + `AiInboxPayload`。
+- AI 补链：候选主题、候选目标、源文档摘要、已有标签等 JSON payload。
+- 补链重写：只重写用户可见字段，保留目标 ID、标题、类型、置信度和标签文本。
+- 文档索引：文档标题、路径、标签和证据块列表，要求输出 proposition 时引用真实 `sourceBlockIds`。
+
 ## 7. 当前提示词维护状态
 
 已解决：
 
 1. prompt 分散
-   - 已统一到 `src/analytics/llm-wiki-prompts.ts`。
+   - LLM Wiki prompt 已统一到 `src/analytics/llm-wiki-prompts.ts`。
+   - AI Inbox、AI 补链、文档索引等通用 AI prompt 已统一到 `src/analytics/ai-prompts.ts`。
 2. i18n 混放模型协议
    - 主题 Wiki 模型协议文案已迁出 `src/i18n/ui.ts`。
 3. 缺少 prompt 结构测试
    - 已新增 `src/analytics/llm-wiki-prompts.test.ts`。
+   - 已新增 `src/analytics/ai-prompts.test.ts`。
 4. 主题生成 prompt 版本不可追踪
    - `lastPreview.promptVersions` 与 `lastApply.promptVersions` 已记录主题生成 prompt 版本。
+5. 非 LLM Wiki prompt 治理
+   - AI Inbox、连接测试、AI 补链、补链重写和文档索引证据编译 prompt 已完成集中治理。
 
 仍需后续处理：
 
 1. UI 过期提示
    - 当前已存储 prompt 版本，但尚未在维护面板提示“由旧 prompt 生成，建议重新预览”。
-2. 非 LLM Wiki prompt 治理
-   - AI Inbox、AI 补链等 prompt 仍在各自模块中。
-3. Prompt 内容质量优化
+2. Prompt 内容质量优化
    - 可继续强化证据优先级、增量文档差异说明和 JSON schema 示例。
 
 ## 8. 当前架构取舍
@@ -239,6 +263,14 @@ LLM Wiki 目前已经形成三条相关链路：
 - `buildSinglePageMaintenancePrompt()`
 - `buildWikiRoutePrompt()`
 - `buildWikiChatPrompt()`
+
+已新增 `src/analytics/ai-prompts.ts`，集中管理通用 AI prompt：
+
+- `buildAiInboxPrompt()`
+- `buildAiConnectionTestPrompt()`
+- `buildAiLinkSuggestionPrompt()`
+- `buildAiLinkRewritePrompt()`
+- `buildAiDocumentEvidencePrompt()`
 
 每个 builder 返回结构化对象：
 
@@ -255,6 +287,7 @@ interface LlmPromptSpec {
 
 - 与 TypeScript 类型、测试和 parser 最容易协同。
 - 主题 Wiki prompt 文案与 UI i18n 解耦。
+- 非 Wiki AI prompt 不再散落在业务模块中，后续优化可先查 registry 和对应测试。
 - 已在 `WikiPreviewRecord` 和 `WikiApplyRecord` 中记录主题 prompt 版本。
 - 不引入额外运行时加载和打包复杂度。
 
@@ -296,13 +329,16 @@ i18n 可以继续提供 UI 文案和用户可见 fallback，但不应作为 prom
 3. 补充 prompt registry 测试。
 4. 从 `src/i18n/ui.ts` 迁出主题 Wiki 模型协议文案。
 5. 在 `WikiPreviewRecord` 和 `WikiApplyRecord` 中记录主题生成 prompt 版本。
+6. 建立 `src/analytics/ai-prompts.ts` 和 `src/analytics/llm-prompt-types.ts`。
+7. 迁移 AI Inbox、连接测试、AI 补链、补链重写、文档索引证据编译 prompt。
+8. 补充 `src/analytics/ai-prompts.test.ts`。
 
 建议后续步骤：
 
 1. 在维护面板展示 prompt 版本过期提示。
-2. 如果 prompt registry 继续变大，拆分主题生成、单页维护、聊天内部模块。
+2. 如果 prompt registry 继续变大，拆分主题生成、单页维护、聊天、Inbox、补链、文档索引内部模块。
 3. 为每个 JSON schema 增加最小输出示例。
-4. 评估 AI Inbox 和 AI 补链 prompt 是否也需要统一 registry。
+4. 评估是否需要用户自定义 prompt 或多套 prompt 预设。
 
 ## 10. 关键文件索引
 
@@ -310,8 +346,11 @@ i18n 可以继续提供 UI 文案和用户可见 fallback，但不应作为 prom
 |---|---|
 | `src/composables/use-analytics-wiki-actions.ts` | 主题 Wiki 预览、增量判断、三段式生成、应用入口 |
 | `src/composables/use-analytics-wiki.ts` | 源文档索引保障、现有 Wiki 页读取、作用域说明、受影响 section 显示 |
+| `src/analytics/llm-prompt-types.ts` | 通用 prompt spec 类型定义 |
 | `src/analytics/llm-wiki-prompts.ts` | LLM Wiki Prompt Registry，集中构建主题生成、单页维护、聊天 prompt |
 | `src/analytics/llm-wiki-prompts.test.ts` | Prompt Registry 结构与关键模式测试 |
+| `src/analytics/ai-prompts.ts` | 通用 AI Prompt Registry，集中构建 AI Inbox、AI 补链、文档索引 prompt |
+| `src/analytics/ai-prompts.test.ts` | 通用 AI Prompt Registry 结构与关键约束测试 |
 | `src/analytics/wiki-ai.ts` | 主题 Wiki 三段式 AI 服务、请求和响应归一化 |
 | `src/analytics/wiki-generation.ts` | Wiki payload 类型与主题 bundle 结构 |
 | `src/analytics/wiki-renderer.ts` | 主题 Wiki draft 渲染、section marker、引用渲染 |
@@ -323,10 +362,13 @@ i18n 可以继续提供 UI 文案和用户可见 fallback，但不应作为 prom
 | `src/composables/llm-wiki-maintain-review.ts` | 单页维护断链探测和状态构造 |
 | `src/composables/llm-wiki-maintain-apply.ts` | 单页维护按 section 合并应用 |
 | `src/analytics/llm-wiki-chat-service.ts` | Wiki 聊天路由和回答解析、兼容 prompt 导出 |
+| `src/analytics/ai-inbox.ts` | AI Inbox payload、请求和结果归一化，prompt 委托 `ai-prompts.ts` |
+| `src/analytics/ai-link-suggestions.ts` | AI 补链候选、请求和结果归一化，prompt 委托 `ai-prompts.ts` |
+| `src/analytics/ai-document-summary.ts` | 文档索引 freshness、请求和证据编译解析，prompt 委托 `ai-prompts.ts` |
 | `src/i18n/ui.ts` | UI 展示文案和用户可见 fallback，不再承载主题 Wiki 模型协议 prompt |
 
 ## 11. 总结
 
 当前 LLM Wiki 的核心语义是：用户手动触发，以当前 scope 和指定主题为边界，先保障源文档索引，再用三段式 LLM 生成主题 Wiki 草稿，随后通过指纹 diff 提供安全预览，最后由用户确认写回 AI 管理区并同步索引页与日志页。
 
-提示词维护上，TypeScript Prompt Registry 已经落地。当前结构是“集中 builder + 兼容委托层 + 主题生成 prompt 版本记录”。下一步重点是 prompt 版本过期提示、内容质量优化，以及必要时将 registry 拆分为更小的内部模块。
+提示词维护上，TypeScript Prompt Registry 已经落地。当前结构是“共享 prompt 类型 + LLM Wiki registry + 通用 AI registry + 兼容委托层 + 主题生成 prompt 版本记录”。下一步重点是 prompt 版本过期提示、内容质量优化，以及必要时将 registry 拆分为更小的内部模块。

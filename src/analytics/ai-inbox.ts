@@ -7,6 +7,7 @@ import type {
   TrendReport,
 } from './analysis'
 import type { SummaryCardItem } from './summary-details'
+import { buildAiConnectionTestPrompt, buildAiInboxPrompt } from './ai-prompts'
 import { parseSiyuanTimestamp } from './document-utils'
 import { countThemeMatchesForDocument, type ThemeDocument } from './theme-documents'
 import { isWikiDocumentTitle } from './wiki-page-model'
@@ -192,23 +193,6 @@ const CAPACITY_LIMITS: Record<AiContextCapacity, {
   },
 }
 
-const SYSTEM_PROMPT = [
-  'You are a knowledge-organization assistant for a SiYuan note library.',
-  'Based on recently collected or created notes and related network analysis signals, output the highest-priority cleanup tasks for today. The goal is to turn scattered notes into a topic-centered knowledge structure.',
-  'You must return JSON only. Do not output Markdown, explanations, or code blocks.',
-  'The JSON shape must be {"summary": string, "items": AiInboxItem[]}.',
-  'Each item must include id, type, title, priority, action, and reason, with optional documentIds, confidence, recommendedTargets, evidence, expectedChanges, and priorityBreakdown.',
-  'type must be one of document, connection, topic-page, or bridge-risk.',
-  'priority must be P1, P2, or P3.',
-  'Prefer using the recommended targets, evidence, estimated gains, and scores already provided in actionCandidates. Do not invent documents or topic pages that do not exist.',
-  'If an actionCandidate includes focusDocumentIds, put the related primary object ids into documentIds.',
-  'If recommendedTargets exist, action must mention the target titles explicitly instead of generic actions like "repair links" or "improve structure".',
-  'action should be directly usable as user-visible recommended action text.',
-  'reason should be directly usable as user-visible why-this-first text and must cite at least one structure signal.',
-  'Prioritize orphan docs, dormant docs, bridge risks, communities missing topic pages, trend changes, and critical link repair.',
-  'All user-visible text fields must follow the user interface language of the current workspace. Keep proper nouns such as document titles, tag names, and model names as needed.',
-].join(' ')
-
 export function isAiConfigComplete(config: AiConfig): boolean {
   return Boolean(
     config.aiBaseUrl?.trim()
@@ -228,37 +212,25 @@ export function createAiInboxService(deps: {
       return buildAiInboxPayload(params)
     },
     async generateInbox(params) {
+      const prompt = buildAiInboxPrompt({
+        payload: params.payload,
+      })
       const response = await requestChatCompletion({
         config: params.config,
         forwardProxy: deps.forwardProxy,
         logger,
-        messages: [
-          { role: 'system', content: SYSTEM_PROMPT },
-          {
-            role: 'user',
-            content: [
-              t('analytics.aiInbox.promptProduceUnifiedTaskList'),
-              t('analytics.aiInbox.promptPreferHighScoringCandidates'),
-              t('analytics.aiInbox.promptKeepStructureCompact'),
-              t('analytics.aiInbox.promptMakeActionSpecific'),
-              t('analytics.aiInbox.promptDoNotFabricateWeakEvidence'),
-              JSON.stringify(params.payload),
-            ].join('\n'),
-          },
-        ],
+        messages: prompt.messages,
       })
 
       return normalizeAiInboxResult(parseJsonFromContent(response))
     },
     async testConnection(params) {
+      const prompt = buildAiConnectionTestPrompt()
       const response = await requestChatCompletion({
         config: params.config,
         forwardProxy: deps.forwardProxy,
         logger,
-        messages: [
-          { role: 'system', content: 'You are a connection test assistant. Return OK only.' },
-          { role: 'user', content: 'Reply with OK only.' },
-        ],
+        messages: prompt.messages,
         maxTokensOverride: 20,
       })
 
