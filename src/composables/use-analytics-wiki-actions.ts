@@ -522,7 +522,7 @@ export function createAnalyticsWikiActionsController(params: {
   }
 }
 
-async function buildSingleThemeWikiPayload(params: {
+export async function buildSingleThemeWikiPayload(params: {
   config: Pick<PluginConfig, 'wikiPageSuffix'>
   themeDocument: { documentId: string, title: string, themeName: string }
   sourceDocuments: DocumentRecord[]

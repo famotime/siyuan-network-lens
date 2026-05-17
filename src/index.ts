@@ -7,6 +7,8 @@ import { destroyApp, destroySetting, mountApp, mountSetting } from '@/main'
 import './index.scss'
 import { openPluginDock } from './plugin-dock'
 import { PLUGIN_ICON, PLUGIN_ICON_SYMBOL } from './plugin-icon'
+import { createWikiCommandProvider } from './plugin/wiki-command-provider'
+import type { WikiCommandProvider } from './plugin/wiki-command-provider-types'
 import { DEFAULT_CONFIG, ensureConfigDefaults, type PluginConfig } from './types/config'
 
 const DOCK_TYPE = 'reference-analytics-dock'
@@ -15,6 +17,7 @@ const STORAGE_NAME = 'settings.json'
 export default class ReferenceAnalyticsPlugin extends Plugin {
   private dockInstance?: ReturnType<Plugin['addDock']>
   private config = reactive<PluginConfig>({ ...DEFAULT_CONFIG })
+  private wikiCommandProvider: WikiCommandProvider | null = null
 
   get version() {
     return pluginInfo.version
@@ -22,6 +25,11 @@ export default class ReferenceAnalyticsPlugin extends Plugin {
 
   async onload() {
     this.addIcons(PLUGIN_ICON_SYMBOL)
+
+    this.wikiCommandProvider = createWikiCommandProvider({
+      pluginVersion: this.version,
+      plugin: this,
+    })
 
     const loadedConfig = await this.loadData(STORAGE_NAME)
     if (loadedConfig) {
@@ -77,6 +85,11 @@ export default class ReferenceAnalyticsPlugin extends Plugin {
 
   openDock() {
     openPluginDock(DOCK_TYPE, this.dockInstance)
+  }
+
+  /** 公开 API — 供外部插件（如文档助手）调用 Wiki 生成 */
+  getWikiCommandIntegration(): WikiCommandProvider | null {
+    return this.wikiCommandProvider
   }
 
   openSetting() {
