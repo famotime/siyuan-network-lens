@@ -8,7 +8,6 @@ export interface PanelCounts {
   propagation: number
 }
 
-const RANKING_LIMIT = 12
 const TREND_LIMIT = 5
 const PROPAGATION_LIMIT = 8
 
@@ -34,7 +33,7 @@ export function buildPanelCounts(params: {
   }
 
   return {
-    ranking: Math.min(params.report.ranking.length, RANKING_LIMIT),
+    ranking: params.report.ranking.length,
     communities: communityDocuments.size,
     orphanBridge: orphanBridgeDocuments.size,
     trends: trendsDocuments.size,

@@ -33,7 +33,7 @@
         class="ranking-list"
       >
         <div
-          v-for="item in ranking.slice(0, 12)"
+          v-for="item in ranking"
           :key="item.documentId"
           class="ranking-entry"
         >
@@ -234,6 +234,7 @@
                 v-bind="wikiPanelProps"
                 :open-source-document="wikiPanelProps.openSourceDocument ?? (() => {})"
                 @update:incremental-enabled="(v: boolean) => emit('update:incrementalEnabled', v)"
+                @update:full-content-enabled="(v: boolean) => emit('update:fullContentEnabled', v)"
                 @toggle-theme-link="(docId: string, themeId: string) => emit('toggleThemeLink', docId, themeId)"
                 @add-tag="(id: string) => emit('addTag', id)"
               />
@@ -292,6 +293,7 @@ const props = withDefaults(defineProps<{
     formatTimestamp: (timestamp?: string) => string
     formatWikiPreviewTimestamp: (timestamp?: string) => { dateText: string, timeText: string, fullText: string }
     incrementalEnabled?: boolean
+    fullContentEnabled?: boolean
     openSourceDocument?: (documentId: string) => void
     onUpdateIncrementalEnabled?: (value: boolean) => void
     onToggleThemeLink?: (documentId: string, themeDocumentId: string) => void
@@ -313,6 +315,7 @@ const props = withDefaults(defineProps<{
 
 const emit = defineEmits<{
   (e: 'update:incrementalEnabled', value: boolean): void
+  (e: 'update:fullContentEnabled', value: boolean): void
   (e: 'toggleThemeLink', documentId: string, themeDocumentId: string): void
   (e: 'addTag', documentId: string, tag?: string): void
 }>()

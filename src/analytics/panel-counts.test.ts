@@ -120,7 +120,7 @@ describe('buildPanelCounts', () => {
       pathChain: ['doc-a', 'doc-b', 'doc-c', 'doc-d'],
     })
 
-    expect(counts.ranking).toBe(12)
+    expect(counts.ranking).toBe(15)
     expect(counts.communities).toBe(3)
     expect(counts.orphanBridge).toBe(3)
     expect(counts.trends).toBe(10)

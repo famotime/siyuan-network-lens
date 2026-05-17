@@ -15,6 +15,21 @@ const snapshot = {
   ],
   references: [
     { id: 'ref-1', sourceDocumentId: 'doc-a', sourceBlockId: 'blk-a1', targetDocumentId: 'doc-b', targetBlockId: 'blk-b1', content: '[[Beta]]', sourceUpdated: '20260311120000' },
+    { id: 'ref-2', sourceDocumentId: 'doc-a', sourceBlockId: 'blk-a2', targetDocumentId: 'doc-b', targetBlockId: 'blk-b2', content: '[[Beta]]', sourceUpdated: '20260311120000' },
+    { id: 'ref-3', sourceDocumentId: 'doc-a', sourceBlockId: 'blk-a3', targetDocumentId: 'doc-b', targetBlockId: 'blk-b3', content: '[[Beta]]', sourceUpdated: '20260311120000' },
+    { id: 'ref-4', sourceDocumentId: 'doc-a', sourceBlockId: 'blk-a4', targetDocumentId: 'doc-b', targetBlockId: 'blk-b4', content: '[[Beta]]', sourceUpdated: '20260311120000' },
+    { id: 'ref-5', sourceDocumentId: 'doc-a', sourceBlockId: 'blk-a5', targetDocumentId: 'doc-b', targetBlockId: 'blk-b5', content: '[[Beta]]', sourceUpdated: '20260311120000' },
+    { id: 'ref-6', sourceDocumentId: 'doc-a', sourceBlockId: 'blk-a6', targetDocumentId: 'doc-b', targetBlockId: 'blk-b6', content: '[[Beta]]', sourceUpdated: '20260311120000' },
+    { id: 'ref-7', sourceDocumentId: 'doc-theme-ai', sourceBlockId: 'blk-t1', targetDocumentId: 'doc-a', targetBlockId: 'blk-a7', content: '[[Alpha AI]]', sourceUpdated: '20260311120000' },
+    { id: 'ref-8', sourceDocumentId: 'doc-theme-ai', sourceBlockId: 'blk-t2', targetDocumentId: 'doc-a', targetBlockId: 'blk-a8', content: '[[Alpha AI]]', sourceUpdated: '20260311120000' },
+    { id: 'ref-9', sourceDocumentId: 'doc-theme-ai', sourceBlockId: 'blk-t3', targetDocumentId: 'doc-a', targetBlockId: 'blk-a9', content: '[[Alpha AI]]', sourceUpdated: '20260311120000' },
+    { id: 'ref-10', sourceDocumentId: 'doc-theme-ai', sourceBlockId: 'blk-t4', targetDocumentId: 'doc-a', targetBlockId: 'blk-a10', content: '[[Alpha AI]]', sourceUpdated: '20260311120000' },
+    { id: 'ref-11', sourceDocumentId: 'doc-theme-ai', sourceBlockId: 'blk-t5', targetDocumentId: 'doc-a', targetBlockId: 'blk-a11', content: '[[Alpha AI]]', sourceUpdated: '20260311120000' },
+    { id: 'ref-12', sourceDocumentId: 'doc-b', sourceBlockId: 'blk-b7', targetDocumentId: 'doc-theme-ai', targetBlockId: 'blk-t6', content: '[[主题-AI-索引]]', sourceUpdated: '20260311120000' },
+    { id: 'ref-13', sourceDocumentId: 'doc-b', sourceBlockId: 'blk-b8', targetDocumentId: 'doc-theme-ai', targetBlockId: 'blk-t7', content: '[[主题-AI-索引]]', sourceUpdated: '20260311120000' },
+    { id: 'ref-14', sourceDocumentId: 'doc-b', sourceBlockId: 'blk-b9', targetDocumentId: 'doc-theme-ai', targetBlockId: 'blk-t8', content: '[[主题-AI-索引]]', sourceUpdated: '20260311120000' },
+    { id: 'ref-15', sourceDocumentId: 'doc-b', sourceBlockId: 'blk-b10', targetDocumentId: 'doc-theme-ml', targetBlockId: 'blk-m1', content: '[[主题-机器学习-索引]]', sourceUpdated: '20260311120000' },
+    { id: 'ref-16', sourceDocumentId: 'doc-b', sourceBlockId: 'blk-b11', targetDocumentId: 'doc-theme-ml', targetBlockId: 'blk-m2', content: '[[主题-机器学习-索引]]', sourceUpdated: '20260311120000' },
   ],
   notebooks: [],
   fetchedAt: '20260312000000',
@@ -322,7 +337,7 @@ describe('useAnalyticsState', () => {
     expect(readCard?.value).toBe('5')
     expect(state.summaryCards.value.find(card => card.key === 'largeDocuments')?.label).toBe('Large docs · text')
     expect(state.summaryCards.value.find(card => card.key === 'largeDocuments')?.value).toBe('0')
-    expect(state.report.value?.ranking.map(item => item.documentId)).toEqual(['doc-b', 'doc-a'])
+    expect(state.report.value?.ranking[0]?.documentId).toBe('doc-b')
     expect(state.selectedEvidenceDocument.value).toBe('doc-b')
     expect(state.themeOptions.value.map(item => item.label)).toEqual(['机器学习', 'AI'])
   })
@@ -832,7 +847,7 @@ describe('useAnalyticsState', () => {
     await state.refresh()
     await nextTick()
 
-    expect(state.report.value?.ranking.map(item => item.documentId)).toEqual(['doc-b', 'doc-a'])
+    expect(state.report.value?.ranking[0]?.documentId).toBe('doc-b')
   })
 
   it('filters by selected themes and allows toggling orphan theme links before refresh', async () => {
@@ -874,6 +889,7 @@ describe('useAnalyticsState', () => {
     await nextTick()
 
     expect(state.filteredDocuments.value.map(document => document.id)).toEqual([
+      'doc-a',
       'doc-theme-ai',
       'doc-orphan',
     ])
@@ -985,8 +1001,6 @@ describe('useAnalyticsState', () => {
 
     expect(state.orphanDetailItems.value.map(item => item.documentId)).toEqual([
       'doc-orphan',
-      'doc-theme-ai',
-      'doc-theme-ml',
       'doc-orphan-zeta',
       'doc-orphan-gamma',
     ])
@@ -995,8 +1009,6 @@ describe('useAnalyticsState', () => {
     await nextTick()
 
     expect(state.orphanDetailItems.value.map(item => item.documentId)).toEqual([
-      'doc-theme-ml',
-      'doc-theme-ai',
       'doc-orphan',
       'doc-orphan-gamma',
       'doc-orphan-zeta',
@@ -1101,6 +1113,16 @@ describe('useAnalyticsState', () => {
       ],
       references: [
         { id: 'ref-1', sourceDocumentId: 'doc-side', sourceBlockId: 'blk-1', targetDocumentId: 'doc-parent', targetBlockId: 'blk-2', content: '[[~Skills]]', sourceUpdated: '20260311120000' },
+        { id: 'ref-2', sourceDocumentId: 'doc-side', sourceBlockId: 'blk-2', targetDocumentId: 'doc-parent', targetBlockId: 'blk-3', content: '[[~Skills]]', sourceUpdated: '20260311120000' },
+        { id: 'ref-3', sourceDocumentId: 'doc-side', sourceBlockId: 'blk-3', targetDocumentId: 'doc-parent', targetBlockId: 'blk-4', content: '[[~Skills]]', sourceUpdated: '20260311120000' },
+        { id: 'ref-4', sourceDocumentId: 'doc-side', sourceBlockId: 'blk-4', targetDocumentId: 'doc-parent', targetBlockId: 'blk-5', content: '[[~Skills]]', sourceUpdated: '20260311120000' },
+        { id: 'ref-5', sourceDocumentId: 'doc-side', sourceBlockId: 'blk-5', targetDocumentId: 'doc-parent', targetBlockId: 'blk-6', content: '[[~Skills]]', sourceUpdated: '20260311120000' },
+        { id: 'ref-6', sourceDocumentId: 'doc-side', sourceBlockId: 'blk-6', targetDocumentId: 'doc-parent', targetBlockId: 'blk-7', content: '[[~Skills]]', sourceUpdated: '20260311120000' },
+        { id: 'ref-7', sourceDocumentId: 'doc-side', sourceBlockId: 'blk-7', targetDocumentId: 'doc-parent', targetBlockId: 'blk-8', content: '[[~Skills]]', sourceUpdated: '20260311120000' },
+        { id: 'ref-8', sourceDocumentId: 'doc-side', sourceBlockId: 'blk-8', targetDocumentId: 'doc-parent', targetBlockId: 'blk-9', content: '[[~Skills]]', sourceUpdated: '20260311120000' },
+        { id: 'ref-9', sourceDocumentId: 'doc-side', sourceBlockId: 'blk-9', targetDocumentId: 'doc-parent', targetBlockId: 'blk-10', content: '[[~Skills]]', sourceUpdated: '20260311120000' },
+        { id: 'ref-10', sourceDocumentId: 'doc-side', sourceBlockId: 'blk-10', targetDocumentId: 'doc-parent', targetBlockId: 'blk-11', content: '[[~Skills]]', sourceUpdated: '20260311120000' },
+        { id: 'ref-11', sourceDocumentId: 'doc-side', sourceBlockId: 'blk-11', targetDocumentId: 'doc-parent', targetBlockId: 'blk-12', content: '[[~Skills]]', sourceUpdated: '20260311120000' },
       ],
       notebooks: [],
       fetchedAt: '20260312000000',

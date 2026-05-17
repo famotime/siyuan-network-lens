@@ -231,6 +231,7 @@ export function analyzeReferenceGraph(params: {
   const inboundByDocument = new Map<string, NormalizedReference[]>()
   const inboundSourcesByDocument = new Map<string, Set<string>>()
   const outboundTargetsByDocument = new Map<string, Set<string>>()
+  const outboundRawCountByDocument = new Map<string, number>()
   const dormantDays = params.dormantDays ?? 30
 
   for (const reference of references) {
@@ -245,6 +246,8 @@ export function analyzeReferenceGraph(params: {
     const outboundTargets = outboundTargetsByDocument.get(reference.sourceDocumentId) ?? new Set<string>()
     outboundTargets.add(reference.targetDocumentId)
     outboundTargetsByDocument.set(reference.sourceDocumentId, outboundTargets)
+
+    outboundRawCountByDocument.set(reference.sourceDocumentId, (outboundRawCountByDocument.get(reference.sourceDocumentId) ?? 0) + 1)
   }
 
   for (const [documentId, items] of inboundByDocument) {
@@ -270,7 +273,10 @@ export function analyzeReferenceGraph(params: {
         }, ''),
       }
     })
-    .filter(item => item.inboundReferences > 0 || item.outboundReferences > 0 || item.childDocumentCount > 0)
+    .filter((item) => {
+      const rawOutbound = outboundRawCountByDocument.get(item.documentId) ?? 0
+      return item.inboundReferences + rawOutbound + item.childDocumentCount >= 10
+    })
     .sort((left, right) => {
       const leftScore = left.distinctSourceDocuments + left.outboundReferences + left.childDocumentCount
       const rightScore = right.distinctSourceDocuments + right.outboundReferences + right.childDocumentCount
@@ -701,7 +707,7 @@ function buildPropagationFocusIds(
   communities: CommunityItem[],
 ): string[] {
   const ids = new Set<string>()
-  for (const item of ranking.slice(0, 12)) {
+  for (const item of ranking) {
     ids.add(item.documentId)
   }
   for (const bridgeId of bridgeIds) {
