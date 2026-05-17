@@ -15,6 +15,7 @@ export type DetailItemWithThemeSuggestions = {
   readTagSuggestions?: string[]
   readTagSuggestionDescription?: string
   themeSuggestions: ThemeDocumentMatch[]
+  keywordSuggestions?: string[]
 }
 
 export function hasSuggestionCallout(item: DetailItemWithThemeSuggestions): boolean {

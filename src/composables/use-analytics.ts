@@ -56,6 +56,7 @@ import { createAiInboxService, isAiConfigComplete, type AiInboxResult, type AiIn
 import {
   createAiDocumentIndexStoreFromPlugin,
   type AiDocumentIndexStore,
+  type DocumentIndexProfile,
 } from '@/analytics/ai-index-store'
 import {
   createAiLinkRepairStoreFromPlugin,
@@ -242,6 +243,7 @@ export function useAnalyticsState(params: UseAnalyticsParams) {
   const aiInboxHistory = ref<TodaySuggestionHistoryEntry[]>([])
   const selectedAiInboxHistoryId = ref('')
   const orphanAiSuggestionStates = ref<Map<string, OrphanAiSuggestionState>>(new Map())
+  const orphanKeywordProfiles = ref<Map<string, DocumentIndexProfile>>(new Map())
   const wikiPreviewLoading = ref(false)
   const wikiApplyLoading = ref(false)
   const wikiError = ref('')
@@ -480,11 +482,26 @@ export function useAnalyticsState(params: UseAnalyticsParams) {
     orphans: report.value?.orphans ?? [],
     documentMap: documentMap.value,
     themeDocuments: themeDocuments.value,
+    keywordProfiles: orphanKeywordProfiles.value,
   }))
   const orphanDetailItems = computed(() => buildOrphanDetailItems({
     selectedSummaryDetail: selectedSummaryDetail.value,
     orphanThemeSuggestions: orphanThemeSuggestions.value,
+    keywordProfiles: orphanKeywordProfiles.value,
   }))
+
+  watch(
+    () => report.value?.orphans ?? [],
+    async (orphans) => {
+      if (!orphans.length || !aiIndexStore?.getDocumentProfiles) {
+        orphanKeywordProfiles.value = new Map()
+        return
+      }
+      const ids = orphans.map(o => o.documentId)
+      orphanKeywordProfiles.value = await aiIndexStore.getDocumentProfiles(ids)
+    },
+    { immediate: true },
+  )
 
   const selectedSummaryCount = computed(() => countSelectedSummaryItems(selectedSummaryDetail.value))
 

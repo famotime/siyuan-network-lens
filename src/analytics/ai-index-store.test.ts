@@ -145,6 +145,38 @@ describe('ai index store', () => {
     expect(profile).toBeNull()
   })
 
+  it('returns profiles for multiple document ids in a single batch call', async () => {
+    const storage = createMemoryStorage()
+    const store = createAiDocumentIndexStore(storage)
+
+    await store.saveDocumentIndex({
+      config: { aiModel: 'gpt-test' },
+      sourceDocument: baseDocument,
+      positioning: '定位一',
+      propositions: [],
+      keywords: ['AI', '索引'],
+      primarySourceBlocks: [],
+      secondarySourceBlocks: [],
+    })
+
+    await store.saveDocumentIndex({
+      config: { aiModel: 'gpt-test' },
+      sourceDocument: { ...baseDocument, id: 'doc-2', title: '文档 2' },
+      positioning: '定位二',
+      propositions: [],
+      keywords: ['知识管理'],
+      primarySourceBlocks: [],
+      secondarySourceBlocks: [],
+    })
+
+    const profiles = await store.getDocumentProfiles(['doc-1', 'doc-2', 'doc-missing'])
+
+    expect(profiles.size).toBe(2)
+    expect(profiles.get('doc-1')?.positioning).toBe('定位一')
+    expect(profiles.get('doc-2')?.positioning).toBe('定位二')
+    expect(profiles.has('doc-missing')).toBe(false)
+  })
+
   it('deletes document index entries', async () => {
     const storage = createMemoryStorage()
     const store = createAiDocumentIndexStore(storage)

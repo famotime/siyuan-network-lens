@@ -66,6 +66,7 @@ export interface AiDocumentIndexStore {
   getDocumentProfile: (documentId: string) => Promise<DocumentIndexProfile | null>
   getFreshDocumentProfile: (documentId: string, sourceUpdatedAt: string) => Promise<DocumentIndexProfile | null>
   getFreshDocumentSummary: (documentId: string, sourceUpdatedAt: string) => Promise<DocumentSummarySnapshot | null>
+  getDocumentProfiles: (documentIds: string[]) => Promise<Map<string, DocumentIndexProfile>>
   deleteDocumentIndex: (documentIds: string[]) => Promise<void>
 }
 
@@ -123,6 +124,17 @@ export function createAiDocumentIndexStore(storage: PluginStorageLike): AiDocume
       }
 
       return buildDocumentSummarySnapshotFromProfile(profile)
+    },
+    async getDocumentProfiles(documentIds) {
+      const snapshot = await loadSnapshot(storage)
+      const result = new Map<string, DocumentIndexProfile>()
+      for (const id of documentIds) {
+        const profile = snapshot.documentProfiles[id]
+        if (profile) {
+          result.set(id, profile)
+        }
+      }
+      return result
     },
     async deleteDocumentIndex(documentIds) {
       if (!documentIds.length) {

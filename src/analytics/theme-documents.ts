@@ -100,8 +100,13 @@ export function buildThemeOptions(themeDocuments: ThemeDocument[]): ThemeOption[
 export function countThemeMatchesForDocument(params: {
   document: Pick<DocumentRecord, 'id' | 'path' | 'hpath' | 'title' | 'name' | 'alias' | 'content' | 'tags'>
   themeDocuments: ThemeDocument[]
+  keywords?: string[]
 }): ThemeDocumentMatch[] {
   const fields = buildMatchFields(params.document, { includeContent: true })
+
+  if (params.keywords?.length) {
+    fields.push(params.keywords.join(' ').toLocaleLowerCase())
+  }
 
   return params.themeDocuments
     .filter(themeDocument => themeDocument.documentId !== params.document.id)

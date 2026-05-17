@@ -1079,6 +1079,14 @@ const UI_TEXT = {
         en_US: 'New tag',
         zh_CN: '新标签',
       },
+      suggestedTags: {
+        en_US: 'Suggested tags',
+        zh_CN: '建议标签',
+      },
+      suggestedTagsDescription: {
+        en_US: 'Based on the document content, the following tags are suggested',
+        zh_CN: '根据当前文档内容，建议如下标签',
+      },
       confidenceHigh: {
         en_US: 'HIGH',
         zh_CN: '高',

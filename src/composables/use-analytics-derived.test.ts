@@ -93,6 +93,89 @@ describe('use-analytics-derived', () => {
     ])
   })
 
+  it('includes keyword suggestions from index profiles in orphan detail items', () => {
+    const keywordProfiles = new Map([
+      ['doc-orphan', {
+        documentId: 'doc-orphan',
+        sourceUpdatedAt: '20260301120000',
+        sourceHash: 'h1',
+        title: 'AI 与 机器学习',
+        path: '/notes/orphan.sy',
+        hpath: '/笔记/AI 与 机器学习',
+        tagsJson: '[]',
+        positioning: '',
+        propositionsJson: '[]',
+        keywordsJson: JSON.stringify(['AI', '知识管理', '深度学习']),
+        primarySourceBlocksJson: '[]',
+        secondarySourceBlocksJson: '[]',
+        generatedAt: '2026-04-01T00:00:00.000Z',
+      }],
+    ])
+
+    const items = buildOrphanDetailItems({
+      selectedSummaryDetail: {
+        key: 'orphans',
+        title: '孤立文档详情',
+        description: '',
+        kind: 'list',
+        items: [
+          { documentId: 'doc-orphan', title: 'AI 与 机器学习', meta: 'meta' },
+          { documentId: 'doc-no-index', title: '无索引文档', meta: 'meta' },
+        ],
+      },
+      orphanThemeSuggestions: new Map(),
+      keywordProfiles,
+    })
+
+    expect(items[0].keywordSuggestions).toEqual(['AI', '知识管理', '深度学习'])
+    expect(items[1].keywordSuggestions).toEqual([])
+  })
+
+  it('enhances theme suggestions with index keyword matches', () => {
+    const documentMap = new Map([
+      ['doc-orphan', { id: 'doc-orphan', box: 'box-1', path: '/notes/orphan.sy', hpath: '/笔记/随笔', title: '日常随笔', tags: [], content: '' }],
+    ])
+    const keywordProfiles = new Map([
+      ['doc-orphan', {
+        documentId: 'doc-orphan',
+        sourceUpdatedAt: '',
+        sourceHash: '',
+        title: '',
+        path: '',
+        hpath: '',
+        tagsJson: '[]',
+        positioning: '',
+        propositionsJson: '[]',
+        keywordsJson: JSON.stringify(['人工智能', '深度学习']),
+        primarySourceBlocksJson: '[]',
+        secondarySourceBlocksJson: '[]',
+        generatedAt: '',
+      }],
+    ])
+
+    const withoutKeywords = buildOrphanThemeSuggestionMap({
+      orphans: [{ documentId: 'doc-orphan' }],
+      documentMap,
+      themeDocuments: [
+        { documentId: 'doc-theme-ai', title: '主题-AI-索引', themeName: 'AI', matchTerms: ['AI', '人工智能'], box: 'box-1', path: '/topics/ai.sy', hpath: '/专题/主题-AI-索引' },
+      ],
+    })
+
+    const withKeywords = buildOrphanThemeSuggestionMap({
+      orphans: [{ documentId: 'doc-orphan' }],
+      documentMap,
+      themeDocuments: [
+        { documentId: 'doc-theme-ai', title: '主题-AI-索引', themeName: 'AI', matchTerms: ['AI', '人工智能'], box: 'box-1', path: '/topics/ai.sy', hpath: '/专题/主题-AI-索引' },
+      ],
+      keywordProfiles,
+    })
+
+    expect(withoutKeywords.get('doc-orphan')).toBeUndefined()
+    expect(withKeywords.get('doc-orphan')).toEqual([
+      expect.objectContaining({ themeName: 'AI', matchCount: 1 }),
+    ])
+  })
+
   it('counts summary items for each detail section kind', () => {
     expect(countSelectedSummaryItems(null)).toBe(0)
     expect(countSelectedSummaryItems({

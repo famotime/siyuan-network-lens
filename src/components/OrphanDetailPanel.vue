@@ -58,6 +58,24 @@
           </div>
         </SuggestionCallout>
         <div
+          v-if="item.keywordSuggestions?.length"
+          class="orphan-detail__keyword-section"
+        >
+          <p class="orphan-detail__keyword-heading">{{ t('orphanDetail.suggestedTags') }}</p>
+          <p class="orphan-detail__keyword-description">{{ t('orphanDetail.suggestedTagsDescription') }}</p>
+          <div class="orphan-detail__keywords">
+            <button
+              v-for="keyword in item.keywordSuggestions"
+              :key="`${item.documentId}-kw-${keyword}`"
+              :class="['orphan-detail__keyword-tag', { 'orphan-detail__keyword-tag--active': isAiTagSuggestionActive(item.documentId, keyword) }]"
+              type="button"
+              @click="onToggleAiTagSuggestion(item.documentId, keyword)"
+            >
+              {{ keyword }}
+            </button>
+          </div>
+        </div>
+        <div
           v-if="aiEnabled"
           class="orphan-detail__ai-panel"
         >
@@ -182,7 +200,7 @@ import DocumentTitle from './DocumentTitle.vue'
 import SuggestionCallout from './SuggestionCallout.vue'
 
 const props = defineProps<{
-  items: Array<SummaryDetailItem & { themeSuggestions?: ThemeDocumentMatch[] }>
+  items: Array<SummaryDetailItem & { themeSuggestions?: ThemeDocumentMatch[]; keywordSuggestions?: string[] }>
   orphanSort: OrphanSort
   onUpdateOrphanSort: (value: OrphanSort) => void
   openDocument: (documentId: string) => void
@@ -367,6 +385,58 @@ function resolveAiTagSuggestions(documentId: string): AiLinkTagSuggestion[] {
 
 .orphan-detail__theme-name {
   font-weight: 600;
+}
+
+.orphan-detail__keyword-section {
+  display: grid;
+  gap: 6px;
+  margin-top: 10px;
+  padding: 12px;
+  border-radius: 10px;
+  border: 1px solid color-mix(in srgb, var(--b3-theme-primary) 12%, var(--panel-border));
+  background: color-mix(in srgb, var(--b3-theme-primary) 6%, var(--surface-card));
+}
+
+.orphan-detail__keyword-heading {
+  margin: 0;
+  font-size: 13px;
+  font-weight: 700;
+  color: color-mix(in srgb, var(--b3-theme-primary) 78%, var(--b3-theme-on-background));
+}
+
+.orphan-detail__keyword-description {
+  margin: 0;
+  font-size: 12px;
+  color: var(--panel-muted);
+}
+
+.orphan-detail__keywords {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.orphan-detail__keyword-tag {
+  border: 0;
+  border-radius: 999px;
+  padding: 7px 12px;
+  cursor: pointer;
+  font: inherit;
+  font-size: 12px;
+  font-weight: 600;
+  color: color-mix(in srgb, var(--b3-theme-on-background) 58%, transparent);
+  background: color-mix(in srgb, var(--b3-theme-on-background) 8%, transparent);
+  transition: background-color 0.2s, color 0.2s;
+}
+
+.orphan-detail__keyword-tag:hover {
+  background: color-mix(in srgb, var(--b3-theme-primary) 14%, transparent);
+  color: var(--b3-theme-primary);
+}
+
+.orphan-detail__keyword-tag--active {
+  background: color-mix(in srgb, var(--b3-theme-primary) 18%, transparent);
+  color: var(--b3-theme-primary);
 }
 
 .orphan-detail__ai-panel {

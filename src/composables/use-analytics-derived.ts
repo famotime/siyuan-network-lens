@@ -4,6 +4,7 @@ import type { SummaryDetailSection, SummaryDetailItem } from '@/analytics/summar
 import { countThemeMatchesForDocument, type ThemeDocument, type ThemeDocumentMatch } from '@/analytics/theme-documents'
 import type { TimeRange } from '@/analytics/analysis'
 import { normalizeTags } from '@/analytics/document-utils'
+import type { DocumentIndexProfile } from '@/analytics/ai-index-store'
 
 export type PathScope = 'focused' | 'all' | 'community'
 
@@ -21,6 +22,7 @@ export function buildOrphanThemeSuggestionMap(params: {
   orphans: Array<{ documentId: string }>
   documentMap: Map<string, DocumentRecord>
   themeDocuments: ThemeDocument[]
+  keywordProfiles?: Map<string, DocumentIndexProfile>
 }): Map<string, ThemeDocumentMatch[]> {
   const suggestions = new Map<string, ThemeDocumentMatch[]>()
 
@@ -29,9 +31,11 @@ export function buildOrphanThemeSuggestionMap(params: {
     if (!document) {
       continue
     }
+    const keywords = parseKeywordsFromProfile(params.keywordProfiles?.get(orphan.documentId))
     const matches = countThemeMatchesForDocument({
       document,
       themeDocuments: params.themeDocuments,
+      keywords,
     })
     if (matches.length) {
       suggestions.set(orphan.documentId, matches)
@@ -44,7 +48,8 @@ export function buildOrphanThemeSuggestionMap(params: {
 export function buildOrphanDetailItems(params: {
   selectedSummaryDetail: SummaryDetailSection | null
   orphanThemeSuggestions: Map<string, ThemeDocumentMatch[]>
-}): Array<SummaryDetailItem & { themeSuggestions: ThemeDocumentMatch[] }> {
+  keywordProfiles?: Map<string, DocumentIndexProfile>
+}): Array<SummaryDetailItem & { themeSuggestions: ThemeDocumentMatch[]; keywordSuggestions: string[] }> {
   if (params.selectedSummaryDetail?.key !== 'orphans' || params.selectedSummaryDetail.kind !== 'list') {
     return []
   }
@@ -52,6 +57,7 @@ export function buildOrphanDetailItems(params: {
   return params.selectedSummaryDetail.items.map(item => ({
     ...item,
     themeSuggestions: params.orphanThemeSuggestions.get(item.documentId) ?? [],
+    keywordSuggestions: parseKeywordsFromProfile(params.keywordProfiles?.get(item.documentId)),
   }))
 }
 
@@ -149,4 +155,18 @@ export function buildLinkAssociationMap(params: {
   }
 
   return map
+}
+
+function parseKeywordsFromProfile(profile: DocumentIndexProfile | undefined): string[] {
+  if (!profile?.keywordsJson) {
+    return []
+  }
+  try {
+    const parsed = JSON.parse(profile.keywordsJson)
+    return Array.isArray(parsed)
+      ? parsed.filter((item: unknown): item is string => typeof item === 'string' && item.trim().length > 0)
+      : []
+  } catch {
+    return []
+  }
 }

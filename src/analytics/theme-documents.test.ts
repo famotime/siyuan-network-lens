@@ -168,4 +168,31 @@ describe('theme documents', () => {
       themeDocuments,
     })).toBe(false)
   })
+
+  it('matches theme documents via index keywords', () => {
+    const themeDocuments = collectThemeDocuments({
+      documents: [...documents],
+      config,
+      notebooks: [
+        { id: 'box-1', name: '知识库' },
+      ],
+    })
+
+    const matches = countThemeMatchesForDocument({
+      document: {
+        id: 'doc-orphan-no-match',
+        box: 'box-1',
+        path: '/notes/essay.sy',
+        hpath: '/笔记/随笔',
+        title: '日常随笔',
+        tags: [],
+      },
+      themeDocuments,
+      keywords: ['人工智能', '深度学习', '神经网络'],
+    })
+
+    expect(matches).toEqual([
+      expect.objectContaining({ themeName: 'AI', matchCount: 1 }),
+    ])
+  })
 })
