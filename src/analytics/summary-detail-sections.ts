@@ -109,6 +109,8 @@ export function buildSummaryDetailSections(params: {
     meta: buildLargeDocumentMeta(largeDocumentCardMode, item, item.updatedAt),
     badge: formatLargeDocumentBadge(largeDocumentCardMode, item),
     isThemeDocument: themeDocumentIdSet.has(item.documentId),
+    createdAt: documentMap.get(item.documentId)?.created ?? '',
+    updatedAt: item.updatedAt,
   }))
   const unreadItems = filteredDocuments
     .filter(document => !readDocumentIdSet.has(document.id))
@@ -119,6 +121,8 @@ export function buildSummaryDetailSections(params: {
       meta: t('analytics.summaryDetailSource.createdDate', { date: formatCompactDate(document.created) }),
       badge: t('analytics.summaryDetailSource.needsReview'),
       isThemeDocument: themeDocumentIdSet.has(document.id),
+      createdAt: document.created ?? '',
+      updatedAt: document.updated ?? '',
       readTagSuggestions,
       readTagSuggestionDescription: readTagSuggestions.length
         ? t('analytics.summaryDetailSource.markDocAsRead')
@@ -146,6 +150,8 @@ export function buildSummaryDetailSections(params: {
             date: formatCompactDate(document.updated),
           }),
           isThemeDocument: themeDocumentIdSet.has(document.id),
+          createdAt: document.created ?? '',
+          updatedAt: document.updated ?? '',
         })),
     },
     read: {
@@ -162,6 +168,8 @@ export function buildSummaryDetailSections(params: {
             meta: buildReadMeta(item),
             badge: buildReadBadge(item),
             isThemeDocument: themeDocumentIdSet.has(item.documentId),
+            createdAt: item.createdAt,
+            updatedAt: item.updatedAt,
           }))
         : unreadItems,
     },
@@ -198,6 +206,8 @@ export function buildSummaryDetailSections(params: {
             meta: t('analytics.summaryDetailSource.inboundOutbound', counts),
             badge: t('analytics.summaryDetailSource.refsCount', { count: counts.inbound + counts.outbound }),
             isThemeDocument: themeDocumentIdSet.has(documentId),
+            createdAt: document.created ?? '',
+            updatedAt: document.updated ?? '',
           }
         })
         .filter((item): item is SummaryDetailItem => item !== null)
@@ -253,6 +263,8 @@ export function buildSummaryDetailSections(params: {
           }),
           badge: community.missingTopicPage && !hasRecognizedThemeDocument ? t('analytics.summaryDetailSource.missingTopicPage') : undefined,
           isThemeDocument: themeDocumentIdSet.has(documentId),
+          createdAt: documentMap.get(documentId)?.created ?? '',
+          updatedAt: documentMap.get(documentId)?.updated ?? '',
         }))
       }),
     },
@@ -269,6 +281,8 @@ export function buildSummaryDetailSections(params: {
           created: formatCompactDate(item.createdAt),
         }),
         isThemeDocument: themeDocumentIdSet.has(item.documentId),
+        createdAt: item.createdAt,
+        updatedAt: item.updatedAt,
         suggestions: resolveSuggestions(suggestionMap, item.documentId, 'repair-orphan'),
       })),
     },
@@ -286,6 +300,8 @@ export function buildSummaryDetailSections(params: {
         }),
         badge: item.hasSparseEvidence ? t('analytics.summaryDetailSource.historicalLinks', { count: item.historicalReferenceCount }) : undefined,
         isThemeDocument: themeDocumentIdSet.has(item.documentId),
+        createdAt: item.createdAt,
+        updatedAt: item.updatedAt,
         suggestions: resolveSuggestions(suggestionMap, item.documentId, 'archive-dormant'),
       })),
     },
@@ -299,6 +315,8 @@ export function buildSummaryDetailSections(params: {
         title: item.title,
         meta: t('analytics.summaryDetailSource.degree', { value: item.degree }),
         isThemeDocument: themeDocumentIdSet.has(item.documentId),
+        createdAt: documentMap.get(item.documentId)?.created ?? '',
+        updatedAt: documentMap.get(item.documentId)?.updated ?? '',
         suggestions: resolveSuggestions(suggestionMap, item.documentId, 'maintain-bridge'),
       })),
     },
@@ -316,6 +334,8 @@ export function buildSummaryDetailSections(params: {
         }),
         badge: t('analytics.summaryDetailSource.scorePts', { score: item.score }),
         isThemeDocument: themeDocumentIdSet.has(item.documentId),
+        createdAt: documentMap.get(item.documentId)?.created ?? '',
+        updatedAt: documentMap.get(item.documentId)?.updated ?? '',
         suggestions: [buildPropagationSuggestion(item)],
       })),
     },

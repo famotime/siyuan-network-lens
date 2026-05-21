@@ -17,6 +17,8 @@ export interface ReadMatchItem {
   matchedPrefixes: string[]
   matchedSuffixes: string[]
   matchedPaths: string[]
+  createdAt: string
+  updatedAt: string
 }
 
 export function collectReadMatches(params: {
@@ -56,6 +58,8 @@ export function collectReadMatches(params: {
         matchedPrefixes,
         matchedSuffixes,
         matchedPaths,
+        createdAt: document.created ?? '',
+        updatedAt: document.updated ?? '',
       }
     })
     .filter((item): item is ReadMatchItem => item !== null)

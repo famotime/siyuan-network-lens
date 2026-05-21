@@ -33,6 +33,8 @@ export interface SummaryDetailItem {
   suggestions?: DetailSuggestion[]
   readTagSuggestions?: string[]
   readTagSuggestionDescription?: string
+  createdAt?: string
+  updatedAt?: string
 }
 
 export interface DetailSuggestion {

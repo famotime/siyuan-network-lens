@@ -487,6 +487,24 @@ const UI_TEXT = {
       en_US: 'History:',
       zh_CN: '历史：',
     },
+    sort: {
+      label: {
+        en_US: 'Sort by',
+        zh_CN: '排序',
+      },
+      updatedDesc: {
+        en_US: 'Updated time',
+        zh_CN: '更新时间',
+      },
+      createdDesc: {
+        en_US: 'Created time',
+        zh_CN: '创建时间',
+      },
+      titleAsc: {
+        en_US: 'Title',
+        zh_CN: '标题',
+      },
+    },
     analyzing: {
       en_US: 'Analyzing...',
       zh_CN: '分析中...',

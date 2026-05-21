@@ -44,6 +44,10 @@
         </div>
       </div>
       <p class="panel-header__description">{{ detail.description }}</p>
+      <DocumentSortControl
+        v-if="showGenericDocumentSort && isExpanded"
+        v-model="documentSort"
+      />
       <div
         v-if="detail.kind === 'aiInbox' && isExpanded"
         class="panel-header__ai-toolbar"
@@ -268,7 +272,7 @@
         <template v-if="listItems.length">
           <div class="summary-detail-list">
             <article
-              v-for="item in listItems"
+              v-for="item in sortedListItems"
               :key="`${detail.key}-${item.documentId}`"
               :class="['summary-detail-item', { 'summary-detail-item--collapsed': collapsedItems[item.documentId] }]"
             >
@@ -797,12 +801,14 @@ import {
   resolveAiInboxTypeLabel,
   type DetailItemWithThemeSuggestions,
 } from '@/components/summary-detail-ai-inbox'
+import DocumentSortControl, { type DocumentSortMode } from '@/components/DocumentSortControl.vue'
 import DocumentTitle from '@/components/DocumentTitle.vue'
 import DormantDetailPanel from '@/components/DormantDetailPanel.vue'
 import OrphanDetailPanel from '@/components/OrphanDetailPanel.vue'
 import RankingPanel from '@/components/RankingPanel.vue'
 import SuggestionCallout from '@/components/SuggestionCallout.vue'
 import { useSummaryDetailDocIndex } from '@/components/use-summary-detail-doc-index'
+import { compareSiyuanTimestamps as compareTimestamp } from '@/analytics/document-utils'
 import WikiCardsSection from '@/components/WikiCardsSection.vue'
 
 const props = withDefaults(defineProps<{
@@ -908,6 +914,20 @@ const summaryCountLabel = computed(() => props.detail.kind === 'aiInbox'
   ? t('summaryDetail.counts.suggestions', { count: props.selectedSummaryCount })
   : t('summaryDetail.counts.docs', { count: props.selectedSummaryCount }))
 
+const documentSort = ref<DocumentSortMode>('updated-desc')
+const detailKeysWithBuiltInSorting = new Set<SummaryDetailSectionType['key']>([
+  'todaySuggestions',
+  'ranking',
+  'trends',
+  'orphans',
+  'dormant',
+  'largeDocuments',
+  'references',
+  'bridges',
+  'propagation',
+  'llmWiki',
+])
+
 const listItems = computed<DetailItemWithThemeSuggestions[]>(() => {
   if (props.detail.kind !== 'list') {
     return []
@@ -926,11 +946,23 @@ const listItems = computed<DetailItemWithThemeSuggestions[]>(() => {
   }))
 })
 
+const showGenericDocumentSort = computed(() => props.detail.kind === 'list'
+  && listItems.value.length > 1
+  && !detailKeysWithBuiltInSorting.has(props.detail.key))
+
+const sortedListItems = computed<DetailItemWithThemeSuggestions[]>(() => {
+  if (!showGenericDocumentSort.value) {
+    return listItems.value
+  }
+
+  return [...listItems.value].sort((left, right) => compareDocumentDetailItems(left, right, documentSort.value))
+})
+
 const collapsedItems = ref<Record<string, boolean>>({})
 
 const collapsibleItemIds = computed(() => {
   if (props.detail.kind === 'list') {
-    return listItems.value.map(item => item.documentId)
+    return sortedListItems.value.map(item => item.documentId)
   }
   if (props.detail.kind === 'ranking') {
     return props.detail.ranking.map(item => item.documentId)
@@ -966,10 +998,27 @@ watch(
 
 const visibleDocumentIds = computed(() => {
   if (props.detail.kind === 'list' && props.detail.key === 'documents') {
-    return listItems.value.map(item => item.documentId)
+    return sortedListItems.value.map(item => item.documentId)
   }
   return []
 })
+
+function compareDocumentDetailItems(left: DetailItemWithThemeSuggestions, right: DetailItemWithThemeSuggestions, sort: DocumentSortMode): number {
+  if (sort === 'created-desc') {
+    return compareTimestamp(right.createdAt ?? '', left.createdAt ?? '')
+      || left.title.localeCompare(right.title, 'zh-CN')
+      || left.documentId.localeCompare(right.documentId)
+  }
+
+  if (sort === 'title-asc') {
+    return left.title.localeCompare(right.title, 'zh-CN')
+      || left.documentId.localeCompare(right.documentId)
+  }
+
+  return compareTimestamp(right.updatedAt ?? '', left.updatedAt ?? '')
+    || left.title.localeCompare(right.title, 'zh-CN')
+    || left.documentId.localeCompare(right.documentId)
+}
 
 function resolveAiInboxItemTitleParts(title: string) {
   return splitAiInboxItemTitle(title)

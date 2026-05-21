@@ -213,6 +213,75 @@ describe('SummaryDetailSection', () => {
     expect(source).not.toContain(":aria-label=\"isExpanded ? uiText('Collapse details', '收起详情') : uiText('Expand details', '展开详情')\"")
   })
 
+
+  it('renders a generic document sort control and defaults generic list details to updated descending', async () => {
+    const app = createSSRApp({
+      render: () => h(SummaryDetailSection, {
+        ...baseProps,
+        detail: {
+          key: 'documents',
+          title: 'Doc sample',
+          description: 'Docs matched by the current filters.',
+          kind: 'list',
+          items: [
+            {
+              documentId: 'doc-old',
+              title: 'Alpha Old',
+              meta: 'Updated 2026-03-01',
+              createdAt: '20260101090000',
+              updatedAt: '20260301090000',
+            },
+            {
+              documentId: 'doc-new',
+              title: 'Beta New',
+              meta: 'Updated 2026-03-14',
+              createdAt: '20260201090000',
+              updatedAt: '20260314120000',
+            },
+          ],
+        },
+      }),
+    })
+
+    const html = await renderToString(app)
+
+    expect(html).toContain('summary-detail-sort')
+    expect(html).toContain('Sort by')
+    expect(html).toContain('Updated time')
+    expect(html).toContain('Created time')
+    expect(html).toContain('Title')
+    expect(html.indexOf('Beta New')).toBeLessThan(html.indexOf('Alpha Old'))
+  })
+
+  it('does not render the generic document sort control for built-in sorted trend details', async () => {
+    const app = createSSRApp({
+      render: () => h(SummaryDetailSection, {
+        ...baseProps,
+        detail: {
+          key: 'trends',
+          title: 'Trend watch',
+          description: 'Activity changes between windows.',
+          kind: 'trends',
+          trends: {
+            current: { referenceCount: 0 },
+            previous: { referenceCount: 0 },
+            risingDocuments: [],
+            fallingDocuments: [],
+            connectionChanges: { newCount: 0, brokenCount: 0, newEdges: [], brokenEdges: [] },
+            communityTrends: [],
+            risingCommunities: [],
+            dormantCommunities: [],
+          },
+        },
+      }),
+    })
+
+    const html = await renderToString(app)
+
+    expect(html).not.toContain('summary-detail-sort')
+    expect(html).not.toContain('Sort by')
+  })
+
   it('does not render the wiki maintenance entry inside the document sample detail card', async () => {
     const app = createSSRApp({
       render: () => h(SummaryDetailSection, {
