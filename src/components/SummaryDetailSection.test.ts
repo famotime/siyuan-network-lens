@@ -282,6 +282,147 @@ describe('SummaryDetailSection', () => {
     expect(html).not.toContain('Sort by')
   })
 
+  it('renders the generic document sort control for ranking details and defaults to updated descending', async () => {
+    const app = createSSRApp({
+      render: () => h(SummaryDetailSection, {
+        ...baseProps,
+        showWikiPanelActions: false,
+        resolveTitle: (documentId: string) => ({
+          'doc-old': 'Alpha Old',
+          'doc-new': 'Beta New',
+        }[documentId] ?? documentId),
+        detail: {
+          key: 'ranking',
+          title: 'Ranking',
+          description: 'Core docs ranked by current connectivity.',
+          kind: 'ranking',
+          ranking: [
+            {
+              documentId: 'doc-old',
+              title: 'Alpha Old',
+              inboundReferences: 3,
+              distinctSourceDocuments: 2,
+              outboundReferences: 1,
+              childDocumentCount: 0,
+              tagCount: 0,
+              createdAt: '20260101090000',
+              updatedAt: '20260301090000',
+              suggestions: [],
+            },
+            {
+              documentId: 'doc-new',
+              title: 'Beta New',
+              inboundReferences: 1,
+              distinctSourceDocuments: 1,
+              outboundReferences: 0,
+              childDocumentCount: 0,
+              tagCount: 0,
+              createdAt: '20260201090000',
+              updatedAt: '20260314120000',
+              suggestions: [],
+            },
+          ],
+        },
+      } as any),
+    })
+
+    const html = await renderToString(app)
+
+    expect(html).toContain('summary-detail-sort')
+    expect(html).toContain('Sort by')
+    expect(html.indexOf('Beta New')).toBeLessThan(html.indexOf('Alpha Old'))
+  })
+
+  it('renders the generic document sort control for propagation detail nodes and defaults to updated descending', async () => {
+    const app = createSSRApp({
+      render: () => h(SummaryDetailSection, {
+        ...baseProps,
+        detail: {
+          key: 'propagation',
+          title: 'Propagation nodes',
+          description: 'Docs that frequently appear on key shortest paths.',
+          kind: 'propagation',
+          items: [
+            {
+              documentId: 'doc-old',
+              title: 'Alpha Old',
+              meta: 'Covers 1 focus doc',
+              createdAt: '20260101090000',
+              updatedAt: '20260301090000',
+            },
+            {
+              documentId: 'doc-new',
+              title: 'Beta New',
+              meta: 'Covers 2 focus docs',
+              createdAt: '20260201090000',
+              updatedAt: '20260314120000',
+            },
+          ],
+        },
+      }),
+    })
+
+    const html = await renderToString(app)
+
+    expect(html).toContain('summary-detail-sort')
+    expect(html).toContain('Sort by')
+    expect(html.indexOf('Beta New')).toBeLessThan(html.indexOf('Alpha Old'))
+  })
+
+  it('renders the generic document sort control for wiki page cards and defaults to updated descending', async () => {
+    const app = createSSRApp({
+      render: () => h(SummaryDetailSection, {
+        ...baseProps,
+        detail: {
+          key: 'llmWiki',
+          title: 'LLM Wiki',
+          description: 'Generated wiki pages.',
+          kind: 'wikiCards',
+          pages: [
+            {
+              documentId: 'wiki-old',
+              title: 'Alpha Wiki',
+              createdAt: '20260101090000',
+              updatedAt: '20260301090000',
+            },
+            {
+              documentId: 'wiki-new',
+              title: 'Beta Wiki',
+              createdAt: '20260201090000',
+              updatedAt: '20260314120000',
+            },
+          ],
+        },
+      }),
+    })
+
+    const html = await renderToString(app)
+
+    expect(html).toContain('summary-detail-sort')
+    expect(html).toContain('Sort by')
+    expect(html.indexOf('Beta Wiki')).toBeLessThan(html.indexOf('Alpha Wiki'))
+  })
+
+  it('does not render the generic document sort control for today suggestions', async () => {
+    const app = createSSRApp({
+      render: () => h(SummaryDetailSection, {
+        ...baseProps,
+        detail: {
+          key: 'todaySuggestions',
+          title: 'Today suggestions',
+          description: 'Suggestions ranked by priority.',
+          kind: 'aiInbox',
+          result: null,
+        },
+      }),
+    })
+
+    const html = await renderToString(app)
+
+    expect(html).not.toContain('summary-detail-sort')
+    expect(html).not.toContain('Sort by')
+  })
+
   it('does not render the wiki maintenance entry inside the document sample detail card', async () => {
     const app = createSSRApp({
       render: () => h(SummaryDetailSection, {

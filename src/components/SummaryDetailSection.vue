@@ -417,11 +417,11 @@
       </template>
       <template v-else-if="detail.kind === 'propagation'">
         <div
-          v-if="detail.items.length"
+          v-if="sortedPropagationItems.length"
           class="summary-detail-list"
         >
           <article
-            v-for="item in detail.items"
+            v-for="item in sortedPropagationItems"
             :key="`${detail.key}-${item.documentId}`"
             class="summary-detail-item"
           >
@@ -538,8 +538,8 @@
       <template v-else-if="detail.kind === 'ranking'">
         <RankingPanel
           variant="detail"
-          :ranking="detail.ranking"
-          :panel-count="detail.ranking.length"
+          :ranking="sortedRankingItems"
+          :panel-count="sortedRankingItems.length"
           :snapshot-label="snapshotLabel"
           :is-expanded="true"
           :on-toggle-panel="() => {}"
@@ -762,7 +762,7 @@
       </template>
       <template v-else-if="detail.kind === 'wikiCards'">
         <WikiCardsSection
-          :pages="detail.pages"
+          :pages="sortedWikiPages"
           :open-document="openDocument"
           :format-timestamp="formatTimestamp"
           @open-chat="(scope: WikiChatScope) => emit('openWikiChat', scope)"
@@ -915,18 +915,6 @@ const summaryCountLabel = computed(() => props.detail.kind === 'aiInbox'
   : t('summaryDetail.counts.docs', { count: props.selectedSummaryCount }))
 
 const documentSort = ref<DocumentSortMode>('updated-desc')
-const detailKeysWithBuiltInSorting = new Set<SummaryDetailSectionType['key']>([
-  'todaySuggestions',
-  'ranking',
-  'trends',
-  'orphans',
-  'dormant',
-  'largeDocuments',
-  'references',
-  'bridges',
-  'propagation',
-  'llmWiki',
-])
 
 const listItems = computed<DetailItemWithThemeSuggestions[]>(() => {
   if (props.detail.kind !== 'list') {
@@ -946,16 +934,60 @@ const listItems = computed<DetailItemWithThemeSuggestions[]>(() => {
   }))
 })
 
-const showGenericDocumentSort = computed(() => props.detail.kind === 'list'
-  && listItems.value.length > 1
-  && !detailKeysWithBuiltInSorting.has(props.detail.key))
+const sortableDocumentCount = computed(() => {
+  if (props.detail.kind === 'list') {
+    return listItems.value.length
+  }
+  if (props.detail.kind === 'ranking') {
+    return props.detail.ranking.length
+  }
+  if (props.detail.kind === 'propagation') {
+    return props.detail.items.length
+  }
+  if (props.detail.kind === 'wikiCards') {
+    return props.detail.pages.length
+  }
+  return 0
+})
+
+const showGenericDocumentSort = computed(() => sortableDocumentCount.value > 1)
 
 const sortedListItems = computed<DetailItemWithThemeSuggestions[]>(() => {
-  if (!showGenericDocumentSort.value) {
+  if (props.detail.kind !== 'list' || listItems.value.length < 2) {
     return listItems.value
   }
 
   return [...listItems.value].sort((left, right) => compareDocumentDetailItems(left, right, documentSort.value))
+})
+
+const sortedRankingItems = computed(() => {
+  if (props.detail.kind !== 'ranking') {
+    return []
+  }
+  if (props.detail.ranking.length < 2) {
+    return props.detail.ranking
+  }
+  return [...props.detail.ranking].sort((left, right) => compareDocumentDetailItems(left, right, documentSort.value))
+})
+
+const sortedPropagationItems = computed(() => {
+  if (props.detail.kind !== 'propagation') {
+    return []
+  }
+  if (props.detail.items.length < 2) {
+    return props.detail.items
+  }
+  return [...props.detail.items].sort((left, right) => compareDocumentDetailItems(left, right, documentSort.value))
+})
+
+const sortedWikiPages = computed(() => {
+  if (props.detail.kind !== 'wikiCards') {
+    return []
+  }
+  if (props.detail.pages.length < 2) {
+    return props.detail.pages
+  }
+  return [...props.detail.pages].sort((left, right) => compareDocumentDetailItems(left, right, documentSort.value))
 })
 
 const collapsedItems = ref<Record<string, boolean>>({})
@@ -965,7 +997,7 @@ const collapsibleItemIds = computed(() => {
     return sortedListItems.value.map(item => item.documentId)
   }
   if (props.detail.kind === 'ranking') {
-    return props.detail.ranking.map(item => item.documentId)
+    return sortedRankingItems.value.map(item => item.documentId)
   }
   return []
 })
@@ -1003,7 +1035,11 @@ const visibleDocumentIds = computed(() => {
   return []
 })
 
-function compareDocumentDetailItems(left: DetailItemWithThemeSuggestions, right: DetailItemWithThemeSuggestions, sort: DocumentSortMode): number {
+function compareDocumentDetailItems(
+  left: { documentId: string, title: string, createdAt?: string, updatedAt?: string },
+  right: { documentId: string, title: string, createdAt?: string, updatedAt?: string },
+  sort: DocumentSortMode,
+): number {
   if (sort === 'created-desc') {
     return compareTimestamp(right.createdAt ?? '', left.createdAt ?? '')
       || left.title.localeCompare(right.title, 'zh-CN')
