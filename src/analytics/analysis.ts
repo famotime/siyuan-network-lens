@@ -206,6 +206,8 @@ export function analyzeReferenceGraph(params: {
   excludedNamePrefixes?: string
   excludedNameSuffixes?: string
   notebooks?: Array<{ id: string, name: string }>
+  timeFilterByCreated?: boolean
+  timeFilterByUpdated?: boolean
 }): ReferenceGraphReport {
   const {
     documents,
@@ -226,6 +228,8 @@ export function analyzeReferenceGraph(params: {
     excludedNamePrefixes: params.excludedNamePrefixes,
     excludedNameSuffixes: params.excludedNameSuffixes,
     notebooks: params.notebooks,
+    timeFilterByCreated: params.timeFilterByCreated,
+    timeFilterByUpdated: params.timeFilterByUpdated,
   })
   const evidenceByDocument: Record<string, NormalizedReference[]> = {}
   const inboundByDocument = new Map<string, NormalizedReference[]>()
@@ -395,6 +399,8 @@ export function analyzeTrends(params: {
   excludedNamePrefixes?: string
   excludedNameSuffixes?: string
   notebooks?: Array<{ id: string, name: string }>
+  timeFilterByCreated?: boolean
+  timeFilterByUpdated?: boolean
 }): TrendReport {
   const {
     documents,
@@ -414,6 +420,8 @@ export function analyzeTrends(params: {
     excludedNamePrefixes: params.excludedNamePrefixes,
     excludedNameSuffixes: params.excludedNameSuffixes,
     notebooks: params.notebooks,
+    timeFilterByCreated: params.timeFilterByCreated,
+    timeFilterByUpdated: params.timeFilterByUpdated,
   })
 
   const currentCounts = countByTarget(currentReferences)

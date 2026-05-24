@@ -14,11 +14,11 @@ const documents = [
   { id: 'doc-a', box: 'box-1', path: '/a.sy', hpath: '/Alpha', title: 'Alpha Index', tags: ['index', 'topic'], created: '20260201090000', updated: '20260310120000' },
   { id: 'doc-b', box: 'box-1', path: '/b.sy', hpath: '/Beta', title: 'Beta Research', tags: ['research'], created: '20260202090000', updated: '20260310120000' },
   { id: 'doc-c', box: 'box-1', path: '/c.sy', hpath: '/Gamma', title: 'Gamma Notes', tags: ['research'], created: '20260203090000', updated: '20260309120000' },
-  { id: 'doc-d', box: 'box-1', path: '/d.sy', hpath: '/Delta', title: 'Delta Archive', tags: ['archive'], created: '20260101090000', updated: '20260115120000' },
+  { id: 'doc-d', box: 'box-1', path: '/d.sy', hpath: '/Delta', title: 'Delta Archive', tags: ['archive'], created: '20260101090000', updated: '20260201120000' },
   { id: 'doc-e', box: 'box-2', path: '/e.sy', hpath: '/Bridge', title: 'Bridge Map', tags: ['bridge'], created: '20260204090000', updated: '20260308120000' },
-  { id: 'doc-f', box: 'box-2', path: '/f.sy', hpath: '/Focus', title: 'Focus Project', tags: ['project'], created: '20260205090000', updated: '20260301120000' },
+  { id: 'doc-f', box: 'box-2', path: '/f.sy', hpath: '/Focus', title: 'Focus Project', tags: ['project'], created: '20260205090000', updated: '20260306120000' },
   { id: 'doc-g', box: 'box-2', path: '/g.sy', hpath: '/Garden', title: 'Garden Topic', tags: ['project'], created: '20260206090000', updated: '20260310120000' },
-  { id: 'doc-h', box: 'box-2', path: '/h.sy', hpath: '/History', title: 'History Review', tags: ['review'], created: '20260207090000', updated: '20260228120000' },
+  { id: 'doc-h', box: 'box-2', path: '/h.sy', hpath: '/History', title: 'History Review', tags: ['review'], created: '20260207090000', updated: '20260306120000' },
 ] as const
 
 const references = [
@@ -30,7 +30,7 @@ const references = [
   { id: 'ref-6', sourceDocumentId: 'doc-e', sourceBlockId: 'blk-e2', targetDocumentId: 'doc-f', targetBlockId: 'blk-f1', content: '[[Focus Project]]', sourceUpdated: '20260308120000' },
   { id: 'ref-7', sourceDocumentId: 'doc-g', sourceBlockId: 'blk-g1', targetDocumentId: 'doc-f', targetBlockId: 'blk-f1', content: '[[Focus Project]]', sourceUpdated: '20260310120000' },
   { id: 'ref-8', sourceDocumentId: 'doc-e', sourceBlockId: 'blk-e3', targetDocumentId: 'doc-a', targetBlockId: 'blk-a2', content: '[[Alpha Index]]', sourceUpdated: '20260308120000' },
-  { id: 'ref-9', sourceDocumentId: 'doc-h', sourceBlockId: 'blk-h1', targetDocumentId: 'doc-g', targetBlockId: 'blk-g1', content: '[[Garden Topic]]', sourceUpdated: '20260228120000' },
+  { id: 'ref-9', sourceDocumentId: 'doc-h', sourceBlockId: 'blk-h1', targetDocumentId: 'doc-g', targetBlockId: 'blk-g1', content: '[[Garden Topic]]', sourceUpdated: '20260306120000' },
 ] as const
 
 const extraRankingReferences = [
@@ -60,7 +60,7 @@ describe('analyzeReferenceGraph', () => {
     expect(TIME_RANGE_OPTIONS).toEqual(['all', '3d', '7d', '30d', '60d', '90d'])
   })
 
-  it('filters documents by time range while keeping active references', () => {
+  it('filters documents strictly by their own timestamps within the time range', () => {
     const filtered = filterDocumentsByTimeRange({
       documents: [
         { id: 'doc-new', box: 'box-1', path: '/new.sy', hpath: '/New', title: 'New Doc', tags: ['note'], created: '20260309120000', updated: '20260310120000' },
@@ -74,7 +74,7 @@ describe('analyzeReferenceGraph', () => {
       timeRange: '7d',
     })
 
-    expect(filtered.map(document => document.id)).toEqual(['doc-new', 'doc-target'])
+    expect(filtered.map(document => document.id)).toEqual(['doc-new'])
   })
 
   it('supports 3d and 60d time ranges', () => {
@@ -191,7 +191,7 @@ describe('analyzeReferenceGraph', () => {
     const report = analyzeReferenceGraph({
       documents: [
         { id: 'doc-new', box: 'box-1', path: '/new.sy', hpath: '/New', title: 'New Doc', tags: ['note'], created: '20260309120000', updated: '20260310120000' },
-        { id: 'doc-target', box: 'box-1', path: '/target.sy', hpath: '/Target', title: 'Target Doc', tags: ['note'], created: '20250101120000', updated: '20250102120000' },
+        { id: 'doc-target', box: 'box-1', path: '/target.sy', hpath: '/Target', title: 'Target Doc', tags: ['note'], created: '20260308120000', updated: '20260309120000' },
         { id: 'doc-old', box: 'box-1', path: '/old.sy', hpath: '/Old', title: 'Old Doc', tags: ['archive'], created: '20240101120000', updated: '20240102120000' },
       ],
       references: [
@@ -546,7 +546,7 @@ describe('analyzeTrends', () => {
     const trends = analyzeTrends({
       documents: [
         { id: 'doc-new', box: 'box-1', path: '/new.sy', hpath: '/New', title: 'New Doc', tags: ['note'], created: '20260309120000', updated: '20260310120000' },
-        { id: 'doc-target', box: 'box-1', path: '/target.sy', hpath: '/Target', title: 'Target Doc', tags: ['note'], created: '20250101120000', updated: '20250102120000' },
+        { id: 'doc-target', box: 'box-1', path: '/target.sy', hpath: '/Target', title: 'Target Doc', tags: ['note'], created: '20260308120000', updated: '20260309120000' },
         { id: 'doc-old', box: 'box-1', path: '/old.sy', hpath: '/Old', title: 'Old Doc', tags: ['archive'], created: '20240101120000', updated: '20240102120000' },
       ],
       references: [
@@ -591,7 +591,7 @@ describe('analyzeTrends', () => {
       timeRange: '7d',
     })
 
-    expect(trends.current.referenceCount).toBe(8)
+    expect(trends.current.referenceCount).toBe(9)
     expect(trends.previous.referenceCount).toBe(0)
     expect(trends.risingDocuments[0]).toMatchObject({
       documentId: 'doc-a',
@@ -601,7 +601,7 @@ describe('analyzeTrends', () => {
     })
     expect(trends.fallingDocuments).toEqual([])
     expect((trends as any).connectionChanges).toMatchObject({
-      newCount: 7,
+      newCount: 8,
       brokenCount: 0,
     })
     expect((trends as any).communityTrends[0]).toMatchObject({

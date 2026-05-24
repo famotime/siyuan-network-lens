@@ -184,6 +184,22 @@ const UI_TEXT = {
         en_US: 'Exclude paths from analysis. Matching docs are skipped when their paths and naming rules match.',
         zh_CN: '排除不参与分析的路径。文档路径与命名规则同时命中时会被跳过。',
       },
+      filterByCreated: {
+        en_US: 'Creation time',
+        zh_CN: '创建时间',
+      },
+      filterByCreatedDesc: {
+        en_US: 'Include documents created within the time range',
+        zh_CN: '纳入时间范围内创建的文档',
+      },
+      filterByUpdated: {
+        en_US: 'Update time',
+        zh_CN: '更新时间',
+      },
+      filterByUpdatedDesc: {
+        en_US: 'Include documents updated within the time range',
+        zh_CN: '纳入时间范围内更新的文档',
+      },
       excludedPaths: {
         en_US: 'Excluded paths',
         zh_CN: '排除路径',
@@ -2237,8 +2253,8 @@ const UI_TEXT = {
         zh_CN: '当前窗口内没有有效的文档级连接，但仍保留 {count} 条历史连接证据',
       },
       updatedCreated: {
-        en_US: 'Updated {updated} · Created {created}',
-        zh_CN: '更新于 {updated} · 创建于 {created}',
+        en_US: 'Created {created} · Updated {updated}',
+        zh_CN: '创建于 {created} · 更新于 {updated}',
       },
       dormantDescription: {
         en_US: 'No valid links for more than {days} days, with possible historical in/out links.',

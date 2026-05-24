@@ -125,6 +125,8 @@ async function invokeOrphanLinkAndTagSuggestions(
       excludedNamePrefixes: config.analysisExcludedNamePrefixes,
       excludedNameSuffixes: config.analysisExcludedNameSuffixes,
       notebooks: snapshot.notebooks,
+      timeFilterByCreated: config.analysisTimeFilterByCreated,
+      timeFilterByUpdated: config.analysisTimeFilterByUpdated,
     })
     const sourceDocument = snapshot.documents.find(document => document.id === documentId)
     if (!sourceDocument) {
@@ -215,6 +217,8 @@ async function invokeWikiGenerationDirect(
       excludedNamePrefixes: config.analysisExcludedNamePrefixes,
       excludedNameSuffixes: config.analysisExcludedNameSuffixes,
       notebooks: snapshot.notebooks,
+      timeFilterByCreated: config.analysisTimeFilterByCreated,
+      timeFilterByUpdated: config.analysisTimeFilterByUpdated,
     })
 
     const trends = analyzeTrends({
@@ -228,6 +232,8 @@ async function invokeWikiGenerationDirect(
       excludedNamePrefixes: config.analysisExcludedNamePrefixes,
       excludedNameSuffixes: config.analysisExcludedNameSuffixes,
       notebooks: snapshot.notebooks,
+      timeFilterByCreated: config.analysisTimeFilterByCreated,
+      timeFilterByUpdated: config.analysisTimeFilterByUpdated,
     })
 
     const themeDocuments = collectThemeDocuments({

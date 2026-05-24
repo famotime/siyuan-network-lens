@@ -50,3 +50,70 @@ describe('buildTrendAnalysisContext', () => {
     expect(context.previousReferences.map(reference => reference.id)).toEqual(['ref-previous'])
   })
 })
+
+describe('timeFilterByCreated / timeFilterByUpdated', () => {
+  const baseDocuments = [
+    { id: 'doc-created-recent', box: 'box-1', path: '/cr.sy', hpath: '/CreatedRecent', title: 'CreatedRecent', tags: [], created: '20260305090000', updated: '20260101090000' },
+    { id: 'doc-updated-recent', box: 'box-1', path: '/ur.sy', hpath: '/UpdatedRecent', title: 'UpdatedRecent', tags: [], created: '20260101090000', updated: '20260305090000' },
+    { id: 'doc-old', box: 'box-1', path: '/old.sy', hpath: '/Old', title: 'Old', tags: [], created: '20260101090000', updated: '20260101090000' },
+  ]
+
+  it('includes documents by creation time when only timeFilterByCreated is true', () => {
+    const context = buildGraphAnalysisContext({
+      documents: baseDocuments,
+      references: [],
+      now,
+      timeRange: '7d',
+      timeFilterByCreated: true,
+      timeFilterByUpdated: false,
+    })
+    const ids = context.documents.map(document => document.id)
+    expect(ids).toContain('doc-created-recent')
+    expect(ids).not.toContain('doc-updated-recent')
+    expect(ids).not.toContain('doc-old')
+  })
+
+  it('includes documents by update time when only timeFilterByUpdated is true', () => {
+    const context = buildGraphAnalysisContext({
+      documents: baseDocuments,
+      references: [],
+      now,
+      timeRange: '7d',
+      timeFilterByCreated: false,
+      timeFilterByUpdated: true,
+    })
+    const ids = context.documents.map(document => document.id)
+    expect(ids).not.toContain('doc-created-recent')
+    expect(ids).toContain('doc-updated-recent')
+    expect(ids).not.toContain('doc-old')
+  })
+
+  it('excludes all documents by timestamp when both flags are false', () => {
+    const context = buildGraphAnalysisContext({
+      documents: baseDocuments,
+      references: [],
+      now,
+      timeRange: '7d',
+      timeFilterByCreated: false,
+      timeFilterByUpdated: false,
+    })
+    expect(context.documents).toHaveLength(0)
+  })
+
+  it('excludes documents outside time window even when they have active references', () => {
+    const context = buildGraphAnalysisContext({
+      documents: baseDocuments,
+      references: [
+        { id: 'ref-active', sourceDocumentId: 'doc-old', sourceBlockId: 'blk-1', targetDocumentId: 'doc-created-recent', targetBlockId: 'blk-2', content: '[[link]]', sourceUpdated: '20260310120000' },
+      ],
+      now,
+      timeRange: '7d',
+      timeFilterByCreated: true,
+      timeFilterByUpdated: true,
+    })
+    const ids = context.documents.map(document => document.id)
+    expect(ids).toContain('doc-created-recent')
+    expect(ids).toContain('doc-updated-recent')
+    expect(ids).not.toContain('doc-old')
+  })
+})

@@ -170,6 +170,8 @@ type AppliedAnalysisConfig = {
   readTitleSuffixes: string
   readPaths: string
   wikiPageSuffix: string
+  timeFilterByCreated: boolean
+  timeFilterByUpdated: boolean
 }
 
 export function useAnalyticsState(params: UseAnalyticsParams) {
@@ -254,6 +256,17 @@ export function useAnalyticsState(params: UseAnalyticsParams) {
   const appliedConfig = computed(() => buildAppliedAnalysisConfig(params.config, appliedAnalysisConfig.value))
   let disposeActiveDocumentSync: (() => void) | null = null
 
+  watch(
+    () => [params.config.analysisTimeFilterByCreated, params.config.analysisTimeFilterByUpdated] as const,
+    ([filterByCreated, filterByUpdated]) => {
+      appliedAnalysisConfig.value = {
+        ...appliedAnalysisConfig.value,
+        timeFilterByCreated: filterByCreated !== false,
+        timeFilterByUpdated: filterByUpdated !== false,
+      }
+    },
+  )
+
   const filters = computed<AnalyticsFilters>(() => ({
     notebook: selectedNotebook.value || undefined,
     tags: selectedTags.value.length ? [...selectedTags.value] : undefined,
@@ -326,6 +339,8 @@ export function useAnalyticsState(params: UseAnalyticsParams) {
       excludedNamePrefixes: appliedAnalysisConfig.value.excludedNamePrefixes,
       excludedNameSuffixes: appliedAnalysisConfig.value.excludedNameSuffixes,
       notebooks: snapshot.value.notebooks,
+      timeFilterByCreated: appliedAnalysisConfig.value.timeFilterByCreated,
+      timeFilterByUpdated: appliedAnalysisConfig.value.timeFilterByUpdated,
     })
   })
   const associationDocuments = computed(() => {
@@ -343,6 +358,8 @@ export function useAnalyticsState(params: UseAnalyticsParams) {
       excludedNamePrefixes: appliedAnalysisConfig.value.excludedNamePrefixes,
       excludedNameSuffixes: appliedAnalysisConfig.value.excludedNameSuffixes,
       notebooks: snapshot.value.notebooks,
+      timeFilterByCreated: appliedAnalysisConfig.value.timeFilterByCreated,
+      timeFilterByUpdated: appliedAnalysisConfig.value.timeFilterByUpdated,
     })
   })
 
@@ -367,6 +384,8 @@ export function useAnalyticsState(params: UseAnalyticsParams) {
       excludedNamePrefixes: appliedAnalysisConfig.value.excludedNamePrefixes,
       excludedNameSuffixes: appliedAnalysisConfig.value.excludedNameSuffixes,
       notebooks: snapshot.value.notebooks,
+      timeFilterByCreated: appliedAnalysisConfig.value.timeFilterByCreated,
+      timeFilterByUpdated: appliedAnalysisConfig.value.timeFilterByUpdated,
     })
   })
 
@@ -395,6 +414,8 @@ export function useAnalyticsState(params: UseAnalyticsParams) {
       excludedNamePrefixes: appliedAnalysisConfig.value.excludedNamePrefixes,
       excludedNameSuffixes: appliedAnalysisConfig.value.excludedNameSuffixes,
       notebooks: snapshot.value.notebooks,
+      timeFilterByCreated: appliedAnalysisConfig.value.timeFilterByCreated,
+      timeFilterByUpdated: appliedAnalysisConfig.value.timeFilterByUpdated,
     })
   })
 
@@ -1106,6 +1127,8 @@ function readAppliedAnalysisConfig(config: PluginConfig): AppliedAnalysisConfig 
     readTitleSuffixes: config.readTitleSuffixes ?? '',
     readPaths: config.readPaths ?? '',
     wikiPageSuffix: config.wikiPageSuffix ?? '',
+    timeFilterByCreated: config.analysisTimeFilterByCreated !== false,
+    timeFilterByUpdated: config.analysisTimeFilterByUpdated !== false,
   }
 }
 
@@ -1127,5 +1150,7 @@ function buildAppliedAnalysisConfig(
     readTitleSuffixes: appliedAnalysisConfig.readTitleSuffixes,
     readPaths: appliedAnalysisConfig.readPaths,
     wikiPageSuffix: appliedAnalysisConfig.wikiPageSuffix,
+    analysisTimeFilterByCreated: appliedAnalysisConfig.timeFilterByCreated,
+    analysisTimeFilterByUpdated: appliedAnalysisConfig.timeFilterByUpdated,
   }
 }

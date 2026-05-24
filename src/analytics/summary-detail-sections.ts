@@ -79,6 +79,8 @@ export function buildSummaryDetailSections(params: {
     excludedNamePrefixes: params.config?.analysisExcludedNamePrefixes,
     excludedNameSuffixes: params.config?.analysisExcludedNameSuffixes,
     notebooks: params.notebooks,
+    timeFilterByCreated: params.config?.analysisTimeFilterByCreated,
+    timeFilterByUpdated: params.config?.analysisTimeFilterByUpdated,
   })
   const documentMap = new Map(filteredDocuments.map(document => [document.id, document]))
   const activeReferences = filterActiveReferences({
@@ -145,9 +147,9 @@ export function buildSummaryDetailSections(params: {
         .map(document => ({
           documentId: document.id,
           title: resolveTitle(document),
-          meta: t('analytics.summaryDetailSource.updatedDatePath', {
-            path: document.hpath || document.path,
-            date: formatCompactDate(document.updated),
+          meta: t('analytics.summaryDetailSource.updatedCreated', {
+            created: formatCompactDate(document.created),
+            updated: formatCompactDate(document.updated),
           }),
           isThemeDocument: themeDocumentIdSet.has(document.id),
           createdAt: document.created ?? '',
@@ -277,8 +279,8 @@ export function buildSummaryDetailSections(params: {
         documentId: item.documentId,
         title: item.title,
         meta: t('analytics.summaryDetailSource.updatedCreated', {
-          updated: formatCompactDate(item.updatedAt),
           created: formatCompactDate(item.createdAt),
+          updated: formatCompactDate(item.updatedAt),
         }),
         isThemeDocument: themeDocumentIdSet.has(item.documentId),
         createdAt: item.createdAt,

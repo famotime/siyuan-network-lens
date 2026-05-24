@@ -43,6 +43,8 @@ export interface PluginConfig {
   analysisExcludedPaths?: string
   analysisExcludedNamePrefixes?: string
   analysisExcludedNameSuffixes?: string
+  analysisTimeFilterByCreated?: boolean
+  analysisTimeFilterByUpdated?: boolean
   readTagNames?: string[]
   readTitlePrefixes?: string
   readTitleSuffixes?: string
@@ -82,6 +84,8 @@ export const DEFAULT_CONFIG: PluginConfig = {
   analysisExcludedPaths: '',
   analysisExcludedNamePrefixes: '',
   analysisExcludedNameSuffixes: '',
+  analysisTimeFilterByCreated: true,
+  analysisTimeFilterByUpdated: true,
   readTagNames: [],
   readTitlePrefixes: '',
   readTitleSuffixes: '',
@@ -145,6 +149,12 @@ export function ensureConfigDefaults(config: PluginConfig) {
   }
   if (typeof config.analysisExcludedNameSuffixes !== 'string') {
     config.analysisExcludedNameSuffixes = ''
+  }
+  if (typeof config.analysisTimeFilterByCreated !== 'boolean') {
+    config.analysisTimeFilterByCreated = true
+  }
+  if (typeof config.analysisTimeFilterByUpdated !== 'boolean') {
+    config.analysisTimeFilterByUpdated = true
   }
   if (config.themeNotebookId.trim() && config.themeDocumentPath.trim() && !looksLikeNotebookScopedPath(config.themeDocumentPath)) {
     config.themeDocumentPath = `/${config.themeNotebookId.trim()}${normalizeLegacyPath(config.themeDocumentPath)}`

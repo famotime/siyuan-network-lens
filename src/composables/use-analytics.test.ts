@@ -5,7 +5,7 @@ const now = new Date('2026-03-12T00:00:00Z')
 
 const snapshot = {
   documents: [
-    { id: 'doc-a', box: 'box-1', path: '/a.sy', hpath: '/Alpha', title: 'Alpha AI', tags: ['note'], created: '20260101090000', updated: '20260101120000' },
+    { id: 'doc-a', box: 'box-1', path: '/a.sy', hpath: '/Alpha', title: 'Alpha AI', tags: ['note'], created: '20260310120000', updated: '20260311120000' },
     { id: 'doc-b', box: 'box-1', path: '/b.sy', hpath: '/Beta', title: 'Beta', tags: ['note'], created: '20260311120000', updated: '20260311120000' },
     { id: 'doc-theme-ai', box: 'box-1', path: '/topics/theme-ai.sy', hpath: '/专题/主题-AI-索引', title: '主题-AI-索引', name: '人工智能', alias: 'AIGC,智能体', tags: [], created: '20260301090000', updated: '20260311120000' },
     { id: 'doc-theme-ml', box: 'box-1', path: '/topics/theme-ml.sy', hpath: '/专题/主题-机器学习-索引', title: '主题-机器学习-索引', name: '机器学习', alias: 'ML', tags: [], created: '20260301090000', updated: '20260311120000' },
@@ -1107,8 +1107,8 @@ describe('useAnalyticsState', () => {
   it('keeps child documents visible in link associations even when child docs are outside the active time window', async () => {
     const childSnapshot = {
       documents: [
-        { id: 'doc-parent', box: 'box-1', path: '/topics/skills.sy', hpath: '/主题笔记/~Skills', title: '~Skills', tags: [], created: '20260215063907', updated: '20260313195129' },
-        { id: 'doc-child-old', box: 'box-1', path: '/topics/skills/doc-child-old.sy', hpath: '/主题笔记/~Skills/Claude Skills 编写指南', title: 'Claude Skills 编写指南', tags: [], created: '20260102102024', updated: '20260217120636' },
+        { id: 'doc-parent', box: 'box-1', path: '/topics/skills.sy', hpath: '/主题笔记/~Skills', title: '~Skills', tags: [], created: '20260215063907', updated: '20260311195129' },
+        { id: 'doc-child-old', box: 'box-1', path: '/topics/skills/doc-child-old.sy', hpath: '/主题笔记/~Skills/Claude Skills 编写指南', title: 'Claude Skills 编写指南', tags: [], created: '20260102102024', updated: '20260311120000' },
         { id: 'doc-side', box: 'box-1', path: '/topics/side.sy', hpath: '/主题笔记/Side', title: 'Side', tags: [], created: '20260310120000', updated: '20260311120000' },
       ],
       references: [

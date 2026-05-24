@@ -24,6 +24,33 @@
         v-show="isSectionExpanded(section.key)"
         class="setting-form"
       >
+        <template v-if="section.key === 'analysisScope'">
+          <div class="setting-item-pair">
+            <label class="setting-item setting-item--compact">
+              <span class="setting-item__text">
+                <strong>{{ t('settings.analysisScope.filterByCreated') }}</strong>
+              </span>
+              <input
+                type="checkbox"
+                class="b3-switch"
+                :checked="config.analysisTimeFilterByCreated !== false"
+                @change="config.analysisTimeFilterByCreated = ($event.target as HTMLInputElement).checked"
+              >
+            </label>
+            <label class="setting-item setting-item--compact">
+              <span class="setting-item__text">
+                <strong>{{ t('settings.analysisScope.filterByUpdated') }}</strong>
+              </span>
+              <input
+                type="checkbox"
+                class="b3-switch"
+                :checked="config.analysisTimeFilterByUpdated !== false"
+                @change="config.analysisTimeFilterByUpdated = ($event.target as HTMLInputElement).checked"
+              >
+            </label>
+          </div>
+          <hr class="setting-separator">
+        </template>
         <label
           v-for="field in section.fields"
           :key="field.modelKey"
@@ -542,6 +569,31 @@ onMounted(async () => {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: 12px;
+}
+
+.setting-separator {
+  grid-column: 1 / -1;
+  border: none;
+  border-top: 1px solid var(--panel-border);
+  margin: -4px 0 -8px;
+}
+
+.setting-item-pair {
+  grid-column: 1 / -1;
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 8px;
+  margin: -4px 0 -4px;
+}
+
+.setting-item-pair .setting-item--compact {
+  padding: 2px 12px;
+  justify-content: flex-start;
+  gap: 8px;
+}
+
+.setting-form > .setting-item {
+  grid-column: 1 / -1;
 }
 
 .setting-header {

@@ -63,6 +63,8 @@ export function filterDocumentsByTimeRange(params: {
   excludedNamePrefixes?: string
   excludedNameSuffixes?: string
   notebooks?: NotebookPathOption[]
+  timeFilterByCreated?: boolean
+  timeFilterByUpdated?: boolean
 }): DocumentRecord[] {
   const visibleDocuments = excludeWikiDocuments(params.documents, params.wikiPageSuffix)
   const filteredVisibleDocuments = excludeConfiguredDocuments({
@@ -82,27 +84,13 @@ export function filterDocumentsByTimeRange(params: {
       .filter((document): document is DocumentRecord => Boolean(document))
   }
 
-  const allowedIds = new Set(filteredDocuments.map(document => document.id))
-  const filteredReferences = normalizeReferences(params.references).filter((reference) => {
-    if (reference.sourceDocumentId === reference.targetDocumentId) {
-      return false
-    }
-    return allowedIds.has(reference.sourceDocumentId) && allowedIds.has(reference.targetDocumentId)
-  })
-  const activeReferences = filteredReferences.filter(reference => isReferenceInTimeRange(reference.sourceUpdated, params.now, params.timeRange))
-  const activeDocumentIds = new Set<string>()
-  for (const reference of activeReferences) {
-    activeDocumentIds.add(reference.sourceDocumentId)
-    activeDocumentIds.add(reference.targetDocumentId)
-  }
-
   const windowDocumentIds = new Set(
     filteredDocuments
       .filter((document) => {
-        if (activeDocumentIds.has(document.id)) {
-          return true
-        }
-        const timestamp = resolveDocumentTimestamp(document)
+        const timestamp = resolveDocumentTimestamp(document, {
+          filterByCreated: params.timeFilterByCreated,
+          filterByUpdated: params.timeFilterByUpdated,
+        })
         if (!timestamp) {
           return false
         }
@@ -125,6 +113,8 @@ export function buildGraphAnalysisContext(params: {
   excludedNamePrefixes?: string
   excludedNameSuffixes?: string
   notebooks?: NotebookPathOption[]
+  timeFilterByCreated?: boolean
+  timeFilterByUpdated?: boolean
 }): GraphAnalysisContext {
   const documentRecords = filterDocumentsByTimeRange({
     documents: params.documents,
@@ -137,6 +127,8 @@ export function buildGraphAnalysisContext(params: {
     excludedNamePrefixes: params.excludedNamePrefixes,
     excludedNameSuffixes: params.excludedNameSuffixes,
     notebooks: params.notebooks,
+    timeFilterByCreated: params.timeFilterByCreated,
+    timeFilterByUpdated: params.timeFilterByUpdated,
   })
   const documents = normalizeDocuments(documentRecords)
   const documentMap = new Map(documents.map(document => [document.id, document]))
@@ -174,6 +166,8 @@ export function buildTrendAnalysisContext(params: {
   excludedNamePrefixes?: string
   excludedNameSuffixes?: string
   notebooks?: NotebookPathOption[]
+  timeFilterByCreated?: boolean
+  timeFilterByUpdated?: boolean
 }): TrendAnalysisContext {
   const documentRecords = filterDocumentsByTimeRange({
     documents: params.documents,
@@ -186,6 +180,8 @@ export function buildTrendAnalysisContext(params: {
     excludedNamePrefixes: params.excludedNamePrefixes,
     excludedNameSuffixes: params.excludedNameSuffixes,
     notebooks: params.notebooks,
+    timeFilterByCreated: params.timeFilterByCreated,
+    timeFilterByUpdated: params.timeFilterByUpdated,
   })
   const documents = normalizeDocuments(documentRecords)
   const documentMap = new Map(documents.map(document => [document.id, document]))
@@ -303,13 +299,28 @@ function matchesExcludedTitle(title: string, prefixes: string[], suffixes: strin
     || suffixes.some(suffix => title.endsWith(suffix))
 }
 
-export function resolveDocumentTimestamp(document: NormalizedDocument): string {
+export function resolveDocumentTimestamp(
+  document: NormalizedDocument,
+  options?: { filterByCreated?: boolean, filterByUpdated?: boolean },
+): string {
+  const filterByCreated = options?.filterByCreated !== false
+  const filterByUpdated = options?.filterByUpdated !== false
   const updated = document.updated ?? ''
   const created = document.created ?? ''
-  if (updated && created) {
-    return latestTimestamp(updated, created)
+
+  if (filterByUpdated && filterByCreated) {
+    if (updated && created) {
+      return latestTimestamp(updated, created)
+    }
+    return updated || created || ''
   }
-  return updated || created || ''
+  if (filterByUpdated) {
+    return updated || ''
+  }
+  if (filterByCreated) {
+    return created || ''
+  }
+  return ''
 }
 
 export function isReferenceInTimeRange(timestamp: string, now: Date, timeRange: TimeRange): boolean {
