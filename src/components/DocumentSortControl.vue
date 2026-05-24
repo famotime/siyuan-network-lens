@@ -7,8 +7,11 @@
       @change="emit('update:modelValue', ($event.target as HTMLSelectElement).value as DocumentSortMode)"
     >
       <option value="updated-desc">{{ t('summaryDetail.sort.updatedDesc') }}</option>
+      <option value="updated-asc">{{ t('summaryDetail.sort.updatedAsc') }}</option>
       <option value="created-desc">{{ t('summaryDetail.sort.createdDesc') }}</option>
+      <option value="created-asc">{{ t('summaryDetail.sort.createdAsc') }}</option>
       <option value="title-asc">{{ t('summaryDetail.sort.titleAsc') }}</option>
+      <option value="title-desc">{{ t('summaryDetail.sort.titleDesc') }}</option>
     </select>
   </label>
 </template>
@@ -16,7 +19,7 @@
 <script setup lang="ts">
 import { t } from '@/i18n/ui'
 
-export type DocumentSortMode = 'updated-desc' | 'created-desc' | 'title-asc'
+export type DocumentSortMode = 'updated-desc' | 'updated-asc' | 'created-desc' | 'created-asc' | 'title-asc' | 'title-desc'
 
 defineProps<{
   modelValue: DocumentSortMode

@@ -509,16 +509,28 @@ const UI_TEXT = {
         zh_CN: '排序',
       },
       updatedDesc: {
-        en_US: 'Updated time',
-        zh_CN: '更新时间',
+        en_US: 'Updated time (desc)',
+        zh_CN: '更新时间（倒序）',
+      },
+      updatedAsc: {
+        en_US: 'Updated time (asc)',
+        zh_CN: '更新时间（升序）',
       },
       createdDesc: {
-        en_US: 'Created time',
-        zh_CN: '创建时间',
+        en_US: 'Created time (desc)',
+        zh_CN: '创建时间（倒序）',
+      },
+      createdAsc: {
+        en_US: 'Created time (asc)',
+        zh_CN: '创建时间（升序）',
       },
       titleAsc: {
-        en_US: 'Title',
-        zh_CN: '标题',
+        en_US: 'Title (asc)',
+        zh_CN: '标题（升序）',
+      },
+      titleDesc: {
+        en_US: 'Title (desc)',
+        zh_CN: '标题（倒序）',
       },
     },
     analyzing: {
@@ -1057,17 +1069,29 @@ const UI_TEXT = {
       en_US: 'Orphan sort',
       zh_CN: '孤立排序',
     },
-    sortUpdated: {
-      en_US: 'By updated time',
-      zh_CN: '按更新时间',
+    sortUpdatedDesc: {
+      en_US: 'By updated time (desc)',
+      zh_CN: '按更新时间（倒序）',
     },
-    sortCreated: {
-      en_US: 'By created time',
-      zh_CN: '按创建时间',
+    sortUpdatedAsc: {
+      en_US: 'By updated time (asc)',
+      zh_CN: '按更新时间（升序）',
     },
-    sortTitle: {
-      en_US: 'By title',
-      zh_CN: '按标题',
+    sortCreatedDesc: {
+      en_US: 'By created time (desc)',
+      zh_CN: '按创建时间（倒序）',
+    },
+    sortCreatedAsc: {
+      en_US: 'By created time (asc)',
+      zh_CN: '按创建时间（升序）',
+    },
+    sortTitleAsc: {
+      en_US: 'By title (asc)',
+      zh_CN: '按标题（升序）',
+    },
+    sortTitleDesc: {
+      en_US: 'By title (desc)',
+      zh_CN: '按标题（倒序）',
     },
     themeTooltip: {
       en_US: '{title} · Matched {count} times',

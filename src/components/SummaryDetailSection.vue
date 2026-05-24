@@ -1040,20 +1040,20 @@ function compareDocumentDetailItems(
   right: { documentId: string, title: string, createdAt?: string, updatedAt?: string },
   sort: DocumentSortMode,
 ): number {
-  if (sort === 'created-desc') {
-    return compareTimestamp(right.createdAt ?? '', left.createdAt ?? '')
-      || left.title.localeCompare(right.title, 'zh-CN')
-      || left.documentId.localeCompare(right.documentId)
-  }
-
-  if (sort === 'title-asc') {
-    return left.title.localeCompare(right.title, 'zh-CN')
-      || left.documentId.localeCompare(right.documentId)
-  }
-
-  return compareTimestamp(right.updatedAt ?? '', left.updatedAt ?? '')
-    || left.title.localeCompare(right.title, 'zh-CN')
+  const tiebreak = left.title.localeCompare(right.title, 'zh-CN')
     || left.documentId.localeCompare(right.documentId)
+
+  if (sort.startsWith('created')) {
+    const ts = compareTimestamp(left.createdAt ?? '', right.createdAt ?? '')
+    return sort === 'created-desc' ? -ts || tiebreak : ts || tiebreak
+  }
+
+  if (sort.startsWith('title')) {
+    return sort === 'title-asc' ? tiebreak : -tiebreak
+  }
+
+  const ts = compareTimestamp(left.updatedAt ?? '', right.updatedAt ?? '')
+  return sort === 'updated-desc' ? -ts || tiebreak : ts || tiebreak
 }
 
 function resolveAiInboxItemTitleParts(title: string) {

@@ -73,7 +73,7 @@ export interface AnalyticsFilters {
   themeNames?: string[]
 }
 
-export type OrphanSort = 'updated-desc' | 'created-desc' | 'title-asc'
+export type OrphanSort = 'updated-desc' | 'updated-asc' | 'created-desc' | 'created-asc' | 'title-asc' | 'title-desc'
 
 export interface RankingItem {
   documentId: string

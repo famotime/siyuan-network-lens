@@ -15,7 +15,7 @@ describe('OrphanDetailPanel', () => {
 
     expect(source).toContain("import { t } from '@/i18n/ui'")
     expect(source).toContain("{{ t('orphanDetail.sortLabel') }}")
-    expect(source).toContain("{{ t('orphanDetail.sortUpdated') }}")
+    expect(source).toContain("{{ t('orphanDetail.sortUpdatedDesc') }}")
     expect(source).toContain("{{ t('orphanDetail.empty') }}")
     expect(source).not.toContain('uiText(')
   })

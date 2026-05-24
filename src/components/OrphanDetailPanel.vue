@@ -7,9 +7,12 @@
         :value="orphanSort"
         @change="onSortChange"
       >
-        <option value="updated-desc">{{ t('orphanDetail.sortUpdated') }}</option>
-        <option value="created-desc">{{ t('orphanDetail.sortCreated') }}</option>
-        <option value="title-asc">{{ t('orphanDetail.sortTitle') }}</option>
+        <option value="updated-desc">{{ t('orphanDetail.sortUpdatedDesc') }}</option>
+        <option value="updated-asc">{{ t('orphanDetail.sortUpdatedAsc') }}</option>
+        <option value="created-desc">{{ t('orphanDetail.sortCreatedDesc') }}</option>
+        <option value="created-asc">{{ t('orphanDetail.sortCreatedAsc') }}</option>
+        <option value="title-asc">{{ t('orphanDetail.sortTitleAsc') }}</option>
+        <option value="title-desc">{{ t('orphanDetail.sortTitleDesc') }}</option>
       </select>
     </div>
 
