@@ -270,6 +270,118 @@ describe('wiki documents', () => {
     })
   })
 
+  it('recreates a theme wiki page when the stored page id no longer resolves', async () => {
+    const kernel = createFakeWikiKernel()
+    const readKramdown = kernel.api.getBlockKramdown.getMockImplementation()!
+    kernel.api.getBlockKramdown.mockImplementation(async (id: string) => {
+      if (id === 'deleted-theme-page') {
+        return null as any
+      }
+      return readKramdown(id)
+    })
+
+    const pageKey = buildWikiPageStorageKey({
+      pageType: 'theme',
+      pageTitle: '主题-AI-索引-llm-wiki',
+      themeDocumentId: 'doc-theme-ai',
+    })
+    const store = createMemoryWikiStore({
+      pages: {
+        [pageKey]: {
+          pageType: 'theme',
+          pageTitle: '主题-AI-索引-llm-wiki',
+          pageId: 'deleted-theme-page',
+          themeDocumentId: 'doc-theme-ai',
+          themeDocumentTitle: '主题-AI-索引',
+          sourceDocumentIds: ['doc-ai-core'],
+          managedFingerprint: fingerprintWikiContent('旧内容'),
+          lastApply: {
+            appliedAt: '2026-04-09T11:00:00.000Z',
+            result: 'created',
+            sourceDocumentIds: ['doc-ai-core'],
+            managedFingerprint: fingerprintWikiContent('旧内容'),
+          },
+        },
+      },
+    })
+    const themeDraft = renderThemeWikiDraft({
+      pageTitle: '主题-AI-索引-llm-wiki',
+      pairedThemeDocumentId: 'doc-theme-ai',
+      pairedThemeTitle: '主题-AI-索引',
+      generatedAt: '2026-04-09T12:00:00.000Z',
+      model: 'gpt-4.1-mini',
+      sourceDocumentCount: 1,
+      diagnosis: TEST_DIAGNOSIS,
+      pagePlan: TEST_PAGE_PLAN,
+      sections: buildThemeSections({
+        intro: '删除后重新生成的主题概览。',
+        highlights: ['AI 核心'],
+        corePrinciples: ['重建页面应使用新文档 ID。'],
+        sources: ['AI 导航 -> AI 核心'],
+      }),
+    })
+    const preview = buildWikiPreview({
+      pageType: 'theme',
+      pageTitle: '主题-AI-索引-llm-wiki',
+      sourceDocumentIds: ['doc-ai-core'],
+      generatedAt: '2026-04-09T12:00:00.000Z',
+      nextDraft: themeDraft,
+      storedRecord: (await store.getPageRecord(pageKey)) ?? undefined,
+    })
+
+    const result = await applyWikiDocuments({
+      config: {
+        themeNotebookId: 'notebook-theme',
+        themeDocumentPath: '/主题',
+        wikiIndexTitle: 'LLM-Wiki-索引',
+        wikiLogTitle: 'LLM-Wiki-维护日志',
+        wikiPageSuffix: '-llm-wiki',
+        wikiContainerPath: '/知识库/LLM Wiki',
+      },
+      notebooks: [
+        { id: 'notebook-theme', name: '知识库' },
+      ],
+      generatedAt: '2026-04-09T12:05:00.000Z',
+      scopeSummary: {
+        sourceDocumentCount: 1,
+        themeGroupCount: 1,
+        unclassifiedDocumentCount: 0,
+        excludedWikiDocumentCount: 0,
+      },
+      scopeDescriptionLines: ['- 时间窗口：7d'],
+      themePages: [
+        {
+          pageTitle: '主题-AI-索引-llm-wiki',
+          themeName: 'AI',
+          themeDocumentId: 'doc-theme-ai',
+          themeDocumentTitle: '主题-AI-索引',
+          themeDocumentBox: 'notebook-theme',
+          themeDocumentHPath: '/主题/主题-AI-索引',
+          sourceDocumentIds: ['doc-ai-core'],
+          preview,
+          draft: themeDraft,
+        },
+      ],
+      unclassifiedDocuments: [],
+      overwriteConflicts: false,
+      store,
+      api: kernel.api,
+    })
+
+    expect(result.themePages[0]).toEqual({
+      pageTitle: '主题-AI-索引-llm-wiki',
+      pageId: 'doc-1',
+      result: 'created',
+    })
+    expect(kernel.api.createDocWithMd).toHaveBeenCalledWith(
+      'notebook-theme',
+      '/LLM Wiki/主题-AI-索引-llm-wiki',
+      themeDraft.fullMarkdown,
+    )
+    expect(kernel.getDocumentMarkdownByPath('/LLM Wiki/主题-AI-索引-llm-wiki')).toContain('删除后重新生成的主题概览。')
+    expect((await store.getPageRecord(pageKey))?.pageId).toBe('doc-1')
+  })
+
   it('updates only the AI managed region and preserves manual notes', async () => {
     const existingMarkdown = [
       '# 主题-AI-索引-llm-wiki',

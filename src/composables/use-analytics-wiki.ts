@@ -202,6 +202,27 @@ export async function resolveExistingWikiPage(params: {
   const storedPageId = params.storedRecord?.pageId
   let pageId = storedPageId
 
+  // 验证存储的 pageId 是否仍然有效（页面可能已被删除或移动）
+  if (pageId) {
+    try {
+      const block = await params.getBlockKramdown(pageId)
+      const fullMarkdown = block?.kramdown ?? ''
+      if (fullMarkdown) {
+        return {
+          pageId,
+          fullMarkdown,
+          managedMarkdown: extractManagedMarkdown(fullMarkdown),
+          hasManualNotes: findHeadingIndex(fullMarkdown, 'manualNotes', '##') >= 0,
+        }
+      }
+      // kramdown 为空，视为无效，回退到 hpath 查找
+      pageId = undefined
+    } catch {
+      // pageId 无效（页面已删除），回退到 hpath 查找
+      pageId = undefined
+    }
+  }
+
   if (!pageId && params.getIDsByHPath) {
     const ids = await params.getIDsByHPath(params.notebook, params.pageHPath)
     pageId = ids[0] ?? ''

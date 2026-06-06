@@ -6,7 +6,7 @@ import type {
   WikiCommandInvokeResult,
   WikiPublicCommand,
 } from './wiki-command-provider-types'
-import { forwardProxy } from '@/api'
+import { forwardProxy, sql } from '@/api'
 import {
   appendBlock,
   createDocWithMd,
@@ -33,7 +33,7 @@ import { createAiDocumentIndexStoreFromPlugin } from '@/analytics/ai-index-store
 import { createAiWikiStoreFromPlugin } from '@/analytics/wiki-store'
 import { buildWikiPageStorageKey } from '@/analytics/wiki-store'
 import type { WikiPageSnapshotRecord } from '@/analytics/wiki-store'
-import { buildWikiPreview } from '@/analytics/wiki-diff'
+import { buildWikiPreview, fingerprintWikiContent } from '@/analytics/wiki-diff'
 import { applyWikiDocuments } from '@/analytics/wiki-documents'
 import { buildThemeWikiPageTitle } from '@/analytics/wiki-page-model'
 import { renderThemeWikiDraft } from '@/analytics/wiki-renderer'
@@ -180,6 +180,71 @@ async function invokeOrphanLinkAndTagSuggestions(
   }
 }
 
+/**
+ * 轻量级预检：在加载完整 snapshot 之前，检查 wiki 页面内容是否未变更。
+ * 如果内容未变更，直接返回成功结果，跳过昂贵的全量分析管线。
+ * 如果检查失败（任何异常），返回 null，调用方继续执行全量管线。
+ */
+async function tryEarlyExitIfWikiUnchanged(
+  plugin: Plugin,
+  config: PluginConfig,
+  themeDocumentId: string,
+): Promise<WikiCommandInvokeResult | null> {
+  try {
+    const aiWikiStore = createAiWikiStoreFromPlugin(plugin)
+    if (!aiWikiStore) {
+      return null
+    }
+
+    // 用轻量 SQL 查询获取主题文档元数据（不加载完整 snapshot）
+    const docRows = await sql(`SELECT title, box, hpath FROM blocks WHERE id = '${themeDocumentId}' AND type = 'd' LIMIT 1`) as Array<{ title: string, box: string, hpath: string }>
+    const docRow = docRows?.[0]
+    if (!docRow) {
+      return null
+    }
+
+    const pageTitle = buildThemeWikiPageTitle(docRow.title, config.wikiPageSuffix ?? '')
+    const pageKey = buildWikiPageStorageKey({
+      pageType: 'theme',
+      pageTitle,
+      themeDocumentId,
+    })
+    const storedRecord = await aiWikiStore.getPageRecord(pageKey)
+    if (!storedRecord?.pageId) {
+      return null // 首次生成，需要执行全量管线
+    }
+
+    // 验证页面是否仍然存在并读取内容
+    const wikiTarget = resolveScopedPathTarget(config.wikiContainerPath ?? '', undefined)
+    const wikiContainerPath = wikiTarget?.path ?? ''
+    const pageHPath = wikiContainerPath
+      ? `${wikiContainerPath}/${pageTitle}`
+      : `${docRow.hpath}/${pageTitle}`
+
+    const existingPage = await resolveExistingWikiPage({
+      notebook: wikiTarget?.notebook ?? docRow.box,
+      pageHPath,
+      storedRecord,
+      getIDsByHPath,
+      getBlockKramdown,
+    })
+
+    if (!existingPage) {
+      return null // 页面不存在，需要重新生成
+    }
+
+    // 比较指纹：现有页面内容 vs 上次生成时保存的指纹
+    const currentFingerprint = fingerprintWikiContent(existingPage.managedMarkdown)
+    if (currentFingerprint === storedRecord.managedFingerprint) {
+      return { ok: true, message: `Wiki 文档已是最新：${pageTitle}` }
+    }
+
+    return null // 内容有变化，需要执行全量管线
+  } catch {
+    return null // 任何异常都回退到全量管线
+  }
+}
+
 async function invokeWikiGenerationDirect(
   plugin: Plugin,
   context: WikiCommandInvokeContext,
@@ -200,6 +265,13 @@ async function invokeWikiGenerationDirect(
     const themeDocumentId = context.themeDocumentId
     if (!themeDocumentId) {
       return { ok: false, errorCode: 'execution-failed', message: '未指定主题文档 ID' }
+    }
+
+    // 1.5 轻量级预检：避免对未变更的 wiki 页面执行昂贵的全量管线
+    const earlyResult = await tryEarlyExitIfWikiUnchanged(plugin, config, themeDocumentId)
+    if (earlyResult) {
+      console.log('[NetworkLens Wiki] 内容未变更，跳过全量管线')
+      return earlyResult
     }
 
     // 2. 执行分析管线
@@ -421,7 +493,7 @@ async function invokeWikiGenerationDirect(
       const nextRecord: WikiPageSnapshotRecord = {
         pageType: 'theme',
         pageTitle: payload.pageTitle,
-        pageId: existingPageForPreview?.pageId ?? storedRecord?.pageId,
+        pageId: existingPageForPreview?.pageId,
         themeDocumentId: payload.themeDocumentId,
         themeDocumentTitle: payload.themeDocumentTitle,
         sourceDocumentIds: payload.sourceDocuments.map(doc => doc.documentId),

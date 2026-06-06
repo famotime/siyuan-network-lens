@@ -693,8 +693,10 @@ async function resolveExistingPageId(params: {
 }): Promise<string | undefined> {
   if (params.storedPageId) {
     try {
-      await params.getBlockKramdown(params.storedPageId)
-      return params.storedPageId
+      const block = await params.getBlockKramdown(params.storedPageId)
+      if (block?.kramdown) {
+        return params.storedPageId
+      }
     } catch {
       // Fall through to hpath lookup.
     }
