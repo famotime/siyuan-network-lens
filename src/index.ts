@@ -44,6 +44,7 @@ export default class ReferenceAnalyticsPlugin extends Plugin {
 
     this.addCommand({
       langKey: 'openReferenceAnalytics',
+      langText: pickPluginText('pluginTitle'),
       hotkey: '',
       callback: () => {
         this.openDock()
