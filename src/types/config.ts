@@ -61,6 +61,8 @@ export interface PluginConfig {
   aiTemperature?: number
   aiMaxContextMessages?: number
   aiContextCapacity?: AiContextCapacity
+  isAiManaged?: boolean
+  aiManagedProfileName?: string
   enableConsoleLogging?: boolean
   showDocumentIndex?: boolean
   wikiEnabled?: boolean

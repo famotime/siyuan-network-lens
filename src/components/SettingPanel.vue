@@ -136,6 +136,9 @@
       </button>
       <div id="setting-section-aiSettings" v-show="isSectionExpanded('aiSettings')">
       <div class="setting-form">
+        <div v-if="config.isAiManaged" class="setting-managed-tip" style="grid-column: 1 / -1; padding: 10px 12px; background: rgba(63, 81, 181, 0.08); border: 1px solid rgba(63, 81, 181, 0.2); border-radius: 6px; font-size: 12px; line-height: 1.5; color: var(--b3-theme-on-background); margin-bottom: 8px;">
+          💡 通用 AI API 已由 <strong>API 管家</strong> 接管 (Profile: {{ config.aiManagedProfileName || '未命名' }})。如需修改，请前往 API 管家插件面板。
+        </div>
         <label v-if="showAiServiceSettings" class="setting-item setting-item--full">
           <span class="setting-item__text">
             <strong>{{ t('settings.ai.enableTodaySuggestions') }}</strong>
@@ -185,7 +188,7 @@
         <div v-if="showAiServiceSettings" class="setting-field setting-field--full">
           <span>{{ t('settings.ai.provider') }}</span>
           <div class="setting-field__inline">
-            <select :value="selectedAiProviderPreset" @change="handleAiProviderPresetChange">
+            <select :value="selectedAiProviderPreset" @change="handleAiProviderPresetChange" :disabled="config.isAiManaged">
               <option
                 v-for="providerOption in aiProviderPresetOptions"
                 :key="providerOption.value"
@@ -199,6 +202,7 @@
                 class="setting-button setting-button--ghost setting-button--compact"
                 type="button"
                 @click="handleImportAiSettingsClick"
+                :disabled="config.isAiManaged"
               >
                 {{ t('settings.ai.importSettings') }}
               </button>
@@ -206,6 +210,7 @@
                 class="setting-button setting-button--ghost setting-button--compact"
                 type="button"
                 @click="handleExportAiSettings"
+                :disabled="config.isAiManaged"
               >
                 {{ t('settings.ai.exportSettings') }}
               </button>
@@ -228,6 +233,7 @@
             :placeholder="aiProviderPresetMeta.baseUrl ?? 'https://api.openai.com/v1'"
             :title="AI_FIELD_TOOLTIPS.baseUrl"
             type="text"
+            :disabled="config.isAiManaged"
           >
         </label>
         <label v-if="showAiServiceSettings" class="setting-field setting-field--full">
@@ -237,6 +243,7 @@
               v-model.trim="config.aiApiKey"
               placeholder="sk-..."
               :type="aiApiKeyFieldMeta.inputType"
+              :disabled="config.isAiManaged"
             >
             <button
               class="setting-icon-button setting-icon-button--inline"
@@ -244,6 +251,7 @@
               :aria-label="aiApiKeyFieldMeta.actionLabel"
               :title="aiApiKeyFieldMeta.actionLabel"
               @click="toggleAiApiKeyVisibility"
+              :disabled="config.isAiManaged"
             >
               <svg
                 v-if="aiApiKeyFieldMeta.icon === 'eye'"
@@ -301,6 +309,7 @@
             :title="siliconFlowChatModelSelectTitle"
             @focus="handleSiliconFlowModelSelectOpen"
             @mousedown="handleSiliconFlowModelSelectOpen"
+            :disabled="config.isAiManaged"
           >
             <option value="">{{ siliconFlowChatModelPlaceholder }}</option>
             <option
@@ -316,6 +325,7 @@
             v-model.trim="config.aiModel"
             :placeholder="aiProviderPresetMeta.modelPlaceholder"
             type="text"
+            :disabled="config.isAiManaged"
           >
         </label>
         <label v-if="showAiServiceSettings" class="setting-field">
@@ -327,6 +337,7 @@
               step="1"
               :title="AI_FIELD_TOOLTIPS.timeout"
               type="number"
+              :disabled="config.isAiManaged"
             >
             <span class="setting-input-with-suffix__unit">s</span>
           </div>
@@ -339,6 +350,7 @@
             step="1"
             :title="AI_FIELD_TOOLTIPS.maxTokens"
             type="number"
+            :disabled="config.isAiManaged"
           >
         </label>
         <label v-if="showAiServiceSettings" class="setting-field">
@@ -350,6 +362,7 @@
             step="0.1"
             :title="AI_FIELD_TOOLTIPS.temperature"
             type="number"
+            :disabled="config.isAiManaged"
           >
         </label>
         <label v-if="showAiServiceSettings" class="setting-field">
@@ -360,11 +373,12 @@
             step="1"
             :title="AI_FIELD_TOOLTIPS.maxContextMessages"
             type="number"
+            :disabled="config.isAiManaged"
           >
         </label>
         <label v-if="showAiServiceSettings" class="setting-field setting-field--full">
           <span>{{ t('settings.ai.contextCapacity') }}</span>
-          <select v-model="config.aiContextCapacity">
+          <select v-model="config.aiContextCapacity" :disabled="config.isAiManaged">
             <option value="compact">{{ t('settings.ai.contextCapacityCompact') }}</option>
             <option value="balanced">{{ t('settings.ai.contextCapacityBalanced') }}</option>
             <option value="full">{{ t('settings.ai.contextCapacityFull') }}</option>
@@ -375,7 +389,7 @@
         <button
           class="setting-button"
           type="button"
-          :disabled="aiTestingConnection || !config.aiEnabled || !aiConfigComplete"
+          :disabled="aiTestingConnection || !config.aiEnabled || !aiConfigComplete || config.isAiManaged"
           @click="handleTestConnection"
         >
           {{ aiTestingConnection ? t('settings.ai.testing') : t('settings.ai.testConnection') }}

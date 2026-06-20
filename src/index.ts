@@ -18,6 +18,8 @@ export default class ReferenceAnalyticsPlugin extends Plugin {
   private dockInstance?: ReturnType<Plugin['addDock']>
   private config = reactive<PluginConfig>({ ...DEFAULT_CONFIG })
   private wikiCommandProvider: WikiCommandProvider | null = null
+  private localAiConfigBackup: any = null
+  private isManaged = false
 
   get version() {
     return pluginInfo.version
@@ -74,9 +76,14 @@ export default class ReferenceAnalyticsPlugin extends Plugin {
         destroyApp()
       },
     })
+
+    this.initApiSwitchSync()
   }
 
   onunload() {
+    if (window.siyuanApiSwitch) {
+      window.siyuanApiSwitch.unregister(this.name)
+    }
     destroyApp()
   }
 
@@ -107,6 +114,67 @@ export default class ReferenceAnalyticsPlugin extends Plugin {
     const root = dialog.element.querySelector('#reference-analytics-setting-root') as HTMLElement
     if (root) {
       mountSetting(root, this.config)
+    }
+  }
+
+  private initApiSwitchSync() {
+    const sync = (shared: any | null) => {
+      if (shared) {
+        if (!this.isManaged) {
+          this.localAiConfigBackup = {
+            aiBaseUrl: this.config.aiBaseUrl,
+            aiApiKey: this.config.aiApiKey,
+            aiModel: this.config.aiModel,
+            aiRequestTimeoutSeconds: this.config.aiRequestTimeoutSeconds,
+            aiMaxTokens: this.config.aiMaxTokens,
+            aiTemperature: this.config.aiTemperature,
+          }
+          this.isManaged = true
+        }
+
+        this.config.aiBaseUrl = shared.baseUrl
+        this.config.aiApiKey = shared.apiKey
+        this.config.aiModel = shared.model
+        this.config.aiRequestTimeoutSeconds = shared.requestTimeoutSeconds ?? this.config.aiRequestTimeoutSeconds
+        this.config.aiMaxTokens = shared.maxTokens ?? this.config.aiMaxTokens
+        this.config.aiTemperature = shared.temperature ?? this.config.aiTemperature
+        this.config.isAiManaged = true
+        this.config.aiManagedProfileName = shared.profileName
+      } else {
+        if (this.isManaged && this.localAiConfigBackup) {
+          this.config.aiBaseUrl = this.localAiConfigBackup.aiBaseUrl
+          this.config.aiApiKey = this.localAiConfigBackup.aiApiKey
+          this.config.aiModel = this.localAiConfigBackup.aiModel
+          this.config.aiRequestTimeoutSeconds = this.localAiConfigBackup.aiRequestTimeoutSeconds
+          this.config.aiMaxTokens = this.localAiConfigBackup.aiMaxTokens
+          this.config.aiTemperature = this.localAiConfigBackup.aiTemperature
+          this.localAiConfigBackup = null
+          this.isManaged = false
+        }
+        this.config.isAiManaged = false
+        this.config.aiManagedProfileName = undefined
+      }
+    }
+
+    const activeLocal = this.isManaged ? this.localAiConfigBackup : this.config;
+    const local = {
+      provider: this.config.aiProviderPreset || "custom",
+      baseUrl: activeLocal?.aiBaseUrl || "",
+      apiKey: activeLocal?.aiApiKey || "",
+      model: activeLocal?.aiModel || "",
+      requestTimeoutSeconds: activeLocal?.aiRequestTimeoutSeconds,
+      temperature: activeLocal?.aiTemperature,
+      maxTokens: activeLocal?.aiMaxTokens,
+    };
+
+    if (window.siyuanApiSwitch) {
+      window.siyuanApiSwitch.register(this.name, this.displayName, sync, local)
+    } else {
+      window.addEventListener("siyuan-api-switch:ready", () => {
+        if (window.siyuanApiSwitch) {
+          window.siyuanApiSwitch.register(this.name, this.displayName, sync, local)
+        }
+      }, { once: true })
     }
   }
 }
