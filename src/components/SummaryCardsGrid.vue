@@ -40,6 +40,7 @@
             class="summary-card__toggle-icon"
             viewBox="0 0 16 16"
             aria-hidden="true"
+            style="fill:none!important"
           >
             <path
               d="M3 5h8.5M9.5 2.5 12 5l-2.5 2.5M13 11H4.5M6.5 8.5 4 11l2.5 2.5"

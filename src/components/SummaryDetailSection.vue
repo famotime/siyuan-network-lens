@@ -15,8 +15,7 @@
           >
             <svg
               viewBox="0 0 48 48"
-              style="width: 16px; height: 16px;"
-              fill="none"
+              style="width: 16px; height: 16px; fill: none !important;"
               aria-hidden="true"
             >
               <template v-if="allCollapsed">
@@ -357,9 +356,11 @@
                   class="doc-index-actions"
                 >
                   <button
-                    class="doc-index-button"
+                    class="action-icon-btn tooltip-trigger"
                     type="button"
                     :disabled="docIndexGenerating[item.documentId]"
+                    :title="docIndexGenerating[item.documentId] ? t('summaryDetail.documentIndex.generating') : t('summaryDetail.documentIndex.generate')"
+                    :aria-label="docIndexGenerating[item.documentId] ? t('summaryDetail.documentIndex.generating') : t('summaryDetail.documentIndex.generate')"
                     @click="handleGenerateDocIndex(item.documentId)"
                   >
                     <span
@@ -367,15 +368,42 @@
                       class="doc-index-spinner"
                       aria-hidden="true"
                     />
-                    {{ docIndexGenerating[item.documentId] ? t('summaryDetail.documentIndex.generating') : t('summaryDetail.documentIndex.generate') }}
+                    <svg
+                      v-else
+                      style="fill:none!important; width:15px; height:15px;"
+                      viewBox="0 0 24 24"
+                      stroke="currentColor"
+                      stroke-width="1.8"
+                      stroke-linecap="round"
+                      stroke-linejoin="round"
+                      aria-hidden="true"
+                    >
+                      <path d="m12 3-1.912 5.813a2 2 0 0 1-1.275 1.275L3 12l5.813 1.912a2 2 0 0 1 1.275 1.275L12 21l1.912-5.813a2 2 0 0 1 1.275-1.275L21 12l-5.813-1.912a2 2 0 0 1-1.275-1.275L12 3Z"/>
+                    </svg>
                   </button>
                   <button
-                    class="doc-index-button doc-index-button--view"
+                    class="action-icon-btn tooltip-trigger"
                     type="button"
                     :disabled="!docIndexExists[item.documentId]"
+                    :title="t('summaryDetail.documentIndex.view')"
+                    :aria-label="t('summaryDetail.documentIndex.view')"
                     @click="handleOpenDocIndex(item.documentId)"
                   >
-                    {{ t('summaryDetail.documentIndex.view') }}
+                    <svg
+                      style="fill:none!important; width:15px; height:15px;"
+                      viewBox="0 0 24 24"
+                      stroke="currentColor"
+                      stroke-width="1.8"
+                      stroke-linecap="round"
+                      stroke-linejoin="round"
+                      aria-hidden="true"
+                    >
+                      <path d="M15 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7Z"/>
+                      <path d="M14 2v4a2 2 0 0 0 2 2h4"/>
+                      <path d="M10 9H8"/>
+                      <path d="M16 13H8"/>
+                      <path d="M16 17H8"/>
+                    </svg>
                   </button>
                 </div>
               </div>

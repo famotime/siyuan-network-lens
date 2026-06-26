@@ -255,6 +255,7 @@
             >
               <svg
                 v-if="aiApiKeyFieldMeta.icon === 'eye'"
+                style="fill:none!important"
                 class="setting-icon-button__svg"
                 viewBox="0 0 24 24"
                 aria-hidden="true"
@@ -278,6 +279,7 @@
               </svg>
               <svg
                 v-else
+                style="fill:none!important"
                 class="setting-icon-button__svg"
                 viewBox="0 0 24 24"
                 aria-hidden="true"
