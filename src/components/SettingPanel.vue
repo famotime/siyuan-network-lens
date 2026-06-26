@@ -199,20 +199,48 @@
             </select>
             <div class="setting-field__actions">
               <button
-                class="setting-button setting-button--ghost setting-button--compact"
+                class="action-icon-btn tooltip-trigger"
                 type="button"
+                :title="t('settings.ai.importSettings')"
+                :aria-label="t('settings.ai.importSettings')"
                 @click="handleImportAiSettingsClick"
                 :disabled="config.isAiManaged"
               >
-                {{ t('settings.ai.importSettings') }}
+                <svg 
+                  style="fill:none!important; width:14px; height:14px;" 
+                  viewBox="0 0 24 24" 
+                  stroke="currentColor" 
+                  stroke-width="1.8" 
+                  stroke-linecap="round" 
+                  stroke-linejoin="round"
+                  aria-hidden="true"
+                >
+                  <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
+                  <polyline points="17 8 12 3 7 8" />
+                  <line x1="12" y1="3" x2="12" y2="15" />
+                </svg>
               </button>
               <button
-                class="setting-button setting-button--ghost setting-button--compact"
+                class="action-icon-btn tooltip-trigger"
                 type="button"
+                :title="t('settings.ai.exportSettings')"
+                :aria-label="t('settings.ai.exportSettings')"
                 @click="handleExportAiSettings"
                 :disabled="config.isAiManaged"
               >
-                {{ t('settings.ai.exportSettings') }}
+                <svg 
+                  style="fill:none!important; width:14px; height:14px;" 
+                  viewBox="0 0 24 24" 
+                  stroke="currentColor" 
+                  stroke-width="1.8" 
+                  stroke-linecap="round" 
+                  stroke-linejoin="round"
+                  aria-hidden="true"
+                >
+                  <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
+                  <polyline points="7 10 12 15 17 10" />
+                  <line x1="12" y1="15" x2="12" y2="3" />
+                </svg>
               </button>
               <input
                 ref="aiSettingsFileInput"

@@ -108,13 +108,31 @@
                     </button>
                     <button
                       v-if="!link.isOverlap"
-                      class="ghost-button"
+                      class="action-icon-btn tooltip-trigger"
                       type="button"
                       :disabled="isSyncing(item.documentId, link.documentId, 'outbound')"
-                      :title="t('rankingPanel.syncTooltip')"
+                      :title="isSyncing(item.documentId, link.documentId, 'outbound') ? t('rankingPanel.syncing') : t('rankingPanel.syncTooltip')"
+                      :aria-label="isSyncing(item.documentId, link.documentId, 'outbound') ? t('rankingPanel.syncing') : t('rankingPanel.syncTooltip')"
                       @click="syncAssociation(item.documentId, link.documentId, 'outbound')"
                     >
-                      {{ isSyncing(item.documentId, link.documentId, 'outbound') ? t('rankingPanel.syncing') : t('rankingPanel.sync') }}
+                      <span
+                        v-if="isSyncing(item.documentId, link.documentId, 'outbound')"
+                        class="action-icon-spinner"
+                        aria-hidden="true"
+                      />
+                      <svg 
+                        v-else
+                        style="fill:none!important; width:14px; height:14px;" 
+                        viewBox="0 0 24 24" 
+                        stroke="currentColor" 
+                        stroke-width="1.8" 
+                        stroke-linecap="round" 
+                        stroke-linejoin="round"
+                        aria-hidden="true"
+                      >
+                        <path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71" />
+                        <path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71" />
+                      </svg>
                     </button>
                   </div>
                   <p
@@ -154,13 +172,31 @@
                     </button>
                     <button
                       v-if="!link.isOverlap"
-                      class="ghost-button"
+                      class="action-icon-btn tooltip-trigger"
                       type="button"
                       :disabled="isSyncing(item.documentId, link.documentId, 'inbound')"
-                      :title="t('rankingPanel.syncTooltip')"
+                      :title="isSyncing(item.documentId, link.documentId, 'inbound') ? t('rankingPanel.syncing') : t('rankingPanel.syncTooltip')"
+                      :aria-label="isSyncing(item.documentId, link.documentId, 'inbound') ? t('rankingPanel.syncing') : t('rankingPanel.syncTooltip')"
                       @click="syncAssociation(item.documentId, link.documentId, 'inbound')"
                     >
-                      {{ isSyncing(item.documentId, link.documentId, 'inbound') ? t('rankingPanel.syncing') : t('rankingPanel.sync') }}
+                      <span
+                        v-if="isSyncing(item.documentId, link.documentId, 'inbound')"
+                        class="action-icon-spinner"
+                        aria-hidden="true"
+                      />
+                      <svg 
+                        v-else
+                        style="fill:none!important; width:14px; height:14px;" 
+                        viewBox="0 0 24 24" 
+                        stroke="currentColor" 
+                        stroke-width="1.8" 
+                        stroke-linecap="round" 
+                        stroke-linejoin="round"
+                        aria-hidden="true"
+                      >
+                        <path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71" />
+                        <path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71" />
+                      </svg>
                     </button>
                   </div>
                   <p
@@ -199,13 +235,31 @@
                       {{ link.title }}
                     </button>
                     <button
-                      class="ghost-button"
+                      class="action-icon-btn tooltip-trigger"
                       type="button"
                       :disabled="isSyncing(item.documentId, link.documentId, 'child')"
-                      :title="t('rankingPanel.linkTooltip')"
+                      :title="isSyncing(item.documentId, link.documentId, 'child') ? t('rankingPanel.linking') : t('rankingPanel.linkTooltip')"
+                      :aria-label="isSyncing(item.documentId, link.documentId, 'child') ? t('rankingPanel.linking') : t('rankingPanel.linkTooltip')"
                       @click="syncAssociation(item.documentId, link.documentId, 'child')"
                     >
-                      {{ isSyncing(item.documentId, link.documentId, 'child') ? t('rankingPanel.linking') : t('rankingPanel.link') }}
+                      <span
+                        v-if="isSyncing(item.documentId, link.documentId, 'child')"
+                        class="action-icon-spinner"
+                        aria-hidden="true"
+                      />
+                      <svg 
+                        v-else
+                        style="fill:none!important; width:14px; height:14px;" 
+                        viewBox="0 0 24 24" 
+                        stroke="currentColor" 
+                        stroke-width="1.8" 
+                        stroke-linecap="round" 
+                        stroke-linejoin="round"
+                        aria-hidden="true"
+                      >
+                        <path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71" />
+                        <path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71" />
+                      </svg>
                     </button>
                   </div>
                   <p
