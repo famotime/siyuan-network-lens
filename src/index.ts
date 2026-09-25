@@ -146,6 +146,8 @@ export default class ReferenceAnalyticsPlugin extends Plugin {
             aiRequestTimeoutSeconds: this.config.aiRequestTimeoutSeconds,
             aiMaxTokens: this.config.aiMaxTokens,
             aiTemperature: this.config.aiTemperature,
+            aiHeaders: this.config.aiHeaders,
+            aiProtocol: this.config.aiProtocol,
           }
           this.isManaged = true
         }
@@ -158,6 +160,8 @@ export default class ReferenceAnalyticsPlugin extends Plugin {
         this.config.aiRequestTimeoutSeconds = shared.requestTimeoutSeconds ?? this.config.aiRequestTimeoutSeconds
         this.config.aiMaxTokens = shared.maxTokens ?? this.config.aiMaxTokens
         this.config.aiTemperature = shared.temperature ?? this.config.aiTemperature
+        this.config.aiHeaders = shared.headers
+        this.config.aiProtocol = shared.protocol
         this.config.isAiManaged = true
         this.config.aiManagedProfileName = shared.profileName
       } else {
@@ -169,6 +173,8 @@ export default class ReferenceAnalyticsPlugin extends Plugin {
           this.config.aiRequestTimeoutSeconds = this.localAiConfigBackup.aiRequestTimeoutSeconds
           this.config.aiMaxTokens = this.localAiConfigBackup.aiMaxTokens
           this.config.aiTemperature = this.localAiConfigBackup.aiTemperature
+          this.config.aiHeaders = this.localAiConfigBackup.aiHeaders
+          this.config.aiProtocol = this.localAiConfigBackup.aiProtocol
           this.localAiConfigBackup = null
           this.isManaged = false
         }
@@ -186,6 +192,8 @@ export default class ReferenceAnalyticsPlugin extends Plugin {
       requestTimeoutSeconds: activeLocal?.aiRequestTimeoutSeconds,
       temperature: activeLocal?.aiTemperature,
       maxTokens: activeLocal?.aiMaxTokens,
+      headers: activeLocal?.aiHeaders,
+      protocol: activeLocal?.aiProtocol,
     }
 
     if (window.siyuanApiSwitch) {

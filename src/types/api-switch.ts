@@ -11,6 +11,9 @@ export interface SharedConfig {
   maxTokens?: number
   memo?: string
   providerUrl?: string
+  protocol?: string
+  headers?: Record<string, string>
+  isDecisionModel?: boolean
 }
 
 export interface SiyuanApiSwitch {

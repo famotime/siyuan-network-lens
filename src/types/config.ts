@@ -61,6 +61,8 @@ export interface PluginConfig {
   aiTemperature?: number
   aiMaxContextMessages?: number
   aiContextCapacity?: AiContextCapacity
+  aiProtocol?: string
+  aiHeaders?: Record<string, string>
   isAiManaged?: boolean
   aiManagedProfileName?: string
   enableConsoleLogging?: boolean
@@ -214,6 +216,12 @@ export function ensureConfigDefaults(config: PluginConfig) {
   )
   if (config.aiContextCapacity !== 'compact' && config.aiContextCapacity !== 'balanced' && config.aiContextCapacity !== 'full') {
     config.aiContextCapacity = 'balanced'
+  }
+  if (config.aiHeaders && typeof config.aiHeaders !== 'object') {
+    delete config.aiHeaders
+  }
+  if (config.aiProtocol && typeof config.aiProtocol !== 'string') {
+    delete config.aiProtocol
   }
   if (typeof config.enableConsoleLogging !== 'boolean') {
     config.enableConsoleLogging = false

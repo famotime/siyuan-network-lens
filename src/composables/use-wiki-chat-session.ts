@@ -46,6 +46,8 @@ export interface WikiChatSessionOptions {
     aiMaxTokens: number
     aiTemperature: number
     aiMaxContextMessages?: number
+    aiHeaders?: Record<string, string>
+    aiProtocol?: string
   }>
   logger?: PluginLogger
 }
@@ -253,6 +255,7 @@ export function createWikiChatSession(options: WikiChatSessionOptions): WikiChat
         [
           { Authorization: `Bearer ${config.value.aiApiKey}` },
           { Accept: 'application/json' },
+          ...Object.entries(config.value.aiHeaders || {}).map(([k, v]) => ({ [k]: String(v) })),
         ],
         config.value.aiRequestTimeoutSeconds * 1000,
         'application/json',
@@ -307,6 +310,7 @@ export function createWikiChatSession(options: WikiChatSessionOptions): WikiChat
       [
         { Authorization: `Bearer ${config.value.aiApiKey}` },
         { Accept: 'application/json' },
+        ...Object.entries(config.value.aiHeaders || {}).map(([k, v]) => ({ [k]: String(v) })),
       ],
       config.value.aiRequestTimeoutSeconds * 1000,
       'application/json',

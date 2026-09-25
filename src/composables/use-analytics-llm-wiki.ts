@@ -104,6 +104,7 @@ export function createLlmWikiController(params: {
         [
           { Authorization: `Bearer ${cfg.aiApiKey ?? ''}` },
           { Accept: 'application/json' },
+          ...Object.entries(cfg.aiHeaders || {}).map(([k, v]) => ({ [k]: String(v) })),
         ],
         (cfg.aiRequestTimeoutSeconds ?? 60) * 1000,
         'application/json',
