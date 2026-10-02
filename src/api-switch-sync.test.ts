@@ -11,6 +11,7 @@ vi.mock('siyuan', () => {
       loadData() { return Promise.resolve(null) }
       saveData() { return Promise.resolve() }
       removeData() { return Promise.resolve() }
+      onDataChanged() {}
     },
     Dialog: class Dialog {},
   }
@@ -136,8 +137,13 @@ describe('siyuan-api-switch integration', () => {
     expect(config.aiModel).toBe('deepseek-ai/DeepSeek-V3')
     expect(config.aiRequestTimeoutSeconds).toBe(60)
 
+    // 模拟在接管状态下修改其他常规配置项
+    config.showRanking = !config.showRanking
+    await new Promise(resolve => setTimeout(resolve, 0))
+
     // 校验在接管状态下保存设置时，存入 settings.json 的仍是底层本地配置
     const lastSaved = saveDataSpy.mock.calls[saveDataSpy.mock.calls.length - 1]?.[1] as any
+    expect(lastSaved).toBeDefined()
     expect(lastSaved.isAiManaged).toBe(false)
     expect(lastSaved.aiBaseUrl).toBe('https://local.api/v1')
     expect(lastSaved.aiApiKey).toBe('local-key')
@@ -224,4 +230,71 @@ describe('siyuan-api-switch integration', () => {
 
     expect(unregisterFn).toHaveBeenCalledWith(plugin.name)
   })
+
+  it('updates configuration via onDataChanged without triggering redundant saveData', async () => {
+    const plugin = new ReferenceAnalyticsPlugin()
+    const saveSpy = vi.spyOn(plugin, 'saveData').mockResolvedValue(undefined as any)
+    vi.spyOn(plugin, 'loadData').mockResolvedValue({
+      showRanking: true,
+      aiBaseUrl: 'https://initial.api/v1',
+    })
+
+    await plugin.onload()
+    saveSpy.mockClear()
+
+    // 模拟另一端更新了配置
+    vi.spyOn(plugin, 'loadData').mockResolvedValue({
+      showRanking: false,
+      aiBaseUrl: 'https://initial.api/v1',
+    })
+
+    await plugin.onDataChanged()
+
+    const config = (plugin as any).config
+    expect(config.showRanking).toBe(false)
+    // 自身不应回写产生网络乒乓
+    expect(saveSpy).not.toHaveBeenCalled()
+  })
+
+  it('does not write to storage when API switch sync triggers with identical persisted config', async () => {
+    let syncCallback: ((config: SharedConfig | null) => void) | null = null
+
+    const mockApiSwitch: SiyuanApiSwitch = {
+      version: '1.0.0',
+      register: (_id, _name, callback) => {
+        syncCallback = callback
+      },
+      unregister: vi.fn(),
+      getBoundConfig: vi.fn(() => null),
+    }
+    ;(window as any).siyuanApiSwitch = mockApiSwitch
+
+    const plugin = new ReferenceAnalyticsPlugin()
+    vi.spyOn(plugin, 'loadData').mockResolvedValue({
+      aiBaseUrl: 'https://local.api/v1',
+      aiApiKey: 'local-key',
+      aiModel: 'local-model',
+    })
+    const saveSpy = vi.spyOn(plugin, 'saveData').mockResolvedValue(undefined as any)
+
+    await plugin.onload()
+    saveSpy.mockClear()
+
+    // 触发接管同步
+    syncCallback!({
+      profileId: 'shared_1',
+      profileName: 'Shared Profile',
+      provider: 'openai',
+      baseUrl: 'https://api.openai.com/v1',
+      apiKey: 'sk-shared',
+      model: 'gpt-4o',
+    })
+
+    const { nextTick } = await import('vue')
+    await nextTick()
+
+    // 接管态下由于备份了本地配置且本地配置未变，落盘内容与加载时一致，不应调用 saveData
+    expect(saveSpy).not.toHaveBeenCalled()
+  })
 })
+

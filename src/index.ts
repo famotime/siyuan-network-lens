@@ -15,12 +15,21 @@ import { DEFAULT_CONFIG, ensureConfigDefaults, type PluginConfig } from './types
 const DOCK_TYPE = 'reference-analytics-dock'
 const STORAGE_NAME = 'settings.json'
 
+function serializeConfig(config: PluginConfig): string {
+  const sorted: Record<string, any> = {}
+  for (const key of Object.keys(config).sort()) {
+    sorted[key] = (config as any)[key]
+  }
+  return JSON.stringify(sorted)
+}
+
 export default class ReferenceAnalyticsPlugin extends Plugin {
   private dockInstance?: ReturnType<Plugin['addDock']>
   private config = reactive<PluginConfig>({ ...DEFAULT_CONFIG })
   private wikiCommandProvider: WikiCommandProvider | null = null
   private localAiConfigBackup: any = null
   private isManaged = false
+  private lastSavedConfigJson = ''
 
   get version() {
     return pluginInfo.version
@@ -40,24 +49,15 @@ export default class ReferenceAnalyticsPlugin extends Plugin {
       Object.assign(this.config, loadedConfig)
     }
     ensureConfigDefaults(this.config)
+    this.lastSavedConfigJson = serializeConfig(this.getPersistedConfig())
 
-    watch(() => { return { ...this.config } }, (newConfig) => {
-      // 当处于 API 旋钮接管状态时，保持保存真正的底层本地 AI 配置，避免将接管参数污染落盘
-      const configToSave = { ...newConfig }
-      if (this.isManaged && this.localAiConfigBackup) {
-        configToSave.aiProviderPreset = this.localAiConfigBackup.aiProviderPreset
-        configToSave.aiBaseUrl = this.localAiConfigBackup.aiBaseUrl
-        configToSave.aiApiKey = this.localAiConfigBackup.aiApiKey
-        configToSave.aiModel = this.localAiConfigBackup.aiModel
-        configToSave.aiRequestTimeoutSeconds = this.localAiConfigBackup.aiRequestTimeoutSeconds
-        configToSave.aiMaxTokens = this.localAiConfigBackup.aiMaxTokens
-        configToSave.aiTemperature = this.localAiConfigBackup.aiTemperature
-        configToSave.isAiManaged = false
-        configToSave.aiManagedProfileName = undefined
-      } else if (!this.isManaged) {
-        configToSave.isAiManaged = false
-        configToSave.aiManagedProfileName = undefined
+    watch(() => { return { ...this.config } }, () => {
+      const configToSave = this.getPersistedConfig()
+      const newJson = serializeConfig(configToSave)
+      if (newJson === this.lastSavedConfigJson) {
+        return
       }
+      this.lastSavedConfigJson = newJson
       this.saveData(STORAGE_NAME, configToSave)
     }, { deep: true })
 
@@ -106,6 +106,72 @@ export default class ReferenceAnalyticsPlugin extends Plugin {
 
   async uninstall() {
     await this.removeData(STORAGE_NAME)
+  }
+
+  /**
+   * 覆盖基类 onDataChanged 方法。
+   * 显式处理思源广播的插件私有存储变更，防止思源因缺少该钩子将数据变更事件降级为全量卸载重载（导致图标闪烁与多端互推风暴）。
+   */
+  async onDataChanged() {
+    const loadedConfig = await this.loadData(STORAGE_NAME)
+    if (!loadedConfig) {
+      return
+    }
+    ensureConfigDefaults(loadedConfig as PluginConfig)
+    const newJson = serializeConfig(loadedConfig as PluginConfig)
+    if (newJson === this.lastSavedConfigJson) {
+      return
+    }
+
+    if (this.isManaged) {
+      this.localAiConfigBackup = {
+        aiProviderPreset: loadedConfig.aiProviderPreset || 'custom',
+        aiBaseUrl: loadedConfig.aiBaseUrl,
+        aiApiKey: loadedConfig.aiApiKey,
+        aiModel: loadedConfig.aiModel,
+        aiRequestTimeoutSeconds: loadedConfig.aiRequestTimeoutSeconds,
+        aiMaxTokens: loadedConfig.aiMaxTokens,
+        aiTemperature: loadedConfig.aiTemperature,
+        aiHeaders: loadedConfig.aiHeaders,
+        aiProtocol: loadedConfig.aiProtocol,
+      }
+      const runtimeAiOverrides = {
+        aiProviderPreset: this.config.aiProviderPreset,
+        aiBaseUrl: this.config.aiBaseUrl,
+        aiApiKey: this.config.aiApiKey,
+        aiModel: this.config.aiModel,
+        aiRequestTimeoutSeconds: this.config.aiRequestTimeoutSeconds,
+        aiMaxTokens: this.config.aiMaxTokens,
+        aiTemperature: this.config.aiTemperature,
+        aiHeaders: this.config.aiHeaders,
+        aiProtocol: this.config.aiProtocol,
+        isAiManaged: true,
+        aiManagedProfileName: this.config.aiManagedProfileName,
+      }
+      Object.assign(this.config, loadedConfig, runtimeAiOverrides)
+    } else {
+      Object.assign(this.config, loadedConfig)
+    }
+    this.lastSavedConfigJson = serializeConfig(this.getPersistedConfig())
+  }
+
+  private getPersistedConfig(): PluginConfig {
+    const configToSave = { ...this.config }
+    if (this.isManaged && this.localAiConfigBackup) {
+      configToSave.aiProviderPreset = this.localAiConfigBackup.aiProviderPreset
+      configToSave.aiBaseUrl = this.localAiConfigBackup.aiBaseUrl
+      configToSave.aiApiKey = this.localAiConfigBackup.aiApiKey
+      configToSave.aiModel = this.localAiConfigBackup.aiModel
+      configToSave.aiRequestTimeoutSeconds = this.localAiConfigBackup.aiRequestTimeoutSeconds
+      configToSave.aiMaxTokens = this.localAiConfigBackup.aiMaxTokens
+      configToSave.aiTemperature = this.localAiConfigBackup.aiTemperature
+      configToSave.isAiManaged = false
+      configToSave.aiManagedProfileName = undefined
+    } else if (!this.isManaged) {
+      configToSave.isAiManaged = false
+      configToSave.aiManagedProfileName = undefined
+    }
+    return configToSave
   }
 
   openDock() {

@@ -23,4 +23,13 @@ describe('plugin lifecycle release hygiene', () => {
     expect(source).toContain("import { pickPluginText } from '@/i18n/plugin'")
     expect(source).toContain("title: this.i18n?.settingsTitle ?? pickPluginText('settingsTitle')")
   })
+
+  it('declares onDataChanged to prevent SiYuan kernel from force-reloading plugin on storage change', async () => {
+    const source = await readFile(new URL('./index.ts', import.meta.url), 'utf8')
+
+    expect(source).toContain('async onDataChanged(')
+    expect(source).toContain('this.getPersistedConfig(')
+    expect(source).toContain('this.lastSavedConfigJson')
+  })
 })
+

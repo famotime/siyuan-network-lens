@@ -8,6 +8,7 @@ export class Plugin {
   loadData() { return Promise.resolve(null) }
   saveData() { return Promise.resolve() }
   removeData() { return Promise.resolve() }
+  onDataChanged(_reason?: any): Promise<void> | void {}
 }
 
 export class Dialog {}
