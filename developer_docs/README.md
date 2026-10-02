@@ -27,10 +27,11 @@
 7. 数据库与 AV 视图：[04-database-av/](04-database-av/)
 8. 块模型与块属性规范：[05-block-model/块模型与属性规范.md](05-block-model/块模型与属性规范.md)
 9. 插件发布服务规范与只读模式：[06-guides/插件发布服务规范与只读模式适配指南.md](06-guides/插件发布服务规范与只读模式适配指南.md)
-10. 调试与发布流程：[06-guides/调试与发布流程.md](06-guides/调试与发布流程.md)
-11. 设置页控件与布局 FAQ：[06-guides/插件设置页开关与控件布局FAQ.md](06-guides/插件设置页开关与控件布局FAQ.md)
-12. 官方全量公开 API 索引：[07-official-index/官方API全量索引-按模块.md](07-official-index/官方API全量索引-按模块.md)
-13. router 路由变更与风险索引：[07-official-index/router路由变更与风险索引.md](07-official-index/router路由变更与风险索引.md)
+10. 插件多端同步与防无限重启：[06-guides/插件多端同步与数据持久化防重启指南.md](06-guides/插件多端同步与数据持久化防重启指南.md)
+11. 调试与发布流程：[06-guides/调试与发布流程.md](06-guides/调试与发布流程.md)
+12. 设置页控件与布局 FAQ：[06-guides/插件设置页开关与控件布局FAQ.md](06-guides/插件设置页开关与控件布局FAQ.md)
+13. 官方全量公开 API 索引：[07-official-index/官方API全量索引-按模块.md](07-official-index/官方API全量索引-按模块.md)
+14. router 路由变更与风险索引：[07-official-index/router路由变更与风险索引.md](07-official-index/router路由变更与风险索引.md)
 
 ## 目录结构
 
@@ -40,7 +41,7 @@
 - `03-kernel-api/`：公开 API 导航、调用示例、非公开 API 风险说明，以及官方 `API_zh_CN.md` 和 `router.go`
 - `04-database-av/`：属性视图（AV/数据库）增删改查、日历/列表视图、富文本与公式、SQL 结构与表字段详解
 - `05-block-model/`：块模型、块类型映射表（含 NodeCustomBlock 与 NodeTabs）、列表思维导图属性、块属性清单
-- `06-guides/`：插件发布服务规范与只读模式、调试与发布流程、集市上架规范、SDK 使用边界、设置页开关与控件布局 FAQ
+- `06-guides/`：插件发布服务规范与只读模式、多端同步与防重启、调试与发布流程、集市上架规范、SDK 使用边界、设置页开关与控件布局 FAQ
 - `07-official-index/`：官方 API 全量索引与 router.go 路由风险评级
 
 ## 文档使用约定
@@ -57,6 +58,7 @@
 
 - 最新演进指南：[00-version/SiYuan-v3.8.5开发进展与API迁移指南.md](00-version/SiYuan-v3.8.5开发进展与API迁移指南.md)
 - 发布服务适配：[06-guides/插件发布服务规范与只读模式适配指南.md](06-guides/插件发布服务规范与只读模式适配指南.md)
+- 多端同步防重启：[06-guides/插件多端同步与数据持久化防重启指南.md](06-guides/插件多端同步与数据持久化防重启指南.md)
 - 插件入门实践：[01-start/插件开发入门与工程实践.md](01-start/插件开发入门与工程实践.md)
 - 关键架构概念：[01-start/关键概念与数据架构速览.md](01-start/关键概念与数据架构速览.md)
 - 设置页布局 FAQ：[06-guides/插件设置页开关与控件布局FAQ.md](06-guides/插件设置页开关与控件布局FAQ.md)
